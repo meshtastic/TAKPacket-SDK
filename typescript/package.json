@@ -1,0 +1,33 @@
+{
+  "name": "@meshtastic/takpacket-sdk",
+  "version": "0.1.0",
+  "description": "CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.3.4",
+    "fzstd": "^0.1.1",
+    "protobufjs": "^7.2.6",
+    "zstd-napi": "^0.0.12"
+  },
+  "files": [
+    "dist",
+    "resources"
+  ],
+  "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meshtastic/TAKPacket-SDK"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}

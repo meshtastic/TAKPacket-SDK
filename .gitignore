@@ -1,0 +1,64 @@
+# Kotlin / Gradle
+kotlin/.gradle/
+kotlin/build/
+kotlin/out/
+kotlin/local.properties
+*.class
+# Keep gradle-wrapper.jar (conventional to commit)
+!kotlin/gradle/wrapper/gradle-wrapper.jar
+
+# Swift
+swift/.build/
+swift/.swiftpm/
+swift/Package.resolved
+swift/*.xcodeproj/
+swift/*.xcworkspace/
+swift/DerivedData/
+
+# C# / .NET
+csharp/**/bin/
+csharp/**/obj/
+csharp/**/.vs/
+csharp/*.user
+csharp/*.suo
+*.nupkg
+
+# TypeScript / Node.js
+typescript/node_modules/
+typescript/dist/
+typescript/coverage/
+typescript/.tsbuildinfo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+python/dist/
+python/build/
+python/.venv/
+python/venv/
+python/.pytest_cache/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts (from build.sh build-artifacts)
+dist/
+*.tgz
+*.jar
+*.war
+!kotlin/gradle/wrapper/gradle-wrapper.jar
+
+# Test outputs (generated, not committed except compression-report.md)
+**/test-reports/
+
