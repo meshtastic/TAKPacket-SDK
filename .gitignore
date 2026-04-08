@@ -28,6 +28,7 @@ typescript/node_modules/
 typescript/dist/
 typescript/coverage/
 typescript/.tsbuildinfo
+typescript/package-lock.json
 
 # Python
 __pycache__/
