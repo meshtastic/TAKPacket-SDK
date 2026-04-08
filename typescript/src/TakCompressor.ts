@@ -5,6 +5,9 @@ import {
   nonAircraftDict, aircraftDict, getDictionary, selectDictId,
 } from "./DictionaryProvider.js";
 
+/** Maximum allowed decompressed payload size (bytes). Prevents decompression bombs. */
+const MAX_DECOMPRESSED_SIZE = 4096;
+
 export interface CompressionResult {
   protobufSize: number;
   compressedSize: number;
@@ -80,12 +83,24 @@ export class TakCompressor {
       const dictId = flagsByte & 0x3f;
       const decompressor = this.decompressors.get(dictId);
       if (!decompressor) throw new Error(`Unknown dict ID: ${dictId}`);
-      protobufBytes = decompressor.decompress(Buffer.from(compressedBytes));
+      try {
+        protobufBytes = decompressor.decompress(Buffer.from(compressedBytes));
+      } catch (e) {
+        throw new Error(`Zstd decompression failed: ${e}`);
+      }
     }
 
-    const TAKPacketV2 = await getTAKPacketV2Type();
-    const msg = TAKPacketV2.decode(protobufBytes);
-    return TAKPacketV2.toObject(msg) as Record<string, unknown>;
+    if (protobufBytes.length > MAX_DECOMPRESSED_SIZE) {
+      throw new Error(`Payload size ${protobufBytes.length} exceeds limit ${MAX_DECOMPRESSED_SIZE}`);
+    }
+
+    try {
+      const TAKPacketV2 = await getTAKPacketV2Type();
+      const msg = TAKPacketV2.decode(protobufBytes);
+      return TAKPacketV2.toObject(msg) as Record<string, unknown>;
+    } catch (e) {
+      throw new Error(`Protobuf parsing failed: ${e}`);
+    }
   }
 
   /** Compress with stats for reporting. */

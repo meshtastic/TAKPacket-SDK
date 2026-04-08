@@ -63,6 +63,10 @@ Flags byte:
 
 `CotXmlBuilder` reconstructs a standards-compliant CoT XML event from a `TAKPacketV2` protobuf, preserving all fields that were extracted during parsing.
 
+## Wire Format Specification
+
+See [WIRE_FORMAT.md](WIRE_FORMAT.md) for the complete wire format specification, including byte layout, flags byte structure, dictionary selection algorithm, error handling requirements, and annotated examples.
+
 ## Compression Results
 
 See the auto-generated [Compression Report](testdata/compression-report.md) for current benchmark data. Updated on every merge to `main`.

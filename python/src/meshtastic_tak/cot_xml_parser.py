@@ -24,6 +24,11 @@ _GEO_SRC_MAP = {"GPS": 1, "USER": 2, "NETWORK": 3}
 
 class CotXmlParser:
     def parse(self, cot_xml: str) -> atak_pb2.TAKPacketV2:
+        # Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion
+        lower = cot_xml.lower()
+        if "<!doctype" in lower or "<!entity" in lower:
+            raise ValueError("XML contains prohibited DOCTYPE or ENTITY declaration")
+
         root = ET.fromstring(cot_xml)
         pkt = atak_pb2.TAKPacketV2()
 

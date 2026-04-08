@@ -5,6 +5,9 @@ import zstandard
 from . import atak_pb2
 from .dictionary_provider import DictionaryProvider, DICT_ID_NON_AIRCRAFT, DICT_ID_AIRCRAFT, DICT_ID_UNCOMPRESSED
 
+# Maximum allowed decompressed payload size (bytes). Prevents decompression bombs.
+MAX_DECOMPRESSED_SIZE = 4096
+
 
 @dataclass
 class CompressionResult:
@@ -65,10 +68,19 @@ class TakCompressor:
                 raise ValueError(f"Unknown dictionary ID: {dict_id}")
 
             dctx = zstandard.ZstdDecompressor(dict_data=zdict)
-            protobuf_bytes = dctx.decompress(compressed_bytes)
+            try:
+                protobuf_bytes = dctx.decompress(compressed_bytes, max_output_size=MAX_DECOMPRESSED_SIZE)
+            except Exception as e:
+                raise ValueError(f"Zstd decompression failed: {e}") from e
 
-        pkt = atak_pb2.TAKPacketV2()
-        pkt.ParseFromString(protobuf_bytes)
+        if len(protobuf_bytes) > MAX_DECOMPRESSED_SIZE:
+            raise ValueError(f"Payload size {len(protobuf_bytes)} exceeds limit {MAX_DECOMPRESSED_SIZE}")
+
+        try:
+            pkt = atak_pb2.TAKPacketV2()
+            pkt.ParseFromString(protobuf_bytes)
+        except Exception as e:
+            raise ValueError(f"Protobuf parsing failed: {e}") from e
         return pkt
 
     def compress_with_stats(self, packet: atak_pb2.TAKPacketV2) -> CompressionResult:

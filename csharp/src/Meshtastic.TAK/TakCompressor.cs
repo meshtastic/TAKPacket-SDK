@@ -15,6 +15,9 @@ public record CompressionResult(int ProtobufSize, int CompressedSize, int DictId
 
 public class TakCompressor
 {
+    /// <summary>Maximum allowed decompressed payload size (bytes). Prevents decompression bombs.</summary>
+    public const int MaxDecompressedSize = 4096;
+
     private readonly int _level;
 
     public TakCompressor(int level = 19) => _level = level;
@@ -56,12 +59,29 @@ public class TakCompressor
             var dict = DictionaryProvider.GetDictionary(dictId)
                 ?? throw new ArgumentException($"Unknown dictionary ID: {dictId}");
 
-            using var decompressor = new ZstdSharp.Decompressor();
-            decompressor.LoadDictionary(dict);
-            protoBytes = decompressor.Unwrap(compressedBytes).ToArray();
+            try
+            {
+                using var decompressor = new ZstdSharp.Decompressor();
+                decompressor.LoadDictionary(dict);
+                protoBytes = decompressor.Unwrap(compressedBytes).ToArray();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Zstd decompression failed: {ex.Message}", ex);
+            }
         }
 
-        return Meshtastic.Protobufs.TAKPacketV2.Parser.ParseFrom(protoBytes);
+        if (protoBytes.Length > MaxDecompressedSize)
+            throw new InvalidOperationException($"Payload size {protoBytes.Length} exceeds limit {MaxDecompressedSize}");
+
+        try
+        {
+            return Meshtastic.Protobufs.TAKPacketV2.Parser.ParseFrom(protoBytes);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Protobuf parsing failed: {ex.Message}", ex);
+        }
     }
 
     public CompressionResult CompressWithStats(Meshtastic.Protobufs.TAKPacketV2 packet)

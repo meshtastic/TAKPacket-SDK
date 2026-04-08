@@ -39,6 +39,12 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var inRemarks = false
 
     public func parse(_ cotXml: String) -> TAKPacketV2 {
+        // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
+        let lower = cotXml.lowercased()
+        if lower.contains("<!doctype") || lower.contains("<!entity") {
+            return TAKPacketV2()  // Return empty packet for malicious input
+        }
+
         // Reset state
         packet = TAKPacketV2()
         hasAircraftData = false

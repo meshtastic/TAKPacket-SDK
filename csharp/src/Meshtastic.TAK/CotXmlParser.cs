@@ -34,6 +34,11 @@ public class CotXmlParser
 
     public Meshtastic.Protobufs.TAKPacketV2 Parse(string cotXml)
     {
+        // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion
+        var lower = cotXml.ToLowerInvariant();
+        if (lower.Contains("<!doctype") || lower.Contains("<!entity"))
+            throw new ArgumentException("XML contains prohibited DOCTYPE or ENTITY declaration");
+
         var doc = XDocument.Parse(cotXml);
         var evt = doc.Root!;
         var pkt = new Meshtastic.Protobufs.TAKPacketV2();

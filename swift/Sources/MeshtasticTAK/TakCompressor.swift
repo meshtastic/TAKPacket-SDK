@@ -8,6 +8,9 @@ import CZstd
 /// Special value 0xFF = uncompressed raw protobuf.
 public class TakCompressor {
 
+    /// Maximum allowed decompressed payload size (bytes). Prevents decompression bombs.
+    private let maxDecompressedSize = 4096
+
     private let compressionLevel: Int32
 
     public init(compressionLevel: Int32 = 19) {
@@ -50,6 +53,10 @@ public class TakCompressor {
                 throw TakCompressorError.unknownDictionary(dictId)
             }
             protobufBytes = try decompressWithDict(compressedBytes, dict: dictData)
+        }
+
+        if protobufBytes.count > maxDecompressedSize {
+            throw TakCompressorError.decompressionFailed("Payload size \(protobufBytes.count) exceeds limit \(maxDecompressedSize)")
         }
 
         return try TAKPacketV2(serializedBytes: protobufBytes)
@@ -112,7 +119,12 @@ public class TakCompressor {
         guard let ddict else { throw TakCompressorError.dictCreationFailed }
 
         let frameSize = input.withUnsafeBytes { ZSTD_getFrameContentSize($0.baseAddress, $0.count) }
-        let maxSize = frameSize > 0 && frameSize != UInt64(ZSTD_CONTENTSIZE_UNKNOWN) ? Int(frameSize) : 4096
+        let maxSize: Int
+        if frameSize > 0 && frameSize != UInt64(ZSTD_CONTENTSIZE_UNKNOWN) && frameSize != UInt64(ZSTD_CONTENTSIZE_ERROR) && frameSize <= UInt64(maxDecompressedSize) {
+            maxSize = Int(frameSize)
+        } else {
+            maxSize = maxDecompressedSize
+        }
         var output = Data(count: maxSize)
 
         let decompressedSize = output.withUnsafeMutableBytes { outPtr in

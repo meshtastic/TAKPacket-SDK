@@ -51,6 +51,11 @@ class CotXmlParser {
      * Parse a full CoT XML event string into a TakPacketV2Data.
      */
     fun parse(cotXml: String): TakPacketV2Data {
+        // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
+        if (cotXml.contains("<!DOCTYPE", ignoreCase = true) || cotXml.contains("<!ENTITY", ignoreCase = true)) {
+            throw IllegalArgumentException("XML contains prohibited DOCTYPE or ENTITY declaration")
+        }
+
         val factory = XmlPullParserFactory.newInstance()
         val parser = factory.newPullParser()
         parser.setInput(StringReader(cotXml))

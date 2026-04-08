@@ -15,6 +15,10 @@ import com.github.luben.zstd.ZstdDictDecompress
 class TakCompressor(
     private val compressionLevel: Int = 19,
 ) {
+    companion object {
+        /** Maximum allowed decompressed payload size (bytes). Prevents decompression bombs. */
+        const val MAX_DECOMPRESSED_SIZE = 4096
+    }
     private val compressors = mutableMapOf<Int, ZstdDictCompress>()
     private val decompressors = mutableMapOf<Int, ZstdDictDecompress>()
 
@@ -68,17 +72,26 @@ class TakCompressor(
             val decompressor = decompressors[dictId]
                 ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
 
-            // Use the (src, ZstdDictDecompress, originalSize) overload
-            val decompressedSize = Zstd.getFrameContentSize(compressedBytes)
-            val maxSize = if (decompressedSize > 0) decompressedSize.toInt() else 4096
             try {
-                Zstd.decompress(compressedBytes, decompressor, maxSize)
+                val result = Zstd.decompress(compressedBytes, decompressor, MAX_DECOMPRESSED_SIZE)
+                if (result.size > MAX_DECOMPRESSED_SIZE) {
+                    throw RuntimeException("Decompressed size ${result.size} exceeds limit $MAX_DECOMPRESSED_SIZE")
+                }
+                result
             } catch (e: Exception) {
                 throw RuntimeException("Zstd decompression failed: ${e.message}", e)
             }
         }
 
-        return TakPacketV2Serializer.deserialize(protobufBytes)
+        if (protobufBytes.size > MAX_DECOMPRESSED_SIZE) {
+            throw IllegalArgumentException("Payload size ${protobufBytes.size} exceeds limit $MAX_DECOMPRESSED_SIZE")
+        }
+
+        try {
+            return TakPacketV2Serializer.deserialize(protobufBytes)
+        } catch (e: Exception) {
+            throw RuntimeException("Protobuf parsing failed: ${e.message}", e)
+        }
     }
 
     /**

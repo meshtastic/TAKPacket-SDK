@@ -15,10 +15,17 @@ const ROLE_NAME_TO_ENUM: Record<string, number> = {
 const GEO_SRC: Record<string, number> = { GPS: 1, USER: 2, NETWORK: 3 };
 
 export function parseCotXml(cotXml: string): Record<string, unknown> {
+  // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion
+  const lower = cotXml.toLowerCase();
+  if (lower.includes("<!doctype") || lower.includes("<!entity")) {
+    throw new Error("XML contains prohibited DOCTYPE or ENTITY declaration");
+  }
+
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
     textNodeName: "#text",
+    processEntities: false,
   });
   const doc = parser.parse(cotXml);
   const event = doc.event;
