@@ -67,7 +67,7 @@ jobs:
           node-version: 20
       - name: Install deps
         working-directory: typescript
-        run: npm ci
+        run: npm install
       - name: Test
         working-directory: typescript
         run: npx vitest run
