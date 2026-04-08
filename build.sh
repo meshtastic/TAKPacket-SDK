@@ -40,10 +40,15 @@ find_python() {
 test_kotlin() {
     log "Testing Kotlin..."
     cd "$SCRIPT_DIR/kotlin"
-    if command -v ./gradlew &>/dev/null; then
-        ./gradlew test --quiet
+    local rc=0
+    if [ -x ./gradlew ]; then
+        ./gradlew test --quiet 2>&1 || rc=$?
     else
-        gradle test --quiet
+        gradle test --quiet 2>&1 || rc=$?
+    fi
+    if [ "$rc" -ne 0 ]; then
+        fail "Kotlin: tests failed (exit code $rc)"
+        return 1
     fi
     local count
     count=$(grep -c 'testcase' build/test-results/test/*.xml 2>/dev/null | awk -F: '{sum+=$2} END{print sum}')
@@ -53,8 +58,13 @@ test_kotlin() {
 test_swift() {
     log "Testing Swift..."
     cd "$SCRIPT_DIR/swift"
-    local output
-    output=$(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test 2>&1)
+    local output rc=0
+    output=$(DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift test 2>&1) || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo "$output" | tail -5
+        fail "Swift: tests failed (exit code $rc)"
+        return 1
+    fi
     local count
     count=$(echo "$output" | grep "Executed.*tests" | tail -1 | grep -oE 'Executed [0-9]+' | grep -oE '[0-9]+')
     pass "Swift: $count tests"
@@ -63,11 +73,15 @@ test_swift() {
 test_python() {
     log "Testing Python..."
     cd "$SCRIPT_DIR/python"
-    local py
+    local py rc=0
     py=$(find_python)
     local output
-    output=$($py -m pytest tests/ -q 2>&1)
-    echo "$output" | tail -1
+    output=$($py -m pytest tests/ -q 2>&1) || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo "$output" | tail -10
+        fail "Python: tests failed (exit code $rc)"
+        return 1
+    fi
     local count
     count=$(echo "$output" | grep -oE '^[0-9]+ passed' | grep -oE '[0-9]+')
     pass "Python: $count tests"
@@ -76,8 +90,13 @@ test_python() {
 test_typescript() {
     log "Testing TypeScript..."
     cd "$SCRIPT_DIR/typescript"
-    local output
-    output=$(npx vitest run 2>&1)
+    local output rc=0
+    output=$(npx vitest run 2>&1) || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo "$output" | tail -10
+        fail "TypeScript: tests failed (exit code $rc)"
+        return 1
+    fi
     local count
     count=$(echo "$output" | grep "Tests" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+')
     pass "TypeScript: $count tests"
@@ -86,9 +105,13 @@ test_typescript() {
 test_csharp() {
     log "Testing C#..."
     cd "$SCRIPT_DIR/csharp"
-    local output
-    output=$(dotnet test --verbosity quiet 2>&1)
-    echo "$output" | grep -E "Passed|Failed" | tail -1
+    local output rc=0
+    output=$(dotnet test --verbosity quiet 2>&1) || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo "$output" | tail -10
+        fail "C#: tests failed (exit code $rc)"
+        return 1
+    fi
     local count
     count=$(echo "$output" | grep -oE 'Passed:\s+[0-9]+' | grep -oE '[0-9]+')
     pass "C#: $count tests"
