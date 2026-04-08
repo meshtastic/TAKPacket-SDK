@@ -51,10 +51,38 @@ check_runtime() {
     return 0
 }
 
+find_java() {
+    # Prefer JDK 17-21 (what Kotlin/Gradle support), then fall back to any JDK
+    for jdk in \
+        /opt/homebrew/opt/openjdk@17/bin \
+        /opt/homebrew/opt/openjdk@21/bin \
+        /opt/homebrew/opt/openjdk@20/bin \
+        /opt/homebrew/opt/openjdk@19/bin \
+        /opt/homebrew/opt/openjdk@18/bin \
+        /usr/local/opt/openjdk@17/bin \
+        /usr/local/opt/openjdk@21/bin; do
+        if [ -x "$jdk/java" ]; then
+            export JAVA_HOME="${jdk%/bin}"
+            export PATH="$jdk:$PATH"
+            log "Found Java at $jdk"
+            return 0
+        fi
+    done
+    # Check SDKMAN
+    if [ -d "$HOME/.sdkman/candidates/java/current/bin" ]; then
+        export JAVA_HOME="$HOME/.sdkman/candidates/java/current"
+        export PATH="$JAVA_HOME/bin:$PATH"
+        return 0
+    fi
+    # Fall back to whatever java is on PATH (may be too new)
+    if java -version &>/dev/null 2>&1; then return 0; fi
+    return 1
+}
+
 test_kotlin() {
     log "Testing Kotlin..."
-    if ! java -version &>/dev/null 2>&1; then
-        fail "Kotlin: Java not found. Install JDK 17+ and ensure java is on PATH."
+    if ! find_java; then
+        fail "Kotlin: Java not found. Install JDK 17+ (brew install openjdk) and ensure java is on PATH."
         return 1
     fi
     cd "$SCRIPT_DIR/kotlin"
