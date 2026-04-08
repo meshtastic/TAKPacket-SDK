@@ -67,7 +67,7 @@ jobs:
           node-version: 20
       - name: Install deps
         working-directory: typescript
-        run: npm install
+        run: rm -f package-lock.json && npm install
       - name: Test
         working-directory: typescript
         run: npx vitest run

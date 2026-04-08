@@ -37,8 +37,26 @@ find_python() {
 
 # ── Test commands ────────────────────────────────────────────────────────────
 
+check_runtime() {
+    local name="$1" cmd="$2"
+    if ! command -v "$cmd" &>/dev/null; then
+        warn "$name: '$cmd' not found. Install it or add to PATH."
+        warn "  Kotlin: brew install openjdk@17 (then export JAVA_HOME)"
+        warn "  Swift:  included with Xcode"
+        warn "  Python: brew install python3 && pip3 install pytest protobuf zstandard"
+        warn "  Node:   brew install node"
+        warn "  .NET:   brew install dotnet"
+        return 1
+    fi
+    return 0
+}
+
 test_kotlin() {
     log "Testing Kotlin..."
+    if ! java -version &>/dev/null 2>&1; then
+        fail "Kotlin: Java not found. Install JDK 17+ and ensure java is on PATH."
+        return 1
+    fi
     cd "$SCRIPT_DIR/kotlin"
     local rc=0
     if [ -x ./gradlew ]; then
