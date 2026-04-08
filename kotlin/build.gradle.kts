@@ -1,6 +1,6 @@
 plugins {
-    kotlin("jvm") version "1.9.22"
-    id("com.google.protobuf") version "0.9.4"
+    kotlin("jvm") version "2.1.20"
+    id("com.google.protobuf") version "0.9.6"
 }
 
 group = "org.meshtastic"
@@ -12,7 +12,7 @@ repositories {
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.25.3"
+        artifact = "com.google.protobuf:protoc:3.25.5"
     }
     generateProtoTasks {
         all().forEach { task ->
@@ -42,14 +42,14 @@ sourceSets {
 }
 
 dependencies {
-    implementation("com.google.protobuf:protobuf-javalite:3.25.3")
-    implementation("com.github.luben:zstd-jni:1.5.6-4")
+    implementation("com.google.protobuf:protobuf-javalite:3.25.5")
+    implementation("com.github.luben:zstd-jni:1.5.7-7")
     implementation("org.ogce:xpp3:1.1.6")
 
     testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.2")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.2")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.12.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.2")
 }
 
 tasks.test {

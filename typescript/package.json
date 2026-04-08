@@ -11,9 +11,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "fast-xml-parser": "^4.3.4",
+    "fast-xml-parser": "^5.5.10",
     "fzstd": "^0.1.1",
-    "protobufjs": "^7.2.6",
+    "protobufjs": "^7.4.0",
     "zstd-napi": "^0.0.12"
   },
   "files": [
@@ -26,8 +26,8 @@
     "url": "https://github.com/meshtastic/TAKPacket-SDK"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "typescript": "^5.3.3",
-    "vitest": "^1.2.0"
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.1.0"
   }
 }

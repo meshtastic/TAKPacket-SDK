@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
+    <RollForward>LatestMajor</RollForward>
     <Version>0.1.0</Version>
     <PackageId>Meshtastic.TAK</PackageId>
     <Authors>Meshtastic</Authors>
