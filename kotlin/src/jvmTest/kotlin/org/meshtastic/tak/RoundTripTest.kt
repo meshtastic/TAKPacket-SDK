@@ -7,13 +7,13 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.io.File
 
 /**
- * Round-trip tests: CoT XML -> parse -> compress -> decompress -> build XML
- * Validates that all fields survive the full pipeline.
+ * JVM-only round-trip tests that require zstd compression (zstd-jni).
+ * Individual parsing tests and uncompressed round-trip have moved to commonTest
+ * (CotXmlParserTest, TakPacketV2SerializerTest) and run on all KMP targets.
  */
 class RoundTripTest {
 
     private val parser = CotXmlParser()
-    private val builder = CotXmlBuilder()
     private val compressor = TakCompressor()
 
     private fun loadFixture(name: String): String {
@@ -34,14 +34,14 @@ class RoundTripTest {
         "casevac.xml",
         "alert_tic.xml",
     ])
-    fun `full round-trip preserves fields`(fixture: String) {
+    fun `full compressed round-trip preserves fields`(fixture: String) {
         val xml = loadFixture(fixture)
 
         // Parse
         val packet = parser.parse(xml)
         assertNotEquals("", packet.uid, "UID should not be empty for $fixture")
 
-        // Compress -> decompress
+        // Compress -> decompress (requires zstd-jni)
         val wirePayload = compressor.compress(packet)
         val decompressed = compressor.decompress(wirePayload)
 
@@ -86,109 +86,10 @@ class RoundTripTest {
         }
 
         // Build XML from decompressed data and verify it's valid XML
+        val builder = CotXmlBuilder()
         val rebuiltXml = builder.build(decompressed)
         assertTrue(rebuiltXml.contains("<event"), "Rebuilt XML should contain <event> for $fixture")
         assertTrue(rebuiltXml.contains(decompressed.callsign),
             "Rebuilt XML should contain callsign for $fixture")
-    }
-
-    @Test
-    fun `PLI basic parses correctly`() {
-        val xml = loadFixture("pli_basic.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals("testnode", packet.uid)
-        assertEquals(CotTypeMapper.COTTYPE_A_F_G_U_C, packet.cotTypeId)
-        assertEquals(CotTypeMapper.COTHOW_M_G, packet.how)
-        assertEquals("testnode", packet.callsign)
-        assertEquals((37.7749 * 1e7).toInt(), packet.latitudeI)
-        assertEquals((-122.4194 * 1e7).toInt(), packet.longitudeI)
-    }
-
-    @Test
-    fun `PLI full parses all fields`() {
-        val xml = loadFixture("pli_full.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_A_F_G_U_C, packet.cotTypeId)
-        assertNotEquals("", packet.callsign)
-        assertNotEquals("", packet.takVersion)
-        assertNotEquals("", packet.takPlatform)
-        assertTrue(packet.battery > 0, "Battery should be > 0")
-        assertTrue(packet.payload is TakPacketV2Data.Payload.Pli)
-    }
-
-    @Test
-    fun `GeoChat parses message and recipients`() {
-        val xml = loadFixture("geochat_simple.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_B_T_F, packet.cotTypeId)
-        assertTrue(packet.payload is TakPacketV2Data.Payload.Chat)
-        val chat = packet.payload as TakPacketV2Data.Payload.Chat
-        assertTrue(chat.message.isNotEmpty(), "Chat message should not be empty")
-    }
-
-    @Test
-    fun `Aircraft ADS-B parses aircraft fields`() {
-        val xml = loadFixture("aircraft_adsb.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_A_N_A_C_F, packet.cotTypeId)
-        assertTrue(packet.payload is TakPacketV2Data.Payload.Aircraft)
-        val aircraft = packet.payload as TakPacketV2Data.Payload.Aircraft
-        assertTrue(aircraft.icao.isNotEmpty(), "ICAO should not be empty")
-    }
-
-    @Test
-    fun `Delete event parses correctly`() {
-        val xml = loadFixture("delete_event.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_T_X_D_D, packet.cotTypeId)
-        assertEquals(CotTypeMapper.COTHOW_H_G_I_G_O, packet.how)
-    }
-
-    @Test
-    fun `CASEVAC parses correctly`() {
-        val xml = loadFixture("casevac.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_B_R_F_H_C, packet.cotTypeId)
-        assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
-        assertEquals("CASEVAC-1", packet.callsign)
-    }
-
-    @Test
-    fun `Alert TIC parses correctly`() {
-        val xml = loadFixture("alert_tic.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_B_A_O_OPN, packet.cotTypeId)
-        assertEquals("ALPHA-6", packet.callsign)
-    }
-
-    @Test
-    fun `uncompressed payload (0xFF flag) round-trips`() {
-        val packet = TakPacketV2Data(
-            cotTypeId = CotTypeMapper.COTTYPE_A_F_G_U_C,
-            how = CotTypeMapper.COTHOW_M_G,
-            callsign = "TEST",
-            latitudeI = 340522000,
-            longitudeI = -1182437000,
-            altitude = 100,
-            payload = TakPacketV2Data.Payload.Pli(true),
-        )
-
-        // Simulate firmware TAK_TRACKER: flags=0xFF + raw protobuf
-        val protobuf = TakPacketV2Serializer.serialize(packet)
-        val wirePayload = ByteArray(1 + protobuf.size)
-        wirePayload[0] = 0xFF.toByte()
-        protobuf.copyInto(wirePayload, destinationOffset = 1)
-
-        val decompressed = compressor.decompress(wirePayload)
-        assertEquals(packet.cotTypeId, decompressed.cotTypeId)
-        assertEquals(packet.callsign, decompressed.callsign)
-        assertEquals(packet.latitudeI, decompressed.latitudeI)
     }
 }
