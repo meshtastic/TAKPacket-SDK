@@ -86,6 +86,51 @@ COTTYPE_B_M_P_C = 79         # Checkpoint
 COTTYPE_U_R_B_C_C = 80       # Ranging circle
 COTTYPE_U_R_B_BULLSEYE = 81  # Bullseye with range rings
 
+# --- Expanded coverage (values 82-124) ---
+COTTYPE_A_F_G_E_V_A = 82
+COTTYPE_A_N_A = 83
+COTTYPE_A_U_G_U_C_F = 84
+COTTYPE_A_N_G_U_C_F = 85
+COTTYPE_A_H_G_U_C_F = 86
+COTTYPE_A_F_G_U_C_F = 87
+COTTYPE_A_U_G_I = 88
+COTTYPE_A_N_G_I = 89
+COTTYPE_A_H_G_I = 90
+COTTYPE_A_F_G_I = 91
+COTTYPE_A_U_G_E_X_M = 92
+COTTYPE_A_N_G_E_X_M = 93
+COTTYPE_A_H_G_E_X_M = 94
+COTTYPE_A_F_G_E_X_M = 95
+COTTYPE_A_U_S = 96
+COTTYPE_A_N_S = 97
+COTTYPE_A_H_S = 98
+COTTYPE_A_U_G_U_C_I_D = 99
+COTTYPE_A_N_G_U_C_I_D = 100
+COTTYPE_A_H_G_U_C_I_D = 101
+COTTYPE_A_F_G_U_C_I_D = 102
+COTTYPE_A_U_G_E_V_A_T = 103
+COTTYPE_A_N_G_E_V_A_T = 104
+COTTYPE_A_H_G_E_V_A_T = 105
+COTTYPE_A_F_G_E_V_A_T = 106
+COTTYPE_A_U_G_U_C_I = 107
+COTTYPE_A_N_G_U_C_I = 108
+COTTYPE_A_H_G_U_C_I = 109
+COTTYPE_A_N_G_E_V = 110
+COTTYPE_A_H_G_E_V = 111
+COTTYPE_A_F_G_E_V = 112
+COTTYPE_B_M_P_W_GOTO = 113
+COTTYPE_B_M_P_C_IP = 114
+COTTYPE_B_M_P_C_CP = 115
+COTTYPE_B_M_P_S_P_OP = 116
+COTTYPE_U_D_V = 117
+COTTYPE_U_D_V_M = 118
+COTTYPE_U_D_C_E = 119
+COTTYPE_B_I_X_I = 120
+COTTYPE_B_T_F_D = 121
+COTTYPE_B_T_F_R = 122
+COTTYPE_B_A_O_C = 123
+COTTYPE_T_S = 124
+
 # CotHow enum values
 COTHOW_UNSPECIFIED = 0
 COTHOW_H_E = 1
@@ -138,6 +183,31 @@ _STRING_TO_TYPE = {
     "u-d-f-m": COTTYPE_U_D_F_M, "u-d-p": COTTYPE_U_D_P,
     "b-m-p-s-m": COTTYPE_B_M_P_S_M, "b-m-p-c": COTTYPE_B_M_P_C,
     "u-r-b-c-c": COTTYPE_U_R_B_C_C, "u-r-b-bullseye": COTTYPE_U_R_B_BULLSEYE,
+    # Expanded coverage (values 82-124)
+    "a-f-G-E-V-A": COTTYPE_A_F_G_E_V_A,
+    "a-n-A": COTTYPE_A_N_A,
+    "a-u-G-U-C-F": COTTYPE_A_U_G_U_C_F, "a-n-G-U-C-F": COTTYPE_A_N_G_U_C_F,
+    "a-h-G-U-C-F": COTTYPE_A_H_G_U_C_F, "a-f-G-U-C-F": COTTYPE_A_F_G_U_C_F,
+    "a-u-G-I": COTTYPE_A_U_G_I, "a-n-G-I": COTTYPE_A_N_G_I,
+    "a-h-G-I": COTTYPE_A_H_G_I, "a-f-G-I": COTTYPE_A_F_G_I,
+    "a-u-G-E-X-M": COTTYPE_A_U_G_E_X_M, "a-n-G-E-X-M": COTTYPE_A_N_G_E_X_M,
+    "a-h-G-E-X-M": COTTYPE_A_H_G_E_X_M, "a-f-G-E-X-M": COTTYPE_A_F_G_E_X_M,
+    "a-u-S": COTTYPE_A_U_S, "a-n-S": COTTYPE_A_N_S, "a-h-S": COTTYPE_A_H_S,
+    "a-u-G-U-C-I-d": COTTYPE_A_U_G_U_C_I_D, "a-n-G-U-C-I-d": COTTYPE_A_N_G_U_C_I_D,
+    "a-h-G-U-C-I-d": COTTYPE_A_H_G_U_C_I_D, "a-f-G-U-C-I-d": COTTYPE_A_F_G_U_C_I_D,
+    "a-u-G-E-V-A-T": COTTYPE_A_U_G_E_V_A_T, "a-n-G-E-V-A-T": COTTYPE_A_N_G_E_V_A_T,
+    "a-h-G-E-V-A-T": COTTYPE_A_H_G_E_V_A_T, "a-f-G-E-V-A-T": COTTYPE_A_F_G_E_V_A_T,
+    "a-u-G-U-C-I": COTTYPE_A_U_G_U_C_I, "a-n-G-U-C-I": COTTYPE_A_N_G_U_C_I,
+    "a-h-G-U-C-I": COTTYPE_A_H_G_U_C_I,
+    "a-n-G-E-V": COTTYPE_A_N_G_E_V, "a-h-G-E-V": COTTYPE_A_H_G_E_V,
+    "a-f-G-E-V": COTTYPE_A_F_G_E_V,
+    "b-m-p-w-GOTO": COTTYPE_B_M_P_W_GOTO,
+    "b-m-p-c-ip": COTTYPE_B_M_P_C_IP, "b-m-p-c-cp": COTTYPE_B_M_P_C_CP,
+    "b-m-p-s-p-op": COTTYPE_B_M_P_S_P_OP,
+    "u-d-v": COTTYPE_U_D_V, "u-d-v-m": COTTYPE_U_D_V_M,
+    "u-d-c-e": COTTYPE_U_D_C_E, "b-i-x-i": COTTYPE_B_I_X_I,
+    "b-t-f-d": COTTYPE_B_T_F_D, "b-t-f-r": COTTYPE_B_T_F_R,
+    "b-a-o-c": COTTYPE_B_A_O_C, "t-s": COTTYPE_T_S,
 }
 _TYPE_TO_STRING = {v: k for k, v in _STRING_TO_TYPE.items()}
 

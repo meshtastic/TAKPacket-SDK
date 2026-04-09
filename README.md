@@ -89,22 +89,25 @@ See [`WIRE_FORMAT.md`](WIRE_FORMAT.md) for the full specification including erro
 
 ## Structured Payload Types
 
-`TAKPacketV2.payload_variant` is a proto `oneof` with eight strongly-typed cases rather than a single opaque bytes field. Decomposing the `<detail>` element into structured messages gives three concrete benefits:
+`TAKPacketV2.payload_variant` is a proto `oneof` with eleven strongly-typed cases rather than a single opaque bytes field. Decomposing the `<detail>` element into structured messages gives three concrete benefits:
 
-1. **Tighter compression** — repeated field names collapse to varint tags. A circle that takes 930B of XML fits in 98B on the wire (9.5× ratio).
+1. **Tighter compression** — repeated field names collapse to varint tags. A circle that takes 930B of XML fits in 128B on the wire (7.3× ratio); a 9-line MEDEVAC goes from 808B of XML to 99B (8.2× ratio).
 2. **Schema evolution** — adding a field to `DrawnShape` doesn't break older receivers, they just see an unknown varint and skip it.
 3. **Parse-side validation** — geometry is a structured object, not a regex over XML text.
 
 | Tag | Variant | Proto message | CoT type atoms | Contents |
 |---|---|---|---|---|
 | 30 | `pli` | `bool` | `a-f-G-U-C`, `a-f-G-U-C-I`, … | Default ground-unit position |
-| 31 | `chat` | `GeoChat` | `b-t-f` | Team chat message + sender info |
+| 31 | `chat` | `GeoChat` | `b-t-f`, `b-t-f-d`, `b-t-f-r` | Team chat message (plus delivered/read receipts via new fields) |
 | 32 | `aircraft` | `AircraftTrack` | `a-n-A-C-F`, `a-h-A-M-F-F`, … | ADS-B / military air track |
 | 33 | `raw_detail` | `bytes` | *any* | Smart-compress fallback (see below) |
-| 34 | `shape` | `DrawnShape` | `u-d-c-c`, `u-d-r`, `u-d-f`, `u-d-f-m`, `u-d-p`, `u-r-b-c-c`, `u-r-b-bullseye` | Tactical graphics |
-| 35 | `marker` | `Marker` | `b-m-p-s-m`, `b-m-p-w`, `b-m-p-c`, `a-u-G`, … | Fixed markers, 2525 symbols, icons |
+| 34 | `shape` | `DrawnShape` | `u-d-c-c`, `u-d-r`, `u-d-f`, `u-d-f-m`, `u-d-p`, `u-r-b-c-c`, `u-r-b-bullseye`, `u-d-c-e`, `u-d-v`, `u-d-v-m` | Tactical graphics |
+| 35 | `marker` | `Marker` | `b-m-p-s-m`, `b-m-p-w`, `b-m-p-c`, `a-u-G`, `b-m-p-w-GOTO`, `b-m-p-c-ip`, `b-m-p-c-cp`, `b-m-p-s-p-op`, `b-i-x-i`, … | Fixed markers, 2525 symbols, icons, mission points |
 | 36 | `rab` | `RangeAndBearing` | `u-rb-a` | Range-and-bearing measurement |
 | 37 | `route` | `Route` | `b-m-r` | Waypoint + control point sequence |
+| 38 | `casevac` | `CasevacReport` | `b-r-f-h-c` | 9-line MEDEVAC request |
+| 39 | `emergency` | `EmergencyAlert` | `b-a-o-tbl`, `b-a-o-pan`, `b-a-o-opn`, `b-a-g`, `b-a-o-c`, `b-a-o-can` | Emergency / 911 alert |
+| 40 | `task` | `TaskRequest` | `t-s` | Tasking / engagement request |
 
 Every geometry variant uses **delta-encoded** `GeoPoint` vertices (`sint32` offsets from the event anchor) so a 32-vertex telestration clustered inside 100m encodes in ~60 bytes of vertex data instead of ~320 bytes with absolute coordinates. Color fields use a two-field encoding: a `Team` palette enum for the 14 ATAK-standard colors (2 bytes on the wire) plus a `fixed32 _argb` fallback for custom user-picked colors (5 bytes). Round-trip is byte-exact — custom colors are never quantized to the nearest palette entry.
 
@@ -121,6 +124,9 @@ Covers seven tactical graphic kinds. The shape's anchor point lives on `TAKPacke
 | 5 | `Polygon` | N vertices (implicitly closed) |
 | 6 | `RangingCircle` | `major_cm`, `minor_cm`, `angle_deg`, stroke only |
 | 7 | `Bullseye` | Ellipse + `bullseye_distance_dm`, `bullseye_bearing_ref`, `bullseye_flags`, `bullseye_uid_ref` |
+| 8 | `Ellipse` | `major_cm`, `minor_cm`, `angle_deg` (distinct major/minor, not a circle) |
+| 9 | `Vehicle2D` | N vertices (footprint polygon) |
+| 10 | `Vehicle3D` | N vertices (footprint polygon; receiver extrudes) |
 
 `StyleMode` discriminates `StrokeOnly` vs `FillOnly` vs `StrokeAndFill`, preserving the distinction between *"this polyline has no fill"* and *"this shape has a transparent black fill"*.
 
@@ -164,6 +170,11 @@ Fixed markers with a `Kind` enum covering the common ATAK categories. `iconset` 
 | 5 | `Symbol2525` | `a-*-G` with `iconsetpath="COT_MAPPING_2525B/…"` |
 | 6 | `SpotMap` | `iconsetpath="COT_MAPPING_SPOTMAP/…"` |
 | 7 | `CustomIcon` | Any type with a `UUID/group/icon.png` iconset |
+| 8 | `GoToPoint` | `b-m-p-w-GOTO` |
+| 9 | `InitialPoint` | `b-m-p-c-ip` |
+| 10 | `ContactPoint` | `b-m-p-c-cp` |
+| 11 | `ObservationPost` | `b-m-p-s-p-op` |
+| 12 | `ImageMarker` | `b-i-x-i` |
 
 **Python — classify a marker by kind:**
 ```python
@@ -221,6 +232,127 @@ if (packet.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route)
         var kind = link.LinkType == 1 ? "checkpoint" : "waypoint";
         Console.WriteLine($"  {link.Callsign} ({kind}): {lat:F6}, {lon:F6}");
     }
+}
+```
+
+### CasevacReport (tag 38)
+
+9-line MEDEVAC request for CoT type `b-r-f-h-c`. Mirrors ATAK's MedLine `<_medevac_>` detail element: precedence, equipment flags bitfield, patient counts, HLZ marking method, zone marker, security at PZ, nationality counts, terrain obstacles bitfield, and comms frequency. Every field is optional so senders omit lines they don't have. The envelope carries Line 1 (location) and Line 2 (callsign).
+
+| Enum | Values |
+|---|---|
+| `Precedence` | `Urgent` (A), `UrgentSurgical` (B), `Priority` (C), `Routine` (D), `Convenience` (E) |
+| `HlzMarking` | `Panels`, `PyroSignal`, `Smoke`, `None`, `Other` |
+| `Security` | `NoEnemy` (N), `PossibleEnemy` (P), `EnemyInArea` (E), `EnemyInArmedContact` (X) |
+
+| Bitfield | Bit layout |
+|---|---|
+| `equipment_flags` | 0=none, 1=hoist, 2=extraction, 3=ventilator, 4=blood |
+| `terrain_flags` | 0=slope, 1=rough, 2=loose, 3=trees, 4=wires, 5=other |
+
+Typical wire size is ~65B of proto + envelope, compressing to ~99B — well under the 237B LoRa MTU even with all 9 lines populated.
+
+**Kotlin — build a CASEVAC request:**
+```kotlin
+val packet = TakPacketV2Data(
+    cotTypeId = CotTypeMapper.typeToEnum("b-r-f-h-c"),
+    how = CotTypeMapper.howToEnum("h-g-i-g-o"),
+    callsign = "MEDEVAC-1",
+    latitudeI = (18.1 * 1e7).roundToInt(),
+    longitudeI = (140.1 * 1e7).roundToInt(),
+    payload = TakPacketV2Data.Payload.CasevacReport(
+        precedence = CotXmlParser.PRECEDENCE_URGENT,
+        litterPatients = 2,
+        ambulatoryPatients = 1,
+        equipmentFlags = 0x02 or 0x04,  // hoist + extraction
+        security = CotXmlParser.SECURITY_POSSIBLE_ENEMY,
+        hlzMarking = CotXmlParser.HLZ_MARKING_SMOKE,
+        zoneMarker = "Green smoke",
+        frequency = "38.90",
+    ),
+)
+val wire = TakCompressor().compress(TakPacketV2Serializer.toProto(packet))
+```
+
+### EmergencyAlert (tag 39)
+
+Small, high-priority structured record for emergency CoT types (`b-a-o-*`, `b-a-g`). The CoT type string is still set on `cot_type_id` so receivers that don't handle `payload_variant` can still display the alert; the typed fields let modern receivers show the authoring unit and handle cancel referencing without XML parsing.
+
+| Enum | Value | CoT type |
+|---|---|---|
+| `Type_Alert911` | 1 | `b-a-o-tbl` |
+| `Type_RingTheBell` | 2 | `b-a-o-pan` |
+| `Type_InContact` | 3 | `b-a-o-opn` |
+| `Type_GeoFenceBreached` | 4 | `b-a-g` |
+| `Type_Custom` | 5 | `b-a-o-c` |
+| `Type_Cancel` | 6 | `b-a-o-can` |
+
+Typical self-authored alert compresses to ~87B on the wire. Cancel events reference the original alert UID via `cancel_reference_uid`.
+
+**Swift — read an emergency alert:**
+```swift
+let packet = parser.parse(emergency911Xml)
+if case .emergency(let emergency) = packet.payloadVariant {
+    switch emergency.type {
+    case .alert911:
+        print("911 alert from \(emergency.authoringUid)")
+    case .inContact:
+        print("Troops in contact from \(emergency.authoringUid)")
+    case .cancel:
+        print("Cancel for \(emergency.cancelReferenceUid)")
+    default:
+        print("Emergency type: \(emergency.type)")
+    }
+}
+```
+
+### TaskRequest (tag 40)
+
+Structured tasking record for CoT type `t-s`. Captures the target UID, assignee, priority, status, and a short note — everything the raw-detail fallback loses when flattening a task into remarks text. The envelope carries the requester UID (implicit) and creation time.
+
+| Enum | Values |
+|---|---|
+| `Priority` | `Low`, `Normal`, `High`, `Critical` |
+| `Status` | `Pending`, `Acknowledged`, `InProgress`, `Completed`, `Cancelled` |
+
+The `task_type` field is free-text (capped at 12 chars) to avoid proto churn when ATAK adds new task categories — common values are `"engage"`, `"observe"`, `"recon"`, `"rescue"`.
+
+**Python — inspect a task request:**
+```python
+packet = parser.parse(task_engage_xml)
+if packet.HasField("task"):
+    task = packet.task
+    print(f"Task type: {task.task_type}")          # "engage"
+    print(f"Target: {task.target_uid}")            # "target-01"
+    print(f"Assigned to: {task.assignee_uid}")     # "ANDROID-..."
+    print(f"Priority: {task.priority}")            # 3 = High
+    print(f"Status: {task.status}")                # 1 = Pending
+    print(f"Note: {task.note}")                    # "cover by fire"
+```
+
+### GeoChat receipts (tag 31, extended fields)
+
+Delivered (`b-t-f-d`) and read (`b-t-f-r`) chat receipts ride on the same `chat = 31` slot as regular chat messages. The CoT type string on `cot_type_id` distinguishes delivered vs read at the envelope level; two new fields on `GeoChat` carry the referenced message UID so receivers can match the receipt back to the outbound message without XML parsing.
+
+| Field | Values |
+|---|---|
+| `receipt_for_uid` | UID of the chat message being acknowledged |
+| `receipt_type` | `None` (normal chat), `Delivered` (`b-t-f-d`), `Read` (`b-t-f-r`) |
+
+**TypeScript — handle an incoming chat or receipt:**
+```typescript
+import { parseCotXml } from "@meshtastic/takpacket-sdk";
+
+const packet = parseCotXml(incomingXml);
+if (packet.chat) {
+  const chat = packet.chat as any;
+  if (chat.receiptType === 1) {
+    console.log(`Delivered receipt for message ${chat.receiptForUid}`);
+  } else if (chat.receiptType === 2) {
+    console.log(`Read receipt for message ${chat.receiptForUid}`);
+  } else {
+    console.log(`Message from ${chat.toCallsign}: ${chat.message}`);
+  }
 }
 ```
 
@@ -301,17 +433,17 @@ var rawDetail = CotXmlParser.ExtractRawDetailBytes(xml);
 var wire = compressor.CompressBestOf(packet, rawDetail);
 ```
 
-On the 22 bundled fixtures `compressBestOf()` picks the typed variant 100% of the time — the delta-encoded geometry wins on every known type. The fallback path is an insurance policy for unmapped types and oversize shapes, not a hot path.
+On the 31 bundled fixtures `compressBestOf()` picks the typed variant 100% of the time — the delta-encoded geometry wins on every known type. The fallback path is an insurance policy for unmapped types and oversize shapes, not a hot path.
 
 ## Supported Platforms
 
 | Platform | Language | Directory | Tests |
 |----------|----------|-----------|-------|
-| Android / ATAK Plugin | Kotlin | `kotlin/` | ✅ 157 |
-| iOS / macOS | Swift | `swift/` | ✅ 116 |
-| Windows / .NET | C# | `csharp/` | ✅ 137 |
-| Web / Node.js | TypeScript | `typescript/` | ✅ 116 |
-| CLI / Scripting | Python | `python/` | ✅ 117 |
+| Android / ATAK Plugin | Kotlin | `kotlin/` | ✅ 211 |
+| iOS / macOS | Swift | `swift/` | ✅ 152 |
+| Windows / .NET | C# | `csharp/` | ✅ 191 |
+| Web / Node.js | TypeScript | `typescript/` | ✅ 161 |
+| CLI / Scripting | Python | `python/` | ✅ 153 |
 
 Every platform is byte-interoperable: `.pb` and `.bin` golden files written by Kotlin's `CompressionTest.generate compression report` are consumed by the other four platforms for exact-match validation (within protobuf field-order tolerance) and full round-trip equivalence.
 
@@ -407,16 +539,16 @@ Each platform implements the same components with identical behavior:
 
 ## Dictionary Management
 
-- **Training** — Dictionaries are trained in the private [TAKPacket-ZTSD](https://github.com/meshtastic/TAKPacket-ZTSD) repository using real CoT XML corpora from TAK Server databases, augmented with synthetic shape/marker/route samples for the typed-geometry extension.
+- **Training** — Dictionaries are trained in the private [TAKPacket-ZTSD](https://github.com/meshtastic/TAKPacket-ZTSD) repository using real CoT XML corpora from TAK Server databases, augmented with synthetic shape/marker/route/casevac/emergency/task samples for the typed-payload extensions.
 - **Shipping** — Each platform embeds the dictionaries as binary resources: **16 KB** non-aircraft + **4 KB** aircraft = 20 KB total.
-- **Versioning** — The flags byte supports up to 62 dictionary IDs, allowing new dictionaries to be added without breaking backward compatibility.
+- **Versioning** — The flags byte supports up to 62 dictionary IDs, allowing new dictionaries to be added without breaking backward compatibility. The current dictionaries are **v2** — retrained on the expanded corpus for the CasevacReport / EmergencyAlert / TaskRequest / GeoChat-receipts rollout. Dictionary IDs stay at 0 (non-aircraft) / 1 (aircraft), so a pre-v2 receiver can still decode post-v2 wire payloads at the cost of a slightly worse ratio.
 - **Updates** — Retrained dictionaries are deployed via `TAKPacket-ZTSD/deploy.sh` and ship with SDK releases; old dictionary IDs remain valid on the wire.
 
 ## Testing
 
 All five language implementations share the same test vectors in `testdata/`:
 
-- **`cot_xml/`** — 22 input CoT XML fixtures covering PLI, chat, aircraft, alerts, CASEVAC, delete events, and the full typed-geometry set (5 drawings, 3 markers, 3 ranging, 1 waypoint, 1 route). All coordinates are in synthetic test ranges over open ocean — no real user locations leak through the test corpus.
+- **`cot_xml/`** — 31 input CoT XML fixtures covering PLI, chat, aircraft, alerts, CASEVAC (bare + full 9-line), delete events, the full typed-geometry set (6 drawings including ellipse, 4 markers including GoTo and tank, 3 ranging, 1 waypoint, 1 route), emergency alerts (911 + cancel), tasking, and chat receipts (delivered + read). All coordinates are in synthetic test ranges over open ocean — no real user locations leak through the test corpus.
 - **`protobuf/`** — Expected `TAKPacketV2` protobuf bytes (pre-compression), written by Kotlin's `CompressionTest`, consumed by every other platform for exact-match validation.
 - **`golden/`** — Expected compressed wire payloads, byte-for-byte identical across platforms.
 

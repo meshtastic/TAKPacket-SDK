@@ -41,6 +41,59 @@ public class CotXmlBuilder
         [1] = "M", [2] = "T", [3] = "G",
     };
 
+    // --- CasevacReport reverse lookups (mirror CotXmlParser maps) -------
+    private static readonly Dictionary<CasevacReport.Types.Precedence, string> PrecedenceNames = new()
+    {
+        [CasevacReport.Types.Precedence.Urgent] = "Urgent",
+        [CasevacReport.Types.Precedence.UrgentSurgical] = "Urgent Surgical",
+        [CasevacReport.Types.Precedence.Priority] = "Priority",
+        [CasevacReport.Types.Precedence.Routine] = "Routine",
+        [CasevacReport.Types.Precedence.Convenience] = "Convenience",
+    };
+    private static readonly Dictionary<CasevacReport.Types.HlzMarking, string> HlzMarkingNames = new()
+    {
+        [CasevacReport.Types.HlzMarking.Panels] = "Panels",
+        [CasevacReport.Types.HlzMarking.PyroSignal] = "Pyro",
+        [CasevacReport.Types.HlzMarking.Smoke] = "Smoke",
+        [CasevacReport.Types.HlzMarking.None] = "None",
+        [CasevacReport.Types.HlzMarking.Other] = "Other",
+    };
+    private static readonly Dictionary<CasevacReport.Types.Security, string> SecurityNames = new()
+    {
+        [CasevacReport.Types.Security.NoEnemy] = "N",
+        [CasevacReport.Types.Security.PossibleEnemy] = "P",
+        [CasevacReport.Types.Security.EnemyInArea] = "E",
+        [CasevacReport.Types.Security.EnemyInArmedContact] = "X",
+    };
+
+    // --- EmergencyAlert reverse lookups ---------------------------------
+    private static readonly Dictionary<EmergencyAlert.Types.Type, string> EmergencyTypeNames = new()
+    {
+        [EmergencyAlert.Types.Type.Alert911] = "911 Alert",
+        [EmergencyAlert.Types.Type.RingTheBell] = "Ring The Bell",
+        [EmergencyAlert.Types.Type.InContact] = "In Contact",
+        [EmergencyAlert.Types.Type.GeoFenceBreached] = "Geo-fence Breached",
+        [EmergencyAlert.Types.Type.Custom] = "Custom",
+        [EmergencyAlert.Types.Type.Cancel] = "Cancel",
+    };
+
+    // --- TaskRequest reverse lookups ------------------------------------
+    private static readonly Dictionary<TaskRequest.Types.Priority, string> TaskPriorityNames = new()
+    {
+        [TaskRequest.Types.Priority.Low] = "Low",
+        [TaskRequest.Types.Priority.Normal] = "Normal",
+        [TaskRequest.Types.Priority.High] = "High",
+        [TaskRequest.Types.Priority.Critical] = "Critical",
+    };
+    private static readonly Dictionary<TaskRequest.Types.Status, string> TaskStatusNames = new()
+    {
+        [TaskRequest.Types.Status.Pending] = "Pending",
+        [TaskRequest.Types.Status.Acknowledged] = "Acknowledged",
+        [TaskRequest.Types.Status.InProgress] = "In Progress",
+        [TaskRequest.Types.Status.Completed] = "Completed",
+        [TaskRequest.Types.Status.Cancelled] = "Cancelled",
+    };
+
     private static string GeoSrcName(int src) => src switch
     {
         1 => "GPS", 2 => "USER", 3 => "NETWORK", _ => "???",
@@ -115,7 +168,18 @@ public class CotXmlBuilder
         switch (pkt.PayloadVariantCase)
         {
             case TAKPacketV2.PayloadVariantOneofCase.Chat:
-                sb.AppendLine($"    <remarks>{Esc(pkt.Chat.Message)}</remarks>");
+                // Chat receipts (b-t-f-d / b-t-f-r) emit a <link> to the
+                // original message UID instead of a <remarks> element; the
+                // envelope cot_type_id carries the discriminator.
+                if (pkt.Chat.ReceiptType != GeoChat.Types.ReceiptType.None &&
+                    !string.IsNullOrEmpty(pkt.Chat.ReceiptForUid))
+                {
+                    sb.AppendLine($"    <link uid=\"{Esc(pkt.Chat.ReceiptForUid)}\" relation=\"p-p\" type=\"b-t-f\"/>");
+                }
+                else
+                {
+                    sb.AppendLine($"    <remarks>{Esc(pkt.Chat.Message)}</remarks>");
+                }
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Aircraft when !string.IsNullOrEmpty(pkt.Aircraft.Icao):
             {
@@ -138,6 +202,15 @@ public class CotXmlBuilder
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Route:
                 EmitRoute(sb, pkt.Route, pkt.LatitudeI, pkt.LongitudeI);
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.Casevac:
+                EmitCasevac(sb, pkt.Casevac);
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.Emergency:
+                EmitEmergency(sb, pkt.Emergency);
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.Task:
+                EmitTask(sb, pkt.Task);
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.RawDetail:
                 // Fallback path (TakCompressor.CompressBestOf): emit the
@@ -178,7 +251,8 @@ public class CotXmlBuilder
         var kind = shape.Kind;
         if (kind == DrawnShape.Types.Kind.Circle ||
             kind == DrawnShape.Types.Kind.RangingCircle ||
-            kind == DrawnShape.Types.Kind.Bullseye)
+            kind == DrawnShape.Types.Kind.Bullseye ||
+            kind == DrawnShape.Types.Kind.Ellipse)
         {
             if (shape.MajorCm > 0 || shape.MinorCm > 0)
             {
@@ -299,6 +373,102 @@ public class CotXmlBuilder
             if (!string.IsNullOrEmpty(link.Callsign)) linkParts.Add($"callsign=\"{Esc(link.Callsign)}\"");
             linkParts.Add($"point=\"{F(llat)},{F(llon)}\"");
             sb.AppendLine($"    <link {string.Join(" ", linkParts)}/>");
+        }
+    }
+
+    private void EmitCasevac(StringBuilder sb, CasevacReport c)
+    {
+        var parts = new List<string>();
+        if (PrecedenceNames.TryGetValue(c.Precedence, out var precName))
+            parts.Add($"precedence=\"{precName}\"");
+
+        // Equipment bitfield flags
+        if ((c.EquipmentFlags & 0x01) != 0) parts.Add("none=\"true\"");
+        if ((c.EquipmentFlags & 0x02) != 0) parts.Add("hoist=\"true\"");
+        if ((c.EquipmentFlags & 0x04) != 0) parts.Add("extraction_equipment=\"true\"");
+        if ((c.EquipmentFlags & 0x08) != 0) parts.Add("ventilator=\"true\"");
+        if ((c.EquipmentFlags & 0x10) != 0) parts.Add("blood=\"true\"");
+
+        if (c.LitterPatients > 0) parts.Add($"litter=\"{c.LitterPatients}\"");
+        if (c.AmbulatoryPatients > 0) parts.Add($"ambulatory=\"{c.AmbulatoryPatients}\"");
+
+        if (SecurityNames.TryGetValue(c.Security, out var secName))
+            parts.Add($"security=\"{secName}\"");
+        if (HlzMarkingNames.TryGetValue(c.HlzMarking, out var hlzName))
+            parts.Add($"hlz_marking=\"{hlzName}\"");
+
+        if (!string.IsNullOrEmpty(c.ZoneMarker))
+            parts.Add($"zone_prot_marker=\"{Esc(c.ZoneMarker)}\"");
+
+        if (c.UsMilitary > 0) parts.Add($"us_military=\"{c.UsMilitary}\"");
+        if (c.UsCivilian > 0) parts.Add($"us_civilian=\"{c.UsCivilian}\"");
+        if (c.NonUsMilitary > 0) parts.Add($"non_us_military=\"{c.NonUsMilitary}\"");
+        if (c.NonUsCivilian > 0) parts.Add($"non_us_civilian=\"{c.NonUsCivilian}\"");
+        if (c.Epw > 0) parts.Add($"epw=\"{c.Epw}\"");
+        if (c.Child > 0) parts.Add($"child=\"{c.Child}\"");
+
+        // Terrain bitfield flags
+        if ((c.TerrainFlags & 0x01) != 0) parts.Add("terrain_slope=\"true\"");
+        if ((c.TerrainFlags & 0x02) != 0) parts.Add("terrain_rough=\"true\"");
+        if ((c.TerrainFlags & 0x04) != 0) parts.Add("terrain_loose=\"true\"");
+        if ((c.TerrainFlags & 0x08) != 0) parts.Add("terrain_trees=\"true\"");
+        if ((c.TerrainFlags & 0x10) != 0) parts.Add("terrain_wires=\"true\"");
+        if ((c.TerrainFlags & 0x20) != 0) parts.Add("terrain_other=\"true\"");
+
+        if (!string.IsNullOrEmpty(c.Frequency))
+            parts.Add($"freq=\"{Esc(c.Frequency)}\"");
+
+        sb.AppendLine(parts.Count > 0
+            ? $"    <_medevac_ {string.Join(" ", parts)}/>"
+            : "    <_medevac_/>");
+    }
+
+    private void EmitEmergency(StringBuilder sb, EmergencyAlert e)
+    {
+        var parts = new List<string>();
+        if (e.Type == EmergencyAlert.Types.Type.Cancel)
+        {
+            parts.Add("cancel=\"true\"");
+        }
+        else if (EmergencyTypeNames.TryGetValue(e.Type, out var typeName))
+        {
+            parts.Add($"type=\"{typeName}\"");
+        }
+        sb.AppendLine(parts.Count > 0
+            ? $"    <emergency {string.Join(" ", parts)}/>"
+            : "    <emergency/>");
+
+        if (!string.IsNullOrEmpty(e.AuthoringUid))
+        {
+            sb.AppendLine($"    <link uid=\"{Esc(e.AuthoringUid)}\" relation=\"p-p\" type=\"a-f-G-U-C\"/>");
+        }
+        if (!string.IsNullOrEmpty(e.CancelReferenceUid))
+        {
+            sb.AppendLine($"    <link uid=\"{Esc(e.CancelReferenceUid)}\" relation=\"p-p\" type=\"b-a-o-tbl\"/>");
+        }
+    }
+
+    private void EmitTask(StringBuilder sb, TaskRequest t)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(t.TaskType))
+            parts.Add($"type=\"{Esc(t.TaskType)}\"");
+        if (TaskPriorityNames.TryGetValue(t.Priority, out var prioName))
+            parts.Add($"priority=\"{prioName}\"");
+        if (TaskStatusNames.TryGetValue(t.Status, out var statusName))
+            parts.Add($"status=\"{statusName}\"");
+        if (!string.IsNullOrEmpty(t.AssigneeUid))
+            parts.Add($"assignee=\"{Esc(t.AssigneeUid)}\"");
+        if (!string.IsNullOrEmpty(t.Note))
+            parts.Add($"note=\"{Esc(t.Note)}\"");
+
+        sb.AppendLine(parts.Count > 0
+            ? $"    <task {string.Join(" ", parts)}/>"
+            : "    <task/>");
+
+        if (!string.IsNullOrEmpty(t.TargetUid))
+        {
+            sb.AppendLine($"    <link uid=\"{Esc(t.TargetUid)}\" relation=\"p-p\" type=\"a-f-G\"/>");
         }
     }
 }

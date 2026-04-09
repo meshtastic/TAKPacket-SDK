@@ -119,6 +119,43 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var routeMethod: Route.Method = .unspecified
     private var routeDirection: Route.Direction = .unspecified
 
+    // --- CasevacReport accumulators ------------------------------------
+    private var hasCasevacData = false
+    private var casevacPrecedence: CasevacReport.Precedence = .unspecified
+    private var casevacEquipmentFlags: UInt32 = 0
+    private var casevacLitterPatients: UInt32 = 0
+    private var casevacAmbulatoryPatients: UInt32 = 0
+    private var casevacSecurity: CasevacReport.Security = .unspecified
+    private var casevacHlzMarking: CasevacReport.HlzMarking = .unspecified
+    private var casevacZoneMarker = ""
+    private var casevacUsMilitary: UInt32 = 0
+    private var casevacUsCivilian: UInt32 = 0
+    private var casevacNonUsMilitary: UInt32 = 0
+    private var casevacNonUsCivilian: UInt32 = 0
+    private var casevacEpw: UInt32 = 0
+    private var casevacChild: UInt32 = 0
+    private var casevacTerrainFlags: UInt32 = 0
+    private var casevacFrequency = ""
+
+    // --- EmergencyAlert accumulators -----------------------------------
+    private var hasEmergencyData = false
+    private var emergencyTypeValue: EmergencyAlert.TypeEnum = .unspecified
+    private var emergencyAuthoringUid = ""
+    private var emergencyCancelReferenceUid = ""
+
+    // --- TaskRequest accumulators --------------------------------------
+    private var hasTaskData = false
+    private var taskTypeTag = ""
+    private var taskTargetUid = ""
+    private var taskAssigneeUid = ""
+    private var taskPriority: TaskRequest.Priority = .unspecified
+    private var taskStatus: TaskRequest.Status = .unspecified
+    private var taskNote = ""
+
+    // --- GeoChat receipt accumulators ----------------------------------
+    private var chatReceiptForUid = ""
+    private var chatReceiptTypeValue: GeoChat.ReceiptType = .none
+
     public func parse(_ cotXml: String) -> TAKPacketV2 {
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
         let lower = cotXml.lowercased()
@@ -156,6 +193,32 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         routeLinksAbs = []; routeTruncated = false
         routePrefix = ""
         routeMethod = .unspecified; routeDirection = .unspecified
+        // --- Reset expanded variant accumulators ---
+        hasCasevacData = false
+        casevacPrecedence = .unspecified
+        casevacEquipmentFlags = 0
+        casevacLitterPatients = 0
+        casevacAmbulatoryPatients = 0
+        casevacSecurity = .unspecified
+        casevacHlzMarking = .unspecified
+        casevacZoneMarker = ""
+        casevacUsMilitary = 0
+        casevacUsCivilian = 0
+        casevacNonUsMilitary = 0
+        casevacNonUsCivilian = 0
+        casevacEpw = 0
+        casevacChild = 0
+        casevacTerrainFlags = 0
+        casevacFrequency = ""
+        hasEmergencyData = false
+        emergencyTypeValue = .unspecified
+        emergencyAuthoringUid = ""
+        emergencyCancelReferenceUid = ""
+        hasTaskData = false
+        taskTypeTag = ""; taskTargetUid = ""; taskAssigneeUid = ""
+        taskPriority = .unspecified; taskStatus = .unspecified; taskNote = ""
+        chatReceiptForUid = ""
+        chatReceiptTypeValue = .none
 
         guard let data = cotXml.data(using: .utf8) else { return packet }
         let parser = XMLParser(data: data)
@@ -209,6 +272,12 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             chat.message = remarksText
             if let to = chatTo { chat.to = to }
             if let toCs = chatToCallsign { chat.toCallsign = toCs }
+            if !chatReceiptForUid.isEmpty {
+                chat.receiptForUid = chatReceiptForUid
+            }
+            if chatReceiptTypeValue != .none {
+                chat.receiptType = chatReceiptTypeValue
+            }
             packet.chat = chat
         } else if hasAircraftData {
             var aircraft = AircraftTrack()
@@ -291,6 +360,41 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             marker.parentCallsign = markerParentCallsign
             marker.iconset = markerIconset
             packet.marker = marker
+        } else if hasCasevacData {
+            var c = CasevacReport()
+            c.precedence = casevacPrecedence
+            c.equipmentFlags = casevacEquipmentFlags
+            c.litterPatients = casevacLitterPatients
+            c.ambulatoryPatients = casevacAmbulatoryPatients
+            c.security = casevacSecurity
+            c.hlzMarking = casevacHlzMarking
+            c.zoneMarker = casevacZoneMarker
+            c.usMilitary = casevacUsMilitary
+            c.usCivilian = casevacUsCivilian
+            c.nonUsMilitary = casevacNonUsMilitary
+            c.nonUsCivilian = casevacNonUsCivilian
+            c.epw = casevacEpw
+            c.child = casevacChild
+            c.terrainFlags = casevacTerrainFlags
+            c.frequency = casevacFrequency
+            packet.casevac = c
+        } else if hasEmergencyData {
+            var e = EmergencyAlert()
+            e.type = (emergencyTypeValue != .unspecified)
+                ? emergencyTypeValue
+                : Self.emergencyTypeFromCotType(cotTypeStr)
+            e.authoringUid = emergencyAuthoringUid
+            e.cancelReferenceUid = emergencyCancelReferenceUid
+            packet.emergency = e
+        } else if hasTaskData {
+            var t = TaskRequest()
+            t.taskType = taskTypeTag
+            t.targetUid = taskTargetUid
+            t.assigneeUid = taskAssigneeUid
+            t.priority = taskPriority
+            t.status = taskStatus
+            t.note = taskNote
+            packet.task = t
         } else {
             packet.pli = true
         }
@@ -309,6 +413,9 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         case "u-d-p": return .polygon
         case "u-r-b-c-c": return .rangingCircle
         case "u-r-b-bullseye": return .bullseye
+        case "u-d-c-e": return .ellipse
+        case "u-d-v": return .vehicle2D
+        case "u-d-v-m": return .vehicle3D
         default: return .unspecified
         }
     }
@@ -322,6 +429,11 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         case "b-m-p-w": return .waypoint
         case "b-m-p-c": return .checkpoint
         case "b-m-p-s-p-i", "b-m-p-s-p-loc": return .selfPosition
+        case "b-m-p-w-GOTO": return .goToPoint
+        case "b-m-p-c-ip": return .initialPoint
+        case "b-m-p-c-cp": return .contactPoint
+        case "b-m-p-s-p-op": return .observationPost
+        case "b-i-x-i": return .imageMarker
         default:
             if iconset.hasPrefix("COT_MAPPING_2525B") { return .symbol2525 }
             if iconset.hasPrefix("COT_MAPPING_SPOTMAP") { return .spotMap }
@@ -329,6 +441,60 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             return .unspecified
         }
     }
+
+    // MARK: - Expanded variant reverse lookups
+
+    private static let precedenceMap: [String: CasevacReport.Precedence] = [
+        "A": .urgent, "URGENT": .urgent, "Urgent": .urgent,
+        "B": .urgentSurgical, "URGENT SURGICAL": .urgentSurgical, "Urgent Surgical": .urgentSurgical,
+        "C": .priority, "PRIORITY": .priority, "Priority": .priority,
+        "D": .routine, "ROUTINE": .routine, "Routine": .routine,
+        "E": .convenience, "CONVENIENCE": .convenience, "Convenience": .convenience,
+    ]
+
+    private static let hlzMarkingMap: [String: CasevacReport.HlzMarking] = [
+        "Panels": .panels, "Pyro": .pyroSignal, "Pyrotechnic": .pyroSignal,
+        "Smoke": .smoke, "None": .none, "Other": .other,
+    ]
+
+    private static let securityMap: [String: CasevacReport.Security] = [
+        "N": .noEnemy, "No Enemy": .noEnemy,
+        "P": .possibleEnemy, "Possible Enemy": .possibleEnemy,
+        "E": .enemyInArea, "Enemy In Area": .enemyInArea,
+        "X": .enemyInArmedContact, "Enemy In Armed Contact": .enemyInArmedContact,
+    ]
+
+    private static let emergencyTypeMap: [String: EmergencyAlert.TypeEnum] = [
+        "911 Alert": .alert911, "911": .alert911,
+        "Ring The Bell": .ringTheBell, "Ring the Bell": .ringTheBell,
+        "In Contact": .inContact, "Troops In Contact": .inContact,
+        "Geo-fence Breached": .geoFenceBreached, "Geo Fence Breached": .geoFenceBreached,
+        "Custom": .custom, "Cancel": .cancel,
+    ]
+
+    private static func emergencyTypeFromCotType(_ cotType: String) -> EmergencyAlert.TypeEnum {
+        switch cotType {
+        case "b-a-o-tbl": return .alert911
+        case "b-a-o-pan": return .ringTheBell
+        case "b-a-o-opn": return .inContact
+        case "b-a-g": return .geoFenceBreached
+        case "b-a-o-c": return .custom
+        case "b-a-o-can": return .cancel
+        default: return .unspecified
+        }
+    }
+
+    private static let taskPriorityMap: [String: TaskRequest.Priority] = [
+        "Low": .low, "Normal": .normal, "Medium": .normal,
+        "High": .high, "Critical": .critical,
+    ]
+
+    private static let taskStatusMap: [String: TaskRequest.Status] = [
+        "Pending": .pending, "Acknowledged": .acknowledged,
+        "InProgress": .inProgress, "In Progress": .inProgress,
+        "Completed": .completed, "Done": .completed,
+        "Cancelled": .cancelled, "Canceled": .cancelled,
+    ]
 
     // MARK: - XMLParserDelegate
 
@@ -505,6 +671,64 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
                 strokeWeightX10 = swi * 10
             }
 
+        // --- CasevacReport --------------------------------------------
+        case "_medevac_":
+            hasCasevacData = true
+            casevacPrecedence = Self.precedenceMap[attributes["precedence"] ?? ""] ?? .unspecified
+            var eq: UInt32 = 0
+            if attributes["none"] == "true" { eq |= 0x01 }
+            if attributes["hoist"] == "true" { eq |= 0x02 }
+            if attributes["extraction_equipment"] == "true" { eq |= 0x04 }
+            if attributes["ventilator"] == "true" { eq |= 0x08 }
+            if attributes["blood"] == "true" { eq |= 0x10 }
+            casevacEquipmentFlags = eq
+            casevacLitterPatients = UInt32(attributes["litter"] ?? "0") ?? 0
+            casevacAmbulatoryPatients = UInt32(attributes["ambulatory"] ?? "0") ?? 0
+            casevacSecurity = Self.securityMap[attributes["security"] ?? ""] ?? .unspecified
+            casevacHlzMarking = Self.hlzMarkingMap[attributes["hlz_marking"] ?? ""] ?? .unspecified
+            casevacZoneMarker = attributes["zone_prot_marker"] ?? ""
+            casevacUsMilitary = UInt32(attributes["us_military"] ?? "0") ?? 0
+            casevacUsCivilian = UInt32(attributes["us_civilian"] ?? "0") ?? 0
+            casevacNonUsMilitary = UInt32(attributes["non_us_military"] ?? "0") ?? 0
+            casevacNonUsCivilian = UInt32(attributes["non_us_civilian"] ?? "0") ?? 0
+            casevacEpw = UInt32(attributes["epw"] ?? "0") ?? 0
+            casevacChild = UInt32(attributes["child"] ?? "0") ?? 0
+            var tf: UInt32 = 0
+            if attributes["terrain_slope"] == "true" { tf |= 0x01 }
+            if attributes["terrain_rough"] == "true" { tf |= 0x02 }
+            if attributes["terrain_loose"] == "true" { tf |= 0x04 }
+            if attributes["terrain_trees"] == "true" { tf |= 0x08 }
+            if attributes["terrain_wires"] == "true" { tf |= 0x10 }
+            if attributes["terrain_other"] == "true" { tf |= 0x20 }
+            casevacTerrainFlags = tf
+            casevacFrequency = attributes["freq"] ?? ""
+
+        // --- EmergencyAlert -------------------------------------------
+        case "emergency":
+            hasEmergencyData = true
+            let typeAttr = attributes["type"] ?? ""
+            if let mapped = Self.emergencyTypeMap[typeAttr] {
+                emergencyTypeValue = mapped
+            } else {
+                emergencyTypeValue = Self.emergencyTypeFromCotType(cotTypeStr)
+            }
+            if attributes["cancel"] == "true" {
+                emergencyTypeValue = .cancel
+            }
+
+        // --- TaskRequest ----------------------------------------------
+        case "task", "_task_":
+            hasTaskData = true
+            taskTypeTag = attributes["type"] ?? ""
+            taskPriority = Self.taskPriorityMap[attributes["priority"] ?? ""] ?? .unspecified
+            taskStatus = Self.taskStatusMap[attributes["status"] ?? ""] ?? .unspecified
+            if let noteAttr = attributes["note"], !noteAttr.isEmpty {
+                taskNote = noteAttr
+            }
+            if let assigneeAttr = attributes["assignee"], !assigneeAttr.isEmpty {
+                taskAssigneeUid = assigneeAttr
+            }
+
         default:
             break
         }
@@ -568,13 +792,35 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
                 }
             }
         } else if let u = linkUidAttr, relation == "p-p", !linkType.isEmpty {
-            // Marker parent link: no point attribute, p-p relation.
-            markerParentUid = u
-            markerParentType = linkType
-            if !parentCallsign.isEmpty {
-                markerParentCallsign = parentCallsign
+            // Chat receipt: the p-p link on a b-t-f-d / b-t-f-r event
+            // references the original message UID being acknowledged.
+            if cotTypeStr == "b-t-f-d" || cotTypeStr == "b-t-f-r" {
+                if chatReceiptForUid.isEmpty {
+                    chatReceiptForUid = u
+                }
+                chatReceiptTypeValue = (cotTypeStr == "b-t-f-d") ? .delivered : .read
+                hasChatData = true
+            } else if cotTypeStr == "t-s" {
+                if taskTargetUid.isEmpty {
+                    taskTargetUid = u
+                }
+                hasTaskData = true
+            } else if cotTypeStr.hasPrefix("b-a-") {
+                if emergencyAuthoringUid.isEmpty {
+                    emergencyAuthoringUid = u
+                } else if cotTypeStr == "b-a-o-can" && emergencyCancelReferenceUid.isEmpty {
+                    emergencyCancelReferenceUid = u
+                }
+                hasEmergencyData = true
+            } else {
+                // Marker parent link: no point attribute, p-p relation.
+                markerParentUid = u
+                markerParentType = linkType
+                if !parentCallsign.isEmpty {
+                    markerParentCallsign = parentCallsign
+                }
+                hasMarkerData = true
             }
-            hasMarkerData = true
         }
     }
 

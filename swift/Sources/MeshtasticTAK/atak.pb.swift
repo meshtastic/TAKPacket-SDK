@@ -666,6 +666,110 @@ public enum CotType: SwiftProtobuf.Enum, Swift.CaseIterable {
   /// u-r-b-bullseye: Bullseye with configurable range rings and bearing
   /// reference (magnetic / true / grid).
   case uRBBullseye // = 81
+
+  ///
+  /// a-f-G-E-V-A: Friendly armored vehicle, user-selectable self PLI.
+  case aFGEVA // = 82
+
+  ///
+  /// a-n-A: Neutral aircraft (friendly/hostile/unknown already present).
+  case aNA // = 83
+
+  /// --- 2525 quick-drop: artillery (4) ----------------------------------
+  case aUGUCF // = 84
+  case aNGUCF // = 85
+  case aHGUCF // = 86
+  case aFGUCF // = 87
+
+  /// --- 2525 quick-drop: building (4) -----------------------------------
+  case aUGI // = 88
+  case aNGI // = 89
+  case aHGI // = 90
+  case aFGI // = 91
+
+  /// --- 2525 quick-drop: mine (4) ---------------------------------------
+  case aUGEXM // = 92
+  case aNGEXM // = 93
+  case aHGEXM // = 94
+  case aFGEXM // = 95
+
+  /// --- 2525 quick-drop: ship (3; a-f-S already at 17) ------------------
+  case aUS // = 96
+  case aNS // = 97
+  case aHS // = 98
+
+  /// --- 2525 quick-drop: sniper (4) -------------------------------------
+  case aUGUCID // = 99
+  case aNGUCID // = 100
+  case aHGUCID // = 101
+  case aFGUCID // = 102
+
+  /// --- 2525 quick-drop: tank (4) ---------------------------------------
+  case aUGEVAT // = 103
+  case aNGEVAT // = 104
+  case aHGEVAT // = 105
+  case aFGEVAT // = 106
+
+  /// --- 2525 quick-drop: troops (3; a-f-G-U-C-I already at 2) -----------
+  case aUGUCI // = 107
+  case aNGUCI // = 108
+  case aHGUCI // = 109
+
+  /// --- 2525 quick-drop: generic vehicle (3; a-u-G-E-V already at 69) ---
+  case aNGEV // = 110
+  case aHGEV // = 111
+  case aFGEV // = 112
+
+  ///
+  /// b-m-p-w-GOTO: Go To / bloodhound navigation target.
+  case bMPWGoto // = 113
+
+  ///
+  /// b-m-p-c-ip: Initial point (mission planning).
+  case bMPCIp // = 114
+
+  ///
+  /// b-m-p-c-cp: Contact point (mission planning).
+  case bMPCCp // = 115
+
+  ///
+  /// b-m-p-s-p-op: Observation post.
+  case bMPSPOp // = 116
+
+  ///
+  /// u-d-v: 2D vehicle outline drawn on the map.
+  case uDV // = 117
+
+  ///
+  /// u-d-v-m: 3D vehicle model reference.
+  case uDVM // = 118
+
+  ///
+  /// u-d-c-e: Non-circular ellipse (circle with distinct major/minor axes).
+  case uDCE // = 119
+
+  ///
+  /// b-i-x-i: Quick Pic geotagged image marker. The image itself does not
+  /// ride on LoRa; this event references the image via iconset metadata.
+  case bIXI // = 120
+
+  ///
+  /// b-t-f-d: GeoChat delivered receipt. Carried on the existing `chat`
+  /// payload_variant via GeoChat.receipt_for_uid + receipt_type.
+  case bTFD // = 121
+
+  ///
+  /// b-t-f-r: GeoChat read receipt. Same wire slot as b-t-f-d.
+  case bTFR // = 122
+
+  ///
+  /// b-a-o-c: Custom / generic emergency beacon.
+  case bAOC // = 123
+
+  ///
+  /// t-s: Task / engage request. Structured payload carried via the new
+  /// TaskRequest typed variant.
+  case tS // = 124
   case UNRECOGNIZED(Int)
 
   public init() {
@@ -756,6 +860,49 @@ public enum CotType: SwiftProtobuf.Enum, Swift.CaseIterable {
     case 79: self = .bMPC
     case 80: self = .uRBCC
     case 81: self = .uRBBullseye
+    case 82: self = .aFGEVA
+    case 83: self = .aNA
+    case 84: self = .aUGUCF
+    case 85: self = .aNGUCF
+    case 86: self = .aHGUCF
+    case 87: self = .aFGUCF
+    case 88: self = .aUGI
+    case 89: self = .aNGI
+    case 90: self = .aHGI
+    case 91: self = .aFGI
+    case 92: self = .aUGEXM
+    case 93: self = .aNGEXM
+    case 94: self = .aHGEXM
+    case 95: self = .aFGEXM
+    case 96: self = .aUS
+    case 97: self = .aNS
+    case 98: self = .aHS
+    case 99: self = .aUGUCID
+    case 100: self = .aNGUCID
+    case 101: self = .aHGUCID
+    case 102: self = .aFGUCID
+    case 103: self = .aUGEVAT
+    case 104: self = .aNGEVAT
+    case 105: self = .aHGEVAT
+    case 106: self = .aFGEVAT
+    case 107: self = .aUGUCI
+    case 108: self = .aNGUCI
+    case 109: self = .aHGUCI
+    case 110: self = .aNGEV
+    case 111: self = .aHGEV
+    case 112: self = .aFGEV
+    case 113: self = .bMPWGoto
+    case 114: self = .bMPCIp
+    case 115: self = .bMPCCp
+    case 116: self = .bMPSPOp
+    case 117: self = .uDV
+    case 118: self = .uDVM
+    case 119: self = .uDCE
+    case 120: self = .bIXI
+    case 121: self = .bTFD
+    case 122: self = .bTFR
+    case 123: self = .bAOC
+    case 124: self = .tS
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -844,6 +991,49 @@ public enum CotType: SwiftProtobuf.Enum, Swift.CaseIterable {
     case .bMPC: return 79
     case .uRBCC: return 80
     case .uRBBullseye: return 81
+    case .aFGEVA: return 82
+    case .aNA: return 83
+    case .aUGUCF: return 84
+    case .aNGUCF: return 85
+    case .aHGUCF: return 86
+    case .aFGUCF: return 87
+    case .aUGI: return 88
+    case .aNGI: return 89
+    case .aHGI: return 90
+    case .aFGI: return 91
+    case .aUGEXM: return 92
+    case .aNGEXM: return 93
+    case .aHGEXM: return 94
+    case .aFGEXM: return 95
+    case .aUS: return 96
+    case .aNS: return 97
+    case .aHS: return 98
+    case .aUGUCID: return 99
+    case .aNGUCID: return 100
+    case .aHGUCID: return 101
+    case .aFGUCID: return 102
+    case .aUGEVAT: return 103
+    case .aNGEVAT: return 104
+    case .aHGEVAT: return 105
+    case .aFGEVAT: return 106
+    case .aUGUCI: return 107
+    case .aNGUCI: return 108
+    case .aHGUCI: return 109
+    case .aNGEV: return 110
+    case .aHGEV: return 111
+    case .aFGEV: return 112
+    case .bMPWGoto: return 113
+    case .bMPCIp: return 114
+    case .bMPCCp: return 115
+    case .bMPSPOp: return 116
+    case .uDV: return 117
+    case .uDVM: return 118
+    case .uDCE: return 119
+    case .bIXI: return 120
+    case .bTFD: return 121
+    case .bTFR: return 122
+    case .bAOC: return 123
+    case .tS: return 124
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -932,6 +1122,49 @@ public enum CotType: SwiftProtobuf.Enum, Swift.CaseIterable {
     .bMPC,
     .uRBCC,
     .uRBBullseye,
+    .aFGEVA,
+    .aNA,
+    .aUGUCF,
+    .aNGUCF,
+    .aHGUCF,
+    .aFGUCF,
+    .aUGI,
+    .aNGI,
+    .aHGI,
+    .aFGI,
+    .aUGEXM,
+    .aNGEXM,
+    .aHGEXM,
+    .aFGEXM,
+    .aUS,
+    .aNS,
+    .aHS,
+    .aUGUCID,
+    .aNGUCID,
+    .aHGUCID,
+    .aFGUCID,
+    .aUGEVAT,
+    .aNGEVAT,
+    .aHGEVAT,
+    .aFGEVAT,
+    .aUGUCI,
+    .aNGUCI,
+    .aHGUCI,
+    .aNGEV,
+    .aHGEV,
+    .aFGEV,
+    .bMPWGoto,
+    .bMPCIp,
+    .bMPCCp,
+    .bMPSPOp,
+    .uDV,
+    .uDVM,
+    .uDCE,
+    .bIXI,
+    .bTFD,
+    .bTFR,
+    .bAOC,
+    .tS,
   ]
 
 }
@@ -1104,7 +1337,7 @@ public struct GeoChat: Sendable {
   // methods supported on all messages.
 
   ///
-  /// The text message
+  /// The text message. Empty for receipts.
   public var message: String = String()
 
   ///
@@ -1129,7 +1362,70 @@ public struct GeoChat: Sendable {
   /// Clears the value of `toCallsign`. Subsequent reads from it will return its default value.
   public mutating func clearToCallsign() {self._toCallsign = nil}
 
+  ///
+  /// UID of the chat message this event is acknowledging. Empty for a
+  /// normal chat message; set for delivered / read receipts. Paired with
+  /// receipt_type so receivers can match the ack back to the original
+  /// outbound GeoChat by its event uid.
+  public var receiptForUid: String = String()
+
+  ///
+  /// Receipt kind discriminator. See ReceiptType doc. Default ReceiptType_None
+  /// means this is a regular chat message, not a receipt.
+  public var receiptType: GeoChat.ReceiptType = .none
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  ///
+  /// Receipt discriminator. Set alongside cot_type_id = b-t-f-d (delivered)
+  /// or b-t-f-r (read). ReceiptType_None is the default for a normal chat
+  /// message (cot_type_id = b-t-f).
+  ///
+  /// Receivers can detect a receipt by checking receipt_type != None without
+  /// re-parsing the envelope cot_type_id.
+  public enum ReceiptType: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+
+    /// normal chat message
+    case none // = 0
+
+    /// b-t-f-d delivered receipt
+    case delivered // = 1
+
+    /// b-t-f-r read receipt
+    case read // = 2
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .none
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .none
+      case 1: self = .delivered
+      case 2: self = .read
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .none: return 0
+      case .delivered: return 1
+      case .read: return 2
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [GeoChat.ReceiptType] = [
+      .none,
+      .delivered,
+      .read,
+    ]
+
+  }
 
   public init() {}
 
@@ -1506,6 +1802,22 @@ public struct DrawnShape: @unchecked Sendable {
     ///
     /// u-r-b-bullseye: Bullseye ring with range rings and bearing reference
     case bullseye // = 7
+
+    ///
+    /// u-d-c-e: Ellipse with distinct major/minor axes (same storage as
+    /// Kind_Circle — uses major_cm/minor_cm/angle_deg — but receivers
+    /// render it as a non-circular ellipse rather than a round circle).
+    case ellipse // = 8
+
+    ///
+    /// u-d-v: 2D vehicle outline drawn on the map. Vertices carry the
+    /// outline polygon; receivers draw it as a filled polygon.
+    case vehicle2D // = 9
+
+    ///
+    /// u-d-v-m: 3D vehicle model reference. Same vertex polygon as
+    /// Kind_Vehicle2D; receivers that support 3D rendering extrude it.
+    case vehicle3D // = 10
     case UNRECOGNIZED(Int)
 
     public init() {
@@ -1522,6 +1834,9 @@ public struct DrawnShape: @unchecked Sendable {
       case 5: self = .polygon
       case 6: self = .rangingCircle
       case 7: self = .bullseye
+      case 8: self = .ellipse
+      case 9: self = .vehicle2D
+      case 10: self = .vehicle3D
       default: self = .UNRECOGNIZED(rawValue)
       }
     }
@@ -1536,6 +1851,9 @@ public struct DrawnShape: @unchecked Sendable {
       case .polygon: return 5
       case .rangingCircle: return 6
       case .bullseye: return 7
+      case .ellipse: return 8
+      case .vehicle2D: return 9
+      case .vehicle3D: return 10
       case .UNRECOGNIZED(let i): return i
       }
     }
@@ -1550,6 +1868,9 @@ public struct DrawnShape: @unchecked Sendable {
       .polygon,
       .rangingCircle,
       .bullseye,
+      .ellipse,
+      .vehicle2D,
+      .vehicle3D,
     ]
 
   }
@@ -1718,6 +2039,28 @@ public struct Marker: Sendable {
     ///
     /// Custom icon set (UUID/GroupName/filename.png)
     case customIcon // = 7
+
+    ///
+    /// b-m-p-w-GOTO: Go To / bloodhound navigation waypoint.
+    case goToPoint // = 8
+
+    ///
+    /// b-m-p-c-ip: Initial point (mission planning control point).
+    case initialPoint // = 9
+
+    ///
+    /// b-m-p-c-cp: Contact point (mission planning control point).
+    case contactPoint // = 10
+
+    ///
+    /// b-m-p-s-p-op: Observation post.
+    case observationPost // = 11
+
+    ///
+    /// b-i-x-i: Quick Pic geotagged image marker. iconset carries the
+    /// image reference (local filename or remote URL); the image itself
+    /// does not ride on the LoRa wire.
+    case imageMarker // = 12
     case UNRECOGNIZED(Int)
 
     public init() {
@@ -1734,6 +2077,11 @@ public struct Marker: Sendable {
       case 5: self = .symbol2525
       case 6: self = .spotMap
       case 7: self = .customIcon
+      case 8: self = .goToPoint
+      case 9: self = .initialPoint
+      case 10: self = .contactPoint
+      case 11: self = .observationPost
+      case 12: self = .imageMarker
       default: self = .UNRECOGNIZED(rawValue)
       }
     }
@@ -1748,6 +2096,11 @@ public struct Marker: Sendable {
       case .symbol2525: return 5
       case .spotMap: return 6
       case .customIcon: return 7
+      case .goToPoint: return 8
+      case .initialPoint: return 9
+      case .contactPoint: return 10
+      case .observationPost: return 11
+      case .imageMarker: return 12
       case .UNRECOGNIZED(let i): return i
       }
     }
@@ -1762,6 +2115,11 @@ public struct Marker: Sendable {
       .symbol2525,
       .spotMap,
       .customIcon,
+      .goToPoint,
+      .initialPoint,
+      .contactPoint,
+      .observationPost,
+      .imageMarker,
     ]
 
   }
@@ -2016,6 +2374,507 @@ public struct Route: Sendable {
     public init() {}
 
     fileprivate var _point: CotGeoPoint? = nil
+  }
+
+  public init() {}
+}
+
+///
+/// 9-line MEDEVAC request (CoT type b-r-f-h-c).
+///
+/// Mirrors the ATAK MedLine tool's <_medevac_> detail element. Every field
+/// is optional (proto3 default); senders omit lines they don't have. The
+/// envelope (TAKPacketV2.uid, cot_type_id=b-r-f-h-c, latitude_i/longitude_i,
+/// altitude, callsign) carries Line 1 (location) and Line 2 (callsign).
+///
+/// All numeric fields are tight varints so a complete 9-line request fits
+/// in well under 100 bytes of proto on the wire.
+public struct CasevacReport: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  ///
+  /// Line 3: precedence / urgency.
+  public var precedence: CasevacReport.Precedence = .unspecified
+
+  ///
+  /// Line 4: special equipment required, as a bitfield.
+  ///   bit 0: none
+  ///   bit 1: hoist
+  ///   bit 2: extraction equipment
+  ///   bit 3: ventilator
+  ///   bit 4: blood
+  public var equipmentFlags: UInt32 = 0
+
+  ///
+  /// Line 5: number of litter (stretcher-bound) patients.
+  public var litterPatients: UInt32 = 0
+
+  ///
+  /// Line 5: number of ambulatory (walking-wounded) patients.
+  public var ambulatoryPatients: UInt32 = 0
+
+  ///
+  /// Line 6: security situation at the PZ.
+  public var security: CasevacReport.Security = .unspecified
+
+  ///
+  /// Line 7: HLZ marking method.
+  public var hlzMarking: CasevacReport.HlzMarking = .unspecified
+
+  ///
+  /// Line 7 supplementary: short free-text describing the zone marker
+  /// (e.g. "Green smoke", "VS-17 panel west"). Capped tight in options.
+  public var zoneMarker: String = String()
+
+  /// --- Line 8: patient nationality counts ---
+  public var usMilitary: UInt32 = 0
+
+  public var usCivilian: UInt32 = 0
+
+  public var nonUsMilitary: UInt32 = 0
+
+  public var nonUsCivilian: UInt32 = 0
+
+  /// enemy prisoner of war
+  public var epw: UInt32 = 0
+
+  public var child: UInt32 = 0
+
+  ///
+  /// Line 9: terrain and obstacles at the PZ, as a bitfield.
+  ///   bit 0: slope
+  ///   bit 1: rough
+  ///   bit 2: loose
+  ///   bit 3: trees
+  ///   bit 4: wires
+  ///   bit 5: other
+  public var terrainFlags: UInt32 = 0
+
+  ///
+  /// Line 2: radio frequency / callsign metadata (e.g. "38.90 Mhz" or
+  /// "Victor 6"). Capped tight in options.
+  public var frequency: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  ///
+  /// Line 3: precedence / urgency.
+  public enum Precedence: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+
+    /// A - immediate, life-threatening
+    case urgent // = 1
+
+    /// B - needs surgery
+    case urgentSurgical // = 2
+
+    /// C - within 4 hours
+    case priority // = 3
+
+    /// D - within 24 hours
+    case routine // = 4
+
+    /// E - convenience
+    case convenience // = 5
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .urgent
+      case 2: self = .urgentSurgical
+      case 3: self = .priority
+      case 4: self = .routine
+      case 5: self = .convenience
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .urgent: return 1
+      case .urgentSurgical: return 2
+      case .priority: return 3
+      case .routine: return 4
+      case .convenience: return 5
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [CasevacReport.Precedence] = [
+      .unspecified,
+      .urgent,
+      .urgentSurgical,
+      .priority,
+      .routine,
+      .convenience,
+    ]
+
+  }
+
+  ///
+  /// Line 7: HLZ marking method.
+  public enum HlzMarking: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+    case panels // = 1
+    case pyroSignal // = 2
+    case smoke // = 3
+    case none // = 4
+    case other // = 5
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .panels
+      case 2: self = .pyroSignal
+      case 3: self = .smoke
+      case 4: self = .none
+      case 5: self = .other
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .panels: return 1
+      case .pyroSignal: return 2
+      case .smoke: return 3
+      case .none: return 4
+      case .other: return 5
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [CasevacReport.HlzMarking] = [
+      .unspecified,
+      .panels,
+      .pyroSignal,
+      .smoke,
+      .none,
+      .other,
+    ]
+
+  }
+
+  ///
+  /// Line 6: security situation at the pickup zone.
+  public enum Security: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+
+    /// N - no enemy activity
+    case noEnemy // = 1
+
+    /// P - possible enemy
+    case possibleEnemy // = 2
+
+    /// E - enemy, approach with caution
+    case enemyInArea // = 3
+
+    /// X - armed escort required
+    case enemyInArmedContact // = 4
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .noEnemy
+      case 2: self = .possibleEnemy
+      case 3: self = .enemyInArea
+      case 4: self = .enemyInArmedContact
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .noEnemy: return 1
+      case .possibleEnemy: return 2
+      case .enemyInArea: return 3
+      case .enemyInArmedContact: return 4
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [CasevacReport.Security] = [
+      .unspecified,
+      .noEnemy,
+      .possibleEnemy,
+      .enemyInArea,
+      .enemyInArmedContact,
+    ]
+
+  }
+
+  public init() {}
+}
+
+///
+/// Emergency alert / 911 beacon (CoT types b-a-o-tbl, b-a-o-pan, b-a-o-opn,
+/// b-a-o-can, b-a-o-c, b-a-g).
+///
+/// Small, high-priority structured record. The CoT type string is still set
+/// on cot_type_id so receivers that ignore payload_variant can still display
+/// the alert from the enum alone; the typed fields let modern receivers show
+/// the authoring unit and handle cancel-referencing without XML parsing.
+public struct EmergencyAlert: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  ///
+  /// Alert discriminator.
+  public var type: EmergencyAlert.TypeEnum = .unspecified
+
+  ///
+  /// UID of the unit that raised the alert. Often the same as
+  /// TAKPacketV2.uid but can be a parent device uid when a tracker raises
+  /// an alert on behalf of a dismount.
+  public var authoringUid: String = String()
+
+  ///
+  /// For Type_Cancel: the uid of the alert being cancelled. Empty for
+  /// non-cancel alert types.
+  public var cancelReferenceUid: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum TypeEnum: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+
+    /// b-a-o-tbl
+    case alert911 // = 1
+
+    /// b-a-o-pan
+    case ringTheBell // = 2
+
+    /// b-a-o-opn
+    case inContact // = 3
+
+    /// b-a-g
+    case geoFenceBreached // = 4
+
+    /// b-a-o-c
+    case custom // = 5
+
+    /// b-a-o-can
+    case cancel // = 6
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .alert911
+      case 2: self = .ringTheBell
+      case 3: self = .inContact
+      case 4: self = .geoFenceBreached
+      case 5: self = .custom
+      case 6: self = .cancel
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .alert911: return 1
+      case .ringTheBell: return 2
+      case .inContact: return 3
+      case .geoFenceBreached: return 4
+      case .custom: return 5
+      case .cancel: return 6
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [EmergencyAlert.TypeEnum] = [
+      .unspecified,
+      .alert911,
+      .ringTheBell,
+      .inContact,
+      .geoFenceBreached,
+      .custom,
+      .cancel,
+    ]
+
+  }
+
+  public init() {}
+}
+
+///
+/// Task / engage request (CoT type t-s).
+///
+/// Mirrors ATAK's TaskCotReceiver / CotTaskBuilder workflow. The envelope
+/// carries the task's originating uid (implicit requester), position, and
+/// creation time; the fields below carry structured metadata the raw-detail
+/// fallback currently loses.
+///
+/// Fields are deliberately lean — this variant is closer to the MTU ceiling
+/// than the others, so every string is capped in options.
+public struct TaskRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  ///
+  /// Short tag for the task category (e.g. "engage", "observe", "recon",
+  /// "rescue"). Free text on the wire so ATAK-specific task taxonomies
+  /// don't need proto coordination; capped tight in options.
+  public var taskType: String = String()
+
+  ///
+  /// UID of the target / map item being tasked.
+  public var targetUid: String = String()
+
+  ///
+  /// UID of the assigned unit. Empty = unassigned / broadcast task.
+  public var assigneeUid: String = String()
+
+  public var priority: TaskRequest.Priority = .unspecified
+
+  public var status: TaskRequest.Status = .unspecified
+
+  ///
+  /// Optional short note (reason, constraints, grid reference). Capped
+  /// tight in options to keep the worst-case under the LoRa MTU.
+  public var note: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public enum Priority: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+    case low // = 1
+    case normal // = 2
+    case high // = 3
+    case critical // = 4
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .low
+      case 2: self = .normal
+      case 3: self = .high
+      case 4: self = .critical
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .low: return 1
+      case .normal: return 2
+      case .high: return 3
+      case .critical: return 4
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [TaskRequest.Priority] = [
+      .unspecified,
+      .low,
+      .normal,
+      .high,
+      .critical,
+    ]
+
+  }
+
+  public enum Status: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+
+    /// assigned, not yet acknowledged
+    case pending // = 1
+
+    /// assignee has seen it
+    case acknowledged // = 2
+
+    /// assignee is working it
+    case inProgress // = 3
+
+    /// task done
+    case completed // = 4
+
+    /// cancelled before completion
+    case cancelled // = 5
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .pending
+      case 2: self = .acknowledged
+      case 3: self = .inProgress
+      case 4: self = .completed
+      case 5: self = .cancelled
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .pending: return 1
+      case .acknowledged: return 2
+      case .inProgress: return 3
+      case .completed: return 4
+      case .cancelled: return 5
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [TaskRequest.Status] = [
+      .unspecified,
+      .pending,
+      .acknowledged,
+      .inProgress,
+      .completed,
+      .cancelled,
+    ]
+
   }
 
   public init() {}
@@ -2284,6 +3143,36 @@ public struct TAKPacketV2: @unchecked Sendable {
     set {_uniqueStorage()._payloadVariant = .route(newValue)}
   }
 
+  ///
+  /// 9-line MEDEVAC request. See CasevacReport.
+  public var casevac: CasevacReport {
+    get {
+      if case .casevac(let v)? = _storage._payloadVariant {return v}
+      return CasevacReport()
+    }
+    set {_uniqueStorage()._payloadVariant = .casevac(newValue)}
+  }
+
+  ///
+  /// Emergency beacon / 911 alert. See EmergencyAlert.
+  public var emergency: EmergencyAlert {
+    get {
+      if case .emergency(let v)? = _storage._payloadVariant {return v}
+      return EmergencyAlert()
+    }
+    set {_uniqueStorage()._payloadVariant = .emergency(newValue)}
+  }
+
+  ///
+  /// Task / engage request. See TaskRequest.
+  public var task: TaskRequest {
+    get {
+      if case .task(let v)? = _storage._payloadVariant {return v}
+      return TaskRequest()
+    }
+    set {_uniqueStorage()._payloadVariant = .task(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   ///
@@ -2317,6 +3206,15 @@ public struct TAKPacketV2: @unchecked Sendable {
     ///
     /// Named route with ordered waypoints and control points. See Route.
     case route(Route)
+    ///
+    /// 9-line MEDEVAC request. See CasevacReport.
+    case casevac(CasevacReport)
+    ///
+    /// Emergency beacon / 911 alert. See EmergencyAlert.
+    case emergency(EmergencyAlert)
+    ///
+    /// Task / engage request. See TaskRequest.
+    case task(TaskRequest)
 
   }
 
@@ -2342,7 +3240,7 @@ extension CotHow: SwiftProtobuf._ProtoNameProviding {
 }
 
 extension CotType: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CotType_Other\0\u{1}CotType_a_f_G_U_C\0\u{1}CotType_a_f_G_U_C_I\0\u{1}CotType_a_n_A_C_F\0\u{1}CotType_a_n_A_C_H\0\u{1}CotType_a_n_A_C\0\u{1}CotType_a_f_A_M_H\0\u{1}CotType_a_f_A_M\0\u{1}CotType_a_f_A_M_F_F\0\u{1}CotType_a_f_A_M_H_A\0\u{1}CotType_a_f_A_M_H_U_M\0\u{1}CotType_a_h_A_M_F_F\0\u{1}CotType_a_h_A_M_H_A\0\u{1}CotType_a_u_A_C\0\u{1}CotType_t_x_d_d\0\u{1}CotType_a_f_G_E_S_E\0\u{1}CotType_a_f_G_E_V_C\0\u{1}CotType_a_f_S\0\u{1}CotType_a_f_A_M_F\0\u{1}CotType_a_f_A_M_F_C_H\0\u{1}CotType_a_f_A_M_F_U_L\0\u{1}CotType_a_f_A_M_F_L\0\u{1}CotType_a_f_A_M_F_P\0\u{1}CotType_a_f_A_C_H\0\u{1}CotType_a_n_A_M_F_Q\0\u{1}CotType_b_t_f\0\u{1}CotType_b_r_f_h_c\0\u{1}CotType_b_a_o_pan\0\u{1}CotType_b_a_o_opn\0\u{1}CotType_b_a_o_can\0\u{1}CotType_b_a_o_tbl\0\u{1}CotType_b_a_g\0\u{1}CotType_a_f_G\0\u{1}CotType_a_f_G_U\0\u{1}CotType_a_h_G\0\u{1}CotType_a_u_G\0\u{1}CotType_a_n_G\0\u{1}CotType_b_m_r\0\u{1}CotType_b_m_p_w\0\u{1}CotType_b_m_p_s_p_i\0\u{1}CotType_u_d_f\0\u{1}CotType_u_d_r\0\u{1}CotType_u_d_c_c\0\u{1}CotType_u_rb_a\0\u{1}CotType_a_h_A\0\u{1}CotType_a_u_A\0\u{1}CotType_a_f_A_M_H_Q\0\u{1}CotType_a_f_A_C_F\0\u{1}CotType_a_f_A_C\0\u{1}CotType_a_f_A_C_L\0\u{1}CotType_a_f_A\0\u{1}CotType_a_f_A_M_H_C\0\u{1}CotType_a_n_A_M_F_F\0\u{1}CotType_a_u_A_C_F\0\u{1}CotType_a_f_G_U_C_F_T_A\0\u{1}CotType_a_f_G_U_C_V_S\0\u{1}CotType_a_f_G_U_C_R_X\0\u{1}CotType_a_f_G_U_C_I_Z\0\u{1}CotType_a_f_G_U_C_E_C_W\0\u{1}CotType_a_f_G_U_C_I_L\0\u{1}CotType_a_f_G_U_C_R_O\0\u{1}CotType_a_f_G_U_C_R_V\0\u{1}CotType_a_f_G_U_H\0\u{1}CotType_a_f_G_U_U_M_S_E\0\u{1}CotType_a_f_G_U_S_M_C\0\u{1}CotType_a_f_G_E_S\0\u{1}CotType_a_f_G_E\0\u{1}CotType_a_f_G_E_V_C_U\0\u{1}CotType_a_f_G_E_V_C_ps\0\u{1}CotType_a_u_G_E_V\0\u{1}CotType_a_f_S_N_N_R\0\u{1}CotType_a_f_F_B\0\u{1}CotType_b_m_p_s_p_loc\0\u{1}CotType_b_i_v\0\u{1}CotType_b_f_t_r\0\u{1}CotType_b_f_t_a\0\u{1}CotType_u_d_f_m\0\u{1}CotType_u_d_p\0\u{1}CotType_b_m_p_s_m\0\u{1}CotType_b_m_p_c\0\u{1}CotType_u_r_b_c_c\0\u{1}CotType_u_r_b_bullseye\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CotType_Other\0\u{1}CotType_a_f_G_U_C\0\u{1}CotType_a_f_G_U_C_I\0\u{1}CotType_a_n_A_C_F\0\u{1}CotType_a_n_A_C_H\0\u{1}CotType_a_n_A_C\0\u{1}CotType_a_f_A_M_H\0\u{1}CotType_a_f_A_M\0\u{1}CotType_a_f_A_M_F_F\0\u{1}CotType_a_f_A_M_H_A\0\u{1}CotType_a_f_A_M_H_U_M\0\u{1}CotType_a_h_A_M_F_F\0\u{1}CotType_a_h_A_M_H_A\0\u{1}CotType_a_u_A_C\0\u{1}CotType_t_x_d_d\0\u{1}CotType_a_f_G_E_S_E\0\u{1}CotType_a_f_G_E_V_C\0\u{1}CotType_a_f_S\0\u{1}CotType_a_f_A_M_F\0\u{1}CotType_a_f_A_M_F_C_H\0\u{1}CotType_a_f_A_M_F_U_L\0\u{1}CotType_a_f_A_M_F_L\0\u{1}CotType_a_f_A_M_F_P\0\u{1}CotType_a_f_A_C_H\0\u{1}CotType_a_n_A_M_F_Q\0\u{1}CotType_b_t_f\0\u{1}CotType_b_r_f_h_c\0\u{1}CotType_b_a_o_pan\0\u{1}CotType_b_a_o_opn\0\u{1}CotType_b_a_o_can\0\u{1}CotType_b_a_o_tbl\0\u{1}CotType_b_a_g\0\u{1}CotType_a_f_G\0\u{1}CotType_a_f_G_U\0\u{1}CotType_a_h_G\0\u{1}CotType_a_u_G\0\u{1}CotType_a_n_G\0\u{1}CotType_b_m_r\0\u{1}CotType_b_m_p_w\0\u{1}CotType_b_m_p_s_p_i\0\u{1}CotType_u_d_f\0\u{1}CotType_u_d_r\0\u{1}CotType_u_d_c_c\0\u{1}CotType_u_rb_a\0\u{1}CotType_a_h_A\0\u{1}CotType_a_u_A\0\u{1}CotType_a_f_A_M_H_Q\0\u{1}CotType_a_f_A_C_F\0\u{1}CotType_a_f_A_C\0\u{1}CotType_a_f_A_C_L\0\u{1}CotType_a_f_A\0\u{1}CotType_a_f_A_M_H_C\0\u{1}CotType_a_n_A_M_F_F\0\u{1}CotType_a_u_A_C_F\0\u{1}CotType_a_f_G_U_C_F_T_A\0\u{1}CotType_a_f_G_U_C_V_S\0\u{1}CotType_a_f_G_U_C_R_X\0\u{1}CotType_a_f_G_U_C_I_Z\0\u{1}CotType_a_f_G_U_C_E_C_W\0\u{1}CotType_a_f_G_U_C_I_L\0\u{1}CotType_a_f_G_U_C_R_O\0\u{1}CotType_a_f_G_U_C_R_V\0\u{1}CotType_a_f_G_U_H\0\u{1}CotType_a_f_G_U_U_M_S_E\0\u{1}CotType_a_f_G_U_S_M_C\0\u{1}CotType_a_f_G_E_S\0\u{1}CotType_a_f_G_E\0\u{1}CotType_a_f_G_E_V_C_U\0\u{1}CotType_a_f_G_E_V_C_ps\0\u{1}CotType_a_u_G_E_V\0\u{1}CotType_a_f_S_N_N_R\0\u{1}CotType_a_f_F_B\0\u{1}CotType_b_m_p_s_p_loc\0\u{1}CotType_b_i_v\0\u{1}CotType_b_f_t_r\0\u{1}CotType_b_f_t_a\0\u{1}CotType_u_d_f_m\0\u{1}CotType_u_d_p\0\u{1}CotType_b_m_p_s_m\0\u{1}CotType_b_m_p_c\0\u{1}CotType_u_r_b_c_c\0\u{1}CotType_u_r_b_bullseye\0\u{1}CotType_a_f_G_E_V_A\0\u{1}CotType_a_n_A\0\u{1}CotType_a_u_G_U_C_F\0\u{1}CotType_a_n_G_U_C_F\0\u{1}CotType_a_h_G_U_C_F\0\u{1}CotType_a_f_G_U_C_F\0\u{1}CotType_a_u_G_I\0\u{1}CotType_a_n_G_I\0\u{1}CotType_a_h_G_I\0\u{1}CotType_a_f_G_I\0\u{1}CotType_a_u_G_E_X_M\0\u{1}CotType_a_n_G_E_X_M\0\u{1}CotType_a_h_G_E_X_M\0\u{1}CotType_a_f_G_E_X_M\0\u{1}CotType_a_u_S\0\u{1}CotType_a_n_S\0\u{1}CotType_a_h_S\0\u{1}CotType_a_u_G_U_C_I_d\0\u{1}CotType_a_n_G_U_C_I_d\0\u{1}CotType_a_h_G_U_C_I_d\0\u{1}CotType_a_f_G_U_C_I_d\0\u{1}CotType_a_u_G_E_V_A_T\0\u{1}CotType_a_n_G_E_V_A_T\0\u{1}CotType_a_h_G_E_V_A_T\0\u{1}CotType_a_f_G_E_V_A_T\0\u{1}CotType_a_u_G_U_C_I\0\u{1}CotType_a_n_G_U_C_I\0\u{1}CotType_a_h_G_U_C_I\0\u{1}CotType_a_n_G_E_V\0\u{1}CotType_a_h_G_E_V\0\u{1}CotType_a_f_G_E_V\0\u{1}CotType_b_m_p_w_GOTO\0\u{1}CotType_b_m_p_c_ip\0\u{1}CotType_b_m_p_c_cp\0\u{1}CotType_b_m_p_s_p_op\0\u{1}CotType_u_d_v\0\u{1}CotType_u_d_v_m\0\u{1}CotType_u_d_c_e\0\u{1}CotType_b_i_x_i\0\u{1}CotType_b_t_f_d\0\u{1}CotType_b_t_f_r\0\u{1}CotType_b_a_o_c\0\u{1}CotType_t_s\0")
 }
 
 extension GeoPointSource: SwiftProtobuf._ProtoNameProviding {
@@ -2450,7 +3348,7 @@ extension TAKPacket: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementation
 
 extension GeoChat: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GeoChat"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}message\0\u{1}to\0\u{3}to_callsign\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}message\0\u{1}to\0\u{3}to_callsign\0\u{3}receipt_for_uid\0\u{3}receipt_type\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2461,6 +3359,8 @@ extension GeoChat: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBa
       case 1: try { try decoder.decodeSingularStringField(value: &self.message) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self._to) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self._toCallsign) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.receiptForUid) }()
+      case 5: try { try decoder.decodeSingularEnumField(value: &self.receiptType) }()
       default: break
       }
     }
@@ -2480,6 +3380,12 @@ extension GeoChat: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBa
     try { if let v = self._toCallsign {
       try visitor.visitSingularStringField(value: v, fieldNumber: 3)
     } }()
+    if !self.receiptForUid.isEmpty {
+      try visitor.visitSingularStringField(value: self.receiptForUid, fieldNumber: 4)
+    }
+    if self.receiptType != .none {
+      try visitor.visitSingularEnumField(value: self.receiptType, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2487,9 +3393,15 @@ extension GeoChat: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBa
     if lhs.message != rhs.message {return false}
     if lhs._to != rhs._to {return false}
     if lhs._toCallsign != rhs._toCallsign {return false}
+    if lhs.receiptForUid != rhs.receiptForUid {return false}
+    if lhs.receiptType != rhs.receiptType {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
+}
+
+extension GeoChat.ReceiptType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0ReceiptType_None\0\u{1}ReceiptType_Delivered\0\u{1}ReceiptType_Read\0")
 }
 
 extension Group: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -2926,7 +3838,7 @@ extension DrawnShape: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementatio
 }
 
 extension DrawnShape.Kind: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Kind_Unspecified\0\u{1}Kind_Circle\0\u{1}Kind_Rectangle\0\u{1}Kind_Freeform\0\u{1}Kind_Telestration\0\u{1}Kind_Polygon\0\u{1}Kind_RangingCircle\0\u{1}Kind_Bullseye\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Kind_Unspecified\0\u{1}Kind_Circle\0\u{1}Kind_Rectangle\0\u{1}Kind_Freeform\0\u{1}Kind_Telestration\0\u{1}Kind_Polygon\0\u{1}Kind_RangingCircle\0\u{1}Kind_Bullseye\0\u{1}Kind_Ellipse\0\u{1}Kind_Vehicle2D\0\u{1}Kind_Vehicle3D\0")
 }
 
 extension DrawnShape.StyleMode: SwiftProtobuf._ProtoNameProviding {
@@ -2999,7 +3911,7 @@ extension Marker: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBas
 }
 
 extension Marker.Kind: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Kind_Unspecified\0\u{1}Kind_Spot\0\u{1}Kind_Waypoint\0\u{1}Kind_Checkpoint\0\u{1}Kind_SelfPosition\0\u{1}Kind_Symbol2525\0\u{1}Kind_SpotMap\0\u{1}Kind_CustomIcon\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Kind_Unspecified\0\u{1}Kind_Spot\0\u{1}Kind_Waypoint\0\u{1}Kind_Checkpoint\0\u{1}Kind_SelfPosition\0\u{1}Kind_Symbol2525\0\u{1}Kind_SpotMap\0\u{1}Kind_CustomIcon\0\u{1}Kind_GoToPoint\0\u{1}Kind_InitialPoint\0\u{1}Kind_ContactPoint\0\u{1}Kind_ObservationPost\0\u{1}Kind_ImageMarker\0")
 }
 
 extension RangeAndBearing: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -3178,9 +4090,228 @@ extension Route.Link: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementatio
   }
 }
 
+extension CasevacReport: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CasevacReport"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}precedence\0\u{3}equipment_flags\0\u{3}litter_patients\0\u{3}ambulatory_patients\0\u{1}security\0\u{3}hlz_marking\0\u{3}zone_marker\0\u{3}us_military\0\u{3}us_civilian\0\u{3}non_us_military\0\u{3}non_us_civilian\0\u{1}epw\0\u{1}child\0\u{3}terrain_flags\0\u{1}frequency\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.precedence) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.equipmentFlags) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.litterPatients) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.ambulatoryPatients) }()
+      case 5: try { try decoder.decodeSingularEnumField(value: &self.security) }()
+      case 6: try { try decoder.decodeSingularEnumField(value: &self.hlzMarking) }()
+      case 7: try { try decoder.decodeSingularStringField(value: &self.zoneMarker) }()
+      case 8: try { try decoder.decodeSingularUInt32Field(value: &self.usMilitary) }()
+      case 9: try { try decoder.decodeSingularUInt32Field(value: &self.usCivilian) }()
+      case 10: try { try decoder.decodeSingularUInt32Field(value: &self.nonUsMilitary) }()
+      case 11: try { try decoder.decodeSingularUInt32Field(value: &self.nonUsCivilian) }()
+      case 12: try { try decoder.decodeSingularUInt32Field(value: &self.epw) }()
+      case 13: try { try decoder.decodeSingularUInt32Field(value: &self.child) }()
+      case 14: try { try decoder.decodeSingularUInt32Field(value: &self.terrainFlags) }()
+      case 15: try { try decoder.decodeSingularStringField(value: &self.frequency) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.precedence != .unspecified {
+      try visitor.visitSingularEnumField(value: self.precedence, fieldNumber: 1)
+    }
+    if self.equipmentFlags != 0 {
+      try visitor.visitSingularUInt32Field(value: self.equipmentFlags, fieldNumber: 2)
+    }
+    if self.litterPatients != 0 {
+      try visitor.visitSingularUInt32Field(value: self.litterPatients, fieldNumber: 3)
+    }
+    if self.ambulatoryPatients != 0 {
+      try visitor.visitSingularUInt32Field(value: self.ambulatoryPatients, fieldNumber: 4)
+    }
+    if self.security != .unspecified {
+      try visitor.visitSingularEnumField(value: self.security, fieldNumber: 5)
+    }
+    if self.hlzMarking != .unspecified {
+      try visitor.visitSingularEnumField(value: self.hlzMarking, fieldNumber: 6)
+    }
+    if !self.zoneMarker.isEmpty {
+      try visitor.visitSingularStringField(value: self.zoneMarker, fieldNumber: 7)
+    }
+    if self.usMilitary != 0 {
+      try visitor.visitSingularUInt32Field(value: self.usMilitary, fieldNumber: 8)
+    }
+    if self.usCivilian != 0 {
+      try visitor.visitSingularUInt32Field(value: self.usCivilian, fieldNumber: 9)
+    }
+    if self.nonUsMilitary != 0 {
+      try visitor.visitSingularUInt32Field(value: self.nonUsMilitary, fieldNumber: 10)
+    }
+    if self.nonUsCivilian != 0 {
+      try visitor.visitSingularUInt32Field(value: self.nonUsCivilian, fieldNumber: 11)
+    }
+    if self.epw != 0 {
+      try visitor.visitSingularUInt32Field(value: self.epw, fieldNumber: 12)
+    }
+    if self.child != 0 {
+      try visitor.visitSingularUInt32Field(value: self.child, fieldNumber: 13)
+    }
+    if self.terrainFlags != 0 {
+      try visitor.visitSingularUInt32Field(value: self.terrainFlags, fieldNumber: 14)
+    }
+    if !self.frequency.isEmpty {
+      try visitor.visitSingularStringField(value: self.frequency, fieldNumber: 15)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: CasevacReport, rhs: CasevacReport) -> Bool {
+    if lhs.precedence != rhs.precedence {return false}
+    if lhs.equipmentFlags != rhs.equipmentFlags {return false}
+    if lhs.litterPatients != rhs.litterPatients {return false}
+    if lhs.ambulatoryPatients != rhs.ambulatoryPatients {return false}
+    if lhs.security != rhs.security {return false}
+    if lhs.hlzMarking != rhs.hlzMarking {return false}
+    if lhs.zoneMarker != rhs.zoneMarker {return false}
+    if lhs.usMilitary != rhs.usMilitary {return false}
+    if lhs.usCivilian != rhs.usCivilian {return false}
+    if lhs.nonUsMilitary != rhs.nonUsMilitary {return false}
+    if lhs.nonUsCivilian != rhs.nonUsCivilian {return false}
+    if lhs.epw != rhs.epw {return false}
+    if lhs.child != rhs.child {return false}
+    if lhs.terrainFlags != rhs.terrainFlags {return false}
+    if lhs.frequency != rhs.frequency {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension CasevacReport.Precedence: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Precedence_Unspecified\0\u{1}Precedence_Urgent\0\u{1}Precedence_UrgentSurgical\0\u{1}Precedence_Priority\0\u{1}Precedence_Routine\0\u{1}Precedence_Convenience\0")
+}
+
+extension CasevacReport.HlzMarking: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0HlzMarking_Unspecified\0\u{1}HlzMarking_Panels\0\u{1}HlzMarking_PyroSignal\0\u{1}HlzMarking_Smoke\0\u{1}HlzMarking_None\0\u{1}HlzMarking_Other\0")
+}
+
+extension CasevacReport.Security: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Security_Unspecified\0\u{1}Security_NoEnemy\0\u{1}Security_PossibleEnemy\0\u{1}Security_EnemyInArea\0\u{1}Security_EnemyInArmedContact\0")
+}
+
+extension EmergencyAlert: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".EmergencyAlert"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{3}authoring_uid\0\u{3}cancel_reference_uid\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.type) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.authoringUid) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.cancelReferenceUid) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.type != .unspecified {
+      try visitor.visitSingularEnumField(value: self.type, fieldNumber: 1)
+    }
+    if !self.authoringUid.isEmpty {
+      try visitor.visitSingularStringField(value: self.authoringUid, fieldNumber: 2)
+    }
+    if !self.cancelReferenceUid.isEmpty {
+      try visitor.visitSingularStringField(value: self.cancelReferenceUid, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: EmergencyAlert, rhs: EmergencyAlert) -> Bool {
+    if lhs.type != rhs.type {return false}
+    if lhs.authoringUid != rhs.authoringUid {return false}
+    if lhs.cancelReferenceUid != rhs.cancelReferenceUid {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension EmergencyAlert.TypeEnum: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Type_Unspecified\0\u{1}Type_Alert911\0\u{1}Type_RingTheBell\0\u{1}Type_InContact\0\u{1}Type_GeoFenceBreached\0\u{1}Type_Custom\0\u{1}Type_Cancel\0")
+}
+
+extension TaskRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TaskRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}task_type\0\u{3}target_uid\0\u{3}assignee_uid\0\u{1}priority\0\u{1}status\0\u{1}note\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.taskType) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.targetUid) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.assigneeUid) }()
+      case 4: try { try decoder.decodeSingularEnumField(value: &self.priority) }()
+      case 5: try { try decoder.decodeSingularEnumField(value: &self.status) }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.note) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.taskType.isEmpty {
+      try visitor.visitSingularStringField(value: self.taskType, fieldNumber: 1)
+    }
+    if !self.targetUid.isEmpty {
+      try visitor.visitSingularStringField(value: self.targetUid, fieldNumber: 2)
+    }
+    if !self.assigneeUid.isEmpty {
+      try visitor.visitSingularStringField(value: self.assigneeUid, fieldNumber: 3)
+    }
+    if self.priority != .unspecified {
+      try visitor.visitSingularEnumField(value: self.priority, fieldNumber: 4)
+    }
+    if self.status != .unspecified {
+      try visitor.visitSingularEnumField(value: self.status, fieldNumber: 5)
+    }
+    if !self.note.isEmpty {
+      try visitor.visitSingularStringField(value: self.note, fieldNumber: 6)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: TaskRequest, rhs: TaskRequest) -> Bool {
+    if lhs.taskType != rhs.taskType {return false}
+    if lhs.targetUid != rhs.targetUid {return false}
+    if lhs.assigneeUid != rhs.assigneeUid {return false}
+    if lhs.priority != rhs.priority {return false}
+    if lhs.status != rhs.status {return false}
+    if lhs.note != rhs.note {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension TaskRequest.Priority: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Priority_Unspecified\0\u{1}Priority_Low\0\u{1}Priority_Normal\0\u{1}Priority_High\0\u{1}Priority_Critical\0")
+}
+
+extension TaskRequest.Status: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Status_Unspecified\0\u{1}Status_Pending\0\u{1}Status_Acknowledged\0\u{1}Status_InProgress\0\u{1}Status_Completed\0\u{1}Status_Cancelled\0")
+}
+
 extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TAKPacketV2"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}cot_type_id\0\u{1}how\0\u{1}callsign\0\u{1}team\0\u{1}role\0\u{3}latitude_i\0\u{3}longitude_i\0\u{1}altitude\0\u{1}speed\0\u{1}course\0\u{1}battery\0\u{3}geo_src\0\u{3}alt_src\0\u{1}uid\0\u{3}device_callsign\0\u{3}stale_seconds\0\u{3}tak_version\0\u{3}tak_device\0\u{3}tak_platform\0\u{3}tak_os\0\u{1}endpoint\0\u{1}phone\0\u{3}cot_type_str\0\u{2}\u{7}pli\0\u{1}chat\0\u{1}aircraft\0\u{3}raw_detail\0\u{1}shape\0\u{1}marker\0\u{1}rab\0\u{1}route\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}cot_type_id\0\u{1}how\0\u{1}callsign\0\u{1}team\0\u{1}role\0\u{3}latitude_i\0\u{3}longitude_i\0\u{1}altitude\0\u{1}speed\0\u{1}course\0\u{1}battery\0\u{3}geo_src\0\u{3}alt_src\0\u{1}uid\0\u{3}device_callsign\0\u{3}stale_seconds\0\u{3}tak_version\0\u{3}tak_device\0\u{3}tak_platform\0\u{3}tak_os\0\u{1}endpoint\0\u{1}phone\0\u{3}cot_type_str\0\u{2}\u{7}pli\0\u{1}chat\0\u{1}aircraft\0\u{3}raw_detail\0\u{1}shape\0\u{1}marker\0\u{1}rab\0\u{1}route\0\u{1}casevac\0\u{1}emergency\0\u{1}task\0")
 
   fileprivate class _StorageClass {
     var _cotTypeID: CotType = .other
@@ -3376,6 +4507,45 @@ extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
             _storage._payloadVariant = .route(v)
           }
         }()
+        case 38: try {
+          var v: CasevacReport?
+          var hadOneofValue = false
+          if let current = _storage._payloadVariant {
+            hadOneofValue = true
+            if case .casevac(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._payloadVariant = .casevac(v)
+          }
+        }()
+        case 39: try {
+          var v: EmergencyAlert?
+          var hadOneofValue = false
+          if let current = _storage._payloadVariant {
+            hadOneofValue = true
+            if case .emergency(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._payloadVariant = .emergency(v)
+          }
+        }()
+        case 40: try {
+          var v: TaskRequest?
+          var hadOneofValue = false
+          if let current = _storage._payloadVariant {
+            hadOneofValue = true
+            if case .task(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._payloadVariant = .task(v)
+          }
+        }()
         default: break
         }
       }
@@ -3489,6 +4659,18 @@ extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
       case .route?: try {
         guard case .route(let v)? = _storage._payloadVariant else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 37)
+      }()
+      case .casevac?: try {
+        guard case .casevac(let v)? = _storage._payloadVariant else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 38)
+      }()
+      case .emergency?: try {
+        guard case .emergency(let v)? = _storage._payloadVariant else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 39)
+      }()
+      case .task?: try {
+        guard case .task(let v)? = _storage._payloadVariant else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 40)
       }()
       case nil: break
       }

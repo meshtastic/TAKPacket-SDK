@@ -51,6 +51,9 @@ class CotXmlParser {
         const val SHAPE_KIND_POLYGON = 5
         const val SHAPE_KIND_RANGING_CIRCLE = 6
         const val SHAPE_KIND_BULLSEYE = 7
+        const val SHAPE_KIND_ELLIPSE = 8
+        const val SHAPE_KIND_VEHICLE_2D = 9
+        const val SHAPE_KIND_VEHICLE_3D = 10
 
         /** DrawnShape.StyleMode values (mirrors proto `StyleMode_*`). */
         const val STYLE_UNSPECIFIED = 0
@@ -67,6 +70,63 @@ class CotXmlParser {
         const val MARKER_KIND_SYMBOL_2525 = 5
         const val MARKER_KIND_SPOT_MAP = 6
         const val MARKER_KIND_CUSTOM_ICON = 7
+        const val MARKER_KIND_GO_TO_POINT = 8
+        const val MARKER_KIND_INITIAL_POINT = 9
+        const val MARKER_KIND_CONTACT_POINT = 10
+        const val MARKER_KIND_OBSERVATION_POST = 11
+        const val MARKER_KIND_IMAGE_MARKER = 12
+
+        /** CasevacReport.Precedence enum values. */
+        const val PRECEDENCE_UNSPECIFIED = 0
+        const val PRECEDENCE_URGENT = 1
+        const val PRECEDENCE_URGENT_SURGICAL = 2
+        const val PRECEDENCE_PRIORITY = 3
+        const val PRECEDENCE_ROUTINE = 4
+        const val PRECEDENCE_CONVENIENCE = 5
+
+        /** CasevacReport.HlzMarking enum values. */
+        const val HLZ_MARKING_UNSPECIFIED = 0
+        const val HLZ_MARKING_PANELS = 1
+        const val HLZ_MARKING_PYRO_SIGNAL = 2
+        const val HLZ_MARKING_SMOKE = 3
+        const val HLZ_MARKING_NONE = 4
+        const val HLZ_MARKING_OTHER = 5
+
+        /** CasevacReport.Security enum values. */
+        const val SECURITY_UNSPECIFIED = 0
+        const val SECURITY_NO_ENEMY = 1
+        const val SECURITY_POSSIBLE_ENEMY = 2
+        const val SECURITY_ENEMY_IN_AREA = 3
+        const val SECURITY_ENEMY_IN_ARMED_CONTACT = 4
+
+        /** EmergencyAlert.Type enum values. */
+        const val EMERGENCY_TYPE_UNSPECIFIED = 0
+        const val EMERGENCY_TYPE_ALERT_911 = 1
+        const val EMERGENCY_TYPE_RING_THE_BELL = 2
+        const val EMERGENCY_TYPE_IN_CONTACT = 3
+        const val EMERGENCY_TYPE_GEO_FENCE_BREACHED = 4
+        const val EMERGENCY_TYPE_CUSTOM = 5
+        const val EMERGENCY_TYPE_CANCEL = 6
+
+        /** TaskRequest.Priority enum values. */
+        const val TASK_PRIORITY_UNSPECIFIED = 0
+        const val TASK_PRIORITY_LOW = 1
+        const val TASK_PRIORITY_NORMAL = 2
+        const val TASK_PRIORITY_HIGH = 3
+        const val TASK_PRIORITY_CRITICAL = 4
+
+        /** TaskRequest.Status enum values. */
+        const val TASK_STATUS_UNSPECIFIED = 0
+        const val TASK_STATUS_PENDING = 1
+        const val TASK_STATUS_ACKNOWLEDGED = 2
+        const val TASK_STATUS_IN_PROGRESS = 3
+        const val TASK_STATUS_COMPLETED = 4
+        const val TASK_STATUS_CANCELLED = 5
+
+        /** GeoChat.ReceiptType enum values. */
+        const val RECEIPT_TYPE_NONE = 0
+        const val RECEIPT_TYPE_DELIVERED = 1
+        const val RECEIPT_TYPE_READ = 2
 
         /** Route.Method values (mirrors proto). */
         private val routeMethodMap = mapOf(
@@ -116,6 +176,9 @@ class CotXmlParser {
             "u-d-p" -> SHAPE_KIND_POLYGON
             "u-r-b-c-c" -> SHAPE_KIND_RANGING_CIRCLE
             "u-r-b-bullseye" -> SHAPE_KIND_BULLSEYE
+            "u-d-c-e" -> SHAPE_KIND_ELLIPSE
+            "u-d-v" -> SHAPE_KIND_VEHICLE_2D
+            "u-d-v-m" -> SHAPE_KIND_VEHICLE_3D
             else -> SHAPE_KIND_UNSPECIFIED
         }
 
@@ -129,6 +192,11 @@ class CotXmlParser {
             "b-m-p-w" -> MARKER_KIND_WAYPOINT
             "b-m-p-c" -> MARKER_KIND_CHECKPOINT
             "b-m-p-s-p-i", "b-m-p-s-p-loc" -> MARKER_KIND_SELF_POSITION
+            "b-m-p-w-GOTO" -> MARKER_KIND_GO_TO_POINT
+            "b-m-p-c-ip" -> MARKER_KIND_INITIAL_POINT
+            "b-m-p-c-cp" -> MARKER_KIND_CONTACT_POINT
+            "b-m-p-s-p-op" -> MARKER_KIND_OBSERVATION_POST
+            "b-i-x-i" -> MARKER_KIND_IMAGE_MARKER
             else -> when {
                 iconset.startsWith("COT_MAPPING_2525B") -> MARKER_KIND_SYMBOL_2525
                 iconset.startsWith("COT_MAPPING_SPOTMAP") -> MARKER_KIND_SPOT_MAP
@@ -136,6 +204,93 @@ class CotXmlParser {
                 else -> MARKER_KIND_UNSPECIFIED
             }
         }
+
+        /** CasevacReport.Precedence string → enum int. ATAK writes these as letter codes. */
+        private val precedenceMap = mapOf(
+            "A" to PRECEDENCE_URGENT,
+            "URGENT" to PRECEDENCE_URGENT,
+            "Urgent" to PRECEDENCE_URGENT,
+            "B" to PRECEDENCE_URGENT_SURGICAL,
+            "URGENT SURGICAL" to PRECEDENCE_URGENT_SURGICAL,
+            "Urgent Surgical" to PRECEDENCE_URGENT_SURGICAL,
+            "C" to PRECEDENCE_PRIORITY,
+            "PRIORITY" to PRECEDENCE_PRIORITY,
+            "Priority" to PRECEDENCE_PRIORITY,
+            "D" to PRECEDENCE_ROUTINE,
+            "ROUTINE" to PRECEDENCE_ROUTINE,
+            "Routine" to PRECEDENCE_ROUTINE,
+            "E" to PRECEDENCE_CONVENIENCE,
+            "CONVENIENCE" to PRECEDENCE_CONVENIENCE,
+            "Convenience" to PRECEDENCE_CONVENIENCE,
+        )
+
+        /** CasevacReport.HlzMarking string → enum int. */
+        private val hlzMarkingMap = mapOf(
+            "Panels" to HLZ_MARKING_PANELS,
+            "Pyro" to HLZ_MARKING_PYRO_SIGNAL,
+            "Pyrotechnic" to HLZ_MARKING_PYRO_SIGNAL,
+            "Smoke" to HLZ_MARKING_SMOKE,
+            "None" to HLZ_MARKING_NONE,
+            "Other" to HLZ_MARKING_OTHER,
+        )
+
+        /** CasevacReport.Security string → enum int. */
+        private val securityMap = mapOf(
+            "N" to SECURITY_NO_ENEMY,
+            "No Enemy" to SECURITY_NO_ENEMY,
+            "P" to SECURITY_POSSIBLE_ENEMY,
+            "Possible Enemy" to SECURITY_POSSIBLE_ENEMY,
+            "E" to SECURITY_ENEMY_IN_AREA,
+            "Enemy In Area" to SECURITY_ENEMY_IN_AREA,
+            "X" to SECURITY_ENEMY_IN_ARMED_CONTACT,
+            "Enemy In Armed Contact" to SECURITY_ENEMY_IN_ARMED_CONTACT,
+        )
+
+        /** EmergencyAlert.Type string → enum int. Covers both ATAK and user-typed variants. */
+        private val emergencyTypeMap = mapOf(
+            "911 Alert" to EMERGENCY_TYPE_ALERT_911,
+            "911" to EMERGENCY_TYPE_ALERT_911,
+            "Ring The Bell" to EMERGENCY_TYPE_RING_THE_BELL,
+            "Ring the Bell" to EMERGENCY_TYPE_RING_THE_BELL,
+            "In Contact" to EMERGENCY_TYPE_IN_CONTACT,
+            "Troops In Contact" to EMERGENCY_TYPE_IN_CONTACT,
+            "Geo-fence Breached" to EMERGENCY_TYPE_GEO_FENCE_BREACHED,
+            "Geo Fence Breached" to EMERGENCY_TYPE_GEO_FENCE_BREACHED,
+            "Custom" to EMERGENCY_TYPE_CUSTOM,
+            "Cancel" to EMERGENCY_TYPE_CANCEL,
+        )
+
+        /** EmergencyAlert.Type derived from CoT type atom — fallback when <emergency type> is missing. */
+        private fun emergencyTypeFromCotType(cotType: String): Int = when (cotType) {
+            "b-a-o-tbl" -> EMERGENCY_TYPE_ALERT_911
+            "b-a-o-pan" -> EMERGENCY_TYPE_RING_THE_BELL
+            "b-a-o-opn" -> EMERGENCY_TYPE_IN_CONTACT
+            "b-a-g" -> EMERGENCY_TYPE_GEO_FENCE_BREACHED
+            "b-a-o-c" -> EMERGENCY_TYPE_CUSTOM
+            "b-a-o-can" -> EMERGENCY_TYPE_CANCEL
+            else -> EMERGENCY_TYPE_UNSPECIFIED
+        }
+
+        /** TaskRequest.Priority string → enum int. */
+        private val taskPriorityMap = mapOf(
+            "Low" to TASK_PRIORITY_LOW,
+            "Normal" to TASK_PRIORITY_NORMAL,
+            "Medium" to TASK_PRIORITY_NORMAL,
+            "High" to TASK_PRIORITY_HIGH,
+            "Critical" to TASK_PRIORITY_CRITICAL,
+        )
+
+        /** TaskRequest.Status string → enum int. */
+        private val taskStatusMap = mapOf(
+            "Pending" to TASK_STATUS_PENDING,
+            "Acknowledged" to TASK_STATUS_ACKNOWLEDGED,
+            "InProgress" to TASK_STATUS_IN_PROGRESS,
+            "In Progress" to TASK_STATUS_IN_PROGRESS,
+            "Completed" to TASK_STATUS_COMPLETED,
+            "Done" to TASK_STATUS_COMPLETED,
+            "Cancelled" to TASK_STATUS_CANCELLED,
+            "Canceled" to TASK_STATUS_CANCELLED,
+        )
     }
 
     /**
@@ -248,6 +403,43 @@ class CotXmlParser {
         var routePrefix = ""
         var routeMethod = 0
         var routeDirection = 0
+
+        // --- CasevacReport accumulators ---------------------------------
+        var hasCasevacData = false
+        var casevacPrecedence = 0
+        var casevacEquipmentFlags = 0
+        var casevacLitterPatients = 0
+        var casevacAmbulatoryPatients = 0
+        var casevacSecurity = 0
+        var casevacHlzMarking = 0
+        var casevacZoneMarker = ""
+        var casevacUsMilitary = 0
+        var casevacUsCivilian = 0
+        var casevacNonUsMilitary = 0
+        var casevacNonUsCivilian = 0
+        var casevacEpw = 0
+        var casevacChild = 0
+        var casevacTerrainFlags = 0
+        var casevacFrequency = ""
+
+        // --- EmergencyAlert accumulators --------------------------------
+        var hasEmergencyData = false
+        var emergencyTypeInt = 0
+        var emergencyAuthoringUid = ""
+        var emergencyCancelReferenceUid = ""
+
+        // --- TaskRequest accumulators -----------------------------------
+        var hasTaskData = false
+        var taskTypeTag = ""
+        var taskTargetUid = ""
+        var taskAssigneeUid = ""
+        var taskPriority = 0
+        var taskStatus = 0
+        var taskNote = ""
+
+        // --- GeoChat receipt accumulators (extend existing chat path) ---
+        var chatReceiptForUid = ""
+        var chatReceiptType = 0
 
         var eventType = parser.eventType
         while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -407,6 +599,74 @@ class CotXmlParser {
                             val sw = parser.getAttributeValue(null, "stroke")?.toIntOrNull() ?: 0
                             if (sw > 0) strokeWeightX10 = sw * 10
                         }
+                        // --- CasevacReport --------------------------------
+                        // ATAK writes: <_medevac_ precedence="…" hoist="true"
+                        //   ventilator="false" equipment_other="…" litter="2"
+                        //   ambulatory="1" security="N" hlz_marking="Smoke"
+                        //   zone_prot_marker="Green" us_military="2" us_civilian="0"
+                        //   non_us_military="0" non_us_civilian="1" epw="0" child="0"
+                        //   terrain_slope="true" terrain_other="…" freq="38.90"/>
+                        "_medevac_" -> {
+                            hasCasevacData = true
+                            casevacPrecedence = precedenceMap[parser.getAttributeValue(null, "precedence") ?: ""] ?: 0
+                            // Equipment flags bitfield
+                            var eq = 0
+                            if (parser.getAttributeValue(null, "hoist") == "true") eq = eq or 0x02
+                            if (parser.getAttributeValue(null, "extraction_equipment") == "true") eq = eq or 0x04
+                            if (parser.getAttributeValue(null, "ventilator") == "true") eq = eq or 0x08
+                            if (parser.getAttributeValue(null, "blood") == "true") eq = eq or 0x10
+                            if (parser.getAttributeValue(null, "none") == "true") eq = eq or 0x01
+                            casevacEquipmentFlags = eq
+                            casevacLitterPatients =
+                                parser.getAttributeValue(null, "litter")?.toIntOrNull() ?: 0
+                            casevacAmbulatoryPatients =
+                                parser.getAttributeValue(null, "ambulatory")?.toIntOrNull() ?: 0
+                            casevacSecurity = securityMap[parser.getAttributeValue(null, "security") ?: ""] ?: 0
+                            casevacHlzMarking = hlzMarkingMap[parser.getAttributeValue(null, "hlz_marking") ?: ""] ?: 0
+                            casevacZoneMarker = parser.getAttributeValue(null, "zone_prot_marker") ?: ""
+                            casevacUsMilitary = parser.getAttributeValue(null, "us_military")?.toIntOrNull() ?: 0
+                            casevacUsCivilian = parser.getAttributeValue(null, "us_civilian")?.toIntOrNull() ?: 0
+                            casevacNonUsMilitary = parser.getAttributeValue(null, "non_us_military")?.toIntOrNull() ?: 0
+                            casevacNonUsCivilian = parser.getAttributeValue(null, "non_us_civilian")?.toIntOrNull() ?: 0
+                            casevacEpw = parser.getAttributeValue(null, "epw")?.toIntOrNull() ?: 0
+                            casevacChild = parser.getAttributeValue(null, "child")?.toIntOrNull() ?: 0
+                            // Terrain flags bitfield
+                            var tf = 0
+                            if (parser.getAttributeValue(null, "terrain_slope") == "true") tf = tf or 0x01
+                            if (parser.getAttributeValue(null, "terrain_rough") == "true") tf = tf or 0x02
+                            if (parser.getAttributeValue(null, "terrain_loose") == "true") tf = tf or 0x04
+                            if (parser.getAttributeValue(null, "terrain_trees") == "true") tf = tf or 0x08
+                            if (parser.getAttributeValue(null, "terrain_wires") == "true") tf = tf or 0x10
+                            if (parser.getAttributeValue(null, "terrain_other") == "true") tf = tf or 0x20
+                            casevacTerrainFlags = tf
+                            casevacFrequency = parser.getAttributeValue(null, "freq") ?: ""
+                        }
+                        // --- EmergencyAlert -------------------------------
+                        // ATAK writes: <emergency type="911 Alert"/> or
+                        //              <emergency cancel="true"/>
+                        "emergency" -> {
+                            hasEmergencyData = true
+                            val typeAttr = parser.getAttributeValue(null, "type") ?: ""
+                            emergencyTypeInt = emergencyTypeMap[typeAttr]
+                                ?: emergencyTypeFromCotType(cotTypeStr)
+                            if (parser.getAttributeValue(null, "cancel") == "true") {
+                                emergencyTypeInt = EMERGENCY_TYPE_CANCEL
+                            }
+                        }
+                        // --- TaskRequest ----------------------------------
+                        // ATAK writes: <task type="engage" priority="High"
+                        //   status="Pending" note="…" assignee="…"/>
+                        // (Element name varies — also sometimes "_task_".)
+                        "task", "_task_" -> {
+                            hasTaskData = true
+                            taskTypeTag = parser.getAttributeValue(null, "type") ?: ""
+                            taskPriority = taskPriorityMap[parser.getAttributeValue(null, "priority") ?: ""] ?: 0
+                            taskStatus = taskStatusMap[parser.getAttributeValue(null, "status") ?: ""] ?: 0
+                            val noteAttr = parser.getAttributeValue(null, "note") ?: ""
+                            if (noteAttr.isNotEmpty()) taskNote = noteAttr
+                            val assigneeAttr = parser.getAttributeValue(null, "assignee") ?: ""
+                            if (assigneeAttr.isNotEmpty()) taskAssigneeUid = assigneeAttr
+                        }
                         // --- Generic link: the most overloaded element in CoT
                         "link" -> {
                             val linkUidAttr = parser.getAttributeValue(null, "uid")
@@ -487,14 +747,43 @@ class CotXmlParser {
                             } else if (!isStyleLink && linkUidAttr != null && relation == "p-p" &&
                                 linkType.isNotEmpty()
                             ) {
-                                // Marker parent link: no point attribute, p-p relation,
-                                // references a parent TAK user by UID + cot type.
-                                markerParentUid = linkUidAttr
-                                markerParentType = linkType
-                                if (parentCallsignAttr.isNotEmpty()) {
-                                    markerParentCallsign = parentCallsignAttr
+                                // Chat receipts: <link uid="…original-message-uid…"
+                                // relation="p-p" type="b-t-f"/> on a b-t-f-d or b-t-f-r
+                                // event is a receipt pointing at the acknowledged message.
+                                if (cotTypeStr == "b-t-f-d" || cotTypeStr == "b-t-f-r") {
+                                    if (chatReceiptForUid.isEmpty()) {
+                                        chatReceiptForUid = linkUidAttr
+                                    }
+                                    chatReceiptType = if (cotTypeStr == "b-t-f-d") {
+                                        RECEIPT_TYPE_DELIVERED
+                                    } else {
+                                        RECEIPT_TYPE_READ
+                                    }
+                                    hasChatData = true
+                                } else if (cotTypeStr == "t-s") {
+                                    // Task target link: first non-self-ref p-p link on
+                                    // a t-s event is the target being tasked.
+                                    if (taskTargetUid.isEmpty()) {
+                                        taskTargetUid = linkUidAttr
+                                    }
+                                    hasTaskData = true
+                                } else if (cotTypeStr.startsWith("b-a-")) {
+                                    // Emergency authoring link: the p-p link on a b-a-*
+                                    // event references the unit that raised the alert.
+                                    if (emergencyAuthoringUid.isEmpty()) {
+                                        emergencyAuthoringUid = linkUidAttr
+                                    }
+                                    hasEmergencyData = true
+                                } else {
+                                    // Marker parent link: no point attribute, p-p relation,
+                                    // references a parent TAK user by UID + cot type.
+                                    markerParentUid = linkUidAttr
+                                    markerParentType = linkType
+                                    if (parentCallsignAttr.isNotEmpty()) {
+                                        markerParentCallsign = parentCallsignAttr
+                                    }
+                                    hasMarkerData = true
                                 }
-                                hasMarkerData = true
                             }
                         }
                     }
@@ -546,22 +835,29 @@ class CotXmlParser {
             else -> STYLE_UNSPECIFIED
         }
 
-        // Payload priority: chat > aircraft > route > rab > shape > marker > pli.
+        // Payload priority: chat > aircraft > route > rab > shape > marker >
+        // casevac > emergency > task > pli.
         //
         // Rationale for ordering:
         //   * Chat and aircraft win first for backward compatibility with the
-        //     pre-v2 behavior.
+        //     pre-v2 behavior. Chat receipts (b-t-f-d / b-t-f-r) ride on the
+        //     same Chat variant with receipt fields set.
         //   * Route wins over RAB because a route also has <link type="b-m-p-w">
         //     entries that could otherwise look like RAB anchors.
         //   * Shape wins over marker because a shape event can have a <contact>
         //     (that looks marker-ish) alongside real shape geometry.
         //   * Markers win over the Pli fallback whenever we saw marker-specific
         //     detail like <usericon> or <color argb="...">.
+        //   * CASEVAC / emergency / task win over the Pli fallback but below
+        //     shape/marker so a drawing that happens to carry stray medevac
+        //     attributes doesn't mis-dispatch.
         val payload = when {
             hasChatData -> TakPacketV2Data.Payload.Chat(
                 message = remarksText,
                 to = chatTo,
                 toCallsign = chatToCallsign,
+                receiptForUid = chatReceiptForUid,
+                receiptType = chatReceiptType,
             )
             hasAircraftData -> TakPacketV2Data.Payload.Aircraft(
                 icao = icao,
@@ -620,6 +916,37 @@ class CotXmlParser {
                 parentType = markerParentType,
                 parentCallsign = markerParentCallsign,
                 iconset = markerIconset,
+            )
+            hasCasevacData -> TakPacketV2Data.Payload.CasevacReport(
+                precedence = casevacPrecedence,
+                equipmentFlags = casevacEquipmentFlags,
+                litterPatients = casevacLitterPatients,
+                ambulatoryPatients = casevacAmbulatoryPatients,
+                security = casevacSecurity,
+                hlzMarking = casevacHlzMarking,
+                zoneMarker = casevacZoneMarker,
+                usMilitary = casevacUsMilitary,
+                usCivilian = casevacUsCivilian,
+                nonUsMilitary = casevacNonUsMilitary,
+                nonUsCivilian = casevacNonUsCivilian,
+                epw = casevacEpw,
+                child = casevacChild,
+                terrainFlags = casevacTerrainFlags,
+                frequency = casevacFrequency,
+            )
+            hasEmergencyData -> TakPacketV2Data.Payload.EmergencyAlert(
+                type = if (emergencyTypeInt != 0) emergencyTypeInt
+                       else emergencyTypeFromCotType(cotTypeStr),
+                authoringUid = emergencyAuthoringUid,
+                cancelReferenceUid = emergencyCancelReferenceUid,
+            )
+            hasTaskData -> TakPacketV2Data.Payload.TaskRequest(
+                taskType = taskTypeTag,
+                targetUid = taskTargetUid,
+                assigneeUid = taskAssigneeUid,
+                priority = taskPriority,
+                status = taskStatus,
+                note = taskNote,
             )
             isDeleteEvent -> TakPacketV2Data.Payload.Pli(true) // delete events use minimal payload
             else -> TakPacketV2Data.Payload.Pli(true) // PLI (position)

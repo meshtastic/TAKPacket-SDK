@@ -48,9 +48,119 @@ describe("RoundTrip", () => {
       expect(decAc.flight).toBe(origAc.flight);
       expect(decAc.squawk).toBe(origAc.squawk);
     }
+    if (packet.casevac) {
+      const origC = packet.casevac as Record<string, unknown>;
+      const decC = decompressed.casevac as Record<string, unknown>;
+      expect(decC).toBeTruthy();
+      expect(decC.precedence ?? 0).toBe(origC.precedence ?? 0);
+      expect(decC.equipmentFlags ?? 0).toBe(origC.equipmentFlags ?? 0);
+      expect(decC.litterPatients ?? 0).toBe(origC.litterPatients ?? 0);
+      expect(decC.ambulatoryPatients ?? 0).toBe(origC.ambulatoryPatients ?? 0);
+      expect(decC.security ?? 0).toBe(origC.security ?? 0);
+      expect(decC.hlzMarking ?? 0).toBe(origC.hlzMarking ?? 0);
+      expect(decC.terrainFlags ?? 0).toBe(origC.terrainFlags ?? 0);
+      expect(decC.frequency ?? "").toBe(origC.frequency ?? "");
+      expect(decC.zoneMarker ?? "").toBe(origC.zoneMarker ?? "");
+    }
+    if (packet.emergency) {
+      const origE = packet.emergency as Record<string, unknown>;
+      const decE = decompressed.emergency as Record<string, unknown>;
+      expect(decE).toBeTruthy();
+      expect(decE.type ?? 0).toBe(origE.type ?? 0);
+      expect(decE.authoringUid ?? "").toBe(origE.authoringUid ?? "");
+    }
+    if (packet.task) {
+      const origT = packet.task as Record<string, unknown>;
+      const decT = decompressed.task as Record<string, unknown>;
+      expect(decT).toBeTruthy();
+      expect(decT.taskType ?? "").toBe(origT.taskType ?? "");
+      expect(decT.targetUid ?? "").toBe(origT.targetUid ?? "");
+      expect(decT.assigneeUid ?? "").toBe(origT.assigneeUid ?? "");
+      expect(decT.priority ?? 0).toBe(origT.priority ?? 0);
+      expect(decT.status ?? 0).toBe(origT.status ?? 0);
+      expect(decT.note ?? "").toBe(origT.note ?? "");
+    }
 
     const rebuiltXml = buildCotXml(decompressed as Record<string, unknown>);
     expect(rebuiltXml).toContain("<event");
+  });
+
+  it("casevac_medline extracts to CasevacReport with full field set", () => {
+    const pkt = parseCotXml(loadFixtureXml("casevac_medline"));
+    expect(pkt.casevac).toBeTruthy();
+    const c = pkt.casevac as Record<string, unknown>;
+    expect(c.precedence).toBe(1); // Urgent
+    expect((c.litterPatients as number) ?? 0).toBeGreaterThan(0);
+    // Equipment: none=false, hoist=true, extraction=true → 0x06
+    expect((c.equipmentFlags as number) & 0x02).toBe(0x02); // hoist
+    expect((c.hlzMarking as number) ?? 0).toBeGreaterThan(0);
+    expect(c.frequency).toBe("38.90");
+  });
+
+  it("emergency_911 extracts to EmergencyAlert with Alert911 type", () => {
+    const pkt = parseCotXml(loadFixtureXml("emergency_911"));
+    expect(pkt.emergency).toBeTruthy();
+    const e = pkt.emergency as Record<string, unknown>;
+    expect(e.type).toBe(1); // Alert911
+    expect(e.authoringUid).toBeTruthy();
+  });
+
+  it("emergency_cancel extracts to EmergencyAlert with Cancel type", () => {
+    const pkt = parseCotXml(loadFixtureXml("emergency_cancel"));
+    expect(pkt.emergency).toBeTruthy();
+    const e = pkt.emergency as Record<string, unknown>;
+    expect(e.type).toBe(6); // Cancel
+  });
+
+  it("task_engage extracts to TaskRequest with target and assignee", () => {
+    const pkt = parseCotXml(loadFixtureXml("task_engage"));
+    expect(pkt.task).toBeTruthy();
+    const t = pkt.task as Record<string, unknown>;
+    expect(t.taskType).toBe("engage");
+    expect(t.targetUid).toBe("target-01");
+    expect(t.assigneeUid).toBe("ANDROID-0000000000000005");
+    expect(t.priority).toBe(3); // High
+    expect(t.status).toBe(1); // Pending
+    expect(t.note).toBe("cover by fire");
+  });
+
+  it("chat_receipt_delivered extracts as Chat with receiptType=Delivered", () => {
+    const pkt = parseCotXml(loadFixtureXml("chat_receipt_delivered"));
+    expect(pkt.chat).toBeTruthy();
+    const chat = pkt.chat as Record<string, unknown>;
+    expect(chat.receiptType).toBe(1); // Delivered
+    expect(chat.receiptForUid).toBeTruthy();
+  });
+
+  it("chat_receipt_read extracts as Chat with receiptType=Read", () => {
+    const pkt = parseCotXml(loadFixtureXml("chat_receipt_read"));
+    expect(pkt.chat).toBeTruthy();
+    const chat = pkt.chat as Record<string, unknown>;
+    expect(chat.receiptType).toBe(2); // Read
+    expect(chat.receiptForUid).toBeTruthy();
+  });
+
+  it("drawing_ellipse extracts to DrawnShape with Kind_Ellipse", () => {
+    const pkt = parseCotXml(loadFixtureXml("drawing_ellipse"));
+    expect(pkt.shape).toBeTruthy();
+    const s = pkt.shape as Record<string, unknown>;
+    expect(s.kind).toBe(8); // Ellipse
+    expect((s.majorCm as number) ?? 0).toBeGreaterThan(0);
+    expect((s.minorCm as number) ?? 0).toBeGreaterThan(0);
+  });
+
+  it("marker_goto extracts to Marker with Kind_GoToPoint", () => {
+    const pkt = parseCotXml(loadFixtureXml("marker_goto"));
+    expect(pkt.marker).toBeTruthy();
+    const m = pkt.marker as Record<string, unknown>;
+    expect(m.kind).toBe(8); // GoToPoint
+  });
+
+  it("marker_tank maps cot_type_id to the tank enum entry", () => {
+    const pkt = parseCotXml(loadFixtureXml("marker_tank"));
+    // a-h-G-E-V-A-T → one of the new 2525 tank entries
+    expect((pkt.cotTypeId as number) ?? 0).toBeGreaterThanOrEqual(82);
+    expect(pkt.cotTypeStr).toBeUndefined();
   });
 
   it("parses PLI basic correctly", () => {

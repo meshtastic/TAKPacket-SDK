@@ -110,7 +110,14 @@ class CotXmlBuilder:
         # Payload-specific
         which = packet.WhichOneof("payload_variant")
         if which == "chat":
-            lines.append(f'    <remarks>{escape(packet.chat.message)}</remarks>')
+            chat = packet.chat
+            if chat.receipt_type != 0 and chat.receipt_for_uid:
+                lines.append(
+                    f'    <link uid="{escape(chat.receipt_for_uid)}" '
+                    f'relation="p-p" type="b-t-f"/>'
+                )
+            else:
+                lines.append(f'    <remarks>{escape(chat.message)}</remarks>')
         elif which == "aircraft":
             ac = packet.aircraft
             if ac.icao:
@@ -128,6 +135,12 @@ class CotXmlBuilder:
             self._emit_rab(lines, packet.rab, packet.latitude_i, packet.longitude_i)
         elif which == "route":
             self._emit_route(lines, packet.route, packet.latitude_i, packet.longitude_i)
+        elif which == "casevac":
+            self._emit_casevac(lines, packet.casevac)
+        elif which == "emergency":
+            self._emit_emergency(lines, packet.emergency)
+        elif which == "task":
+            self._emit_task(lines, packet.task)
         elif which == "raw_detail":
             # Fallback path (``TakCompressor.compress_best_of``): emit the
             # raw bytes verbatim as the inner content of <detail>.  No
@@ -284,3 +297,104 @@ class CotXmlBuilder:
                 parts.append(f'callsign="{escape(link.callsign)}"')
             parts.append(f'point="{llat},{llon}"')
             lines.append(f'    <link {" ".join(parts)}/>')
+
+    # --- CasevacReport / EmergencyAlert / TaskRequest reverse lookups ----
+
+    _PRECEDENCE_INT_TO_NAME = {
+        1: "Urgent", 2: "Urgent Surgical", 3: "Priority",
+        4: "Routine", 5: "Convenience",
+    }
+    _HLZ_MARKING_INT_TO_NAME = {
+        1: "Panels", 2: "Pyro", 3: "Smoke", 4: "None", 5: "Other",
+    }
+    _SECURITY_INT_TO_NAME = {
+        1: "N", 2: "P", 3: "E", 4: "X",
+    }
+    _EMERGENCY_TYPE_INT_TO_NAME = {
+        1: "911 Alert", 2: "Ring The Bell", 3: "In Contact",
+        4: "Geo-fence Breached", 5: "Custom", 6: "Cancel",
+    }
+    _TASK_PRIORITY_INT_TO_NAME = {
+        1: "Low", 2: "Normal", 3: "High", 4: "Critical",
+    }
+    _TASK_STATUS_INT_TO_NAME = {
+        1: "Pending", 2: "Acknowledged", 3: "In Progress",
+        4: "Completed", 5: "Cancelled",
+    }
+
+    def _emit_casevac(self, lines: list, c) -> None:
+        parts = []
+        name = self._PRECEDENCE_INT_TO_NAME.get(c.precedence)
+        if name:
+            parts.append(f'precedence="{name}"')
+        if c.equipment_flags & 0x01: parts.append('none="true"')
+        if c.equipment_flags & 0x02: parts.append('hoist="true"')
+        if c.equipment_flags & 0x04: parts.append('extraction_equipment="true"')
+        if c.equipment_flags & 0x08: parts.append('ventilator="true"')
+        if c.equipment_flags & 0x10: parts.append('blood="true"')
+        if c.litter_patients > 0: parts.append(f'litter="{c.litter_patients}"')
+        if c.ambulatory_patients > 0: parts.append(f'ambulatory="{c.ambulatory_patients}"')
+        sec = self._SECURITY_INT_TO_NAME.get(c.security)
+        if sec: parts.append(f'security="{sec}"')
+        hlz = self._HLZ_MARKING_INT_TO_NAME.get(c.hlz_marking)
+        if hlz: parts.append(f'hlz_marking="{hlz}"')
+        if c.zone_marker: parts.append(f'zone_prot_marker="{escape(c.zone_marker)}"')
+        if c.us_military > 0: parts.append(f'us_military="{c.us_military}"')
+        if c.us_civilian > 0: parts.append(f'us_civilian="{c.us_civilian}"')
+        if c.non_us_military > 0: parts.append(f'non_us_military="{c.non_us_military}"')
+        if c.non_us_civilian > 0: parts.append(f'non_us_civilian="{c.non_us_civilian}"')
+        if c.epw > 0: parts.append(f'epw="{c.epw}"')
+        if c.child > 0: parts.append(f'child="{c.child}"')
+        if c.terrain_flags & 0x01: parts.append('terrain_slope="true"')
+        if c.terrain_flags & 0x02: parts.append('terrain_rough="true"')
+        if c.terrain_flags & 0x04: parts.append('terrain_loose="true"')
+        if c.terrain_flags & 0x08: parts.append('terrain_trees="true"')
+        if c.terrain_flags & 0x10: parts.append('terrain_wires="true"')
+        if c.terrain_flags & 0x20: parts.append('terrain_other="true"')
+        if c.frequency: parts.append(f'freq="{escape(c.frequency)}"')
+        if parts:
+            lines.append(f'    <_medevac_ {" ".join(parts)}/>')
+        else:
+            lines.append('    <_medevac_/>')
+
+    def _emit_emergency(self, lines: list, e) -> None:
+        parts = []
+        if e.type == 6:  # Cancel
+            parts.append('cancel="true"')
+        else:
+            name = self._EMERGENCY_TYPE_INT_TO_NAME.get(e.type)
+            if name:
+                parts.append(f'type="{name}"')
+        if parts:
+            lines.append(f'    <emergency {" ".join(parts)}/>')
+        else:
+            lines.append('    <emergency/>')
+        if e.authoring_uid:
+            lines.append(
+                f'    <link uid="{escape(e.authoring_uid)}" '
+                f'relation="p-p" type="a-f-G-U-C"/>'
+            )
+        if e.cancel_reference_uid:
+            lines.append(
+                f'    <link uid="{escape(e.cancel_reference_uid)}" '
+                f'relation="p-p" type="b-a-o-tbl"/>'
+            )
+
+    def _emit_task(self, lines: list, t) -> None:
+        parts = []
+        if t.task_type: parts.append(f'type="{escape(t.task_type)}"')
+        pri = self._TASK_PRIORITY_INT_TO_NAME.get(t.priority)
+        if pri: parts.append(f'priority="{pri}"')
+        stat = self._TASK_STATUS_INT_TO_NAME.get(t.status)
+        if stat: parts.append(f'status="{stat}"')
+        if t.assignee_uid: parts.append(f'assignee="{escape(t.assignee_uid)}"')
+        if t.note: parts.append(f'note="{escape(t.note)}"')
+        if parts:
+            lines.append(f'    <task {" ".join(parts)}/>')
+        else:
+            lines.append('    <task/>')
+        if t.target_uid:
+            lines.append(
+                f'    <link uid="{escape(t.target_uid)}" '
+                f'relation="p-p" type="a-f-G"/>'
+            )

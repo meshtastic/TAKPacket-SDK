@@ -100,6 +100,39 @@ class RoundTripTest {
                 assertEquals(p.links.size, d.links.size, "route link count mismatch in $fixture")
                 assertEquals(p.truncated, d.truncated, "route truncated mismatch in $fixture")
             }
+            is TakPacketV2Data.Payload.CasevacReport -> {
+                val d = decompressed.payload as TakPacketV2Data.Payload.CasevacReport
+                assertEquals(p.precedence, d.precedence, "casevac precedence mismatch in $fixture")
+                assertEquals(p.equipmentFlags, d.equipmentFlags, "casevac equipmentFlags mismatch in $fixture")
+                assertEquals(p.litterPatients, d.litterPatients, "casevac litterPatients mismatch in $fixture")
+                assertEquals(p.ambulatoryPatients, d.ambulatoryPatients, "casevac ambulatoryPatients mismatch in $fixture")
+                assertEquals(p.security, d.security, "casevac security mismatch in $fixture")
+                assertEquals(p.hlzMarking, d.hlzMarking, "casevac hlzMarking mismatch in $fixture")
+                assertEquals(p.zoneMarker, d.zoneMarker, "casevac zoneMarker mismatch in $fixture")
+                assertEquals(p.usMilitary, d.usMilitary, "casevac usMilitary mismatch in $fixture")
+                assertEquals(p.usCivilian, d.usCivilian, "casevac usCivilian mismatch in $fixture")
+                assertEquals(p.nonUsMilitary, d.nonUsMilitary, "casevac nonUsMilitary mismatch in $fixture")
+                assertEquals(p.nonUsCivilian, d.nonUsCivilian, "casevac nonUsCivilian mismatch in $fixture")
+                assertEquals(p.epw, d.epw, "casevac epw mismatch in $fixture")
+                assertEquals(p.child, d.child, "casevac child mismatch in $fixture")
+                assertEquals(p.terrainFlags, d.terrainFlags, "casevac terrainFlags mismatch in $fixture")
+                assertEquals(p.frequency, d.frequency, "casevac frequency mismatch in $fixture")
+            }
+            is TakPacketV2Data.Payload.EmergencyAlert -> {
+                val d = decompressed.payload as TakPacketV2Data.Payload.EmergencyAlert
+                assertEquals(p.type, d.type, "emergency type mismatch in $fixture")
+                assertEquals(p.authoringUid, d.authoringUid, "emergency authoringUid mismatch in $fixture")
+                assertEquals(p.cancelReferenceUid, d.cancelReferenceUid, "emergency cancelReferenceUid mismatch in $fixture")
+            }
+            is TakPacketV2Data.Payload.TaskRequest -> {
+                val d = decompressed.payload as TakPacketV2Data.Payload.TaskRequest
+                assertEquals(p.taskType, d.taskType, "task type mismatch in $fixture")
+                assertEquals(p.targetUid, d.targetUid, "task targetUid mismatch in $fixture")
+                assertEquals(p.assigneeUid, d.assigneeUid, "task assigneeUid mismatch in $fixture")
+                assertEquals(p.priority, d.priority, "task priority mismatch in $fixture")
+                assertEquals(p.status, d.status, "task status mismatch in $fixture")
+                assertEquals(p.note, d.note, "task note mismatch in $fixture")
+            }
             else -> { /* PLI, None, RawDetail have no extra fields to check */ }
         }
 
@@ -305,6 +338,104 @@ class RoundTripTest {
         assertEquals("CP", route.prefix)
         assertFalse(route.truncated)
         assertEquals("CP1", route.links[0].callsign)
+    }
+
+    @Test
+    fun `casevac_medline extracts full MEDEVAC report`() {
+        val packet = parser.parse(loadFixture("casevac_medline.xml"))
+        val c = packet.payload as TakPacketV2Data.Payload.CasevacReport
+        assertEquals(CotXmlParser.PRECEDENCE_URGENT, c.precedence)
+        // equipment_flags: hoist (0x02) + extraction_equipment (0x04) = 0x06
+        assertEquals(0x06, c.equipmentFlags)
+        assertEquals(2, c.litterPatients)
+        assertEquals(1, c.ambulatoryPatients)
+        assertEquals(CotXmlParser.SECURITY_NO_ENEMY, c.security)
+        assertEquals(CotXmlParser.HLZ_MARKING_SMOKE, c.hlzMarking)
+        assertEquals("Green smoke", c.zoneMarker)
+        assertEquals(2, c.usMilitary)
+        assertEquals(0, c.usCivilian)
+        assertEquals(1, c.nonUsMilitary)
+        assertEquals(0, c.nonUsCivilian)
+        assertEquals(0, c.epw)
+        assertEquals(0, c.child)
+        // terrain_flags: slope (0x01) + loose (0x04) = 0x05
+        assertEquals(0x05, c.terrainFlags)
+        assertEquals("38.90", c.frequency)
+    }
+
+    @Test
+    fun `emergency_911 extracts to Alert911 type`() {
+        val packet = parser.parse(loadFixture("emergency_911.xml"))
+        val e = packet.payload as TakPacketV2Data.Payload.EmergencyAlert
+        assertEquals(CotXmlParser.EMERGENCY_TYPE_ALERT_911, e.type)
+        assertTrue(e.authoringUid.isNotEmpty(), "emergency must capture authoring uid")
+        assertEquals("", e.cancelReferenceUid)
+    }
+
+    @Test
+    fun `emergency_cancel extracts to Cancel type`() {
+        val packet = parser.parse(loadFixture("emergency_cancel.xml"))
+        val e = packet.payload as TakPacketV2Data.Payload.EmergencyAlert
+        assertEquals(CotXmlParser.EMERGENCY_TYPE_CANCEL, e.type)
+    }
+
+    @Test
+    fun `task_engage extracts to TaskRequest with target and assignee`() {
+        val packet = parser.parse(loadFixture("task_engage.xml"))
+        val t = packet.payload as TakPacketV2Data.Payload.TaskRequest
+        assertEquals("engage", t.taskType)
+        assertEquals("target-01", t.targetUid)
+        assertEquals("ANDROID-0000000000000005", t.assigneeUid)
+        assertEquals(CotXmlParser.TASK_PRIORITY_HIGH, t.priority)
+        assertEquals(CotXmlParser.TASK_STATUS_PENDING, t.status)
+        assertEquals("cover by fire", t.note)
+    }
+
+    @Test
+    fun `chat_receipt_delivered extracts as Chat with receiptType=Delivered`() {
+        val packet = parser.parse(loadFixture("chat_receipt_delivered.xml"))
+        val chat = packet.payload as TakPacketV2Data.Payload.Chat
+        assertEquals(CotXmlParser.RECEIPT_TYPE_DELIVERED, chat.receiptType)
+        assertTrue(chat.receiptForUid.isNotEmpty(), "delivered receipt must reference an original message uid")
+        assertEquals("", chat.message, "receipt must not carry a text message")
+    }
+
+    @Test
+    fun `chat_receipt_read extracts as Chat with receiptType=Read`() {
+        val packet = parser.parse(loadFixture("chat_receipt_read.xml"))
+        val chat = packet.payload as TakPacketV2Data.Payload.Chat
+        assertEquals(CotXmlParser.RECEIPT_TYPE_READ, chat.receiptType)
+        assertTrue(chat.receiptForUid.isNotEmpty())
+    }
+
+    @Test
+    fun `drawing_ellipse extracts to Ellipse kind with distinct axes`() {
+        val packet = parser.parse(loadFixture("drawing_ellipse.xml"))
+        val shape = packet.payload as TakPacketV2Data.Payload.DrawnShape
+        assertEquals(CotXmlParser.SHAPE_KIND_ELLIPSE, shape.kind)
+        assertTrue(shape.majorCm > 0, "ellipse must have non-zero major axis")
+        assertTrue(shape.minorCm > 0, "ellipse must have non-zero minor axis")
+        assertTrue(shape.majorCm != shape.minorCm, "ellipse must have distinct major/minor axes")
+        assertEquals(45, shape.angleDeg, "ellipse rotation angle must round-trip")
+    }
+
+    @Test
+    fun `marker_goto extracts to GoToPoint kind`() {
+        val packet = parser.parse(loadFixture("marker_goto.xml"))
+        val marker = packet.payload as TakPacketV2Data.Payload.Marker
+        assertEquals(CotXmlParser.MARKER_KIND_GO_TO_POINT, marker.kind)
+        assertTrue(marker.parentUid.isNotEmpty())
+    }
+
+    @Test
+    fun `marker_tank round-trips via 2525 iconset marker`() {
+        val packet = parser.parse(loadFixture("marker_tank.xml"))
+        // CotType enum has a-h-G-E-V-A-T at 105 now — verify the id was
+        // resolved and the marker captured the 2525 iconset path.
+        assertEquals(CotTypeMapper.COTTYPE_A_H_G_E_V_A_T, packet.cotTypeId)
+        val marker = packet.payload as TakPacketV2Data.Payload.Marker
+        assertEquals(CotXmlParser.MARKER_KIND_SYMBOL_2525, marker.kind)
+        assertTrue(marker.iconset.contains("COT_MAPPING_2525B"))
     }
 
     @Test
