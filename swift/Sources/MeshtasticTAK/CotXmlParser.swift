@@ -230,7 +230,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             route.strokeWeightX10 = strokeWeightX10
             route.links = routeLinksAbs.map { abs in
                 var link = Route.Link()
-                var gp = GeoPoint()
+                var gp = CotGeoPoint()
                 gp.latDeltaI = abs.latI - packet.latitudeI
                 gp.lonDeltaI = abs.lonI - packet.longitudeI
                 link.point = gp
@@ -243,7 +243,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             packet.route = route
         } else if hasRabData {
             var rab = RangeAndBearing()
-            var anchor = GeoPoint()
+            var anchor = CotGeoPoint()
             anchor.latDeltaI = rabAnchorLatI - packet.latitudeI
             anchor.lonDeltaI = rabAnchorLonI - packet.longitudeI
             rab.anchor = anchor
@@ -269,7 +269,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             shape.labelsOn = labelsOn
             // Apply delta encoding relative to the event anchor.
             shape.vertices = verticesAbs.map { (lat, lon) in
-                var gp = GeoPoint()
+                var gp = CotGeoPoint()
                 gp.latDeltaI = lat - packet.latitudeI
                 gp.lonDeltaI = lon - packet.longitudeI
                 return gp

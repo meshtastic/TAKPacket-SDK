@@ -1281,7 +1281,10 @@ public struct AircraftTrack: Sendable {
 }
 
 ///
-/// Compact geographic vertex used by repeated vertex lists in geometry payloads.
+/// Compact geographic vertex used by repeated vertex lists in TAK geometry
+/// payloads. Named with a `Cot` prefix to avoid a namespace collision with
+/// `meshtastic.GeoPoint` in `device_ui.proto`, which is an unrelated zoom/
+/// latitude/longitude type used by the on-device map UI.
 ///
 /// Encoded as a signed DELTA from TAKPacketV2.latitude_i / longitude_i (the
 /// enclosing event's anchor point). The absolute coordinate is recovered by
@@ -1296,7 +1299,7 @@ public struct AircraftTrack: Sendable {
 /// not. Absolute coordinates (values ~10^9) would cost sint32 varint 5 bytes
 /// per field, which is why TAKPacketV2's top-level latitude_i / longitude_i
 /// stay sfixed32 — only small values win with sint32.
-public struct GeoPoint: Sendable {
+public struct CotGeoPoint: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1420,7 +1423,7 @@ public struct DrawnShape: @unchecked Sendable {
   /// Vertex list for polyline/polygon/rectangle shapes. Capped at 32 by
   /// the nanopb pool; senders MUST truncate longer inputs and set
   /// `truncated = true`.
-  public var vertices: [GeoPoint] {
+  public var vertices: [CotGeoPoint] {
     get {return _storage._vertices}
     set {_uniqueStorage()._vertices = newValue}
   }
@@ -1770,18 +1773,18 @@ public struct Marker: Sendable {
 /// Range and bearing measurement line from the event anchor to a target point.
 ///
 /// Covers CoT type u-rb-a. The anchor position is on
-/// TAKPacketV2.latitude_i/longitude_i; the target endpoint is carried as an
-/// absolute GeoPoint (not a delta) since RAB lines are cheap and the numeric
-/// text is load-bearing for display.
+/// TAKPacketV2.latitude_i/longitude_i; the target endpoint is carried as a
+/// CotGeoPoint — same delta-from-anchor encoding used by DrawnShape.vertices
+/// so a self-anchored RAB (common case) encodes in zero bytes.
 public struct RangeAndBearing: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   ///
-  /// Target/anchor endpoint
-  public var anchor: GeoPoint {
-    get {return _anchor ?? GeoPoint()}
+  /// Target/anchor endpoint (delta-encoded from TAKPacketV2.latitude_i/longitude_i).
+  public var anchor: CotGeoPoint {
+    get {return _anchor ?? CotGeoPoint()}
     set {_anchor = newValue}
   }
   /// Returns true if `anchor` has been explicitly set.
@@ -1817,7 +1820,7 @@ public struct RangeAndBearing: Sendable {
 
   public init() {}
 
-  fileprivate var _anchor: GeoPoint? = nil
+  fileprivate var _anchor: CotGeoPoint? = nil
 }
 
 ///
@@ -1986,9 +1989,9 @@ public struct Route: Sendable {
     // methods supported on all messages.
 
     ///
-    /// Waypoint position (absolute, not delta).
-    public var point: GeoPoint {
-      get {return _point ?? GeoPoint()}
+    /// Waypoint position (delta-encoded from TAKPacketV2.latitude_i/longitude_i).
+    public var point: CotGeoPoint {
+      get {return _point ?? CotGeoPoint()}
       set {_point = newValue}
     }
     /// Returns true if `point` has been explicitly set.
@@ -2012,7 +2015,7 @@ public struct Route: Sendable {
 
     public init() {}
 
-    fileprivate var _point: GeoPoint? = nil
+    fileprivate var _point: CotGeoPoint? = nil
   }
 
   public init() {}
@@ -2709,8 +2712,8 @@ extension AircraftTrack: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementa
   }
 }
 
-extension GeoPoint: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".GeoPoint"
+extension CotGeoPoint: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CotGeoPoint"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}lat_delta_i\0\u{3}lon_delta_i\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2736,7 +2739,7 @@ extension GeoPoint: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationB
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: GeoPoint, rhs: GeoPoint) -> Bool {
+  public static func ==(lhs: CotGeoPoint, rhs: CotGeoPoint) -> Bool {
     if lhs.latDeltaI != rhs.latDeltaI {return false}
     if lhs.lonDeltaI != rhs.lonDeltaI {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -2760,7 +2763,7 @@ extension DrawnShape: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementatio
     var _fillColor: Team = .unspecifedColor
     var _fillArgb: UInt32 = 0
     var _labelsOn: Bool = false
-    var _vertices: [GeoPoint] = []
+    var _vertices: [CotGeoPoint] = []
     var _truncated: Bool = false
     var _bullseyeDistanceDm: UInt32 = 0
     var _bullseyeBearingRef: UInt32 = 0

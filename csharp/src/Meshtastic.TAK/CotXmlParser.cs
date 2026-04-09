@@ -423,7 +423,7 @@ public class CotXmlParser
             {
                 route.Links.Add(new Route.Types.Link
                 {
-                    Point = new GeoPoint
+                    Point = new CotGeoPoint
                     {
                         LatDeltaI = lat - pkt.LatitudeI,
                         LonDeltaI = lon - pkt.LongitudeI,
@@ -439,7 +439,7 @@ public class CotXmlParser
         {
             pkt.Rab = new RangeAndBearing
             {
-                Anchor = new GeoPoint
+                Anchor = new CotGeoPoint
                 {
                     LatDeltaI = rabAnchorLatI - pkt.LatitudeI,
                     LonDeltaI = rabAnchorLonI - pkt.LongitudeI,
@@ -475,7 +475,7 @@ public class CotXmlParser
             };
             foreach (var (lat, lon) in verticesAbs)
             {
-                shape.Vertices.Add(new GeoPoint
+                shape.Vertices.Add(new CotGeoPoint
                 {
                     LatDeltaI = lat - pkt.LatitudeI,
                     LonDeltaI = lon - pkt.LongitudeI,

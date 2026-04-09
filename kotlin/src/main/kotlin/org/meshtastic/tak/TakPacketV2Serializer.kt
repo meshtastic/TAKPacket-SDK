@@ -81,10 +81,10 @@ object TakPacketV2Serializer {
                     .setBullseyeBearingRef(payload.bullseyeBearingRef)
                     .setBullseyeFlags(payload.bullseyeFlags)
                     .setBullseyeUidRef(payload.bullseyeUidRef)
-                // GeoPoint is delta-encoded from the event anchor — see atak.proto.
+                // CotGeoPoint is delta-encoded from the event anchor — see atak.proto.
                 payload.vertices.forEach { v ->
                     shapeBuilder.addVertices(
-                        GeoPoint.newBuilder()
+                        CotGeoPoint.newBuilder()
                             .setLatDeltaI(v.latI - data.latitudeI)
                             .setLonDeltaI(v.lonI - data.longitudeI)
                     )
@@ -108,7 +108,7 @@ object TakPacketV2Serializer {
                 builder.setRab(
                     RangeAndBearing.newBuilder()
                         .setAnchor(
-                            GeoPoint.newBuilder()
+                            CotGeoPoint.newBuilder()
                                 .setLatDeltaI(payload.anchorLatI - data.latitudeI)
                                 .setLonDeltaI(payload.anchorLonI - data.longitudeI)
                         )
@@ -131,7 +131,7 @@ object TakPacketV2Serializer {
                     routeBuilder.addLinks(
                         Route.Link.newBuilder()
                             .setPoint(
-                                GeoPoint.newBuilder()
+                                CotGeoPoint.newBuilder()
                                     .setLatDeltaI(link.latI - data.latitudeI)
                                     .setLonDeltaI(link.lonI - data.longitudeI)
                             )
@@ -173,7 +173,7 @@ object TakPacketV2Serializer {
                 direction = proto.route.directionValue,
                 prefix = proto.route.prefix,
                 strokeWeightX10 = proto.route.strokeWeightX10,
-                // GeoPoint is delta-encoded from the event anchor — re-add
+                // CotGeoPoint is delta-encoded from the event anchor — re-add
                 // the top-level latitude_i/longitude_i to recover absolutes.
                 links = proto.route.linksList.map { link ->
                     TakPacketV2Data.Payload.Route.Link(
