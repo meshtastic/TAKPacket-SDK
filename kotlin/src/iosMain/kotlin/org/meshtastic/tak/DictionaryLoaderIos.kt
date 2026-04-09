@@ -1,15 +1,19 @@
 package org.meshtastic.tak
 
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
+
 /**
- * iOS stub for [DictionaryLoader].
+ * iOS implementation of [DictionaryLoader] using embedded Base64-encoded dictionaries.
  *
- * TODO: Implement using NSBundle resource loading or embedded byte arrays.
+ * Since Kotlin/Native has no classpath resource loading like JVM,
+ * the dictionary data is embedded directly in the binary.
  */
+@OptIn(ExperimentalEncodingApi::class)
 actual object DictionaryLoader {
-    actual fun loadDictionary(name: String): ByteArray {
-        throw UnsupportedOperationException(
-            "Dictionary loading is not yet implemented for iOS. " +
-                "Requires NSBundle resource loading via kotlinx.cinterop."
-        )
+    actual fun loadDictionary(name: String): ByteArray = when (name) {
+        "dict_aircraft.zstd" -> Base64.decode(EmbeddedDictionaries.AIRCRAFT_BASE64)
+        "dict_non_aircraft.zstd" -> Base64.decode(EmbeddedDictionaries.NON_AIRCRAFT_BASE64)
+        else -> throw IllegalStateException("Unknown dictionary resource: $name")
     }
 }

@@ -40,8 +40,17 @@ kotlin {
 
     jvm()
 
-    iosArm64()
-    iosSimulatorArm64()
+    // iOS targets with zstd C interop for dictionary compression
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+        target.compilations.getByName("main") {
+            cinterops {
+                val zstd by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/zstd.def"))
+                    includeDirs(project.file("src/nativeInterop/cinterop/include"))
+                }
+            }
+        }
+    }
 
     // Shared iOS source set
     applyDefaultHierarchyTemplate()
