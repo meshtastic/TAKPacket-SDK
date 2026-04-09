@@ -20,7 +20,7 @@ jobs:
           java-version: 17
       - name: Test
         working-directory: kotlin
-        run: gradle test --quiet
+        run: ./gradlew jvmTest --quiet
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v5

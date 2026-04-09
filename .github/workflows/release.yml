@@ -61,7 +61,7 @@ jobs:
 
       - name: Test Kotlin
         working-directory: kotlin
-        run: gradle test --quiet
+        run: ./gradlew jvmTest --quiet
 
       - name: Test Swift
         working-directory: swift
@@ -85,7 +85,7 @@ jobs:
 
       - name: Build Kotlin JAR
         working-directory: kotlin
-        run: gradle jar --quiet
+        run: ./gradlew jvmJar --quiet
 
       - name: Build Python wheel
         working-directory: python

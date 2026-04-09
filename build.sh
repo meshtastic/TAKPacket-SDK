@@ -88,16 +88,16 @@ test_kotlin() {
     cd "$SCRIPT_DIR/kotlin"
     local rc=0
     if [ -x ./gradlew ]; then
-        ./gradlew test --quiet 2>&1 || rc=$?
+        ./gradlew jvmTest --quiet 2>&1 || rc=$?
     else
-        gradle test --quiet 2>&1 || rc=$?
+        gradle jvmTest --quiet 2>&1 || rc=$?
     fi
     if [ "$rc" -ne 0 ]; then
         fail "Kotlin: tests failed (exit code $rc)"
         return 1
     fi
     local count
-    count=$(grep -c 'testcase' build/test-results/test/*.xml 2>/dev/null | awk -F: '{sum+=$2} END{print sum}')
+    count=$(grep -c 'testcase' build/test-results/jvmTest/*.xml 2>/dev/null | awk -F: '{sum+=$2} END{print sum}')
     pass "Kotlin: $count tests"
 }
 
@@ -274,9 +274,9 @@ build_artifacts() {
     log "Building Kotlin JAR..."
     cd "$SCRIPT_DIR/kotlin"
     if command -v ./gradlew &>/dev/null; then
-        ./gradlew jar --quiet
+        ./gradlew jvmJar --quiet
     else
-        gradle jar --quiet
+        gradle jvmJar --quiet
     fi
     cp build/libs/*.jar "$dist/meshtastic-tak-${ver}.jar"
     pass "Kotlin: meshtastic-tak-${ver}.jar"
