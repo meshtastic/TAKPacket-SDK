@@ -44,7 +44,7 @@ class CompatibilityTest {
         "casevac",
         "alert_tic",
     ])
-    fun `compressed output similar size to golden file`(fixtureName: String) {
+    fun `compressed output matches golden file byte-for-byte`(fixtureName: String) {
         val golden = loadGolden("$fixtureName.bin")
             ?: return
 
@@ -52,9 +52,8 @@ class CompatibilityTest {
         val packet = parser.parse(xml)
         val wirePayload = compressor.compress(packet)
 
-        val ratio = wirePayload.size.toDouble() / golden.size.toDouble()
-        assertTrue(ratio in 0.5..2.0,
-            "$fixtureName: compressed size ${wirePayload.size}B differs significantly from golden ${golden.size}B")
+        assertArrayEquals(golden, wirePayload,
+            "$fixtureName: compressed output differs from golden file")
     }
 
     @ParameterizedTest
@@ -69,7 +68,7 @@ class CompatibilityTest {
         "casevac",
         "alert_tic",
     ])
-    fun `protobuf output matches golden file`(fixtureName: String) {
+    fun `protobuf output matches golden file byte-for-byte`(fixtureName: String) {
         val goldenPb = loadProtobuf("$fixtureName.pb")
             ?: return
 
@@ -77,13 +76,8 @@ class CompatibilityTest {
         val packet = parser.parse(xml)
         val protobuf = TakPacketV2Serializer.serialize(packet)
 
-        // Note: Wire KMP may produce different byte ordering than protobuf-javalite.
-        // Golden files will need regeneration after the KMP migration.
-        // For now, verify the size is in the same range.
-        val sizeDiff = kotlin.math.abs(protobuf.size - goldenPb.size)
-        assertTrue(sizeDiff <= goldenPb.size / 2,
-            "$fixtureName: protobuf bytes differ significantly from golden " +
-            "(got ${protobuf.size}B, expected ${goldenPb.size}B)")
+        assertArrayEquals(goldenPb, protobuf,
+            "$fixtureName: protobuf output differs from golden file")
     }
 
     @ParameterizedTest
