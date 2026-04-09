@@ -3,6 +3,7 @@ kotlin/.gradle/
 kotlin/build/
 kotlin/out/
 kotlin/local.properties
+kotlin/src/commonMain/generated/
 *.class
 # Keep gradle-wrapper.jar (conventional to commit)
 !kotlin/gradle/wrapper/gradle-wrapper.jar

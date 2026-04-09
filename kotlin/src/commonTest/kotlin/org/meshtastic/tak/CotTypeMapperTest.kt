@@ -1,12 +1,15 @@
 package org.meshtastic.tak
 
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class CotTypeMapperTest {
 
     @Test
-    fun `known type strings map to correct enum values`() {
+    fun knownTypeStringsMapToCorrectEnumValues() {
         assertEquals(CotTypeMapper.COTTYPE_A_F_G_U_C, CotTypeMapper.typeToEnum("a-f-G-U-C"))
         assertEquals(CotTypeMapper.COTTYPE_A_N_A_C_F, CotTypeMapper.typeToEnum("a-n-A-C-F"))
         assertEquals(CotTypeMapper.COTTYPE_T_X_D_D, CotTypeMapper.typeToEnum("t-x-d-d"))
@@ -17,14 +20,14 @@ class CotTypeMapperTest {
     }
 
     @Test
-    fun `unknown type strings map to OTHER`() {
+    fun unknownTypeStringsMapToOther() {
         assertEquals(CotTypeMapper.COTTYPE_OTHER, CotTypeMapper.typeToEnum("a-f-G-U-C-X-Y-Z"))
         assertEquals(CotTypeMapper.COTTYPE_OTHER, CotTypeMapper.typeToEnum("z-unknown"))
         assertEquals(CotTypeMapper.COTTYPE_OTHER, CotTypeMapper.typeToEnum(""))
     }
 
     @Test
-    fun `enum values round-trip through string`() {
+    fun enumValuesRoundTripThroughString() {
         for (enumVal in 1..75) {
             val str = CotTypeMapper.typeToString(enumVal)
             if (str != null) {
@@ -35,12 +38,12 @@ class CotTypeMapperTest {
     }
 
     @Test
-    fun `OTHER returns null string`() {
+    fun otherReturnsNullString() {
         assertNull(CotTypeMapper.typeToString(CotTypeMapper.COTTYPE_OTHER))
     }
 
     @Test
-    fun `aircraft classification is correct`() {
+    fun aircraftClassificationIsCorrect() {
         // Air domain types
         assertTrue(CotTypeMapper.isAircraft(CotTypeMapper.COTTYPE_A_N_A_C_F))
         assertTrue(CotTypeMapper.isAircraft(CotTypeMapper.COTTYPE_A_F_A_M_H))
@@ -59,7 +62,7 @@ class CotTypeMapperTest {
     }
 
     @Test
-    fun `aircraft string classification is correct`() {
+    fun aircraftStringClassificationIsCorrect() {
         assertTrue(CotTypeMapper.isAircraftString("a-f-A-M-H"))
         assertTrue(CotTypeMapper.isAircraftString("a-n-A-C-F"))
         assertTrue(CotTypeMapper.isAircraftString("a-h-A-M-F-F"))
@@ -71,7 +74,7 @@ class CotTypeMapperTest {
     }
 
     @Test
-    fun `how strings map correctly`() {
+    fun howStringsMapCorrectly() {
         assertEquals(CotTypeMapper.COTHOW_H_E, CotTypeMapper.howToEnum("h-e"))
         assertEquals(CotTypeMapper.COTHOW_M_G, CotTypeMapper.howToEnum("m-g"))
         assertEquals(CotTypeMapper.COTHOW_H_G_I_G_O, CotTypeMapper.howToEnum("h-g-i-g-o"))
@@ -80,7 +83,7 @@ class CotTypeMapperTest {
     }
 
     @Test
-    fun `how enum round-trips through string`() {
+    fun howEnumRoundTripsThroughString() {
         for (enumVal in 1..7) {
             val str = CotTypeMapper.howToString(enumVal)
             if (str != null) {

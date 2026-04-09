@@ -1,7 +1,9 @@
 package org.meshtastic.tak
 
 /**
- * Loads and provides zstd compression dictionaries embedded as classpath resources.
+ * Loads and provides zstd compression dictionaries.
+ *
+ * Dictionary bytes are loaded via the platform-specific [DictionaryLoader].
  */
 object DictionaryProvider {
 
@@ -10,16 +12,16 @@ object DictionaryProvider {
     const val DICT_ID_UNCOMPRESSED = 0xFF
 
     val nonAircraftDict: ByteArray by lazy {
-        loadResource("dict_non_aircraft.zstd")
+        DictionaryLoader.loadDictionary("dict_non_aircraft.zstd")
     }
 
     val aircraftDict: ByteArray by lazy {
-        loadResource("dict_aircraft.zstd")
+        DictionaryLoader.loadDictionary("dict_aircraft.zstd")
     }
 
     /**
      * Get the dictionary bytes for a given dictionary ID.
-     * Returns null for DICT_ID_UNCOMPRESSED or unknown IDs.
+     * Returns null for [DICT_ID_UNCOMPRESSED] or unknown IDs.
      */
     fun getDictionary(dictId: Int): ByteArray? = when (dictId) {
         DICT_ID_NON_AIRCRAFT -> nonAircraftDict
@@ -40,11 +42,5 @@ object DictionaryProvider {
             return DICT_ID_AIRCRAFT
         }
         return DICT_ID_NON_AIRCRAFT
-    }
-
-    private fun loadResource(name: String): ByteArray {
-        val stream = DictionaryProvider::class.java.classLoader?.getResourceAsStream(name)
-            ?: throw IllegalStateException("Dictionary resource not found: $name")
-        return stream.use { it.readBytes() }
     }
 }

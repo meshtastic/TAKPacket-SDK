@@ -1,11 +1,12 @@
 package org.meshtastic.tak
 
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
 
 /**
- * Builds a CoT XML event string from a TakPacketV2Data.
+ * Builds a CoT XML event string from a [TakPacketV2Data].
  * Reconstructs a standards-compliant CoT XML event that can be consumed by ATAK
  * and other CoT-compatible systems.
  */
@@ -31,19 +32,18 @@ class CotXmlBuilder {
             3 -> "NETWORK"
             else -> "???"
         }
-
-        private val isoFormatter = DateTimeFormatter.ISO_INSTANT
     }
 
     /**
-     * Build a CoT XML event string from a TakPacketV2Data.
+     * Build a CoT XML event string from a [TakPacketV2Data].
      */
     fun build(packet: TakPacketV2Data): String {
         val sb = StringBuilder()
-        val now = Instant.now()
-        val timeStr = isoFormatter.format(now)
-        val stale = now.plusSeconds(packet.staleSeconds.toLong().coerceAtLeast(45))
-        val staleStr = isoFormatter.format(stale)
+        val now = Clock.System.now()
+        val timeStr = now.toString()
+        val staleSeconds = packet.staleSeconds.toLong().coerceAtLeast(45)
+        val stale = now + staleSeconds.seconds
+        val staleStr = stale.toString()
 
         val cotType = packet.cotTypeString()
         val how = packet.howString().ifEmpty { "m-g" }
@@ -86,8 +86,8 @@ class CotXmlBuilder {
         }
 
         // Track
-        val speedMs = packet.speed / 100.0  // cm/s -> m/s
-        val courseDeg = packet.course / 100.0  // degrees*100 -> degrees
+        val speedMs = packet.speed / 100.0
+        val courseDeg = packet.course / 100.0
         if (packet.speed > 0 || packet.course > 0) {
             sb.append("""    <track speed="$speedMs" course="$courseDeg"/>""")
             sb.append("\n")

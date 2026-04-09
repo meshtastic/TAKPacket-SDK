@@ -60,7 +60,6 @@ class CompressionTest {
 
     @Test
     fun `compression achieves meaningful ratio`() {
-        // At least 3x compression on average across all fixtures
         var totalXml = 0
         var totalCompressed = 0
 
@@ -148,7 +147,6 @@ class CompressionTest {
         // Write report
         val reportFile = File("../testdata/compression-report.md")
         reportFile.writeText(report.toString())
-        println("Compression report written to: ${reportFile.absolutePath}")
 
         // Also write golden files
         val goldenDir = File("../testdata/golden")
@@ -160,7 +158,6 @@ class CompressionTest {
             val goldenFile = File(goldenDir, fixture.removeSuffix(".xml") + ".bin")
             goldenFile.writeBytes(wirePayload)
         }
-        println("Golden files written to: ${goldenDir.absolutePath}")
 
         // Also write protobuf intermediate files
         val protoDir = File("../testdata/protobuf")
@@ -172,9 +169,7 @@ class CompressionTest {
             val pbFile = File(protoDir, fixture.removeSuffix(".xml") + ".pb")
             pbFile.writeBytes(protobuf)
         }
-        println("Protobuf files written to: ${protoDir.absolutePath}")
 
-        // Assert the report was generated
         assertTrue(reportFile.exists(), "Compression report should be generated")
         assertTrue(allUnderMtu, "All messages must fit under LoRa MTU")
     }

@@ -40,18 +40,15 @@ class MalformedInputTest {
 
     @Test
     fun `handles invalid protobuf without crash`() {
-        // 0xFF + garbage bytes — protobuf parser may be lenient or may throw
-        // Key assertion: no crash
         try {
             compressor.decompress(loadMalformed("invalid_protobuf.bin"))
         } catch (_: Exception) {
-            // Expected — either outcome is acceptable
+            // Expected -- either outcome is acceptable
         }
     }
 
     @Test
     fun `ignores reserved bits in flags byte`() {
-        // 0xC0 has reserved bits set but dict ID = 0 (0xC0 & 0x3F = 0)
         val packet = compressor.decompress(loadMalformed("reserved_bits_set.bin"))
         assert(packet.uid.isNotEmpty()) { "Should decompress despite reserved bits" }
     }

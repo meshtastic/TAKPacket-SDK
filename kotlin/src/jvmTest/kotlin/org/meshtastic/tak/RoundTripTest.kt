@@ -184,7 +184,7 @@ class RoundTripTest {
         val protobuf = TakPacketV2Serializer.serialize(packet)
         val wirePayload = ByteArray(1 + protobuf.size)
         wirePayload[0] = 0xFF.toByte()
-        System.arraycopy(protobuf, 0, wirePayload, 1, protobuf.size)
+        protobuf.copyInto(wirePayload, destinationOffset = 1)
 
         val decompressed = compressor.decompress(wirePayload)
         assertEquals(packet.cotTypeId, decompressed.cotTypeId)
