@@ -1,4 +1,5 @@
 import { typeToString, howToString } from "./CotTypeMapper.js";
+import { resolveColor } from "./AtakPalette.js";
 
 const TEAM_NAMES: Record<number, string> = {
   1: "White", 2: "Yellow", 3: "Orange", 4: "Magenta", 5: "Red", 6: "Maroon",
@@ -13,9 +14,31 @@ const ROLE_NAMES: Record<number, string> = {
 
 const GEO_SRC_NAMES: Record<number, string> = { 1: "GPS", 2: "USER", 3: "NETWORK" };
 
+const ROUTE_METHOD_NAMES: Record<number, string> = {
+  1: "Driving", 2: "Walking", 3: "Flying", 4: "Swimming", 5: "Watercraft",
+};
+const ROUTE_DIRECTION_NAMES: Record<number, string> = { 1: "Infil", 2: "Exfil" };
+const BEARING_REF_NAMES: Record<number, string> = { 1: "M", 2: "T", 3: "G" };
+
+// DrawnShape.Kind
+const SHAPE_KIND_CIRCLE = 1;
+const SHAPE_KIND_RANGING_CIRCLE = 6;
+const SHAPE_KIND_BULLSEYE = 7;
+
+// DrawnShape.StyleMode
+const STYLE_UNSPECIFIED = 0;
+const STYLE_STROKE_ONLY = 1;
+const STYLE_FILL_ONLY = 2;
+const STYLE_STROKE_AND_FILL = 3;
+
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
           .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+}
+
+/** Convert unsigned 32-bit ARGB back to ATAK's signed Int32 XML form. */
+function argbToSigned(argb: number): number {
+  return argb | 0;
 }
 
 export function buildCotXml(packet: Record<string, unknown>): string {
@@ -85,6 +108,13 @@ export function buildCotXml(packet: Record<string, unknown>): string {
   // Payload-specific
   const chat = packet.chat as Record<string, string> | undefined;
   const aircraft = packet.aircraft as Record<string, unknown> | undefined;
+  const shape = packet.shape as Record<string, unknown> | undefined;
+  const marker = packet.marker as Record<string, unknown> | undefined;
+  const rab = packet.rab as Record<string, unknown> | undefined;
+  const route = packet.route as Record<string, unknown> | undefined;
+  const eventLatI = (packet.latitudeI as number) ?? 0;
+  const eventLonI = (packet.longitudeI as number) ?? 0;
+
   if (chat) {
     lines.push(`    <remarks>${esc(chat.message ?? "")}</remarks>`);
   } else if (aircraft) {
@@ -97,9 +127,171 @@ export function buildCotXml(packet: Record<string, unknown>): string {
       if (aircraft.cotHostId) tag += ` cot_host_id="${esc(String(aircraft.cotHostId))}"`;
       lines.push(tag + "/>");
     }
+  } else if (shape) {
+    emitShape(lines, shape, eventLatI, eventLonI);
+  } else if (marker) {
+    emitMarker(lines, marker);
+  } else if (rab) {
+    emitRab(lines, rab, eventLatI, eventLonI);
+  } else if (route) {
+    emitRoute(lines, route, eventLatI, eventLonI);
+  } else if (packet.rawDetail) {
+    // Fallback path (`TakCompressor.compressBestOf`): raw bytes of the
+    // original <detail> element are shipped verbatim and re-emitted
+    // without any normalization so the receiver round trip stays
+    // byte-exact with the source XML.
+    const raw = packet.rawDetail as Buffer | Uint8Array | string;
+    const text = typeof raw === "string"
+      ? raw
+      : Buffer.from(raw as Uint8Array).toString("utf-8");
+    if (text.length > 0) lines.push(text);
   }
 
   lines.push("  </detail>");
   lines.push("</event>");
   return lines.join("\n");
+}
+
+// --- Typed geometry emitters -------------------------------------------
+
+function emitShape(lines: string[], shape: Record<string, unknown>, eventLatI: number, eventLonI: number): void {
+  const kind = (shape.kind as number) ?? 0;
+  const style = (shape.style as number) ?? STYLE_UNSPECIFIED;
+  const strokeArgb = resolveColor((shape.strokeColor as number) ?? 0, (shape.strokeArgb as number) ?? 0);
+  const fillArgb = resolveColor((shape.fillColor as number) ?? 0, (shape.fillArgb as number) ?? 0);
+  const strokeVal = argbToSigned(strokeArgb);
+  const fillVal = argbToSigned(fillArgb);
+  const strokeWeightX10 = (shape.strokeWeightX10 as number) ?? 0;
+  const labelsOn = (shape.labelsOn as boolean) ?? false;
+
+  const emitStroke = style === STYLE_STROKE_ONLY || style === STYLE_STROKE_AND_FILL ||
+    (style === STYLE_UNSPECIFIED && strokeVal !== 0);
+  const emitFill = style === STYLE_FILL_ONLY || style === STYLE_STROKE_AND_FILL ||
+    (style === STYLE_UNSPECIFIED && fillVal !== 0);
+
+  const majorCm = (shape.majorCm as number) ?? 0;
+  const minorCm = (shape.minorCm as number) ?? 0;
+  const angleDeg = (shape.angleDeg as number) ?? 360;
+
+  if (kind === SHAPE_KIND_CIRCLE || kind === SHAPE_KIND_RANGING_CIRCLE || kind === SHAPE_KIND_BULLSEYE) {
+    if (majorCm > 0 || minorCm > 0) {
+      lines.push("    <shape>");
+      lines.push(`      <ellipse major="${majorCm / 100}" minor="${minorCm / 100}" angle="${angleDeg}"/>`);
+      lines.push("    </shape>");
+    }
+  } else {
+    const vertices = (shape.vertices as Array<Record<string, number>>) ?? [];
+    for (const v of vertices) {
+      const vlat = (eventLatI + (v.latDeltaI ?? 0)) / 1e7;
+      const vlon = (eventLonI + (v.lonDeltaI ?? 0)) / 1e7;
+      lines.push(`    <link point="${vlat},${vlon}"/>`);
+    }
+  }
+
+  if (kind === SHAPE_KIND_BULLSEYE) {
+    const bullseyeDistanceDm = (shape.bullseyeDistanceDm as number) ?? 0;
+    const bullseyeBearingRef = (shape.bullseyeBearingRef as number) ?? 0;
+    const bullseyeFlags = (shape.bullseyeFlags as number) ?? 0;
+    const bullseyeUidRef = (shape.bullseyeUidRef as string) ?? "";
+    const parts: string[] = [];
+    if (bullseyeDistanceDm > 0) parts.push(`distance="${bullseyeDistanceDm / 10}"`);
+    const ref = BEARING_REF_NAMES[bullseyeBearingRef];
+    if (ref) parts.push(`bearingRef="${ref}"`);
+    if (bullseyeFlags & 0x01) parts.push(`rangeRingVisible="true"`);
+    if (bullseyeFlags & 0x02) parts.push(`hasRangeRings="true"`);
+    if (bullseyeFlags & 0x04) parts.push(`edgeToCenter="true"`);
+    if (bullseyeFlags & 0x08) parts.push(`mils="true"`);
+    if (bullseyeUidRef) parts.push(`bullseyeUID="${esc(bullseyeUidRef)}"`);
+    lines.push(parts.length > 0 ? `    <bullseye ${parts.join(" ")}/>` : "    <bullseye/>");
+  }
+
+  if (emitStroke) {
+    lines.push(`    <strokeColor value="${strokeVal}"/>`);
+    if (strokeWeightX10 > 0) {
+      lines.push(`    <strokeWeight value="${strokeWeightX10 / 10}"/>`);
+    }
+  }
+  if (emitFill) {
+    lines.push(`    <fillColor value="${fillVal}"/>`);
+  }
+  lines.push(`    <labels_on value="${labelsOn}"/>`);
+}
+
+function emitMarker(lines: string[], marker: Record<string, unknown>): void {
+  if (marker.readiness === true) {
+    lines.push(`    <status readiness="true"/>`);
+  }
+  const parentUid = (marker.parentUid as string) ?? "";
+  if (parentUid) {
+    const parts = [`uid="${esc(parentUid)}"`];
+    const parentType = (marker.parentType as string) ?? "";
+    if (parentType) parts.push(`type="${esc(parentType)}"`);
+    const parentCallsign = (marker.parentCallsign as string) ?? "";
+    if (parentCallsign) parts.push(`parent_callsign="${esc(parentCallsign)}"`);
+    parts.push(`relation="p-p"`);
+    lines.push(`    <link ${parts.join(" ")}/>`);
+  }
+  const colorArgb = resolveColor((marker.color as number) ?? 0, (marker.colorArgb as number) ?? 0);
+  const colorVal = argbToSigned(colorArgb);
+  if (colorVal !== 0) {
+    lines.push(`    <color argb="${colorVal}"/>`);
+  }
+  const iconset = (marker.iconset as string) ?? "";
+  if (iconset) {
+    lines.push(`    <usericon iconsetpath="${esc(iconset)}"/>`);
+  }
+}
+
+function emitRab(lines: string[], rab: Record<string, unknown>, eventLatI: number, eventLonI: number): void {
+  const anchor = (rab.anchor as Record<string, number>) ?? {};
+  const anchorLatI = eventLatI + (anchor.latDeltaI ?? 0);
+  const anchorLonI = eventLonI + (anchor.lonDeltaI ?? 0);
+  if (anchorLatI !== 0 || anchorLonI !== 0) {
+    const alat = anchorLatI / 1e7;
+    const alon = anchorLonI / 1e7;
+    const parts: string[] = [];
+    const anchorUid = (rab.anchorUid as string) ?? "";
+    if (anchorUid) parts.push(`uid="${esc(anchorUid)}"`);
+    parts.push(`relation="p-p"`, `type="b-m-p-w"`, `point="${alat},${alon}"`);
+    lines.push(`    <link ${parts.join(" ")}/>`);
+  }
+  const rangeCm = (rab.rangeCm as number) ?? 0;
+  if (rangeCm > 0) lines.push(`    <range value="${rangeCm / 100}"/>`);
+  const bearingCdeg = (rab.bearingCdeg as number) ?? 0;
+  if (bearingCdeg > 0) lines.push(`    <bearing value="${bearingCdeg / 100}"/>`);
+  const strokeArgb = resolveColor((rab.strokeColor as number) ?? 0, (rab.strokeArgb as number) ?? 0);
+  const strokeVal = argbToSigned(strokeArgb);
+  if (strokeVal !== 0) lines.push(`    <strokeColor value="${strokeVal}"/>`);
+  const strokeWeightX10 = (rab.strokeWeightX10 as number) ?? 0;
+  if (strokeWeightX10 > 0) lines.push(`    <strokeWeight value="${strokeWeightX10 / 10}"/>`);
+}
+
+function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: number, eventLonI: number): void {
+  lines.push("    <__routeinfo/>");
+  const parts: string[] = [];
+  const method = ROUTE_METHOD_NAMES[(route.method as number) ?? 0];
+  if (method) parts.push(`method="${method}"`);
+  const direction = ROUTE_DIRECTION_NAMES[(route.direction as number) ?? 0];
+  if (direction) parts.push(`direction="${direction}"`);
+  const prefix = (route.prefix as string) ?? "";
+  if (prefix) parts.push(`prefix="${esc(prefix)}"`);
+  const strokeWeightX10 = (route.strokeWeightX10 as number) ?? 0;
+  if (strokeWeightX10 > 0) parts.push(`stroke="${Math.floor(strokeWeightX10 / 10)}"`);
+  lines.push(parts.length > 0 ? `    <link_attr ${parts.join(" ")}/>` : "    <link_attr/>");
+
+  const links = (route.links as Array<Record<string, unknown>>) ?? [];
+  for (const link of links) {
+    const point = (link.point as Record<string, number>) ?? {};
+    const llat = (eventLatI + (point.latDeltaI ?? 0)) / 1e7;
+    const llon = (eventLonI + (point.lonDeltaI ?? 0)) / 1e7;
+    const linkType = (link.linkType as number) === 1 ? "b-m-p-c" : "b-m-p-w";
+    const linkParts: string[] = [];
+    const uid = (link.uid as string) ?? "";
+    if (uid) linkParts.push(`uid="${esc(uid)}"`);
+    linkParts.push(`type="${linkType}"`);
+    const callsign = (link.callsign as string) ?? "";
+    if (callsign) linkParts.push(`callsign="${esc(callsign)}"`);
+    linkParts.push(`point="${llat},${llon}"`);
+    lines.push(`    <link ${linkParts.join(" ")}/>`);
+  }
 }

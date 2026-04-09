@@ -16,6 +16,10 @@ import zstd.ZSTD_createCDict
 import zstd.ZSTD_createDCtx
 import zstd.ZSTD_createDDict
 import zstd.ZSTD_decompress_usingDDict
+import zstd.ZSTD_freeCCtx
+import zstd.ZSTD_freeCDict
+import zstd.ZSTD_freeDCtx
+import zstd.ZSTD_freeDDict
 import zstd.ZSTD_getErrorName
 import zstd.ZSTD_isError
 
@@ -31,7 +35,7 @@ import zstd.ZSTD_isError
 actual object ZstdCodec {
     private var cCtx: CPointer<ZSTD_CCtx>? = null
     private var dCtx: CPointer<ZSTD_DCtx>? = null
-    private val cDicts = mutableMapOf<Int, CPointer<ZSTD_CDict>>()
+    private val cDicts = mutableMapOf<Pair<Int, Int>, CPointer<ZSTD_CDict>>()
     private val dDicts = mutableMapOf<Int, CPointer<ZSTD_DDict>>()
 
     private fun getOrCreateCCtx(): CPointer<ZSTD_CCtx> =
@@ -41,7 +45,7 @@ actual object ZstdCodec {
         dCtx ?: (ZSTD_createDCtx() ?: error("Failed to create ZSTD_DCtx")).also { dCtx = it }
 
     private fun getOrCreateCDict(dictId: Int, level: Int): CPointer<ZSTD_CDict> =
-        cDicts.getOrPut(dictId) {
+        cDicts.getOrPut(dictId to level) {
             val dictBytes = DictionaryProvider.getDictionary(dictId)
                 ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
             dictBytes.usePinned { pinned ->
@@ -49,7 +53,7 @@ actual object ZstdCodec {
                     pinned.addressOf(0),
                     dictBytes.size.toULong(),
                     level,
-                ) ?: error("Failed to create ZSTD_CDict for dictId=$dictId")
+                ) ?: error("Failed to create ZSTD_CDict for dictId=$dictId level=$level")
             }
         }
 
@@ -116,5 +120,21 @@ actual object ZstdCodec {
         }
 
         return destBuffer.copyOf(decompressedSize.toInt())
+    }
+
+    /**
+     * Release all cached native resources (contexts and dictionaries).
+     * Call this when the codec is no longer needed to avoid memory leaks
+     * in long-running apps or tests.
+     */
+    fun release() {
+        cCtx?.let { ZSTD_freeCCtx(it) }
+        cCtx = null
+        dCtx?.let { ZSTD_freeDCtx(it) }
+        dCtx = null
+        cDicts.values.forEach { ZSTD_freeCDict(it) }
+        cDicts.clear()
+        dDicts.values.forEach { ZSTD_freeDDict(it) }
+        dDicts.clear()
     }
 }

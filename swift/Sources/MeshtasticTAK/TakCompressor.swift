@@ -62,6 +62,62 @@ public class TakCompressor {
         return try TAKPacketV2(serializedBytes: protobufBytes)
     }
 
+    /// Compress a packet using whichever format yields the smaller wire
+    /// payload: the fully-typed `TAKPacketV2` (the default `compress(_:)`
+    /// path) or a `raw_detail` fallback carrying the original `<detail>`
+    /// bytes.
+    ///
+    /// On every bundled fixture the typed path wins — delta-encoded
+    /// geometry and palette-enum colors compress much tighter than raw
+    /// XML tag names, even with a 16KB zstd dictionary.  This method is a
+    /// safety net for CoT types the structured parser can't decompose or
+    /// for shapes with geometry beyond `MAX_VERTICES` that would otherwise
+    /// be silently truncated.
+    ///
+    /// The fallback path strips detail-derived top-level fields (callsign,
+    /// takVersion, …) from the alternate packet so the `<detail>` content
+    /// isn't duplicated on the wire; the receiver re-parses those fields
+    /// out of the raw bytes when needed.
+    ///
+    /// - Parameters:
+    ///   - packet:         The typed-variant packet from
+    ///                     `CotXmlParser().parse(_:)`.
+    ///   - rawDetailBytes: The raw `<detail>` inner bytes from
+    ///                     `CotXmlParser.extractRawDetailBytes(_:)`.
+    /// - Returns: Whichever wire payload is smaller.  Ties go to the typed
+    ///            packet since it preserves strong typing on decode.
+    public func compressBestOf(_ packet: TAKPacketV2, rawDetailBytes: Data) throws -> Data {
+        let typedWire = try compress(packet)
+        if rawDetailBytes.isEmpty { return typedWire }
+
+        // Clear every detail-derived top-level field in the fallback
+        // packet — contact, __group, status, track, takv, precisionlocation
+        // and the <uid Droid="…"/> hint all live inside <detail>, so they
+        // would otherwise be shipped twice (once as proto fields, once
+        // inside the raw_detail bytes).  The envelope (uid, cotTypeId, how,
+        // stale, lat/lon/alt) stays intact.
+        var rawPacket = packet
+        rawPacket.callsign = ""
+        rawPacket.team = .unspecifedColor
+        rawPacket.role = .unspecifed
+        rawPacket.battery = 0
+        rawPacket.speed = 0
+        rawPacket.course = 0
+        rawPacket.deviceCallsign = ""
+        rawPacket.takVersion = ""
+        rawPacket.takDevice = ""
+        rawPacket.takPlatform = ""
+        rawPacket.takOs = ""
+        rawPacket.endpoint = ""
+        rawPacket.phone = ""
+        rawPacket.geoSrc = .unspecified
+        rawPacket.altSrc = .unspecified
+        rawPacket.rawDetail = rawDetailBytes  // sets the oneof to raw_detail
+
+        let rawWire = try compress(rawPacket)
+        return rawWire.count < typedWire.count ? rawWire : typedWire
+    }
+
     /// Compress and return stats for reporting.
     public func compressWithStats(_ packet: TAKPacketV2) throws -> CompressionResult {
         let protobufBytes = try packet.serializedData()

@@ -9,12 +9,20 @@ public class TakTests
     private static readonly string TestDataDir = Path.GetFullPath(
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "..", "testdata"));
 
-    private static readonly string[] Fixtures =
-    [
-        "pli_basic", "pli_full", "pli_webtak",
-        "geochat_simple", "aircraft_adsb", "aircraft_hostile",
-        "delete_event", "casevac", "alert_tic",
-    ];
+    // Dynamically enumerate all XML fixtures in the shared testdata directory
+    // so new fixtures can be added without editing this list. Kotlin's
+    // CompressionTest is the canonical generator for the corresponding .pb
+    // and .bin files — run it first when adding new fixtures, then the C#
+    // suite picks them up on the next `dotnet test` run. Sorted for stable
+    // test ordering. Lazy evaluation so the test class can still load even
+    // if the testdata directory is absent at type-load time.
+    private static readonly Lazy<string[]> FixturesLazy = new(() =>
+        Directory.EnumerateFiles(Path.Combine(TestDataDir, "cot_xml"), "*.xml")
+            .Select(Path.GetFileNameWithoutExtension)
+            .OrderBy(n => n, StringComparer.Ordinal)
+            .ToArray()!);
+
+    private static string[] Fixtures => FixturesLazy.Value;
 
     private readonly CotXmlParser _parser = new();
     private readonly TakCompressor _compressor = new();

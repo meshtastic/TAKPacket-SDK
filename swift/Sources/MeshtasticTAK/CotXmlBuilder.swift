@@ -16,6 +16,18 @@ public class CotXmlBuilder {
         .rto: "RTO", .k9: "K9",
     ]
 
+    // --- Reverse lookups for route/bullseye fields ------------------------
+    private static let routeMethodIntToName: [Route.Method: String] = [
+        .driving: "Driving", .walking: "Walking", .flying: "Flying",
+        .swimming: "Swimming", .watercraft: "Watercraft",
+    ]
+    private static let routeDirectionIntToName: [Route.Direction: String] = [
+        .infil: "Infil", .exfil: "Exfil",
+    ]
+    private static let bearingRefIntToName: [UInt32: String] = [
+        1: "M", 2: "T", 3: "G",
+    ]
+
     private static func geoSrcStr(_ src: GeoPointSource) -> String {
         switch src {
         case .gps: return "GPS"
@@ -101,12 +113,182 @@ public class CotXmlBuilder {
                 if !ac.cotHostID.isEmpty { s += " cot_host_id=\"\(esc(ac.cotHostID))\"" }
                 s += "/>\n"
             }
+        case .shape(let shape):
+            s += emitShape(shape, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
+        case .marker(let marker):
+            s += emitMarker(marker)
+        case .rab(let rab):
+            s += emitRab(rab, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
+        case .route(let route):
+            s += emitRoute(route, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
+        case .rawDetail(let bytes):
+            // Fallback path (`TakCompressor.compressBestOf`): the original
+            // <detail> inner bytes are shipped verbatim and re-emitted
+            // without any normalization so the receiver round trip stays
+            // byte-exact with the source XML.
+            if !bytes.isEmpty, let text = String(data: bytes, encoding: .utf8) {
+                s += text
+                if !text.hasSuffix("\n") { s += "\n" }
+            }
         default:
             break
         }
 
         s += "  </detail>\n"
         s += "</event>"
+        return s
+    }
+
+    // MARK: - Typed geometry emitters
+
+    private func emitShape(_ shape: DrawnShape, eventLatI: Int32, eventLonI: Int32) -> String {
+        var s = ""
+        // ATAK XML writes colors as signed Int32 decimal (e.g. -65536 for red).
+        // The proto-generated `_argb` fields are UInt32; bit-cast on emit.
+        let strokeArgbUInt = AtakPalette.resolveColor(palette: shape.strokeColor, fallback: shape.strokeArgb)
+        let fillArgbUInt = AtakPalette.resolveColor(palette: shape.fillColor, fallback: shape.fillArgb)
+        let strokeVal = Int32(bitPattern: strokeArgbUInt)
+        let fillVal = Int32(bitPattern: fillArgbUInt)
+        let emitStroke = shape.style == .strokeOnly || shape.style == .strokeAndFill ||
+            (shape.style == .unspecified && strokeVal != 0)
+        let emitFill = shape.style == .fillOnly || shape.style == .strokeAndFill ||
+            (shape.style == .unspecified && fillVal != 0)
+
+        // Circle-like kinds use <shape><ellipse/></shape>.
+        // Polyline-like kinds (rectangle, freeform, polygon, telestration)
+        // emit vertices as <link point> siblings that the parser treats as
+        // the shape's vertex list.
+        let kind = shape.kind
+        if kind == .circle || kind == .rangingCircle || kind == .bullseye {
+            if shape.majorCm > 0 || shape.minorCm > 0 {
+                let majorM = Double(shape.majorCm) / 100.0
+                let minorM = Double(shape.minorCm) / 100.0
+                s += "    <shape>\n"
+                s += "      <ellipse major=\"\(majorM)\" minor=\"\(minorM)\" angle=\"\(shape.angleDeg)\"/>\n"
+                s += "    </shape>\n"
+            }
+        } else {
+            for v in shape.vertices {
+                let vlat = Double(eventLatI + v.latDeltaI) / 1e7
+                let vlon = Double(eventLonI + v.lonDeltaI) / 1e7
+                s += "    <link point=\"\(vlat),\(vlon)\"/>\n"
+            }
+        }
+
+        if kind == .bullseye {
+            s += "    <bullseye"
+            if shape.bullseyeDistanceDm > 0 {
+                let distM = Double(shape.bullseyeDistanceDm) / 10.0
+                s += " distance=\"\(distM)\""
+            }
+            if let ref = Self.bearingRefIntToName[shape.bullseyeBearingRef] {
+                s += " bearingRef=\"\(ref)\""
+            }
+            if shape.bullseyeFlags & 0x01 != 0 { s += " rangeRingVisible=\"true\"" }
+            if shape.bullseyeFlags & 0x02 != 0 { s += " hasRangeRings=\"true\"" }
+            if shape.bullseyeFlags & 0x04 != 0 { s += " edgeToCenter=\"true\"" }
+            if shape.bullseyeFlags & 0x08 != 0 { s += " mils=\"true\"" }
+            if !shape.bullseyeUidRef.isEmpty {
+                s += " bullseyeUID=\"\(esc(shape.bullseyeUidRef))\""
+            }
+            s += "/>\n"
+        }
+
+        if emitStroke {
+            s += "    <strokeColor value=\"\(strokeVal)\"/>\n"
+            if shape.strokeWeightX10 > 0 {
+                let w = Double(shape.strokeWeightX10) / 10.0
+                s += "    <strokeWeight value=\"\(w)\"/>\n"
+            }
+        }
+        if emitFill {
+            s += "    <fillColor value=\"\(fillVal)\"/>\n"
+        }
+        s += "    <labels_on value=\"\(shape.labelsOn)\"/>\n"
+        return s
+    }
+
+    private func emitMarker(_ marker: Marker) -> String {
+        var s = ""
+        if marker.readiness {
+            s += "    <status readiness=\"true\"/>\n"
+        }
+        if !marker.parentUid.isEmpty {
+            s += "    <link"
+            s += " uid=\"\(esc(marker.parentUid))\""
+            if !marker.parentType.isEmpty {
+                s += " type=\"\(esc(marker.parentType))\""
+            }
+            if !marker.parentCallsign.isEmpty {
+                s += " parent_callsign=\"\(esc(marker.parentCallsign))\""
+            }
+            s += " relation=\"p-p\"/>\n"
+        }
+        let colorArgbUInt = AtakPalette.resolveColor(palette: marker.color, fallback: marker.colorArgb)
+        let colorVal = Int32(bitPattern: colorArgbUInt)
+        if colorVal != 0 {
+            s += "    <color argb=\"\(colorVal)\"/>\n"
+        }
+        if !marker.iconset.isEmpty {
+            s += "    <usericon iconsetpath=\"\(esc(marker.iconset))\"/>\n"
+        }
+        return s
+    }
+
+    private func emitRab(_ rab: RangeAndBearing, eventLatI: Int32, eventLonI: Int32) -> String {
+        var s = ""
+        let anchorLatI = eventLatI + rab.anchor.latDeltaI
+        let anchorLonI = eventLonI + rab.anchor.lonDeltaI
+        if anchorLatI != 0 || anchorLonI != 0 {
+            let alat = Double(anchorLatI) / 1e7
+            let alon = Double(anchorLonI) / 1e7
+            s += "    <link"
+            if !rab.anchorUid.isEmpty {
+                s += " uid=\"\(esc(rab.anchorUid))\""
+            }
+            s += " relation=\"p-p\" type=\"b-m-p-w\" point=\"\(alat),\(alon)\"/>\n"
+        }
+        if rab.rangeCm > 0 {
+            let rangeM = Double(rab.rangeCm) / 100.0
+            s += "    <range value=\"\(rangeM)\"/>\n"
+        }
+        if rab.bearingCdeg > 0 {
+            let bearingDeg = Double(rab.bearingCdeg) / 100.0
+            s += "    <bearing value=\"\(bearingDeg)\"/>\n"
+        }
+        let strokeArgbUInt = AtakPalette.resolveColor(palette: rab.strokeColor, fallback: rab.strokeArgb)
+        let strokeVal = Int32(bitPattern: strokeArgbUInt)
+        if strokeVal != 0 {
+            s += "    <strokeColor value=\"\(strokeVal)\"/>\n"
+        }
+        if rab.strokeWeightX10 > 0 {
+            let w = Double(rab.strokeWeightX10) / 10.0
+            s += "    <strokeWeight value=\"\(w)\"/>\n"
+        }
+        return s
+    }
+
+    private func emitRoute(_ route: Route, eventLatI: Int32, eventLonI: Int32) -> String {
+        var s = "    <__routeinfo/>\n"
+        s += "    <link_attr"
+        if let m = Self.routeMethodIntToName[route.method] { s += " method=\"\(m)\"" }
+        if let d = Self.routeDirectionIntToName[route.direction] { s += " direction=\"\(d)\"" }
+        if !route.prefix.isEmpty { s += " prefix=\"\(esc(route.prefix))\"" }
+        if route.strokeWeightX10 > 0 {
+            let sw = route.strokeWeightX10 / 10
+            s += " stroke=\"\(sw)\""
+        }
+        s += "/>\n"
+        for link in route.links {
+            let llat = Double(eventLatI + link.point.latDeltaI) / 1e7
+            let llon = Double(eventLonI + link.point.lonDeltaI) / 1e7
+            s += "    <link"
+            if !link.uid.isEmpty { s += " uid=\"\(esc(link.uid))\"" }
+            let linkType = link.linkType == 1 ? "b-m-p-c" : "b-m-p-w"
+            s += " type=\"\(linkType)\""
+            if !link.callsign.isEmpty { s += " callsign=\"\(esc(link.callsign))\"" }
+            s += " point=\"\(llat),\(llon)\"/>\n"
+        }
         return s
     }
 

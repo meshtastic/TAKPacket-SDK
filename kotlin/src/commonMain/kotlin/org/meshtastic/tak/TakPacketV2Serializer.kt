@@ -1,14 +1,19 @@
 package org.meshtastic.tak
 
+import okio.ByteString.Companion.toByteString
 import org.meshtastic.proto.AircraftTrack
+import org.meshtastic.proto.CotGeoPoint
 import org.meshtastic.proto.CotHow
 import org.meshtastic.proto.CotType
+import org.meshtastic.proto.DrawnShape
 import org.meshtastic.proto.GeoChat
 import org.meshtastic.proto.GeoPointSource
+import org.meshtastic.proto.Marker
 import org.meshtastic.proto.MemberRole
+import org.meshtastic.proto.RangeAndBearing
+import org.meshtastic.proto.Route
 import org.meshtastic.proto.TAKPacketV2
 import org.meshtastic.proto.Team
-import okio.ByteString.Companion.toByteString
 
 /**
  * Serializes/deserializes [TakPacketV2Data] to/from protobuf wire format
@@ -17,31 +22,27 @@ import okio.ByteString.Companion.toByteString
 object TakPacketV2Serializer {
 
     fun serialize(data: TakPacketV2Data): ByteArray {
-        val chatPayload: GeoChat?
-        val aircraftPayload: AircraftTrack?
-        val pliPayload: Boolean?
-        val rawDetailPayload: okio.ByteString?
+        var pliPayload: Boolean? = null
+        var chatPayload: GeoChat? = null
+        var aircraftPayload: AircraftTrack? = null
+        var rawDetailPayload: okio.ByteString? = null
+        var shapePayload: DrawnShape? = null
+        var markerPayload: Marker? = null
+        var rabPayload: RangeAndBearing? = null
+        var routePayload: Route? = null
 
         when (val payload = data.payload) {
             is TakPacketV2Data.Payload.Pli -> {
-                pliPayload = true
-                chatPayload = null
-                aircraftPayload = null
-                rawDetailPayload = null
+                pliPayload = payload.value
             }
             is TakPacketV2Data.Payload.Chat -> {
-                pliPayload = null
                 chatPayload = GeoChat(
                     message = payload.message,
                     to = payload.to ?: "",
                     to_callsign = payload.toCallsign ?: "",
                 )
-                aircraftPayload = null
-                rawDetailPayload = null
             }
             is TakPacketV2Data.Payload.Aircraft -> {
-                pliPayload = null
-                chatPayload = null
                 aircraftPayload = AircraftTrack(
                     icao = payload.icao,
                     registration = payload.registration,
@@ -53,20 +54,83 @@ object TakPacketV2Serializer {
                     gps = payload.gps,
                     cot_host_id = payload.cotHostId,
                 )
-                rawDetailPayload = null
             }
             is TakPacketV2Data.Payload.RawDetail -> {
-                pliPayload = null
-                chatPayload = null
-                aircraftPayload = null
                 rawDetailPayload = payload.bytes.toByteString()
             }
-            is TakPacketV2Data.Payload.None -> {
-                pliPayload = null
-                chatPayload = null
-                aircraftPayload = null
-                rawDetailPayload = null
+            is TakPacketV2Data.Payload.DrawnShape -> {
+                shapePayload = DrawnShape(
+                    kind = DrawnShape.Kind.fromValue(payload.kind) ?: DrawnShape.Kind.Kind_Unspecified,
+                    style = DrawnShape.StyleMode.fromValue(payload.style) ?: DrawnShape.StyleMode.StyleMode_Unspecified,
+                    major_cm = payload.majorCm,
+                    minor_cm = payload.minorCm,
+                    angle_deg = payload.angleDeg,
+                    stroke_color = Team.fromValue(payload.strokeColor) ?: Team.Unspecifed_Color,
+                    stroke_argb = payload.strokeArgb,
+                    stroke_weight_x10 = payload.strokeWeightX10,
+                    fill_color = Team.fromValue(payload.fillColor) ?: Team.Unspecifed_Color,
+                    fill_argb = payload.fillArgb,
+                    labels_on = payload.labelsOn,
+                    truncated = payload.truncated,
+                    vertices = payload.vertices.map { v ->
+                        CotGeoPoint(
+                            lat_delta_i = v.latI - data.latitudeI,
+                            lon_delta_i = v.lonI - data.longitudeI,
+                        )
+                    },
+                    bullseye_distance_dm = payload.bullseyeDistanceDm,
+                    bullseye_bearing_ref = payload.bullseyeBearingRef,
+                    bullseye_flags = payload.bullseyeFlags,
+                    bullseye_uid_ref = payload.bullseyeUidRef,
+                )
             }
+            is TakPacketV2Data.Payload.Marker -> {
+                markerPayload = Marker(
+                    kind = Marker.Kind.fromValue(payload.kind) ?: Marker.Kind.Kind_Unspecified,
+                    color = Team.fromValue(payload.color) ?: Team.Unspecifed_Color,
+                    color_argb = payload.colorArgb,
+                    readiness = payload.readiness,
+                    parent_uid = payload.parentUid,
+                    parent_type = payload.parentType,
+                    parent_callsign = payload.parentCallsign,
+                    iconset = payload.iconset,
+                )
+            }
+            is TakPacketV2Data.Payload.RangeAndBearing -> {
+                rabPayload = RangeAndBearing(
+                    anchor = CotGeoPoint(
+                        lat_delta_i = payload.anchorLatI - data.latitudeI,
+                        lon_delta_i = payload.anchorLonI - data.longitudeI,
+                    ),
+                    anchor_uid = payload.anchorUid,
+                    range_cm = payload.rangeCm,
+                    bearing_cdeg = payload.bearingCdeg,
+                    stroke_color = Team.fromValue(payload.strokeColor) ?: Team.Unspecifed_Color,
+                    stroke_argb = payload.strokeArgb,
+                    stroke_weight_x10 = payload.strokeWeightX10,
+                )
+            }
+            is TakPacketV2Data.Payload.Route -> {
+                routePayload = Route(
+                    method = Route.Method.fromValue(payload.method) ?: Route.Method.Method_Unspecified,
+                    direction = Route.Direction.fromValue(payload.direction) ?: Route.Direction.Direction_Unspecified,
+                    prefix = payload.prefix,
+                    stroke_weight_x10 = payload.strokeWeightX10,
+                    truncated = payload.truncated,
+                    links = payload.links.map { link ->
+                        Route.Link(
+                            point = CotGeoPoint(
+                                lat_delta_i = link.latI - data.latitudeI,
+                                lon_delta_i = link.lonI - data.longitudeI,
+                            ),
+                            uid = link.uid,
+                            callsign = link.callsign,
+                            link_type = link.linkType,
+                        )
+                    },
+                )
+            }
+            is TakPacketV2Data.Payload.None -> { /* all payloads remain null */ }
         }
 
         val proto = TAKPacketV2(
@@ -97,6 +161,10 @@ object TakPacketV2Serializer {
             chat = chatPayload,
             aircraft = aircraftPayload,
             raw_detail = rawDetailPayload,
+            shape = shapePayload,
+            marker = markerPayload,
+            rab = rabPayload,
+            route = routePayload,
         )
 
         return proto.encode()
@@ -106,24 +174,96 @@ object TakPacketV2Serializer {
         val proto = TAKPacketV2.ADAPTER.decode(bytes)
 
         val payload = when {
-            proto.pli != null -> TakPacketV2Data.Payload.Pli(proto.pli)
             proto.chat != null -> TakPacketV2Data.Payload.Chat(
-                message = proto.chat.message,
-                to = proto.chat.to?.ifEmpty { null },
-                toCallsign = proto.chat.to_callsign?.ifEmpty { null },
+                message = proto.chat!!.message,
+                to = proto.chat!!.to?.ifEmpty { null },
+                toCallsign = proto.chat!!.to_callsign?.ifEmpty { null },
             )
             proto.aircraft != null -> TakPacketV2Data.Payload.Aircraft(
-                icao = proto.aircraft.icao,
-                registration = proto.aircraft.registration,
-                flight = proto.aircraft.flight,
-                aircraftType = proto.aircraft.aircraft_type,
-                squawk = proto.aircraft.squawk,
-                category = proto.aircraft.category,
-                rssiX10 = proto.aircraft.rssi_x10,
-                gps = proto.aircraft.gps,
-                cotHostId = proto.aircraft.cot_host_id,
+                icao = proto.aircraft!!.icao,
+                registration = proto.aircraft!!.registration,
+                flight = proto.aircraft!!.flight,
+                aircraftType = proto.aircraft!!.aircraft_type,
+                squawk = proto.aircraft!!.squawk,
+                category = proto.aircraft!!.category,
+                rssiX10 = proto.aircraft!!.rssi_x10,
+                gps = proto.aircraft!!.gps,
+                cotHostId = proto.aircraft!!.cot_host_id,
             )
-            proto.raw_detail != null -> TakPacketV2Data.Payload.RawDetail(proto.raw_detail.toByteArray())
+            proto.route != null -> {
+                val route = proto.route!!
+                TakPacketV2Data.Payload.Route(
+                    method = route.method.value,
+                    direction = route.direction.value,
+                    prefix = route.prefix,
+                    strokeWeightX10 = route.stroke_weight_x10,
+                    truncated = route.truncated,
+                    links = route.links.map { link ->
+                        TakPacketV2Data.Payload.Route.Link(
+                            latI = proto.latitude_i + (link.point?.lat_delta_i ?: 0),
+                            lonI = proto.longitude_i + (link.point?.lon_delta_i ?: 0),
+                            uid = link.uid,
+                            callsign = link.callsign,
+                            linkType = link.link_type,
+                        )
+                    },
+                )
+            }
+            proto.rab != null -> {
+                val rab = proto.rab!!
+                TakPacketV2Data.Payload.RangeAndBearing(
+                    anchorLatI = proto.latitude_i + (rab.anchor?.lat_delta_i ?: 0),
+                    anchorLonI = proto.longitude_i + (rab.anchor?.lon_delta_i ?: 0),
+                    anchorUid = rab.anchor_uid,
+                    rangeCm = rab.range_cm,
+                    bearingCdeg = rab.bearing_cdeg,
+                    strokeColor = rab.stroke_color.value,
+                    strokeArgb = rab.stroke_argb,
+                    strokeWeightX10 = rab.stroke_weight_x10,
+                )
+            }
+            proto.shape != null -> {
+                val shape = proto.shape!!
+                TakPacketV2Data.Payload.DrawnShape(
+                    kind = shape.kind.value,
+                    style = shape.style.value,
+                    majorCm = shape.major_cm,
+                    minorCm = shape.minor_cm,
+                    angleDeg = shape.angle_deg,
+                    strokeColor = shape.stroke_color.value,
+                    strokeArgb = shape.stroke_argb,
+                    strokeWeightX10 = shape.stroke_weight_x10,
+                    fillColor = shape.fill_color.value,
+                    fillArgb = shape.fill_argb,
+                    labelsOn = shape.labels_on,
+                    truncated = shape.truncated,
+                    vertices = shape.vertices.map { v ->
+                        TakPacketV2Data.Payload.Vertex(
+                            latI = proto.latitude_i + v.lat_delta_i,
+                            lonI = proto.longitude_i + v.lon_delta_i,
+                        )
+                    },
+                    bullseyeDistanceDm = shape.bullseye_distance_dm,
+                    bullseyeBearingRef = shape.bullseye_bearing_ref,
+                    bullseyeFlags = shape.bullseye_flags,
+                    bullseyeUidRef = shape.bullseye_uid_ref,
+                )
+            }
+            proto.marker != null -> {
+                val marker = proto.marker!!
+                TakPacketV2Data.Payload.Marker(
+                    kind = marker.kind.value,
+                    color = marker.color.value,
+                    colorArgb = marker.color_argb,
+                    readiness = marker.readiness,
+                    parentUid = marker.parent_uid,
+                    parentType = marker.parent_type,
+                    parentCallsign = marker.parent_callsign,
+                    iconset = marker.iconset,
+                )
+            }
+            proto.raw_detail != null -> TakPacketV2Data.Payload.RawDetail(proto.raw_detail!!.toByteArray())
+            proto.pli != null -> TakPacketV2Data.Payload.Pli(proto.pli!!)
             else -> TakPacketV2Data.Payload.None
         }
 

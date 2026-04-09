@@ -25,6 +25,9 @@ public static class CotTypeMapper
         ["a-f-G-E"] = 66, ["a-f-G-E-V-C-U"] = 67, ["a-f-G-E-V-C-ps"] = 68,
         ["a-u-G-E-V"] = 69, ["a-f-S-N-N-R"] = 70, ["a-f-F-B"] = 71,
         ["b-m-p-s-p-loc"] = 72, ["b-i-v"] = 73, ["b-f-t-r"] = 74, ["b-f-t-a"] = 75,
+        // Typed geometry additions (v2 protocol extension)
+        ["u-d-f-m"] = 76, ["u-d-p"] = 77, ["b-m-p-s-m"] = 78, ["b-m-p-c"] = 79,
+        ["u-r-b-c-c"] = 80, ["u-r-b-bullseye"] = 81,
     };
 
     private static readonly Dictionary<int, string> TypeToStr =

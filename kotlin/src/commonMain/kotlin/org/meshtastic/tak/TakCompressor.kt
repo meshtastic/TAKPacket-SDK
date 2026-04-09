@@ -72,6 +72,68 @@ class TakCompressor(
     }
 
     /**
+     * Compress a packet using whichever format yields the smaller wire payload:
+     * the fully-typed [TAKPacketV2] (default [compress] path), or a `raw_detail`
+     * fallback carrying the original `<detail>` bytes.
+     *
+     * On every bundled fixture the typed path wins — delta-encoded geometry
+     * and palette-enum colors compress much tighter than repeated XML tag
+     * names, even with a 16KB zstd dictionary.  [compressBestOf] is a safety
+     * net for:
+     *
+     *   * CoT types the parser can't structurally decompose (everything the
+     *     current `CotXmlParser` doesn't recognize falls back to `Pli(true)`
+     *     today, silently losing the detail children).
+     *   * Shapes with geometry beyond [CotXmlParser.MAX_VERTICES] that would
+     *     otherwise be silently truncated by the typed parser.
+     *   * Any detail content that carries fields outside the typed schema.
+     *
+     * The fallback path strips the detail-derived top-level fields
+     * (`callsign`, `takVersion`, etc.) from the alternate packet so the
+     * `<detail>` content isn't duplicated on the wire, and relies on the
+     * receiver re-parsing those fields out of the raw bytes.
+     *
+     * @param packet         The typed-variant packet (from [CotXmlParser.parse]).
+     * @param rawDetailBytes The raw `<detail>` inner bytes (from
+     *                       [CotXmlParser.extractRawDetailBytes]).
+     * @return Whichever wire payload is smaller.  Ties go to the typed
+     *         packet since it preserves strong typing on the receiver side.
+     */
+    fun compressBestOf(packet: TakPacketV2Data, rawDetailBytes: ByteArray): ByteArray {
+        val typedWire = compress(packet)
+        if (rawDetailBytes.isEmpty()) return typedWire
+
+        // Strip every detail-derived top-level field in the fallback packet.
+        // These come from <contact>, <__group>, <status>, <track>, <takv>,
+        // <precisionlocation>, and <uid Droid="…"/> — all of which live
+        // inside <detail>, so they'd be duplicated if we shipped them both
+        // in the top-level proto fields and in raw_detail.  The envelope
+        // (uid, cot_type_id, how, stale, lat, lon, altitude) stays intact
+        // because those come from the <event> and <point> attributes.
+        val rawPacket = packet.copy(
+            callsign = "",
+            team = 0,
+            role = 0,
+            battery = 0,
+            speed = 0,
+            course = 0,
+            deviceCallsign = "",
+            takVersion = "",
+            takDevice = "",
+            takPlatform = "",
+            takOs = "",
+            endpoint = "",
+            phone = "",
+            geoSrc = 0,
+            altSrc = 0,
+            payload = TakPacketV2Data.Payload.RawDetail(rawDetailBytes),
+        )
+        val rawWire = compress(rawPacket)
+
+        return if (typedWire.size <= rawWire.size) typedWire else rawWire
+    }
+
+    /**
      * Compress and return both the wire payload and intermediate sizes for reporting.
      */
     fun compressWithStats(packet: TakPacketV2Data): CompressionResult {

@@ -42,78 +42,127 @@ namespace Meshtastic.Protobufs {
             "Z2lzdHJhdGlvbhgCIAEoCRIOCgZmbGlnaHQYAyABKAkSFQoNYWlyY3JhZnRf",
             "dHlwZRgEIAEoCRIOCgZzcXVhd2sYBSABKA0SEAoIY2F0ZWdvcnkYBiABKAkS",
             "EAoIcnNzaV94MTAYByABKBESCwoDZ3BzGAggASgIEhMKC2NvdF9ob3N0X2lk",
-            "GAkgASgJIsQFCgtUQUtQYWNrZXRWMhIoCgtjb3RfdHlwZV9pZBgBIAEoDjIT",
-            "Lm1lc2h0YXN0aWMuQ290VHlwZRIfCgNob3cYAiABKA4yEi5tZXNodGFzdGlj",
-            "LkNvdEhvdxIQCghjYWxsc2lnbhgDIAEoCRIeCgR0ZWFtGAQgASgOMhAubWVz",
-            "aHRhc3RpYy5UZWFtEiQKBHJvbGUYBSABKA4yFi5tZXNodGFzdGljLk1lbWJl",
-            "clJvbGUSEgoKbGF0aXR1ZGVfaRgGIAEoDxITCgtsb25naXR1ZGVfaRgHIAEo",
-            "DxIQCghhbHRpdHVkZRgIIAEoERINCgVzcGVlZBgJIAEoDRIOCgZjb3Vyc2UY",
-            "CiABKA0SDwoHYmF0dGVyeRgLIAEoDRIrCgdnZW9fc3JjGAwgASgOMhoubWVz",
-            "aHRhc3RpYy5HZW9Qb2ludFNvdXJjZRIrCgdhbHRfc3JjGA0gASgOMhoubWVz",
-            "aHRhc3RpYy5HZW9Qb2ludFNvdXJjZRILCgN1aWQYDiABKAkSFwoPZGV2aWNl",
-            "X2NhbGxzaWduGA8gASgJEhUKDXN0YWxlX3NlY29uZHMYECABKA0SEwoLdGFr",
-            "X3ZlcnNpb24YESABKAkSEgoKdGFrX2RldmljZRgSIAEoCRIUCgx0YWtfcGxh",
-            "dGZvcm0YEyABKAkSDgoGdGFrX29zGBQgASgJEhAKCGVuZHBvaW50GBUgASgJ",
-            "Eg0KBXBob25lGBYgASgJEhQKDGNvdF90eXBlX3N0chgXIAEoCRINCgNwbGkY",
-            "HiABKAhIABIjCgRjaGF0GB8gASgLMhMubWVzaHRhc3RpYy5HZW9DaGF0SAAS",
-            "LQoIYWlyY3JhZnQYICABKAsyGS5tZXNodGFzdGljLkFpcmNyYWZ0VHJhY2tI",
-            "ABIUCgpyYXdfZGV0YWlsGCEgASgMSABCEQoPcGF5bG9hZF92YXJpYW50KsAB",
-            "CgRUZWFtEhQKEFVuc3BlY2lmZWRfQ29sb3IQABIJCgVXaGl0ZRABEgoKBlll",
-            "bGxvdxACEgoKBk9yYW5nZRADEgsKB01hZ2VudGEQBBIHCgNSZWQQBRIKCgZN",
-            "YXJvb24QBhIKCgZQdXJwbGUQBxINCglEYXJrX0JsdWUQCBIICgRCbHVlEAkS",
-            "CAoEQ3lhbhAKEggKBFRlYWwQCxIJCgVHcmVlbhAMEg4KCkRhcmtfR3JlZW4Q",
-            "DRIJCgVCcm93bhAOKn8KCk1lbWJlclJvbGUSDgoKVW5zcGVjaWZlZBAAEg4K",
-            "ClRlYW1NZW1iZXIQARIMCghUZWFtTGVhZBACEgYKAkhREAMSCgoGU25pcGVy",
-            "EAQSCQoFTWVkaWMQBRITCg9Gb3J3YXJkT2JzZXJ2ZXIQBhIHCgNSVE8QBxIG",
-            "CgJLORAIKpYBCgZDb3RIb3cSFgoSQ290SG93X1Vuc3BlY2lmaWVkEAASDgoK",
-            "Q290SG93X2hfZRABEg4KCkNvdEhvd19tX2cQAhIUChBDb3RIb3dfaF9nX2lf",
-            "Z19vEAMSDgoKQ290SG93X21fchAEEg4KCkNvdEhvd19tX2YQBRIOCgpDb3RI",
-            "b3dfbV9wEAYSDgoKQ290SG93X21fcxAHKusNCgdDb3RUeXBlEhEKDUNvdFR5",
-            "cGVfT3RoZXIQABIVChFDb3RUeXBlX2FfZl9HX1VfQxABEhcKE0NvdFR5cGVf",
-            "YV9mX0dfVV9DX0kQAhIVChFDb3RUeXBlX2Ffbl9BX0NfRhADEhUKEUNvdFR5",
-            "cGVfYV9uX0FfQ19IEAQSEwoPQ290VHlwZV9hX25fQV9DEAUSFQoRQ290VHlw",
-            "ZV9hX2ZfQV9NX0gQBhITCg9Db3RUeXBlX2FfZl9BX00QBxIXChNDb3RUeXBl",
-            "X2FfZl9BX01fRl9GEAgSFwoTQ290VHlwZV9hX2ZfQV9NX0hfQRAJEhkKFUNv",
-            "dFR5cGVfYV9mX0FfTV9IX1VfTRAKEhcKE0NvdFR5cGVfYV9oX0FfTV9GX0YQ",
-            "CxIXChNDb3RUeXBlX2FfaF9BX01fSF9BEAwSEwoPQ290VHlwZV9hX3VfQV9D",
-            "EA0SEwoPQ290VHlwZV90X3hfZF9kEA4SFwoTQ290VHlwZV9hX2ZfR19FX1Nf",
-            "RRAPEhcKE0NvdFR5cGVfYV9mX0dfRV9WX0MQEBIRCg1Db3RUeXBlX2FfZl9T",
-            "EBESFQoRQ290VHlwZV9hX2ZfQV9NX0YQEhIZChVDb3RUeXBlX2FfZl9BX01f",
-            "Rl9DX0gQExIZChVDb3RUeXBlX2FfZl9BX01fRl9VX0wQFBIXChNDb3RUeXBl",
-            "X2FfZl9BX01fRl9MEBUSFwoTQ290VHlwZV9hX2ZfQV9NX0ZfUBAWEhUKEUNv",
-            "dFR5cGVfYV9mX0FfQ19IEBcSFwoTQ290VHlwZV9hX25fQV9NX0ZfURAYEhEK",
-            "DUNvdFR5cGVfYl90X2YQGRIVChFDb3RUeXBlX2Jfcl9mX2hfYxAaEhUKEUNv",
-            "dFR5cGVfYl9hX29fcGFuEBsSFQoRQ290VHlwZV9iX2Ffb19vcG4QHBIVChFD",
-            "b3RUeXBlX2JfYV9vX2NhbhAdEhUKEUNvdFR5cGVfYl9hX29fdGJsEB4SEQoN",
-            "Q290VHlwZV9iX2FfZxAfEhEKDUNvdFR5cGVfYV9mX0cQIBITCg9Db3RUeXBl",
-            "X2FfZl9HX1UQIRIRCg1Db3RUeXBlX2FfaF9HECISEQoNQ290VHlwZV9hX3Vf",
-            "RxAjEhEKDUNvdFR5cGVfYV9uX0cQJBIRCg1Db3RUeXBlX2JfbV9yECUSEwoP",
-            "Q290VHlwZV9iX21fcF93ECYSFwoTQ290VHlwZV9iX21fcF9zX3BfaRAnEhEK",
-            "DUNvdFR5cGVfdV9kX2YQKBIRCg1Db3RUeXBlX3VfZF9yECkSEwoPQ290VHlw",
-            "ZV91X2RfY19jECoSEgoOQ290VHlwZV91X3JiX2EQKxIRCg1Db3RUeXBlX2Ff",
-            "aF9BECwSEQoNQ290VHlwZV9hX3VfQRAtEhcKE0NvdFR5cGVfYV9mX0FfTV9I",
-            "X1EQLhIVChFDb3RUeXBlX2FfZl9BX0NfRhAvEhMKD0NvdFR5cGVfYV9mX0Ff",
-            "QxAwEhUKEUNvdFR5cGVfYV9mX0FfQ19MEDESEQoNQ290VHlwZV9hX2ZfQRAy",
-            "EhcKE0NvdFR5cGVfYV9mX0FfTV9IX0MQMxIXChNDb3RUeXBlX2Ffbl9BX01f",
-            "Rl9GEDQSFQoRQ290VHlwZV9hX3VfQV9DX0YQNRIbChdDb3RUeXBlX2FfZl9H",
-            "X1VfQ19GX1RfQRA2EhkKFUNvdFR5cGVfYV9mX0dfVV9DX1ZfUxA3EhkKFUNv",
-            "dFR5cGVfYV9mX0dfVV9DX1JfWBA4EhkKFUNvdFR5cGVfYV9mX0dfVV9DX0lf",
-            "WhA5EhsKF0NvdFR5cGVfYV9mX0dfVV9DX0VfQ19XEDoSGQoVQ290VHlwZV9h",
-            "X2ZfR19VX0NfSV9MEDsSGQoVQ290VHlwZV9hX2ZfR19VX0NfUl9PEDwSGQoV",
-            "Q290VHlwZV9hX2ZfR19VX0NfUl9WED0SFQoRQ290VHlwZV9hX2ZfR19VX0gQ",
-            "PhIbChdDb3RUeXBlX2FfZl9HX1VfVV9NX1NfRRA/EhkKFUNvdFR5cGVfYV9m",
-            "X0dfVV9TX01fQxBAEhUKEUNvdFR5cGVfYV9mX0dfRV9TEEESEwoPQ290VHlw",
-            "ZV9hX2ZfR19FEEISGQoVQ290VHlwZV9hX2ZfR19FX1ZfQ19VEEMSGgoWQ290",
-            "VHlwZV9hX2ZfR19FX1ZfQ19wcxBEEhUKEUNvdFR5cGVfYV91X0dfRV9WEEUS",
-            "FwoTQ290VHlwZV9hX2ZfU19OX05fUhBGEhMKD0NvdFR5cGVfYV9mX0ZfQhBH",
-            "EhkKFUNvdFR5cGVfYl9tX3Bfc19wX2xvYxBIEhEKDUNvdFR5cGVfYl9pX3YQ",
-            "SRITCg9Db3RUeXBlX2JfZl90X3IQShITCg9Db3RUeXBlX2JfZl90X2EQSyp9",
-            "Cg5HZW9Qb2ludFNvdXJjZRIeChpHZW9Qb2ludFNvdXJjZV9VbnNwZWNpZmll",
-            "ZBAAEhYKEkdlb1BvaW50U291cmNlX0dQUxABEhcKE0dlb1BvaW50U291cmNl",
-            "X1VTRVIQAhIaChZHZW9Qb2ludFNvdXJjZV9ORVRXT1JLEANCYAoUb3JnLm1l",
-            "c2h0YXN0aWMucHJvdG9CCkFUQUtQcm90b3NaImdpdGh1Yi5jb20vbWVzaHRh",
-            "c3RpYy9nby9nZW5lcmF0ZWSqAhRNZXNodGFzdGljLlByb3RvYnVmc7oCAGIG",
-            "cHJvdG8z"));
+            "GAkgASgJIjcKC0NvdEdlb1BvaW50EhMKC2xhdF9kZWx0YV9pGAEgASgREhMK",
+            "C2xvbl9kZWx0YV9pGAIgASgRIpEGCgpEcmF3blNoYXBlEikKBGtpbmQYASAB",
+            "KA4yGy5tZXNodGFzdGljLkRyYXduU2hhcGUuS2luZBIvCgVzdHlsZRgCIAEo",
+            "DjIgLm1lc2h0YXN0aWMuRHJhd25TaGFwZS5TdHlsZU1vZGUSEAoIbWFqb3Jf",
+            "Y20YAyABKA0SEAoIbWlub3JfY20YBCABKA0SEQoJYW5nbGVfZGVnGAUgASgN",
+            "EiYKDHN0cm9rZV9jb2xvchgGIAEoDjIQLm1lc2h0YXN0aWMuVGVhbRITCgtz",
+            "dHJva2VfYXJnYhgHIAEoBxIZChFzdHJva2Vfd2VpZ2h0X3gxMBgIIAEoDRIk",
+            "CgpmaWxsX2NvbG9yGAkgASgOMhAubWVzaHRhc3RpYy5UZWFtEhEKCWZpbGxf",
+            "YXJnYhgKIAEoBxIRCglsYWJlbHNfb24YCyABKAgSKQoIdmVydGljZXMYDCAD",
+            "KAsyFy5tZXNodGFzdGljLkNvdEdlb1BvaW50EhEKCXRydW5jYXRlZBgNIAEo",
+            "CBIcChRidWxsc2V5ZV9kaXN0YW5jZV9kbRgOIAEoDRIcChRidWxsc2V5ZV9i",
+            "ZWFyaW5nX3JlZhgPIAEoDRIWCg5idWxsc2V5ZV9mbGFncxgQIAEoDRIYChBi",
+            "dWxsc2V5ZV91aWRfcmVmGBEgASgJIqgBCgRLaW5kEhQKEEtpbmRfVW5zcGVj",
+            "aWZpZWQQABIPCgtLaW5kX0NpcmNsZRABEhIKDktpbmRfUmVjdGFuZ2xlEAIS",
+            "EQoNS2luZF9GcmVlZm9ybRADEhUKEUtpbmRfVGVsZXN0cmF0aW9uEAQSEAoM",
+            "S2luZF9Qb2x5Z29uEAUSFgoSS2luZF9SYW5naW5nQ2lyY2xlEAYSEQoNS2lu",
+            "ZF9CdWxsc2V5ZRAHInUKCVN0eWxlTW9kZRIZChVTdHlsZU1vZGVfVW5zcGVj",
+            "aWZpZWQQABIYChRTdHlsZU1vZGVfU3Ryb2tlT25seRABEhYKElN0eWxlTW9k",
+            "ZV9GaWxsT25seRACEhsKF1N0eWxlTW9kZV9TdHJva2VBbmRGaWxsEAMi8wIK",
+            "Bk1hcmtlchIlCgRraW5kGAEgASgOMhcubWVzaHRhc3RpYy5NYXJrZXIuS2lu",
+            "ZBIfCgVjb2xvchgCIAEoDjIQLm1lc2h0YXN0aWMuVGVhbRISCgpjb2xvcl9h",
+            "cmdiGAMgASgHEhEKCXJlYWRpbmVzcxgEIAEoCBISCgpwYXJlbnRfdWlkGAUg",
+            "ASgJEhMKC3BhcmVudF90eXBlGAYgASgJEhcKD3BhcmVudF9jYWxsc2lnbhgH",
+            "IAEoCRIPCgdpY29uc2V0GAggASgJIqYBCgRLaW5kEhQKEEtpbmRfVW5zcGVj",
+            "aWZpZWQQABINCglLaW5kX1Nwb3QQARIRCg1LaW5kX1dheXBvaW50EAISEwoP",
+            "S2luZF9DaGVja3BvaW50EAMSFQoRS2luZF9TZWxmUG9zaXRpb24QBBITCg9L",
+            "aW5kX1N5bWJvbDI1MjUQBRIQCgxLaW5kX1Nwb3RNYXAQBhITCg9LaW5kX0N1",
+            "c3RvbUljb24QByLOAQoPUmFuZ2VBbmRCZWFyaW5nEicKBmFuY2hvchgBIAEo",
+            "CzIXLm1lc2h0YXN0aWMuQ290R2VvUG9pbnQSEgoKYW5jaG9yX3VpZBgCIAEo",
+            "CRIQCghyYW5nZV9jbRgDIAEoDRIUCgxiZWFyaW5nX2NkZWcYBCABKA0SJgoM",
+            "c3Ryb2tlX2NvbG9yGAUgASgOMhAubWVzaHRhc3RpYy5UZWFtEhMKC3N0cm9r",
+            "ZV9hcmdiGAYgASgHEhkKEXN0cm9rZV93ZWlnaHRfeDEwGAcgASgNIoQECgVS",
+            "b3V0ZRIoCgZtZXRob2QYASABKA4yGC5tZXNodGFzdGljLlJvdXRlLk1ldGhv",
+            "ZBIuCglkaXJlY3Rpb24YAiABKA4yGy5tZXNodGFzdGljLlJvdXRlLkRpcmVj",
+            "dGlvbhIOCgZwcmVmaXgYAyABKAkSGQoRc3Ryb2tlX3dlaWdodF94MTAYBCAB",
+            "KA0SJQoFbGlua3MYBSADKAsyFi5tZXNodGFzdGljLlJvdXRlLkxpbmsSEQoJ",
+            "dHJ1bmNhdGVkGAYgASgIGmAKBExpbmsSJgoFcG9pbnQYASABKAsyFy5tZXNo",
+            "dGFzdGljLkNvdEdlb1BvaW50EgsKA3VpZBgCIAEoCRIQCghjYWxsc2lnbhgD",
+            "IAEoCRIRCglsaW5rX3R5cGUYBCABKA0ihwEKBk1ldGhvZBIWChJNZXRob2Rf",
+            "VW5zcGVjaWZpZWQQABISCg5NZXRob2RfRHJpdmluZxABEhIKDk1ldGhvZF9X",
+            "YWxraW5nEAISEQoNTWV0aG9kX0ZseWluZxADEhMKD01ldGhvZF9Td2ltbWlu",
+            "ZxAEEhUKEU1ldGhvZF9XYXRlcmNyYWZ0EAUiUAoJRGlyZWN0aW9uEhkKFURp",
+            "cmVjdGlvbl9VbnNwZWNpZmllZBAAEhMKD0RpcmVjdGlvbl9JbmZpbBABEhMK",
+            "D0RpcmVjdGlvbl9FeGZpbBACIuMGCgtUQUtQYWNrZXRWMhIoCgtjb3RfdHlw",
+            "ZV9pZBgBIAEoDjITLm1lc2h0YXN0aWMuQ290VHlwZRIfCgNob3cYAiABKA4y",
+            "Ei5tZXNodGFzdGljLkNvdEhvdxIQCghjYWxsc2lnbhgDIAEoCRIeCgR0ZWFt",
+            "GAQgASgOMhAubWVzaHRhc3RpYy5UZWFtEiQKBHJvbGUYBSABKA4yFi5tZXNo",
+            "dGFzdGljLk1lbWJlclJvbGUSEgoKbGF0aXR1ZGVfaRgGIAEoDxITCgtsb25n",
+            "aXR1ZGVfaRgHIAEoDxIQCghhbHRpdHVkZRgIIAEoERINCgVzcGVlZBgJIAEo",
+            "DRIOCgZjb3Vyc2UYCiABKA0SDwoHYmF0dGVyeRgLIAEoDRIrCgdnZW9fc3Jj",
+            "GAwgASgOMhoubWVzaHRhc3RpYy5HZW9Qb2ludFNvdXJjZRIrCgdhbHRfc3Jj",
+            "GA0gASgOMhoubWVzaHRhc3RpYy5HZW9Qb2ludFNvdXJjZRILCgN1aWQYDiAB",
+            "KAkSFwoPZGV2aWNlX2NhbGxzaWduGA8gASgJEhUKDXN0YWxlX3NlY29uZHMY",
+            "ECABKA0SEwoLdGFrX3ZlcnNpb24YESABKAkSEgoKdGFrX2RldmljZRgSIAEo",
+            "CRIUCgx0YWtfcGxhdGZvcm0YEyABKAkSDgoGdGFrX29zGBQgASgJEhAKCGVu",
+            "ZHBvaW50GBUgASgJEg0KBXBob25lGBYgASgJEhQKDGNvdF90eXBlX3N0chgX",
+            "IAEoCRINCgNwbGkYHiABKAhIABIjCgRjaGF0GB8gASgLMhMubWVzaHRhc3Rp",
+            "Yy5HZW9DaGF0SAASLQoIYWlyY3JhZnQYICABKAsyGS5tZXNodGFzdGljLkFp",
+            "cmNyYWZ0VHJhY2tIABIUCgpyYXdfZGV0YWlsGCEgASgMSAASJwoFc2hhcGUY",
+            "IiABKAsyFi5tZXNodGFzdGljLkRyYXduU2hhcGVIABIkCgZtYXJrZXIYIyAB",
+            "KAsyEi5tZXNodGFzdGljLk1hcmtlckgAEioKA3JhYhgkIAEoCzIbLm1lc2h0",
+            "YXN0aWMuUmFuZ2VBbmRCZWFyaW5nSAASIgoFcm91dGUYJSABKAsyES5tZXNo",
+            "dGFzdGljLlJvdXRlSABCEQoPcGF5bG9hZF92YXJpYW50KsABCgRUZWFtEhQK",
+            "EFVuc3BlY2lmZWRfQ29sb3IQABIJCgVXaGl0ZRABEgoKBlllbGxvdxACEgoK",
+            "Bk9yYW5nZRADEgsKB01hZ2VudGEQBBIHCgNSZWQQBRIKCgZNYXJvb24QBhIK",
+            "CgZQdXJwbGUQBxINCglEYXJrX0JsdWUQCBIICgRCbHVlEAkSCAoEQ3lhbhAK",
+            "EggKBFRlYWwQCxIJCgVHcmVlbhAMEg4KCkRhcmtfR3JlZW4QDRIJCgVCcm93",
+            "bhAOKn8KCk1lbWJlclJvbGUSDgoKVW5zcGVjaWZlZBAAEg4KClRlYW1NZW1i",
+            "ZXIQARIMCghUZWFtTGVhZBACEgYKAkhREAMSCgoGU25pcGVyEAQSCQoFTWVk",
+            "aWMQBRITCg9Gb3J3YXJkT2JzZXJ2ZXIQBhIHCgNSVE8QBxIGCgJLORAIKpYB",
+            "CgZDb3RIb3cSFgoSQ290SG93X1Vuc3BlY2lmaWVkEAASDgoKQ290SG93X2hf",
+            "ZRABEg4KCkNvdEhvd19tX2cQAhIUChBDb3RIb3dfaF9nX2lfZ19vEAMSDgoK",
+            "Q290SG93X21fchAEEg4KCkNvdEhvd19tX2YQBRIOCgpDb3RIb3dfbV9wEAYS",
+            "DgoKQ290SG93X21fcxAHKvIOCgdDb3RUeXBlEhEKDUNvdFR5cGVfT3RoZXIQ",
+            "ABIVChFDb3RUeXBlX2FfZl9HX1VfQxABEhcKE0NvdFR5cGVfYV9mX0dfVV9D",
+            "X0kQAhIVChFDb3RUeXBlX2Ffbl9BX0NfRhADEhUKEUNvdFR5cGVfYV9uX0Ff",
+            "Q19IEAQSEwoPQ290VHlwZV9hX25fQV9DEAUSFQoRQ290VHlwZV9hX2ZfQV9N",
+            "X0gQBhITCg9Db3RUeXBlX2FfZl9BX00QBxIXChNDb3RUeXBlX2FfZl9BX01f",
+            "Rl9GEAgSFwoTQ290VHlwZV9hX2ZfQV9NX0hfQRAJEhkKFUNvdFR5cGVfYV9m",
+            "X0FfTV9IX1VfTRAKEhcKE0NvdFR5cGVfYV9oX0FfTV9GX0YQCxIXChNDb3RU",
+            "eXBlX2FfaF9BX01fSF9BEAwSEwoPQ290VHlwZV9hX3VfQV9DEA0SEwoPQ290",
+            "VHlwZV90X3hfZF9kEA4SFwoTQ290VHlwZV9hX2ZfR19FX1NfRRAPEhcKE0Nv",
+            "dFR5cGVfYV9mX0dfRV9WX0MQEBIRCg1Db3RUeXBlX2FfZl9TEBESFQoRQ290",
+            "VHlwZV9hX2ZfQV9NX0YQEhIZChVDb3RUeXBlX2FfZl9BX01fRl9DX0gQExIZ",
+            "ChVDb3RUeXBlX2FfZl9BX01fRl9VX0wQFBIXChNDb3RUeXBlX2FfZl9BX01f",
+            "Rl9MEBUSFwoTQ290VHlwZV9hX2ZfQV9NX0ZfUBAWEhUKEUNvdFR5cGVfYV9m",
+            "X0FfQ19IEBcSFwoTQ290VHlwZV9hX25fQV9NX0ZfURAYEhEKDUNvdFR5cGVf",
+            "Yl90X2YQGRIVChFDb3RUeXBlX2Jfcl9mX2hfYxAaEhUKEUNvdFR5cGVfYl9h",
+            "X29fcGFuEBsSFQoRQ290VHlwZV9iX2Ffb19vcG4QHBIVChFDb3RUeXBlX2Jf",
+            "YV9vX2NhbhAdEhUKEUNvdFR5cGVfYl9hX29fdGJsEB4SEQoNQ290VHlwZV9i",
+            "X2FfZxAfEhEKDUNvdFR5cGVfYV9mX0cQIBITCg9Db3RUeXBlX2FfZl9HX1UQ",
+            "IRIRCg1Db3RUeXBlX2FfaF9HECISEQoNQ290VHlwZV9hX3VfRxAjEhEKDUNv",
+            "dFR5cGVfYV9uX0cQJBIRCg1Db3RUeXBlX2JfbV9yECUSEwoPQ290VHlwZV9i",
+            "X21fcF93ECYSFwoTQ290VHlwZV9iX21fcF9zX3BfaRAnEhEKDUNvdFR5cGVf",
+            "dV9kX2YQKBIRCg1Db3RUeXBlX3VfZF9yECkSEwoPQ290VHlwZV91X2RfY19j",
+            "ECoSEgoOQ290VHlwZV91X3JiX2EQKxIRCg1Db3RUeXBlX2FfaF9BECwSEQoN",
+            "Q290VHlwZV9hX3VfQRAtEhcKE0NvdFR5cGVfYV9mX0FfTV9IX1EQLhIVChFD",
+            "b3RUeXBlX2FfZl9BX0NfRhAvEhMKD0NvdFR5cGVfYV9mX0FfQxAwEhUKEUNv",
+            "dFR5cGVfYV9mX0FfQ19MEDESEQoNQ290VHlwZV9hX2ZfQRAyEhcKE0NvdFR5",
+            "cGVfYV9mX0FfTV9IX0MQMxIXChNDb3RUeXBlX2Ffbl9BX01fRl9GEDQSFQoR",
+            "Q290VHlwZV9hX3VfQV9DX0YQNRIbChdDb3RUeXBlX2FfZl9HX1VfQ19GX1Rf",
+            "QRA2EhkKFUNvdFR5cGVfYV9mX0dfVV9DX1ZfUxA3EhkKFUNvdFR5cGVfYV9m",
+            "X0dfVV9DX1JfWBA4EhkKFUNvdFR5cGVfYV9mX0dfVV9DX0lfWhA5EhsKF0Nv",
+            "dFR5cGVfYV9mX0dfVV9DX0VfQ19XEDoSGQoVQ290VHlwZV9hX2ZfR19VX0Nf",
+            "SV9MEDsSGQoVQ290VHlwZV9hX2ZfR19VX0NfUl9PEDwSGQoVQ290VHlwZV9h",
+            "X2ZfR19VX0NfUl9WED0SFQoRQ290VHlwZV9hX2ZfR19VX0gQPhIbChdDb3RU",
+            "eXBlX2FfZl9HX1VfVV9NX1NfRRA/EhkKFUNvdFR5cGVfYV9mX0dfVV9TX01f",
+            "QxBAEhUKEUNvdFR5cGVfYV9mX0dfRV9TEEESEwoPQ290VHlwZV9hX2ZfR19F",
+            "EEISGQoVQ290VHlwZV9hX2ZfR19FX1ZfQ19VEEMSGgoWQ290VHlwZV9hX2Zf",
+            "R19FX1ZfQ19wcxBEEhUKEUNvdFR5cGVfYV91X0dfRV9WEEUSFwoTQ290VHlw",
+            "ZV9hX2ZfU19OX05fUhBGEhMKD0NvdFR5cGVfYV9mX0ZfQhBHEhkKFUNvdFR5",
+            "cGVfYl9tX3Bfc19wX2xvYxBIEhEKDUNvdFR5cGVfYl9pX3YQSRITCg9Db3RU",
+            "eXBlX2JfZl90X3IQShITCg9Db3RUeXBlX2JfZl90X2EQSxITCg9Db3RUeXBl",
+            "X3VfZF9mX20QTBIRCg1Db3RUeXBlX3VfZF9wEE0SFQoRQ290VHlwZV9iX21f",
+            "cF9zX20QThITCg9Db3RUeXBlX2JfbV9wX2MQTxIVChFDb3RUeXBlX3Vfcl9i",
+            "X2NfYxBQEhoKFkNvdFR5cGVfdV9yX2JfYnVsbHNleWUQUSp9Cg5HZW9Qb2lu",
+            "dFNvdXJjZRIeChpHZW9Qb2ludFNvdXJjZV9VbnNwZWNpZmllZBAAEhYKEkdl",
+            "b1BvaW50U291cmNlX0dQUxABEhcKE0dlb1BvaW50U291cmNlX1VTRVIQAhIa",
+            "ChZHZW9Qb2ludFNvdXJjZV9ORVRXT1JLEANCYAoUb3JnLm1lc2h0YXN0aWMu",
+            "cHJvdG9CCkFUQUtQcm90b3NaImdpdGh1Yi5jb20vbWVzaHRhc3RpYy9nby9n",
+            "ZW5lcmF0ZWSqAhRNZXNodGFzdGljLlByb3RvYnVmc7oCAGIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Meshtastic.Protobufs.Team), typeof(global::Meshtastic.Protobufs.MemberRole), typeof(global::Meshtastic.Protobufs.CotHow), typeof(global::Meshtastic.Protobufs.CotType), typeof(global::Meshtastic.Protobufs.GeoPointSource), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -124,7 +173,12 @@ namespace Meshtastic.Protobufs {
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.Contact), global::Meshtastic.Protobufs.Contact.Parser, new[]{ "Callsign", "DeviceCallsign" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.PLI), global::Meshtastic.Protobufs.PLI.Parser, new[]{ "LatitudeI", "LongitudeI", "Altitude", "Speed", "Course" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.AircraftTrack), global::Meshtastic.Protobufs.AircraftTrack.Parser, new[]{ "Icao", "Registration", "Flight", "AircraftType", "Squawk", "Category", "RssiX10", "Gps", "CotHostId" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKPacketV2), global::Meshtastic.Protobufs.TAKPacketV2.Parser, new[]{ "CotTypeId", "How", "Callsign", "Team", "Role", "LatitudeI", "LongitudeI", "Altitude", "Speed", "Course", "Battery", "GeoSrc", "AltSrc", "Uid", "DeviceCallsign", "StaleSeconds", "TakVersion", "TakDevice", "TakPlatform", "TakOs", "Endpoint", "Phone", "CotTypeStr", "Pli", "Chat", "Aircraft", "RawDetail" }, new[]{ "PayloadVariant" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.CotGeoPoint), global::Meshtastic.Protobufs.CotGeoPoint.Parser, new[]{ "LatDeltaI", "LonDeltaI" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.DrawnShape), global::Meshtastic.Protobufs.DrawnShape.Parser, new[]{ "Kind", "Style", "MajorCm", "MinorCm", "AngleDeg", "StrokeColor", "StrokeArgb", "StrokeWeightX10", "FillColor", "FillArgb", "LabelsOn", "Vertices", "Truncated", "BullseyeDistanceDm", "BullseyeBearingRef", "BullseyeFlags", "BullseyeUidRef" }, null, new[]{ typeof(global::Meshtastic.Protobufs.DrawnShape.Types.Kind), typeof(global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode) }, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.Marker), global::Meshtastic.Protobufs.Marker.Parser, new[]{ "Kind", "Color", "ColorArgb", "Readiness", "ParentUid", "ParentType", "ParentCallsign", "Iconset" }, null, new[]{ typeof(global::Meshtastic.Protobufs.Marker.Types.Kind) }, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.RangeAndBearing), global::Meshtastic.Protobufs.RangeAndBearing.Parser, new[]{ "Anchor", "AnchorUid", "RangeCm", "BearingCdeg", "StrokeColor", "StrokeArgb", "StrokeWeightX10" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.Route), global::Meshtastic.Protobufs.Route.Parser, new[]{ "Method", "Direction", "Prefix", "StrokeWeightX10", "Links", "Truncated" }, null, new[]{ typeof(global::Meshtastic.Protobufs.Route.Types.Method), typeof(global::Meshtastic.Protobufs.Route.Types.Direction) }, null, new pbr::GeneratedClrTypeInfo[] { new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.Route.Types.Link), global::Meshtastic.Protobufs.Route.Types.Link.Parser, new[]{ "Point", "Uid", "Callsign", "LinkType" }, null, null, null, null)}),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKPacketV2), global::Meshtastic.Protobufs.TAKPacketV2.Parser, new[]{ "CotTypeId", "How", "Callsign", "Team", "Role", "LatitudeI", "LongitudeI", "Altitude", "Speed", "Course", "Battery", "GeoSrc", "AltSrc", "Uid", "DeviceCallsign", "StaleSeconds", "TakVersion", "TakDevice", "TakPlatform", "TakOs", "Endpoint", "Phone", "CotTypeStr", "Pli", "Chat", "Aircraft", "RawDetail", "Shape", "Marker", "Rab", "Route" }, new[]{ "PayloadVariant" }, null, null, null)
           }));
     }
     #endregion
@@ -696,6 +750,40 @@ namespace Meshtastic.Protobufs {
     /// b-f-t-a: File transfer acknowledgment
     /// </summary>
     [pbr::OriginalName("CotType_b_f_t_a")] BFTA = 75,
+    /// <summary>
+    ///
+    /// u-d-f-m: Freehand telestration / annotation. Anchor at event point,
+    /// geometry carried via DrawnShape.vertices. May be truncated to
+    /// MAX_VERTICES by the sender.
+    /// </summary>
+    [pbr::OriginalName("CotType_u_d_f_m")] UDFM = 76,
+    /// <summary>
+    ///
+    /// u-d-p: Closed polygon. Geometry carried via DrawnShape.vertices,
+    /// implicitly closed (receiver duplicates first vertex as needed).
+    /// </summary>
+    [pbr::OriginalName("CotType_u_d_p")] UDP = 77,
+    /// <summary>
+    ///
+    /// b-m-p-s-m: Spot map marker (colored dot at a point of interest).
+    /// </summary>
+    [pbr::OriginalName("CotType_b_m_p_s_m")] BMPSM = 78,
+    /// <summary>
+    ///
+    /// b-m-p-c: Checkpoint (intermediate route control point).
+    /// </summary>
+    [pbr::OriginalName("CotType_b_m_p_c")] BMPC = 79,
+    /// <summary>
+    ///
+    /// u-r-b-c-c: Ranging circle (range rings centered on the event point).
+    /// </summary>
+    [pbr::OriginalName("CotType_u_r_b_c_c")] URBCC = 80,
+    /// <summary>
+    ///
+    /// u-r-b-bullseye: Bullseye with configurable range rings and bearing
+    /// reference (magnetic / true / grid).
+    /// </summary>
+    [pbr::OriginalName("CotType_u_r_b_bullseye")] URBBullseye = 81,
   }
 
   /// <summary>
@@ -3213,6 +3301,3079 @@ namespace Meshtastic.Protobufs {
 
   /// <summary>
   ///
+  /// Compact geographic vertex used by repeated vertex lists in TAK geometry
+  /// payloads. Named with a `Cot` prefix to avoid a namespace collision with
+  /// `meshtastic.GeoPoint` in `device_ui.proto`, which is an unrelated zoom/
+  /// latitude/longitude type used by the on-device map UI.
+  ///
+  /// Encoded as a signed DELTA from TAKPacketV2.latitude_i / longitude_i (the
+  /// enclosing event's anchor point). The absolute coordinate is recovered by
+  /// the receiver as `event.latitude_i + vertex.lat_delta_i` (and likewise for
+  /// longitude).
+  ///
+  /// Why deltas: a 32-vertex telestration with vertices clustered within a few
+  /// hundred meters of the anchor has per-vertex deltas in the ±10^4 range.
+  /// Under sint32+zigzag those encode as 2 bytes each (tag+varint), versus the
+  /// 4 bytes that sfixed32 would always require. At 32 vertices that is ~128
+  /// bytes of savings — the difference between fitting under the LoRa MTU or
+  /// not. Absolute coordinates (values ~10^9) would cost sint32 varint 5 bytes
+  /// per field, which is why TAKPacketV2's top-level latitude_i / longitude_i
+  /// stay sfixed32 — only small values win with sint32.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class CotGeoPoint : pb::IMessage<CotGeoPoint>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<CotGeoPoint> _parser = new pb::MessageParser<CotGeoPoint>(() => new CotGeoPoint());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<CotGeoPoint> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[7]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CotGeoPoint() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CotGeoPoint(CotGeoPoint other) : this() {
+      latDeltaI_ = other.latDeltaI_;
+      lonDeltaI_ = other.lonDeltaI_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public CotGeoPoint Clone() {
+      return new CotGeoPoint(this);
+    }
+
+    /// <summary>Field number for the "lat_delta_i" field.</summary>
+    public const int LatDeltaIFieldNumber = 1;
+    private int latDeltaI_;
+    /// <summary>
+    ///
+    /// Latitude delta from TAKPacketV2.latitude_i, in 1e-7 degree units.
+    /// Add to the enclosing event's latitude_i to recover the absolute latitude.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int LatDeltaI {
+      get { return latDeltaI_; }
+      set {
+        latDeltaI_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "lon_delta_i" field.</summary>
+    public const int LonDeltaIFieldNumber = 2;
+    private int lonDeltaI_;
+    /// <summary>
+    ///
+    /// Longitude delta from TAKPacketV2.longitude_i, in 1e-7 degree units.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int LonDeltaI {
+      get { return lonDeltaI_; }
+      set {
+        lonDeltaI_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as CotGeoPoint);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(CotGeoPoint other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (LatDeltaI != other.LatDeltaI) return false;
+      if (LonDeltaI != other.LonDeltaI) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (LatDeltaI != 0) hash ^= LatDeltaI.GetHashCode();
+      if (LonDeltaI != 0) hash ^= LonDeltaI.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (LatDeltaI != 0) {
+        output.WriteRawTag(8);
+        output.WriteSInt32(LatDeltaI);
+      }
+      if (LonDeltaI != 0) {
+        output.WriteRawTag(16);
+        output.WriteSInt32(LonDeltaI);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (LatDeltaI != 0) {
+        output.WriteRawTag(8);
+        output.WriteSInt32(LatDeltaI);
+      }
+      if (LonDeltaI != 0) {
+        output.WriteRawTag(16);
+        output.WriteSInt32(LonDeltaI);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (LatDeltaI != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeSInt32Size(LatDeltaI);
+      }
+      if (LonDeltaI != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeSInt32Size(LonDeltaI);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(CotGeoPoint other) {
+      if (other == null) {
+        return;
+      }
+      if (other.LatDeltaI != 0) {
+        LatDeltaI = other.LatDeltaI;
+      }
+      if (other.LonDeltaI != 0) {
+        LonDeltaI = other.LonDeltaI;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            LatDeltaI = input.ReadSInt32();
+            break;
+          }
+          case 16: {
+            LonDeltaI = input.ReadSInt32();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            LatDeltaI = input.ReadSInt32();
+            break;
+          }
+          case 16: {
+            LonDeltaI = input.ReadSInt32();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  ///
+  /// User-drawn tactical graphic: circle, rectangle, polygon, polyline, freehand
+  /// telestration, ranging circle, or bullseye.
+  ///
+  /// Covers CoT types u-d-c-c, u-d-r, u-d-f, u-d-f-m, u-d-p, u-r-b-c-c,
+  /// u-r-b-bullseye. The shape's anchor position is carried on
+  /// TAKPacketV2.latitude_i/longitude_i; polyline/polygon vertices are in the
+  /// `vertices` repeated field (absolute, not deltas).
+  ///
+  /// Colors use the Team enum as a 14-color palette (see color encoding below)
+  /// with a fixed32 exact-ARGB fallback for custom user-picked colors that
+  /// don't map to a palette entry.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DrawnShape : pb::IMessage<DrawnShape>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DrawnShape> _parser = new pb::MessageParser<DrawnShape>(() => new DrawnShape());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DrawnShape> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[8]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DrawnShape() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DrawnShape(DrawnShape other) : this() {
+      kind_ = other.kind_;
+      style_ = other.style_;
+      majorCm_ = other.majorCm_;
+      minorCm_ = other.minorCm_;
+      angleDeg_ = other.angleDeg_;
+      strokeColor_ = other.strokeColor_;
+      strokeArgb_ = other.strokeArgb_;
+      strokeWeightX10_ = other.strokeWeightX10_;
+      fillColor_ = other.fillColor_;
+      fillArgb_ = other.fillArgb_;
+      labelsOn_ = other.labelsOn_;
+      vertices_ = other.vertices_.Clone();
+      truncated_ = other.truncated_;
+      bullseyeDistanceDm_ = other.bullseyeDistanceDm_;
+      bullseyeBearingRef_ = other.bullseyeBearingRef_;
+      bullseyeFlags_ = other.bullseyeFlags_;
+      bullseyeUidRef_ = other.bullseyeUidRef_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DrawnShape Clone() {
+      return new DrawnShape(this);
+    }
+
+    /// <summary>Field number for the "kind" field.</summary>
+    public const int KindFieldNumber = 1;
+    private global::Meshtastic.Protobufs.DrawnShape.Types.Kind kind_ = global::Meshtastic.Protobufs.DrawnShape.Types.Kind.Unspecified;
+    /// <summary>
+    ///
+    /// Shape kind (circle, rectangle, freeform, etc.)
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.DrawnShape.Types.Kind Kind {
+      get { return kind_; }
+      set {
+        kind_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "style" field.</summary>
+    public const int StyleFieldNumber = 2;
+    private global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode style_ = global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode.Unspecified;
+    /// <summary>
+    ///
+    /// Explicit stroke/fill/both discriminator. See StyleMode doc.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode Style {
+      get { return style_; }
+      set {
+        style_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "major_cm" field.</summary>
+    public const int MajorCmFieldNumber = 3;
+    private uint majorCm_;
+    /// <summary>
+    ///
+    /// Ellipse major radius in centimeters. 0 for non-ellipse kinds.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint MajorCm {
+      get { return majorCm_; }
+      set {
+        majorCm_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "minor_cm" field.</summary>
+    public const int MinorCmFieldNumber = 4;
+    private uint minorCm_;
+    /// <summary>
+    ///
+    /// Ellipse minor radius in centimeters. 0 for non-ellipse kinds.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint MinorCm {
+      get { return minorCm_; }
+      set {
+        minorCm_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "angle_deg" field.</summary>
+    public const int AngleDegFieldNumber = 5;
+    private uint angleDeg_;
+    /// <summary>
+    ///
+    /// Ellipse rotation angle in degrees (0..360). Default 360 = circle.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint AngleDeg {
+      get { return angleDeg_; }
+      set {
+        angleDeg_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "stroke_color" field.</summary>
+    public const int StrokeColorFieldNumber = 6;
+    private global::Meshtastic.Protobufs.Team strokeColor_ = global::Meshtastic.Protobufs.Team.UnspecifedColor;
+    /// <summary>
+    ///
+    /// Stroke color as a named palette entry from the Team enum. If
+    /// Unspecifed_Color, the exact ARGB is carried in stroke_argb.
+    /// Valid only when style is StrokeOnly or StrokeAndFill.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.Team StrokeColor {
+      get { return strokeColor_; }
+      set {
+        strokeColor_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "stroke_argb" field.</summary>
+    public const int StrokeArgbFieldNumber = 7;
+    private uint strokeArgb_;
+    /// <summary>
+    ///
+    /// Stroke color as an exact 32-bit ARGB bit pattern. Always populated
+    /// on the wire; readers MUST use this value when stroke_color ==
+    /// Unspecifed_Color and MAY use it to recover the exact original bytes
+    /// even when a palette entry is set.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint StrokeArgb {
+      get { return strokeArgb_; }
+      set {
+        strokeArgb_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "stroke_weight_x10" field.</summary>
+    public const int StrokeWeightX10FieldNumber = 8;
+    private uint strokeWeightX10_;
+    /// <summary>
+    ///
+    /// Stroke weight in tenths of a unit (e.g. 30 = 3.0). Typical ATAK
+    /// range 10..60.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint StrokeWeightX10 {
+      get { return strokeWeightX10_; }
+      set {
+        strokeWeightX10_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "fill_color" field.</summary>
+    public const int FillColorFieldNumber = 9;
+    private global::Meshtastic.Protobufs.Team fillColor_ = global::Meshtastic.Protobufs.Team.UnspecifedColor;
+    /// <summary>
+    ///
+    /// Fill color as a named palette entry. See stroke_color docs.
+    /// Valid only when style is FillOnly or StrokeAndFill.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.Team FillColor {
+      get { return fillColor_; }
+      set {
+        fillColor_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "fill_argb" field.</summary>
+    public const int FillArgbFieldNumber = 10;
+    private uint fillArgb_;
+    /// <summary>
+    ///
+    /// Fill color exact ARGB fallback. See stroke_argb docs.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint FillArgb {
+      get { return fillArgb_; }
+      set {
+        fillArgb_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "labels_on" field.</summary>
+    public const int LabelsOnFieldNumber = 11;
+    private bool labelsOn_;
+    /// <summary>
+    ///
+    /// Whether labels are rendered on this shape.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool LabelsOn {
+      get { return labelsOn_; }
+      set {
+        labelsOn_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "vertices" field.</summary>
+    public const int VerticesFieldNumber = 12;
+    private static readonly pb::FieldCodec<global::Meshtastic.Protobufs.CotGeoPoint> _repeated_vertices_codec
+        = pb::FieldCodec.ForMessage(98, global::Meshtastic.Protobufs.CotGeoPoint.Parser);
+    private readonly pbc::RepeatedField<global::Meshtastic.Protobufs.CotGeoPoint> vertices_ = new pbc::RepeatedField<global::Meshtastic.Protobufs.CotGeoPoint>();
+    /// <summary>
+    ///
+    /// Vertex list for polyline/polygon/rectangle shapes. Capped at 32 by
+    /// the nanopb pool; senders MUST truncate longer inputs and set
+    /// `truncated = true`.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Meshtastic.Protobufs.CotGeoPoint> Vertices {
+      get { return vertices_; }
+    }
+
+    /// <summary>Field number for the "truncated" field.</summary>
+    public const int TruncatedFieldNumber = 13;
+    private bool truncated_;
+    /// <summary>
+    ///
+    /// True if the sender truncated `vertices` to fit the pool.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Truncated {
+      get { return truncated_; }
+      set {
+        truncated_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "bullseye_distance_dm" field.</summary>
+    public const int BullseyeDistanceDmFieldNumber = 14;
+    private uint bullseyeDistanceDm_;
+    /// <summary>
+    ///
+    /// Bullseye distance in meters * 10 (e.g. 3285 = 328.5 m). 0 = unset.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint BullseyeDistanceDm {
+      get { return bullseyeDistanceDm_; }
+      set {
+        bullseyeDistanceDm_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "bullseye_bearing_ref" field.</summary>
+    public const int BullseyeBearingRefFieldNumber = 15;
+    private uint bullseyeBearingRef_;
+    /// <summary>
+    ///
+    /// Bullseye bearing reference: 0 unset, 1 Magnetic, 2 True, 3 Grid.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint BullseyeBearingRef {
+      get { return bullseyeBearingRef_; }
+      set {
+        bullseyeBearingRef_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "bullseye_flags" field.</summary>
+    public const int BullseyeFlagsFieldNumber = 16;
+    private uint bullseyeFlags_;
+    /// <summary>
+    ///
+    /// Bullseye attribute bit flags:
+    ///   bit 0: rangeRingVisible
+    ///   bit 1: hasRangeRings
+    ///   bit 2: edgeToCenter
+    ///   bit 3: mils
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint BullseyeFlags {
+      get { return bullseyeFlags_; }
+      set {
+        bullseyeFlags_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "bullseye_uid_ref" field.</summary>
+    public const int BullseyeUidRefFieldNumber = 17;
+    private string bullseyeUidRef_ = "";
+    /// <summary>
+    ///
+    /// Bullseye reference UID (anchor marker). Empty = anchor is self.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string BullseyeUidRef {
+      get { return bullseyeUidRef_; }
+      set {
+        bullseyeUidRef_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DrawnShape);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DrawnShape other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Kind != other.Kind) return false;
+      if (Style != other.Style) return false;
+      if (MajorCm != other.MajorCm) return false;
+      if (MinorCm != other.MinorCm) return false;
+      if (AngleDeg != other.AngleDeg) return false;
+      if (StrokeColor != other.StrokeColor) return false;
+      if (StrokeArgb != other.StrokeArgb) return false;
+      if (StrokeWeightX10 != other.StrokeWeightX10) return false;
+      if (FillColor != other.FillColor) return false;
+      if (FillArgb != other.FillArgb) return false;
+      if (LabelsOn != other.LabelsOn) return false;
+      if(!vertices_.Equals(other.vertices_)) return false;
+      if (Truncated != other.Truncated) return false;
+      if (BullseyeDistanceDm != other.BullseyeDistanceDm) return false;
+      if (BullseyeBearingRef != other.BullseyeBearingRef) return false;
+      if (BullseyeFlags != other.BullseyeFlags) return false;
+      if (BullseyeUidRef != other.BullseyeUidRef) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Kind != global::Meshtastic.Protobufs.DrawnShape.Types.Kind.Unspecified) hash ^= Kind.GetHashCode();
+      if (Style != global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode.Unspecified) hash ^= Style.GetHashCode();
+      if (MajorCm != 0) hash ^= MajorCm.GetHashCode();
+      if (MinorCm != 0) hash ^= MinorCm.GetHashCode();
+      if (AngleDeg != 0) hash ^= AngleDeg.GetHashCode();
+      if (StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) hash ^= StrokeColor.GetHashCode();
+      if (StrokeArgb != 0) hash ^= StrokeArgb.GetHashCode();
+      if (StrokeWeightX10 != 0) hash ^= StrokeWeightX10.GetHashCode();
+      if (FillColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) hash ^= FillColor.GetHashCode();
+      if (FillArgb != 0) hash ^= FillArgb.GetHashCode();
+      if (LabelsOn != false) hash ^= LabelsOn.GetHashCode();
+      hash ^= vertices_.GetHashCode();
+      if (Truncated != false) hash ^= Truncated.GetHashCode();
+      if (BullseyeDistanceDm != 0) hash ^= BullseyeDistanceDm.GetHashCode();
+      if (BullseyeBearingRef != 0) hash ^= BullseyeBearingRef.GetHashCode();
+      if (BullseyeFlags != 0) hash ^= BullseyeFlags.GetHashCode();
+      if (BullseyeUidRef.Length != 0) hash ^= BullseyeUidRef.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Kind != global::Meshtastic.Protobufs.DrawnShape.Types.Kind.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) Kind);
+      }
+      if (Style != global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Style);
+      }
+      if (MajorCm != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(MajorCm);
+      }
+      if (MinorCm != 0) {
+        output.WriteRawTag(32);
+        output.WriteUInt32(MinorCm);
+      }
+      if (AngleDeg != 0) {
+        output.WriteRawTag(40);
+        output.WriteUInt32(AngleDeg);
+      }
+      if (StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        output.WriteRawTag(48);
+        output.WriteEnum((int) StrokeColor);
+      }
+      if (StrokeArgb != 0) {
+        output.WriteRawTag(61);
+        output.WriteFixed32(StrokeArgb);
+      }
+      if (StrokeWeightX10 != 0) {
+        output.WriteRawTag(64);
+        output.WriteUInt32(StrokeWeightX10);
+      }
+      if (FillColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        output.WriteRawTag(72);
+        output.WriteEnum((int) FillColor);
+      }
+      if (FillArgb != 0) {
+        output.WriteRawTag(85);
+        output.WriteFixed32(FillArgb);
+      }
+      if (LabelsOn != false) {
+        output.WriteRawTag(88);
+        output.WriteBool(LabelsOn);
+      }
+      vertices_.WriteTo(output, _repeated_vertices_codec);
+      if (Truncated != false) {
+        output.WriteRawTag(104);
+        output.WriteBool(Truncated);
+      }
+      if (BullseyeDistanceDm != 0) {
+        output.WriteRawTag(112);
+        output.WriteUInt32(BullseyeDistanceDm);
+      }
+      if (BullseyeBearingRef != 0) {
+        output.WriteRawTag(120);
+        output.WriteUInt32(BullseyeBearingRef);
+      }
+      if (BullseyeFlags != 0) {
+        output.WriteRawTag(128, 1);
+        output.WriteUInt32(BullseyeFlags);
+      }
+      if (BullseyeUidRef.Length != 0) {
+        output.WriteRawTag(138, 1);
+        output.WriteString(BullseyeUidRef);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Kind != global::Meshtastic.Protobufs.DrawnShape.Types.Kind.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) Kind);
+      }
+      if (Style != global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Style);
+      }
+      if (MajorCm != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(MajorCm);
+      }
+      if (MinorCm != 0) {
+        output.WriteRawTag(32);
+        output.WriteUInt32(MinorCm);
+      }
+      if (AngleDeg != 0) {
+        output.WriteRawTag(40);
+        output.WriteUInt32(AngleDeg);
+      }
+      if (StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        output.WriteRawTag(48);
+        output.WriteEnum((int) StrokeColor);
+      }
+      if (StrokeArgb != 0) {
+        output.WriteRawTag(61);
+        output.WriteFixed32(StrokeArgb);
+      }
+      if (StrokeWeightX10 != 0) {
+        output.WriteRawTag(64);
+        output.WriteUInt32(StrokeWeightX10);
+      }
+      if (FillColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        output.WriteRawTag(72);
+        output.WriteEnum((int) FillColor);
+      }
+      if (FillArgb != 0) {
+        output.WriteRawTag(85);
+        output.WriteFixed32(FillArgb);
+      }
+      if (LabelsOn != false) {
+        output.WriteRawTag(88);
+        output.WriteBool(LabelsOn);
+      }
+      vertices_.WriteTo(ref output, _repeated_vertices_codec);
+      if (Truncated != false) {
+        output.WriteRawTag(104);
+        output.WriteBool(Truncated);
+      }
+      if (BullseyeDistanceDm != 0) {
+        output.WriteRawTag(112);
+        output.WriteUInt32(BullseyeDistanceDm);
+      }
+      if (BullseyeBearingRef != 0) {
+        output.WriteRawTag(120);
+        output.WriteUInt32(BullseyeBearingRef);
+      }
+      if (BullseyeFlags != 0) {
+        output.WriteRawTag(128, 1);
+        output.WriteUInt32(BullseyeFlags);
+      }
+      if (BullseyeUidRef.Length != 0) {
+        output.WriteRawTag(138, 1);
+        output.WriteString(BullseyeUidRef);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Kind != global::Meshtastic.Protobufs.DrawnShape.Types.Kind.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Kind);
+      }
+      if (Style != global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Style);
+      }
+      if (MajorCm != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MajorCm);
+      }
+      if (MinorCm != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(MinorCm);
+      }
+      if (AngleDeg != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(AngleDeg);
+      }
+      if (StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) StrokeColor);
+      }
+      if (StrokeArgb != 0) {
+        size += 1 + 4;
+      }
+      if (StrokeWeightX10 != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(StrokeWeightX10);
+      }
+      if (FillColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) FillColor);
+      }
+      if (FillArgb != 0) {
+        size += 1 + 4;
+      }
+      if (LabelsOn != false) {
+        size += 1 + 1;
+      }
+      size += vertices_.CalculateSize(_repeated_vertices_codec);
+      if (Truncated != false) {
+        size += 1 + 1;
+      }
+      if (BullseyeDistanceDm != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(BullseyeDistanceDm);
+      }
+      if (BullseyeBearingRef != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(BullseyeBearingRef);
+      }
+      if (BullseyeFlags != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeUInt32Size(BullseyeFlags);
+      }
+      if (BullseyeUidRef.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(BullseyeUidRef);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DrawnShape other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Kind != global::Meshtastic.Protobufs.DrawnShape.Types.Kind.Unspecified) {
+        Kind = other.Kind;
+      }
+      if (other.Style != global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode.Unspecified) {
+        Style = other.Style;
+      }
+      if (other.MajorCm != 0) {
+        MajorCm = other.MajorCm;
+      }
+      if (other.MinorCm != 0) {
+        MinorCm = other.MinorCm;
+      }
+      if (other.AngleDeg != 0) {
+        AngleDeg = other.AngleDeg;
+      }
+      if (other.StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        StrokeColor = other.StrokeColor;
+      }
+      if (other.StrokeArgb != 0) {
+        StrokeArgb = other.StrokeArgb;
+      }
+      if (other.StrokeWeightX10 != 0) {
+        StrokeWeightX10 = other.StrokeWeightX10;
+      }
+      if (other.FillColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        FillColor = other.FillColor;
+      }
+      if (other.FillArgb != 0) {
+        FillArgb = other.FillArgb;
+      }
+      if (other.LabelsOn != false) {
+        LabelsOn = other.LabelsOn;
+      }
+      vertices_.Add(other.vertices_);
+      if (other.Truncated != false) {
+        Truncated = other.Truncated;
+      }
+      if (other.BullseyeDistanceDm != 0) {
+        BullseyeDistanceDm = other.BullseyeDistanceDm;
+      }
+      if (other.BullseyeBearingRef != 0) {
+        BullseyeBearingRef = other.BullseyeBearingRef;
+      }
+      if (other.BullseyeFlags != 0) {
+        BullseyeFlags = other.BullseyeFlags;
+      }
+      if (other.BullseyeUidRef.Length != 0) {
+        BullseyeUidRef = other.BullseyeUidRef;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            Kind = (global::Meshtastic.Protobufs.DrawnShape.Types.Kind) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            Style = (global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode) input.ReadEnum();
+            break;
+          }
+          case 24: {
+            MajorCm = input.ReadUInt32();
+            break;
+          }
+          case 32: {
+            MinorCm = input.ReadUInt32();
+            break;
+          }
+          case 40: {
+            AngleDeg = input.ReadUInt32();
+            break;
+          }
+          case 48: {
+            StrokeColor = (global::Meshtastic.Protobufs.Team) input.ReadEnum();
+            break;
+          }
+          case 61: {
+            StrokeArgb = input.ReadFixed32();
+            break;
+          }
+          case 64: {
+            StrokeWeightX10 = input.ReadUInt32();
+            break;
+          }
+          case 72: {
+            FillColor = (global::Meshtastic.Protobufs.Team) input.ReadEnum();
+            break;
+          }
+          case 85: {
+            FillArgb = input.ReadFixed32();
+            break;
+          }
+          case 88: {
+            LabelsOn = input.ReadBool();
+            break;
+          }
+          case 98: {
+            vertices_.AddEntriesFrom(input, _repeated_vertices_codec);
+            break;
+          }
+          case 104: {
+            Truncated = input.ReadBool();
+            break;
+          }
+          case 112: {
+            BullseyeDistanceDm = input.ReadUInt32();
+            break;
+          }
+          case 120: {
+            BullseyeBearingRef = input.ReadUInt32();
+            break;
+          }
+          case 128: {
+            BullseyeFlags = input.ReadUInt32();
+            break;
+          }
+          case 138: {
+            BullseyeUidRef = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            Kind = (global::Meshtastic.Protobufs.DrawnShape.Types.Kind) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            Style = (global::Meshtastic.Protobufs.DrawnShape.Types.StyleMode) input.ReadEnum();
+            break;
+          }
+          case 24: {
+            MajorCm = input.ReadUInt32();
+            break;
+          }
+          case 32: {
+            MinorCm = input.ReadUInt32();
+            break;
+          }
+          case 40: {
+            AngleDeg = input.ReadUInt32();
+            break;
+          }
+          case 48: {
+            StrokeColor = (global::Meshtastic.Protobufs.Team) input.ReadEnum();
+            break;
+          }
+          case 61: {
+            StrokeArgb = input.ReadFixed32();
+            break;
+          }
+          case 64: {
+            StrokeWeightX10 = input.ReadUInt32();
+            break;
+          }
+          case 72: {
+            FillColor = (global::Meshtastic.Protobufs.Team) input.ReadEnum();
+            break;
+          }
+          case 85: {
+            FillArgb = input.ReadFixed32();
+            break;
+          }
+          case 88: {
+            LabelsOn = input.ReadBool();
+            break;
+          }
+          case 98: {
+            vertices_.AddEntriesFrom(ref input, _repeated_vertices_codec);
+            break;
+          }
+          case 104: {
+            Truncated = input.ReadBool();
+            break;
+          }
+          case 112: {
+            BullseyeDistanceDm = input.ReadUInt32();
+            break;
+          }
+          case 120: {
+            BullseyeBearingRef = input.ReadUInt32();
+            break;
+          }
+          case 128: {
+            BullseyeFlags = input.ReadUInt32();
+            break;
+          }
+          case 138: {
+            BullseyeUidRef = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+    #region Nested types
+    /// <summary>Container for nested types declared in the DrawnShape message type.</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static partial class Types {
+      /// <summary>
+      ///
+      /// Shape kind discriminator. Drives receiver rendering and also controls
+      /// which optional fields below are meaningful.
+      /// </summary>
+      public enum Kind {
+        /// <summary>
+        ///
+        /// Unspecified (do not use on the wire)
+        /// </summary>
+        [pbr::OriginalName("Kind_Unspecified")] Unspecified = 0,
+        /// <summary>
+        ///
+        /// u-d-c-c: User-drawn circle (uses major/minor/angle, anchor = event point)
+        /// </summary>
+        [pbr::OriginalName("Kind_Circle")] Circle = 1,
+        /// <summary>
+        ///
+        /// u-d-r: User-drawn rectangle (uses vertices = 4 corners)
+        /// </summary>
+        [pbr::OriginalName("Kind_Rectangle")] Rectangle = 2,
+        /// <summary>
+        ///
+        /// u-d-f: User-drawn polyline (uses vertices, not closed)
+        /// </summary>
+        [pbr::OriginalName("Kind_Freeform")] Freeform = 3,
+        /// <summary>
+        ///
+        /// u-d-f-m: Freehand telestration / annotation (uses vertices, may be truncated)
+        /// </summary>
+        [pbr::OriginalName("Kind_Telestration")] Telestration = 4,
+        /// <summary>
+        ///
+        /// u-d-p: Closed polygon (uses vertices, implicitly closed)
+        /// </summary>
+        [pbr::OriginalName("Kind_Polygon")] Polygon = 5,
+        /// <summary>
+        ///
+        /// u-r-b-c-c: Ranging circle (major/minor/angle, stroke + optional fill)
+        /// </summary>
+        [pbr::OriginalName("Kind_RangingCircle")] RangingCircle = 6,
+        /// <summary>
+        ///
+        /// u-r-b-bullseye: Bullseye ring with range rings and bearing reference
+        /// </summary>
+        [pbr::OriginalName("Kind_Bullseye")] Bullseye = 7,
+      }
+
+      /// <summary>
+      ///
+      /// Explicit stroke/fill/both discriminator.
+      ///
+      /// ATAK's source XML distinguishes "stroke-only polyline" from "closed shape
+      /// with both stroke and fill" by the presence of the &lt;fillColor> element.
+      /// Both states can hash to all-zero color fields, so we carry the signal
+      /// explicitly. Parser sets this from (sawStrokeColor, sawFillColor) at the
+      /// end of parse; builder uses it to decide which of &lt;strokeColor> /
+      /// &lt;fillColor> to emit in the reconstructed XML.
+      /// </summary>
+      public enum StyleMode {
+        /// <summary>
+        ///
+        /// Unspecified — receiver infers from which color fields are non-zero.
+        /// </summary>
+        [pbr::OriginalName("StyleMode_Unspecified")] Unspecified = 0,
+        /// <summary>
+        ///
+        /// Stroke only. No &lt;fillColor> in the source XML. Used for polylines,
+        /// ranging lines, bullseye rings.
+        /// </summary>
+        [pbr::OriginalName("StyleMode_StrokeOnly")] StrokeOnly = 1,
+        /// <summary>
+        ///
+        /// Fill only. No &lt;strokeColor> in the source XML. Rare but valid in
+        /// ATAK (solid region with no outline).
+        /// </summary>
+        [pbr::OriginalName("StyleMode_FillOnly")] FillOnly = 2,
+        /// <summary>
+        ///
+        /// Both stroke and fill present. Closed shapes: circle, rectangle,
+        /// polygon, ranging circle.
+        /// </summary>
+        [pbr::OriginalName("StyleMode_StrokeAndFill")] StrokeAndFill = 3,
+      }
+
+    }
+    #endregion
+
+  }
+
+  /// <summary>
+  ///
+  /// Fixed point of interest: spot marker, waypoint, checkpoint, 2525 symbol,
+  /// or custom icon.
+  ///
+  /// Covers CoT types b-m-p-s-m, b-m-p-w, b-m-p-c, b-m-p-s-p-i, b-m-p-s-p-loc,
+  /// plus a-u-G / a-f-G / a-h-G / a-n-G with iconset paths. The marker position
+  /// is carried on TAKPacketV2.latitude_i/longitude_i; fields below carry only
+  /// the marker-specific metadata.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class Marker : pb::IMessage<Marker>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<Marker> _parser = new pb::MessageParser<Marker>(() => new Marker());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<Marker> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[9]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Marker() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Marker(Marker other) : this() {
+      kind_ = other.kind_;
+      color_ = other.color_;
+      colorArgb_ = other.colorArgb_;
+      readiness_ = other.readiness_;
+      parentUid_ = other.parentUid_;
+      parentType_ = other.parentType_;
+      parentCallsign_ = other.parentCallsign_;
+      iconset_ = other.iconset_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Marker Clone() {
+      return new Marker(this);
+    }
+
+    /// <summary>Field number for the "kind" field.</summary>
+    public const int KindFieldNumber = 1;
+    private global::Meshtastic.Protobufs.Marker.Types.Kind kind_ = global::Meshtastic.Protobufs.Marker.Types.Kind.Unspecified;
+    /// <summary>
+    ///
+    /// Marker kind
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.Marker.Types.Kind Kind {
+      get { return kind_; }
+      set {
+        kind_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "color" field.</summary>
+    public const int ColorFieldNumber = 2;
+    private global::Meshtastic.Protobufs.Team color_ = global::Meshtastic.Protobufs.Team.UnspecifedColor;
+    /// <summary>
+    ///
+    /// Marker color as a named palette entry. If Unspecifed_Color, the exact
+    /// ARGB is in color_argb.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.Team Color {
+      get { return color_; }
+      set {
+        color_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "color_argb" field.</summary>
+    public const int ColorArgbFieldNumber = 3;
+    private uint colorArgb_;
+    /// <summary>
+    ///
+    /// Marker color exact ARGB bit pattern. Always populated on the wire.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint ColorArgb {
+      get { return colorArgb_; }
+      set {
+        colorArgb_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "readiness" field.</summary>
+    public const int ReadinessFieldNumber = 4;
+    private bool readiness_;
+    /// <summary>
+    ///
+    /// Status readiness flag (ATAK &lt;status readiness="true"/>).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Readiness {
+      get { return readiness_; }
+      set {
+        readiness_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "parent_uid" field.</summary>
+    public const int ParentUidFieldNumber = 5;
+    private string parentUid_ = "";
+    /// <summary>
+    ///
+    /// Parent link UID (ATAK &lt;link uid=... relation="p-p"/>). Empty = no parent.
+    /// For spot/waypoint markers this is typically the producing TAK user's UID.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ParentUid {
+      get { return parentUid_; }
+      set {
+        parentUid_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "parent_type" field.</summary>
+    public const int ParentTypeFieldNumber = 6;
+    private string parentType_ = "";
+    /// <summary>
+    ///
+    /// Parent CoT type (e.g. "a-f-G-U-C"). Usually the parent TAK user's type.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ParentType {
+      get { return parentType_; }
+      set {
+        parentType_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "parent_callsign" field.</summary>
+    public const int ParentCallsignFieldNumber = 7;
+    private string parentCallsign_ = "";
+    /// <summary>
+    ///
+    /// Parent callsign (e.g. "HOPE").
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ParentCallsign {
+      get { return parentCallsign_; }
+      set {
+        parentCallsign_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "iconset" field.</summary>
+    public const int IconsetFieldNumber = 8;
+    private string iconset_ = "";
+    /// <summary>
+    ///
+    /// Iconset path stored verbatim. ATAK emits three flavors:
+    ///   Kind_Symbol2525    -> "COT_MAPPING_2525B/&lt;cot-type-prefix>/&lt;cot-type>"
+    ///   Kind_SpotMap       -> "COT_MAPPING_SPOTMAP/&lt;cot-type>/&lt;argb>"
+    ///   Kind_CustomIcon    -> "&lt;UUID>/&lt;GroupName>/&lt;filename>.png"
+    /// Stored end-to-end without prefix stripping; the ~19 bytes saved by
+    /// stripping well-known prefixes are not worth the builder-side bug
+    /// surface, and the dict compresses the repetition effectively.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Iconset {
+      get { return iconset_; }
+      set {
+        iconset_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as Marker);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(Marker other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Kind != other.Kind) return false;
+      if (Color != other.Color) return false;
+      if (ColorArgb != other.ColorArgb) return false;
+      if (Readiness != other.Readiness) return false;
+      if (ParentUid != other.ParentUid) return false;
+      if (ParentType != other.ParentType) return false;
+      if (ParentCallsign != other.ParentCallsign) return false;
+      if (Iconset != other.Iconset) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Kind != global::Meshtastic.Protobufs.Marker.Types.Kind.Unspecified) hash ^= Kind.GetHashCode();
+      if (Color != global::Meshtastic.Protobufs.Team.UnspecifedColor) hash ^= Color.GetHashCode();
+      if (ColorArgb != 0) hash ^= ColorArgb.GetHashCode();
+      if (Readiness != false) hash ^= Readiness.GetHashCode();
+      if (ParentUid.Length != 0) hash ^= ParentUid.GetHashCode();
+      if (ParentType.Length != 0) hash ^= ParentType.GetHashCode();
+      if (ParentCallsign.Length != 0) hash ^= ParentCallsign.GetHashCode();
+      if (Iconset.Length != 0) hash ^= Iconset.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Kind != global::Meshtastic.Protobufs.Marker.Types.Kind.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) Kind);
+      }
+      if (Color != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Color);
+      }
+      if (ColorArgb != 0) {
+        output.WriteRawTag(29);
+        output.WriteFixed32(ColorArgb);
+      }
+      if (Readiness != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Readiness);
+      }
+      if (ParentUid.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ParentUid);
+      }
+      if (ParentType.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ParentType);
+      }
+      if (ParentCallsign.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(ParentCallsign);
+      }
+      if (Iconset.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(Iconset);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Kind != global::Meshtastic.Protobufs.Marker.Types.Kind.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) Kind);
+      }
+      if (Color != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Color);
+      }
+      if (ColorArgb != 0) {
+        output.WriteRawTag(29);
+        output.WriteFixed32(ColorArgb);
+      }
+      if (Readiness != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(Readiness);
+      }
+      if (ParentUid.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(ParentUid);
+      }
+      if (ParentType.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ParentType);
+      }
+      if (ParentCallsign.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(ParentCallsign);
+      }
+      if (Iconset.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(Iconset);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Kind != global::Meshtastic.Protobufs.Marker.Types.Kind.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Kind);
+      }
+      if (Color != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Color);
+      }
+      if (ColorArgb != 0) {
+        size += 1 + 4;
+      }
+      if (Readiness != false) {
+        size += 1 + 1;
+      }
+      if (ParentUid.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ParentUid);
+      }
+      if (ParentType.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ParentType);
+      }
+      if (ParentCallsign.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ParentCallsign);
+      }
+      if (Iconset.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Iconset);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(Marker other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Kind != global::Meshtastic.Protobufs.Marker.Types.Kind.Unspecified) {
+        Kind = other.Kind;
+      }
+      if (other.Color != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        Color = other.Color;
+      }
+      if (other.ColorArgb != 0) {
+        ColorArgb = other.ColorArgb;
+      }
+      if (other.Readiness != false) {
+        Readiness = other.Readiness;
+      }
+      if (other.ParentUid.Length != 0) {
+        ParentUid = other.ParentUid;
+      }
+      if (other.ParentType.Length != 0) {
+        ParentType = other.ParentType;
+      }
+      if (other.ParentCallsign.Length != 0) {
+        ParentCallsign = other.ParentCallsign;
+      }
+      if (other.Iconset.Length != 0) {
+        Iconset = other.Iconset;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            Kind = (global::Meshtastic.Protobufs.Marker.Types.Kind) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            Color = (global::Meshtastic.Protobufs.Team) input.ReadEnum();
+            break;
+          }
+          case 29: {
+            ColorArgb = input.ReadFixed32();
+            break;
+          }
+          case 32: {
+            Readiness = input.ReadBool();
+            break;
+          }
+          case 42: {
+            ParentUid = input.ReadString();
+            break;
+          }
+          case 50: {
+            ParentType = input.ReadString();
+            break;
+          }
+          case 58: {
+            ParentCallsign = input.ReadString();
+            break;
+          }
+          case 66: {
+            Iconset = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            Kind = (global::Meshtastic.Protobufs.Marker.Types.Kind) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            Color = (global::Meshtastic.Protobufs.Team) input.ReadEnum();
+            break;
+          }
+          case 29: {
+            ColorArgb = input.ReadFixed32();
+            break;
+          }
+          case 32: {
+            Readiness = input.ReadBool();
+            break;
+          }
+          case 42: {
+            ParentUid = input.ReadString();
+            break;
+          }
+          case 50: {
+            ParentType = input.ReadString();
+            break;
+          }
+          case 58: {
+            ParentCallsign = input.ReadString();
+            break;
+          }
+          case 66: {
+            Iconset = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+    #region Nested types
+    /// <summary>Container for nested types declared in the Marker message type.</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static partial class Types {
+      /// <summary>
+      ///
+      /// Marker kind. Used to pick sensible receiver defaults when the CoT type
+      /// alone is ambiguous (e.g. a-u-G could be a 2525 symbol or a custom icon
+      /// depending on the iconset path).
+      /// </summary>
+      public enum Kind {
+        /// <summary>
+        ///
+        /// Unspecified — fall back to TAKPacketV2.cot_type_id
+        /// </summary>
+        [pbr::OriginalName("Kind_Unspecified")] Unspecified = 0,
+        /// <summary>
+        ///
+        /// b-m-p-s-m: Spot map marker
+        /// </summary>
+        [pbr::OriginalName("Kind_Spot")] Spot = 1,
+        /// <summary>
+        ///
+        /// b-m-p-w: Route waypoint
+        /// </summary>
+        [pbr::OriginalName("Kind_Waypoint")] Waypoint = 2,
+        /// <summary>
+        ///
+        /// b-m-p-c: Checkpoint
+        /// </summary>
+        [pbr::OriginalName("Kind_Checkpoint")] Checkpoint = 3,
+        /// <summary>
+        ///
+        /// b-m-p-s-p-i / b-m-p-s-p-loc: Self-position marker
+        /// </summary>
+        [pbr::OriginalName("Kind_SelfPosition")] SelfPosition = 4,
+        /// <summary>
+        ///
+        /// 2525B/C military symbol (iconsetpath = COT_MAPPING_2525B/...)
+        /// </summary>
+        [pbr::OriginalName("Kind_Symbol2525")] Symbol2525 = 5,
+        /// <summary>
+        ///
+        /// COT_MAPPING_SPOTMAP icon (e.g. colored dot)
+        /// </summary>
+        [pbr::OriginalName("Kind_SpotMap")] SpotMap = 6,
+        /// <summary>
+        ///
+        /// Custom icon set (UUID/GroupName/filename.png)
+        /// </summary>
+        [pbr::OriginalName("Kind_CustomIcon")] CustomIcon = 7,
+      }
+
+    }
+    #endregion
+
+  }
+
+  /// <summary>
+  ///
+  /// Range and bearing measurement line from the event anchor to a target point.
+  ///
+  /// Covers CoT type u-rb-a. The anchor position is on
+  /// TAKPacketV2.latitude_i/longitude_i; the target endpoint is carried as a
+  /// CotGeoPoint — same delta-from-anchor encoding used by DrawnShape.vertices
+  /// so a self-anchored RAB (common case) encodes in zero bytes.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class RangeAndBearing : pb::IMessage<RangeAndBearing>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<RangeAndBearing> _parser = new pb::MessageParser<RangeAndBearing>(() => new RangeAndBearing());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<RangeAndBearing> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[10]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RangeAndBearing() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RangeAndBearing(RangeAndBearing other) : this() {
+      anchor_ = other.anchor_ != null ? other.anchor_.Clone() : null;
+      anchorUid_ = other.anchorUid_;
+      rangeCm_ = other.rangeCm_;
+      bearingCdeg_ = other.bearingCdeg_;
+      strokeColor_ = other.strokeColor_;
+      strokeArgb_ = other.strokeArgb_;
+      strokeWeightX10_ = other.strokeWeightX10_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public RangeAndBearing Clone() {
+      return new RangeAndBearing(this);
+    }
+
+    /// <summary>Field number for the "anchor" field.</summary>
+    public const int AnchorFieldNumber = 1;
+    private global::Meshtastic.Protobufs.CotGeoPoint anchor_;
+    /// <summary>
+    ///
+    /// Target/anchor endpoint (delta-encoded from TAKPacketV2.latitude_i/longitude_i).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.CotGeoPoint Anchor {
+      get { return anchor_; }
+      set {
+        anchor_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "anchor_uid" field.</summary>
+    public const int AnchorUidFieldNumber = 2;
+    private string anchorUid_ = "";
+    /// <summary>
+    ///
+    /// Anchor UID (from &lt;link uid="anchor-1"/>). Empty = free-standing.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string AnchorUid {
+      get { return anchorUid_; }
+      set {
+        anchorUid_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "range_cm" field.</summary>
+    public const int RangeCmFieldNumber = 3;
+    private uint rangeCm_;
+    /// <summary>
+    ///
+    /// Range in centimeters (value * 100). Range 0..4294 km.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint RangeCm {
+      get { return rangeCm_; }
+      set {
+        rangeCm_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "bearing_cdeg" field.</summary>
+    public const int BearingCdegFieldNumber = 4;
+    private uint bearingCdeg_;
+    /// <summary>
+    ///
+    /// Bearing in degrees * 100 (0..36000).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint BearingCdeg {
+      get { return bearingCdeg_; }
+      set {
+        bearingCdeg_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "stroke_color" field.</summary>
+    public const int StrokeColorFieldNumber = 5;
+    private global::Meshtastic.Protobufs.Team strokeColor_ = global::Meshtastic.Protobufs.Team.UnspecifedColor;
+    /// <summary>
+    ///
+    /// Stroke color as a Team palette entry. See DrawnShape.stroke_color doc.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.Team StrokeColor {
+      get { return strokeColor_; }
+      set {
+        strokeColor_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "stroke_argb" field.</summary>
+    public const int StrokeArgbFieldNumber = 6;
+    private uint strokeArgb_;
+    /// <summary>
+    ///
+    /// Stroke color exact ARGB fallback.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint StrokeArgb {
+      get { return strokeArgb_; }
+      set {
+        strokeArgb_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "stroke_weight_x10" field.</summary>
+    public const int StrokeWeightX10FieldNumber = 7;
+    private uint strokeWeightX10_;
+    /// <summary>
+    ///
+    /// Stroke weight * 10 (e.g. 30 = 3.0).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint StrokeWeightX10 {
+      get { return strokeWeightX10_; }
+      set {
+        strokeWeightX10_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as RangeAndBearing);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(RangeAndBearing other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(Anchor, other.Anchor)) return false;
+      if (AnchorUid != other.AnchorUid) return false;
+      if (RangeCm != other.RangeCm) return false;
+      if (BearingCdeg != other.BearingCdeg) return false;
+      if (StrokeColor != other.StrokeColor) return false;
+      if (StrokeArgb != other.StrokeArgb) return false;
+      if (StrokeWeightX10 != other.StrokeWeightX10) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (anchor_ != null) hash ^= Anchor.GetHashCode();
+      if (AnchorUid.Length != 0) hash ^= AnchorUid.GetHashCode();
+      if (RangeCm != 0) hash ^= RangeCm.GetHashCode();
+      if (BearingCdeg != 0) hash ^= BearingCdeg.GetHashCode();
+      if (StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) hash ^= StrokeColor.GetHashCode();
+      if (StrokeArgb != 0) hash ^= StrokeArgb.GetHashCode();
+      if (StrokeWeightX10 != 0) hash ^= StrokeWeightX10.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (anchor_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Anchor);
+      }
+      if (AnchorUid.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(AnchorUid);
+      }
+      if (RangeCm != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(RangeCm);
+      }
+      if (BearingCdeg != 0) {
+        output.WriteRawTag(32);
+        output.WriteUInt32(BearingCdeg);
+      }
+      if (StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        output.WriteRawTag(40);
+        output.WriteEnum((int) StrokeColor);
+      }
+      if (StrokeArgb != 0) {
+        output.WriteRawTag(53);
+        output.WriteFixed32(StrokeArgb);
+      }
+      if (StrokeWeightX10 != 0) {
+        output.WriteRawTag(56);
+        output.WriteUInt32(StrokeWeightX10);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (anchor_ != null) {
+        output.WriteRawTag(10);
+        output.WriteMessage(Anchor);
+      }
+      if (AnchorUid.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(AnchorUid);
+      }
+      if (RangeCm != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(RangeCm);
+      }
+      if (BearingCdeg != 0) {
+        output.WriteRawTag(32);
+        output.WriteUInt32(BearingCdeg);
+      }
+      if (StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        output.WriteRawTag(40);
+        output.WriteEnum((int) StrokeColor);
+      }
+      if (StrokeArgb != 0) {
+        output.WriteRawTag(53);
+        output.WriteFixed32(StrokeArgb);
+      }
+      if (StrokeWeightX10 != 0) {
+        output.WriteRawTag(56);
+        output.WriteUInt32(StrokeWeightX10);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (anchor_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Anchor);
+      }
+      if (AnchorUid.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(AnchorUid);
+      }
+      if (RangeCm != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(RangeCm);
+      }
+      if (BearingCdeg != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(BearingCdeg);
+      }
+      if (StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) StrokeColor);
+      }
+      if (StrokeArgb != 0) {
+        size += 1 + 4;
+      }
+      if (StrokeWeightX10 != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(StrokeWeightX10);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(RangeAndBearing other) {
+      if (other == null) {
+        return;
+      }
+      if (other.anchor_ != null) {
+        if (anchor_ == null) {
+          Anchor = new global::Meshtastic.Protobufs.CotGeoPoint();
+        }
+        Anchor.MergeFrom(other.Anchor);
+      }
+      if (other.AnchorUid.Length != 0) {
+        AnchorUid = other.AnchorUid;
+      }
+      if (other.RangeCm != 0) {
+        RangeCm = other.RangeCm;
+      }
+      if (other.BearingCdeg != 0) {
+        BearingCdeg = other.BearingCdeg;
+      }
+      if (other.StrokeColor != global::Meshtastic.Protobufs.Team.UnspecifedColor) {
+        StrokeColor = other.StrokeColor;
+      }
+      if (other.StrokeArgb != 0) {
+        StrokeArgb = other.StrokeArgb;
+      }
+      if (other.StrokeWeightX10 != 0) {
+        StrokeWeightX10 = other.StrokeWeightX10;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            if (anchor_ == null) {
+              Anchor = new global::Meshtastic.Protobufs.CotGeoPoint();
+            }
+            input.ReadMessage(Anchor);
+            break;
+          }
+          case 18: {
+            AnchorUid = input.ReadString();
+            break;
+          }
+          case 24: {
+            RangeCm = input.ReadUInt32();
+            break;
+          }
+          case 32: {
+            BearingCdeg = input.ReadUInt32();
+            break;
+          }
+          case 40: {
+            StrokeColor = (global::Meshtastic.Protobufs.Team) input.ReadEnum();
+            break;
+          }
+          case 53: {
+            StrokeArgb = input.ReadFixed32();
+            break;
+          }
+          case 56: {
+            StrokeWeightX10 = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            if (anchor_ == null) {
+              Anchor = new global::Meshtastic.Protobufs.CotGeoPoint();
+            }
+            input.ReadMessage(Anchor);
+            break;
+          }
+          case 18: {
+            AnchorUid = input.ReadString();
+            break;
+          }
+          case 24: {
+            RangeCm = input.ReadUInt32();
+            break;
+          }
+          case 32: {
+            BearingCdeg = input.ReadUInt32();
+            break;
+          }
+          case 40: {
+            StrokeColor = (global::Meshtastic.Protobufs.Team) input.ReadEnum();
+            break;
+          }
+          case 53: {
+            StrokeArgb = input.ReadFixed32();
+            break;
+          }
+          case 56: {
+            StrokeWeightX10 = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  ///
+  /// Named route consisting of ordered waypoints and control points.
+  ///
+  /// Covers CoT type b-m-r. The first waypoint's position is on
+  /// TAKPacketV2.latitude_i/longitude_i; subsequent waypoints and checkpoints
+  /// are in `links`. Link count is capped at 16 by the nanopb pool; senders
+  /// MUST truncate longer routes and set `truncated = true`.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class Route : pb::IMessage<Route>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<Route> _parser = new pb::MessageParser<Route>(() => new Route());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<Route> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[11]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Route() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Route(Route other) : this() {
+      method_ = other.method_;
+      direction_ = other.direction_;
+      prefix_ = other.prefix_;
+      strokeWeightX10_ = other.strokeWeightX10_;
+      links_ = other.links_.Clone();
+      truncated_ = other.truncated_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Route Clone() {
+      return new Route(this);
+    }
+
+    /// <summary>Field number for the "method" field.</summary>
+    public const int MethodFieldNumber = 1;
+    private global::Meshtastic.Protobufs.Route.Types.Method method_ = global::Meshtastic.Protobufs.Route.Types.Method.Unspecified;
+    /// <summary>
+    ///
+    /// Travel method
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.Route.Types.Method Method {
+      get { return method_; }
+      set {
+        method_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "direction" field.</summary>
+    public const int DirectionFieldNumber = 2;
+    private global::Meshtastic.Protobufs.Route.Types.Direction direction_ = global::Meshtastic.Protobufs.Route.Types.Direction.Unspecified;
+    /// <summary>
+    ///
+    /// Direction (infil/exfil)
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.Route.Types.Direction Direction {
+      get { return direction_; }
+      set {
+        direction_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "prefix" field.</summary>
+    public const int PrefixFieldNumber = 3;
+    private string prefix_ = "";
+    /// <summary>
+    ///
+    /// Waypoint name prefix (e.g. "CP").
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Prefix {
+      get { return prefix_; }
+      set {
+        prefix_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "stroke_weight_x10" field.</summary>
+    public const int StrokeWeightX10FieldNumber = 4;
+    private uint strokeWeightX10_;
+    /// <summary>
+    ///
+    /// Stroke weight * 10 (e.g. 30 = 3.0). 0 = default.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint StrokeWeightX10 {
+      get { return strokeWeightX10_; }
+      set {
+        strokeWeightX10_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "links" field.</summary>
+    public const int LinksFieldNumber = 5;
+    private static readonly pb::FieldCodec<global::Meshtastic.Protobufs.Route.Types.Link> _repeated_links_codec
+        = pb::FieldCodec.ForMessage(42, global::Meshtastic.Protobufs.Route.Types.Link.Parser);
+    private readonly pbc::RepeatedField<global::Meshtastic.Protobufs.Route.Types.Link> links_ = new pbc::RepeatedField<global::Meshtastic.Protobufs.Route.Types.Link>();
+    /// <summary>
+    ///
+    /// Ordered list of route control points. Capped at 16.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Meshtastic.Protobufs.Route.Types.Link> Links {
+      get { return links_; }
+    }
+
+    /// <summary>Field number for the "truncated" field.</summary>
+    public const int TruncatedFieldNumber = 6;
+    private bool truncated_;
+    /// <summary>
+    ///
+    /// True if the sender truncated `links` to fit the pool.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Truncated {
+      get { return truncated_; }
+      set {
+        truncated_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as Route);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(Route other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Method != other.Method) return false;
+      if (Direction != other.Direction) return false;
+      if (Prefix != other.Prefix) return false;
+      if (StrokeWeightX10 != other.StrokeWeightX10) return false;
+      if(!links_.Equals(other.links_)) return false;
+      if (Truncated != other.Truncated) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Method != global::Meshtastic.Protobufs.Route.Types.Method.Unspecified) hash ^= Method.GetHashCode();
+      if (Direction != global::Meshtastic.Protobufs.Route.Types.Direction.Unspecified) hash ^= Direction.GetHashCode();
+      if (Prefix.Length != 0) hash ^= Prefix.GetHashCode();
+      if (StrokeWeightX10 != 0) hash ^= StrokeWeightX10.GetHashCode();
+      hash ^= links_.GetHashCode();
+      if (Truncated != false) hash ^= Truncated.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Method != global::Meshtastic.Protobufs.Route.Types.Method.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) Method);
+      }
+      if (Direction != global::Meshtastic.Protobufs.Route.Types.Direction.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Direction);
+      }
+      if (Prefix.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Prefix);
+      }
+      if (StrokeWeightX10 != 0) {
+        output.WriteRawTag(32);
+        output.WriteUInt32(StrokeWeightX10);
+      }
+      links_.WriteTo(output, _repeated_links_codec);
+      if (Truncated != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(Truncated);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Method != global::Meshtastic.Protobufs.Route.Types.Method.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) Method);
+      }
+      if (Direction != global::Meshtastic.Protobufs.Route.Types.Direction.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Direction);
+      }
+      if (Prefix.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Prefix);
+      }
+      if (StrokeWeightX10 != 0) {
+        output.WriteRawTag(32);
+        output.WriteUInt32(StrokeWeightX10);
+      }
+      links_.WriteTo(ref output, _repeated_links_codec);
+      if (Truncated != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(Truncated);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Method != global::Meshtastic.Protobufs.Route.Types.Method.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Method);
+      }
+      if (Direction != global::Meshtastic.Protobufs.Route.Types.Direction.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Direction);
+      }
+      if (Prefix.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Prefix);
+      }
+      if (StrokeWeightX10 != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(StrokeWeightX10);
+      }
+      size += links_.CalculateSize(_repeated_links_codec);
+      if (Truncated != false) {
+        size += 1 + 1;
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(Route other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Method != global::Meshtastic.Protobufs.Route.Types.Method.Unspecified) {
+        Method = other.Method;
+      }
+      if (other.Direction != global::Meshtastic.Protobufs.Route.Types.Direction.Unspecified) {
+        Direction = other.Direction;
+      }
+      if (other.Prefix.Length != 0) {
+        Prefix = other.Prefix;
+      }
+      if (other.StrokeWeightX10 != 0) {
+        StrokeWeightX10 = other.StrokeWeightX10;
+      }
+      links_.Add(other.links_);
+      if (other.Truncated != false) {
+        Truncated = other.Truncated;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            Method = (global::Meshtastic.Protobufs.Route.Types.Method) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            Direction = (global::Meshtastic.Protobufs.Route.Types.Direction) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            Prefix = input.ReadString();
+            break;
+          }
+          case 32: {
+            StrokeWeightX10 = input.ReadUInt32();
+            break;
+          }
+          case 42: {
+            links_.AddEntriesFrom(input, _repeated_links_codec);
+            break;
+          }
+          case 48: {
+            Truncated = input.ReadBool();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            Method = (global::Meshtastic.Protobufs.Route.Types.Method) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            Direction = (global::Meshtastic.Protobufs.Route.Types.Direction) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            Prefix = input.ReadString();
+            break;
+          }
+          case 32: {
+            StrokeWeightX10 = input.ReadUInt32();
+            break;
+          }
+          case 42: {
+            links_.AddEntriesFrom(ref input, _repeated_links_codec);
+            break;
+          }
+          case 48: {
+            Truncated = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+    #region Nested types
+    /// <summary>Container for nested types declared in the Route message type.</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static partial class Types {
+      /// <summary>
+      ///
+      /// Travel method for the route.
+      /// </summary>
+      public enum Method {
+        /// <summary>
+        ///
+        /// Unspecified / unknown
+        /// </summary>
+        [pbr::OriginalName("Method_Unspecified")] Unspecified = 0,
+        /// <summary>
+        ///
+        /// Driving / vehicle
+        /// </summary>
+        [pbr::OriginalName("Method_Driving")] Driving = 1,
+        /// <summary>
+        ///
+        /// Walking / foot
+        /// </summary>
+        [pbr::OriginalName("Method_Walking")] Walking = 2,
+        /// <summary>
+        ///
+        /// Flying
+        /// </summary>
+        [pbr::OriginalName("Method_Flying")] Flying = 3,
+        /// <summary>
+        ///
+        /// Swimming (individual)
+        /// </summary>
+        [pbr::OriginalName("Method_Swimming")] Swimming = 4,
+        /// <summary>
+        ///
+        /// Watercraft (boat)
+        /// </summary>
+        [pbr::OriginalName("Method_Watercraft")] Watercraft = 5,
+      }
+
+      /// <summary>
+      ///
+      /// Route direction (infil = ingress, exfil = egress).
+      /// </summary>
+      public enum Direction {
+        /// <summary>
+        ///
+        /// Unspecified
+        /// </summary>
+        [pbr::OriginalName("Direction_Unspecified")] Unspecified = 0,
+        /// <summary>
+        ///
+        /// Infiltration (ingress)
+        /// </summary>
+        [pbr::OriginalName("Direction_Infil")] Infil = 1,
+        /// <summary>
+        ///
+        /// Exfiltration (egress)
+        /// </summary>
+        [pbr::OriginalName("Direction_Exfil")] Exfil = 2,
+      }
+
+      /// <summary>
+      ///
+      /// Route waypoint or control point. Each link corresponds to one ATAK
+      /// &lt;link type=... point=...> entry inside the b-m-r event.
+      /// </summary>
+      [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+      public sealed partial class Link : pb::IMessage<Link>
+      #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          , pb::IBufferMessage
+      #endif
+      {
+        private static readonly pb::MessageParser<Link> _parser = new pb::MessageParser<Link>(() => new Link());
+        private pb::UnknownFieldSet _unknownFields;
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pb::MessageParser<Link> Parser { get { return _parser; } }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public static pbr::MessageDescriptor Descriptor {
+          get { return global::Meshtastic.Protobufs.Route.Descriptor.NestedTypes[0]; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        pbr::MessageDescriptor pb::IMessage.Descriptor {
+          get { return Descriptor; }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public Link() {
+          OnConstruction();
+        }
+
+        partial void OnConstruction();
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public Link(Link other) : this() {
+          point_ = other.point_ != null ? other.point_.Clone() : null;
+          uid_ = other.uid_;
+          callsign_ = other.callsign_;
+          linkType_ = other.linkType_;
+          _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public Link Clone() {
+          return new Link(this);
+        }
+
+        /// <summary>Field number for the "point" field.</summary>
+        public const int PointFieldNumber = 1;
+        private global::Meshtastic.Protobufs.CotGeoPoint point_;
+        /// <summary>
+        ///
+        /// Waypoint position (delta-encoded from TAKPacketV2.latitude_i/longitude_i).
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public global::Meshtastic.Protobufs.CotGeoPoint Point {
+          get { return point_; }
+          set {
+            point_ = value;
+          }
+        }
+
+        /// <summary>Field number for the "uid" field.</summary>
+        public const int UidFieldNumber = 2;
+        private string uid_ = "";
+        /// <summary>
+        ///
+        /// Optional UID (empty = receiver derives).
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public string Uid {
+          get { return uid_; }
+          set {
+            uid_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+          }
+        }
+
+        /// <summary>Field number for the "callsign" field.</summary>
+        public const int CallsignFieldNumber = 3;
+        private string callsign_ = "";
+        /// <summary>
+        ///
+        /// Optional display callsign (e.g. "CP1"). Empty for unnamed control points.
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public string Callsign {
+          get { return callsign_; }
+          set {
+            callsign_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+          }
+        }
+
+        /// <summary>Field number for the "link_type" field.</summary>
+        public const int LinkTypeFieldNumber = 4;
+        private uint linkType_;
+        /// <summary>
+        ///
+        /// Link role: 0 = waypoint (b-m-p-w), 1 = checkpoint (b-m-p-c).
+        /// </summary>
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public uint LinkType {
+          get { return linkType_; }
+          set {
+            linkType_ = value;
+          }
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override bool Equals(object other) {
+          return Equals(other as Link);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public bool Equals(Link other) {
+          if (ReferenceEquals(other, null)) {
+            return false;
+          }
+          if (ReferenceEquals(other, this)) {
+            return true;
+          }
+          if (!object.Equals(Point, other.Point)) return false;
+          if (Uid != other.Uid) return false;
+          if (Callsign != other.Callsign) return false;
+          if (LinkType != other.LinkType) return false;
+          return Equals(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override int GetHashCode() {
+          int hash = 1;
+          if (point_ != null) hash ^= Point.GetHashCode();
+          if (Uid.Length != 0) hash ^= Uid.GetHashCode();
+          if (Callsign.Length != 0) hash ^= Callsign.GetHashCode();
+          if (LinkType != 0) hash ^= LinkType.GetHashCode();
+          if (_unknownFields != null) {
+            hash ^= _unknownFields.GetHashCode();
+          }
+          return hash;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public override string ToString() {
+          return pb::JsonFormatter.ToDiagnosticString(this);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void WriteTo(pb::CodedOutputStream output) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          output.WriteRawMessage(this);
+        #else
+          if (point_ != null) {
+            output.WriteRawTag(10);
+            output.WriteMessage(Point);
+          }
+          if (Uid.Length != 0) {
+            output.WriteRawTag(18);
+            output.WriteString(Uid);
+          }
+          if (Callsign.Length != 0) {
+            output.WriteRawTag(26);
+            output.WriteString(Callsign);
+          }
+          if (LinkType != 0) {
+            output.WriteRawTag(32);
+            output.WriteUInt32(LinkType);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(output);
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+          if (point_ != null) {
+            output.WriteRawTag(10);
+            output.WriteMessage(Point);
+          }
+          if (Uid.Length != 0) {
+            output.WriteRawTag(18);
+            output.WriteString(Uid);
+          }
+          if (Callsign.Length != 0) {
+            output.WriteRawTag(26);
+            output.WriteString(Callsign);
+          }
+          if (LinkType != 0) {
+            output.WriteRawTag(32);
+            output.WriteUInt32(LinkType);
+          }
+          if (_unknownFields != null) {
+            _unknownFields.WriteTo(ref output);
+          }
+        }
+        #endif
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public int CalculateSize() {
+          int size = 0;
+          if (point_ != null) {
+            size += 1 + pb::CodedOutputStream.ComputeMessageSize(Point);
+          }
+          if (Uid.Length != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeStringSize(Uid);
+          }
+          if (Callsign.Length != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeStringSize(Callsign);
+          }
+          if (LinkType != 0) {
+            size += 1 + pb::CodedOutputStream.ComputeUInt32Size(LinkType);
+          }
+          if (_unknownFields != null) {
+            size += _unknownFields.CalculateSize();
+          }
+          return size;
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(Link other) {
+          if (other == null) {
+            return;
+          }
+          if (other.point_ != null) {
+            if (point_ == null) {
+              Point = new global::Meshtastic.Protobufs.CotGeoPoint();
+            }
+            Point.MergeFrom(other.Point);
+          }
+          if (other.Uid.Length != 0) {
+            Uid = other.Uid;
+          }
+          if (other.Callsign.Length != 0) {
+            Callsign = other.Callsign;
+          }
+          if (other.LinkType != 0) {
+            LinkType = other.LinkType;
+          }
+          _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+        }
+
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        public void MergeFrom(pb::CodedInputStream input) {
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+          input.ReadRawMessage(this);
+        #else
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+                break;
+              case 10: {
+                if (point_ == null) {
+                  Point = new global::Meshtastic.Protobufs.CotGeoPoint();
+                }
+                input.ReadMessage(Point);
+                break;
+              }
+              case 18: {
+                Uid = input.ReadString();
+                break;
+              }
+              case 26: {
+                Callsign = input.ReadString();
+                break;
+              }
+              case 32: {
+                LinkType = input.ReadUInt32();
+                break;
+              }
+            }
+          }
+        #endif
+        }
+
+        #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+        [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+        void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+          uint tag;
+          while ((tag = input.ReadTag()) != 0) {
+          if ((tag & 7) == 4) {
+            // Abort on any end group tag.
+            return;
+          }
+          switch(tag) {
+              default:
+                _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+                break;
+              case 10: {
+                if (point_ == null) {
+                  Point = new global::Meshtastic.Protobufs.CotGeoPoint();
+                }
+                input.ReadMessage(Point);
+                break;
+              }
+              case 18: {
+                Uid = input.ReadString();
+                break;
+              }
+              case 26: {
+                Callsign = input.ReadString();
+                break;
+              }
+              case 32: {
+                LinkType = input.ReadUInt32();
+                break;
+              }
+            }
+          }
+        }
+        #endif
+
+      }
+
+    }
+    #endregion
+
+  }
+
+  /// <summary>
+  ///
   /// ATAK v2 packet with expanded CoT field support and zstd dictionary compression.
   /// Sent on ATAK_PLUGIN_V2 port. The wire payload is:
   ///   [1 byte flags][zstd-compressed TAKPacketV2 protobuf]
@@ -3233,7 +6394,7 @@ namespace Meshtastic.Protobufs {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[7]; }
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[12]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3288,6 +6449,18 @@ namespace Meshtastic.Protobufs {
           break;
         case PayloadVariantOneofCase.RawDetail:
           RawDetail = other.RawDetail;
+          break;
+        case PayloadVariantOneofCase.Shape:
+          Shape = other.Shape.Clone();
+          break;
+        case PayloadVariantOneofCase.Marker:
+          Marker = other.Marker.Clone();
+          break;
+        case PayloadVariantOneofCase.Rab:
+          Rab = other.Rab.Clone();
+          break;
+        case PayloadVariantOneofCase.Route:
+          Route = other.Route.Clone();
           break;
       }
 
@@ -3735,7 +6908,9 @@ namespace Meshtastic.Protobufs {
     public const int RawDetailFieldNumber = 33;
     /// <summary>
     ///
-    /// Generic CoT detail XML for unmapped types
+    /// Generic CoT detail XML for unmapped types. Kept as a fallback for CoT
+    /// types not yet promoted to a typed variant; drawings, markers, ranging
+    /// tools, and routes have dedicated variants below and should not land here.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -3761,6 +6936,72 @@ namespace Meshtastic.Protobufs {
       }
     }
 
+    /// <summary>Field number for the "shape" field.</summary>
+    public const int ShapeFieldNumber = 34;
+    /// <summary>
+    ///
+    /// User-drawn tactical graphic: circle, rectangle, polygon, polyline,
+    /// telestration, ranging circle, or bullseye. See DrawnShape.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.DrawnShape Shape {
+      get { return payloadVariantCase_ == PayloadVariantOneofCase.Shape ? (global::Meshtastic.Protobufs.DrawnShape) payloadVariant_ : null; }
+      set {
+        payloadVariant_ = value;
+        payloadVariantCase_ = value == null ? PayloadVariantOneofCase.None : PayloadVariantOneofCase.Shape;
+      }
+    }
+
+    /// <summary>Field number for the "marker" field.</summary>
+    public const int MarkerFieldNumber = 35;
+    /// <summary>
+    ///
+    /// Fixed point of interest: spot marker, waypoint, checkpoint, 2525
+    /// symbol, or custom icon. See Marker.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.Marker Marker {
+      get { return payloadVariantCase_ == PayloadVariantOneofCase.Marker ? (global::Meshtastic.Protobufs.Marker) payloadVariant_ : null; }
+      set {
+        payloadVariant_ = value;
+        payloadVariantCase_ = value == null ? PayloadVariantOneofCase.None : PayloadVariantOneofCase.Marker;
+      }
+    }
+
+    /// <summary>Field number for the "rab" field.</summary>
+    public const int RabFieldNumber = 36;
+    /// <summary>
+    ///
+    /// Range and bearing measurement line. See RangeAndBearing.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.RangeAndBearing Rab {
+      get { return payloadVariantCase_ == PayloadVariantOneofCase.Rab ? (global::Meshtastic.Protobufs.RangeAndBearing) payloadVariant_ : null; }
+      set {
+        payloadVariant_ = value;
+        payloadVariantCase_ = value == null ? PayloadVariantOneofCase.None : PayloadVariantOneofCase.Rab;
+      }
+    }
+
+    /// <summary>Field number for the "route" field.</summary>
+    public const int RouteFieldNumber = 37;
+    /// <summary>
+    ///
+    /// Named route with ordered waypoints and control points. See Route.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.Route Route {
+      get { return payloadVariantCase_ == PayloadVariantOneofCase.Route ? (global::Meshtastic.Protobufs.Route) payloadVariant_ : null; }
+      set {
+        payloadVariant_ = value;
+        payloadVariantCase_ = value == null ? PayloadVariantOneofCase.None : PayloadVariantOneofCase.Route;
+      }
+    }
+
     private object payloadVariant_;
     /// <summary>Enum of possible cases for the "payload_variant" oneof.</summary>
     public enum PayloadVariantOneofCase {
@@ -3769,6 +7010,10 @@ namespace Meshtastic.Protobufs {
       Chat = 31,
       Aircraft = 32,
       RawDetail = 33,
+      Shape = 34,
+      Marker = 35,
+      Rab = 36,
+      Route = 37,
     }
     private PayloadVariantOneofCase payloadVariantCase_ = PayloadVariantOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -3826,6 +7071,10 @@ namespace Meshtastic.Protobufs {
       if (!object.Equals(Chat, other.Chat)) return false;
       if (!object.Equals(Aircraft, other.Aircraft)) return false;
       if (RawDetail != other.RawDetail) return false;
+      if (!object.Equals(Shape, other.Shape)) return false;
+      if (!object.Equals(Marker, other.Marker)) return false;
+      if (!object.Equals(Rab, other.Rab)) return false;
+      if (!object.Equals(Route, other.Route)) return false;
       if (PayloadVariantCase != other.PayloadVariantCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -3861,6 +7110,10 @@ namespace Meshtastic.Protobufs {
       if (payloadVariantCase_ == PayloadVariantOneofCase.Chat) hash ^= Chat.GetHashCode();
       if (payloadVariantCase_ == PayloadVariantOneofCase.Aircraft) hash ^= Aircraft.GetHashCode();
       if (HasRawDetail) hash ^= RawDetail.GetHashCode();
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Shape) hash ^= Shape.GetHashCode();
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Marker) hash ^= Marker.GetHashCode();
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Rab) hash ^= Rab.GetHashCode();
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Route) hash ^= Route.GetHashCode();
       hash ^= (int) payloadVariantCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -3988,6 +7241,22 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(138, 2);
         output.WriteBytes(RawDetail);
       }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Shape) {
+        output.WriteRawTag(146, 2);
+        output.WriteMessage(Shape);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Marker) {
+        output.WriteRawTag(154, 2);
+        output.WriteMessage(Marker);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Rab) {
+        output.WriteRawTag(162, 2);
+        output.WriteMessage(Rab);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Route) {
+        output.WriteRawTag(170, 2);
+        output.WriteMessage(Route);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -4106,6 +7375,22 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(138, 2);
         output.WriteBytes(RawDetail);
       }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Shape) {
+        output.WriteRawTag(146, 2);
+        output.WriteMessage(Shape);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Marker) {
+        output.WriteRawTag(154, 2);
+        output.WriteMessage(Marker);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Rab) {
+        output.WriteRawTag(162, 2);
+        output.WriteMessage(Rab);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Route) {
+        output.WriteRawTag(170, 2);
+        output.WriteMessage(Route);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -4196,6 +7481,18 @@ namespace Meshtastic.Protobufs {
       }
       if (HasRawDetail) {
         size += 2 + pb::CodedOutputStream.ComputeBytesSize(RawDetail);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Shape) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Shape);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Marker) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Marker);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Rab) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Rab);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Route) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Route);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -4296,6 +7593,30 @@ namespace Meshtastic.Protobufs {
           break;
         case PayloadVariantOneofCase.RawDetail:
           RawDetail = other.RawDetail;
+          break;
+        case PayloadVariantOneofCase.Shape:
+          if (Shape == null) {
+            Shape = new global::Meshtastic.Protobufs.DrawnShape();
+          }
+          Shape.MergeFrom(other.Shape);
+          break;
+        case PayloadVariantOneofCase.Marker:
+          if (Marker == null) {
+            Marker = new global::Meshtastic.Protobufs.Marker();
+          }
+          Marker.MergeFrom(other.Marker);
+          break;
+        case PayloadVariantOneofCase.Rab:
+          if (Rab == null) {
+            Rab = new global::Meshtastic.Protobufs.RangeAndBearing();
+          }
+          Rab.MergeFrom(other.Rab);
+          break;
+        case PayloadVariantOneofCase.Route:
+          if (Route == null) {
+            Route = new global::Meshtastic.Protobufs.Route();
+          }
+          Route.MergeFrom(other.Route);
           break;
       }
 
@@ -4436,6 +7757,42 @@ namespace Meshtastic.Protobufs {
             RawDetail = input.ReadBytes();
             break;
           }
+          case 274: {
+            global::Meshtastic.Protobufs.DrawnShape subBuilder = new global::Meshtastic.Protobufs.DrawnShape();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Shape) {
+              subBuilder.MergeFrom(Shape);
+            }
+            input.ReadMessage(subBuilder);
+            Shape = subBuilder;
+            break;
+          }
+          case 282: {
+            global::Meshtastic.Protobufs.Marker subBuilder = new global::Meshtastic.Protobufs.Marker();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Marker) {
+              subBuilder.MergeFrom(Marker);
+            }
+            input.ReadMessage(subBuilder);
+            Marker = subBuilder;
+            break;
+          }
+          case 290: {
+            global::Meshtastic.Protobufs.RangeAndBearing subBuilder = new global::Meshtastic.Protobufs.RangeAndBearing();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Rab) {
+              subBuilder.MergeFrom(Rab);
+            }
+            input.ReadMessage(subBuilder);
+            Rab = subBuilder;
+            break;
+          }
+          case 298: {
+            global::Meshtastic.Protobufs.Route subBuilder = new global::Meshtastic.Protobufs.Route();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Route) {
+              subBuilder.MergeFrom(Route);
+            }
+            input.ReadMessage(subBuilder);
+            Route = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -4571,6 +7928,42 @@ namespace Meshtastic.Protobufs {
           }
           case 266: {
             RawDetail = input.ReadBytes();
+            break;
+          }
+          case 274: {
+            global::Meshtastic.Protobufs.DrawnShape subBuilder = new global::Meshtastic.Protobufs.DrawnShape();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Shape) {
+              subBuilder.MergeFrom(Shape);
+            }
+            input.ReadMessage(subBuilder);
+            Shape = subBuilder;
+            break;
+          }
+          case 282: {
+            global::Meshtastic.Protobufs.Marker subBuilder = new global::Meshtastic.Protobufs.Marker();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Marker) {
+              subBuilder.MergeFrom(Marker);
+            }
+            input.ReadMessage(subBuilder);
+            Marker = subBuilder;
+            break;
+          }
+          case 290: {
+            global::Meshtastic.Protobufs.RangeAndBearing subBuilder = new global::Meshtastic.Protobufs.RangeAndBearing();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Rab) {
+              subBuilder.MergeFrom(Rab);
+            }
+            input.ReadMessage(subBuilder);
+            Rab = subBuilder;
+            break;
+          }
+          case 298: {
+            global::Meshtastic.Protobufs.Route subBuilder = new global::Meshtastic.Protobufs.Route();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Route) {
+              subBuilder.MergeFrom(Route);
+            }
+            input.ReadMessage(subBuilder);
+            Route = subBuilder;
             break;
           }
         }

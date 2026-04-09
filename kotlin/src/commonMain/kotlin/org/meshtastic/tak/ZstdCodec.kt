@@ -4,7 +4,7 @@ package org.meshtastic.tak
  * Platform-specific Zstd dictionary compression/decompression.
  *
  * JVM: uses zstd-jni.
- * iOS: not yet implemented (requires native zstd C interop).
+ * iOS: uses native zstd C interop with libzstd.
  */
 expect object ZstdCodec {
     /**

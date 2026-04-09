@@ -1,4 +1,5 @@
 using Google.Protobuf;
+using Meshtastic.Protobufs;
 using ZstdSharp;
 
 namespace Meshtastic.TAK;
@@ -82,6 +83,63 @@ public class TakCompressor
         {
             throw new InvalidOperationException($"Protobuf parsing failed: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Compress a packet using whichever format yields the smaller wire
+    /// payload: the fully-typed <see cref="TAKPacketV2"/> (the default
+    /// <see cref="Compress"/> path) or a <c>raw_detail</c> fallback
+    /// carrying the original <c>&lt;detail&gt;</c> bytes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// On every bundled fixture the typed path wins — delta-encoded
+    /// geometry and palette-enum colors compress much tighter than raw
+    /// XML tag names, even with a 16KB zstd dictionary.  This method is a
+    /// safety net for CoT types the structured parser can't decompose or
+    /// for shapes with geometry beyond <c>MAX_VERTICES</c> that would
+    /// otherwise be silently truncated.
+    /// </para>
+    /// <para>
+    /// The fallback path strips detail-derived top-level fields
+    /// (callsign, takVersion, …) from the alternate packet so the
+    /// <c>&lt;detail&gt;</c> content isn't duplicated on the wire; the
+    /// receiver re-parses those fields out of the raw bytes when needed.
+    /// </para>
+    /// </remarks>
+    /// <param name="packet">Typed-variant packet from <see cref="CotXmlParser.Parse"/>.</param>
+    /// <param name="rawDetailBytes">Raw <c>&lt;detail&gt;</c> inner bytes
+    /// from <see cref="CotXmlParser.ExtractRawDetailBytes"/>.</param>
+    /// <returns>Whichever wire payload is smaller.  Ties go to the typed
+    /// packet since it preserves strong typing on decode.</returns>
+    public byte[] CompressBestOf(TAKPacketV2 packet, byte[] rawDetailBytes)
+    {
+        var typedWire = Compress(packet);
+        if (rawDetailBytes is null || rawDetailBytes.Length == 0) return typedWire;
+
+        // Clone the packet and clear every detail-derived top-level field.
+        // The envelope (Uid, CotTypeId, How, Stale, Lat/Lon/Alt) stays
+        // intact; assigning RawDetail clears the existing oneof case.
+        var rawPacket = packet.Clone();
+        rawPacket.Callsign = "";
+        rawPacket.Team = Team.UnspecifedColor;
+        rawPacket.Role = MemberRole.Unspecifed;
+        rawPacket.Battery = 0;
+        rawPacket.Speed = 0;
+        rawPacket.Course = 0;
+        rawPacket.DeviceCallsign = "";
+        rawPacket.TakVersion = "";
+        rawPacket.TakDevice = "";
+        rawPacket.TakPlatform = "";
+        rawPacket.TakOs = "";
+        rawPacket.Endpoint = "";
+        rawPacket.Phone = "";
+        rawPacket.GeoSrc = GeoPointSource.Unspecified;
+        rawPacket.AltSrc = GeoPointSource.Unspecified;
+        rawPacket.RawDetail = ByteString.CopyFrom(rawDetailBytes);
+
+        var rawWire = Compress(rawPacket);
+        return rawWire.Length < typedWire.Length ? rawWire : typedWire;
     }
 
     public CompressionResult CompressWithStats(Meshtastic.Protobufs.TAKPacketV2 packet)

@@ -87,6 +87,16 @@ object CotTypeMapper {
     const val COTTYPE_B_F_T_R = 74
     const val COTTYPE_B_F_T_A = 75
 
+    // --- Typed geometry CoT types (v2 protocol extension) ---
+    // These 6 entries accompany the new DrawnShape/Marker/RangeAndBearing
+    // payload variants added to TAKPacketV2 at tags 34-37. See atak.proto.
+    const val COTTYPE_U_D_F_M = 76         // Freehand telestration
+    const val COTTYPE_U_D_P = 77           // Closed polygon
+    const val COTTYPE_B_M_P_S_M = 78       // Spot map marker
+    const val COTTYPE_B_M_P_C = 79         // Checkpoint
+    const val COTTYPE_U_R_B_C_C = 80       // Ranging circle
+    const val COTTYPE_U_R_B_BULLSEYE = 81  // Bullseye with range rings
+
     // CotHow enum values from atak.proto
     const val COTHOW_UNSPECIFIED = 0
     const val COTHOW_H_E = 1
@@ -173,6 +183,13 @@ object CotTypeMapper {
         "b-i-v" to COTTYPE_B_I_V,
         "b-f-t-r" to COTTYPE_B_F_T_R,
         "b-f-t-a" to COTTYPE_B_F_T_A,
+        // Typed geometry additions (v2 protocol extension)
+        "u-d-f-m" to COTTYPE_U_D_F_M,
+        "u-d-p" to COTTYPE_U_D_P,
+        "b-m-p-s-m" to COTTYPE_B_M_P_S_M,
+        "b-m-p-c" to COTTYPE_B_M_P_C,
+        "u-r-b-c-c" to COTTYPE_U_R_B_C_C,
+        "u-r-b-bullseye" to COTTYPE_U_R_B_BULLSEYE,
     )
 
     private val typeToString = stringToType.entries.associate { (k, v) -> v to k }

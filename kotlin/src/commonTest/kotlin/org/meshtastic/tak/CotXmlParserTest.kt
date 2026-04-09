@@ -17,7 +17,7 @@ class CotXmlParserTest {
 
     @Test
     fun pliBasicParsesCorrectly() {
-        val packet = parser.parse(TestFixtures.PLI_BASIC)
+        val packet = parser.parse(InlinedFixtures.PLI_BASIC)
 
         assertEquals("testnode", packet.uid)
         assertEquals(CotTypeMapper.COTTYPE_A_F_G_U_C, packet.cotTypeId)
@@ -29,7 +29,7 @@ class CotXmlParserTest {
 
     @Test
     fun pliFullParsesAllFields() {
-        val packet = parser.parse(TestFixtures.PLI_FULL)
+        val packet = parser.parse(InlinedFixtures.PLI_FULL)
 
         assertEquals(CotTypeMapper.COTTYPE_A_F_G_U_C, packet.cotTypeId)
         assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
@@ -52,7 +52,7 @@ class CotXmlParserTest {
 
     @Test
     fun pliWebtakParsesCorrectly() {
-        val packet = parser.parse(TestFixtures.PLI_WEBTAK)
+        val packet = parser.parse(InlinedFixtures.PLI_WEBTAK)
 
         // WebTAK uses a-f-G-U-C-I which maps to OTHER since it's not in the 75-type table
         assertEquals("FALCON224", packet.callsign)
@@ -64,7 +64,7 @@ class CotXmlParserTest {
 
     @Test
     fun geoChatParsesMessageAndRecipients() {
-        val packet = parser.parse(TestFixtures.GEOCHAT_SIMPLE)
+        val packet = parser.parse(InlinedFixtures.GEOCHAT_SIMPLE)
 
         assertEquals(CotTypeMapper.COTTYPE_B_T_F, packet.cotTypeId)
         assertEquals(CotTypeMapper.COTHOW_H_G_I_G_O, packet.how)
@@ -76,7 +76,7 @@ class CotXmlParserTest {
 
     @Test
     fun aircraftAdsbParsesAircraftFields() {
-        val packet = parser.parse(TestFixtures.AIRCRAFT_ADSB)
+        val packet = parser.parse(InlinedFixtures.AIRCRAFT_ADSB)
 
         assertEquals(CotTypeMapper.COTTYPE_A_N_A_C_F, packet.cotTypeId)
         assertEquals(CotTypeMapper.COTHOW_M_G, packet.how)
@@ -91,7 +91,7 @@ class CotXmlParserTest {
 
     @Test
     fun aircraftHostileParsesAircotElement() {
-        val packet = parser.parse(TestFixtures.AIRCRAFT_HOSTILE)
+        val packet = parser.parse(InlinedFixtures.AIRCRAFT_HOSTILE)
 
         assertEquals(CotTypeMapper.COTTYPE_A_H_A_M_F_F, packet.cotTypeId)
         assertTrue(packet.payload is TakPacketV2Data.Payload.Aircraft)
@@ -105,7 +105,7 @@ class CotXmlParserTest {
 
     @Test
     fun deleteEventParsesCorrectly() {
-        val packet = parser.parse(TestFixtures.DELETE_EVENT)
+        val packet = parser.parse(InlinedFixtures.DELETE_EVENT)
 
         assertEquals(CotTypeMapper.COTTYPE_T_X_D_D, packet.cotTypeId)
         assertEquals(CotTypeMapper.COTHOW_H_G_I_G_O, packet.how)
@@ -114,7 +114,7 @@ class CotXmlParserTest {
 
     @Test
     fun casevacParsesCorrectly() {
-        val packet = parser.parse(TestFixtures.CASEVAC)
+        val packet = parser.parse(InlinedFixtures.CASEVAC)
 
         assertEquals(CotTypeMapper.COTTYPE_B_R_F_H_C, packet.cotTypeId)
         assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
@@ -123,7 +123,7 @@ class CotXmlParserTest {
 
     @Test
     fun alertTicParsesCorrectly() {
-        val packet = parser.parse(TestFixtures.ALERT_TIC)
+        val packet = parser.parse(InlinedFixtures.ALERT_TIC)
 
         assertEquals(CotTypeMapper.COTTYPE_B_A_O_OPN, packet.cotTypeId)
         assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
@@ -134,7 +134,7 @@ class CotXmlParserTest {
 
     @Test
     fun allFixturesParseWithoutErrors() {
-        for ((name, xml) in TestFixtures.ALL) {
+        for ((name, xml) in InlinedFixtures.ALL) {
             val packet = parser.parse(xml)
             assertNotEquals("", packet.uid, "UID should not be empty for $name")
         }
@@ -142,20 +142,20 @@ class CotXmlParserTest {
 
     @Test
     fun staleSecondsComputedCorrectly() {
-        val packet = parser.parse(TestFixtures.PLI_BASIC)
+        val packet = parser.parse(InlinedFixtures.PLI_BASIC)
         // stale is 45 seconds after time
         assertEquals(45, packet.staleSeconds, "PLI basic stale should be 45 seconds")
 
-        val fullPacket = parser.parse(TestFixtures.PLI_FULL)
+        val fullPacket = parser.parse(InlinedFixtures.PLI_FULL)
         assertEquals(45, fullPacket.staleSeconds, "PLI full stale should be 45 seconds")
 
-        val chatPacket = parser.parse(TestFixtures.GEOCHAT_SIMPLE)
+        val chatPacket = parser.parse(InlinedFixtures.GEOCHAT_SIMPLE)
         assertEquals(60, chatPacket.staleSeconds, "GeoChat stale should be 60 seconds")
     }
 
     @Test
     fun latLonConversionIsAccurate() {
-        val packet = parser.parse(TestFixtures.CASEVAC)
+        val packet = parser.parse(InlinedFixtures.CASEVAC)
         // 47.6062 * 1e7 = 476062000
         assertEquals(476062000, packet.latitudeI, "CASEVAC latitude")
         // -122.3321 * 1e7 = -1223321000
@@ -165,7 +165,7 @@ class CotXmlParserTest {
 
     @Test
     fun trackFieldsParsed() {
-        val packet = parser.parse(TestFixtures.PLI_FULL)
+        val packet = parser.parse(InlinedFixtures.PLI_FULL)
         // speed 1.2 m/s * 100 = 120 cm/s
         assertEquals(120, packet.speed, "PLI full speed (cm/s)")
         // course 142.75 * 100 = 14275
@@ -174,7 +174,7 @@ class CotXmlParserTest {
 
     @Test
     fun endpointParsed() {
-        val packet = parser.parse(TestFixtures.PLI_BASIC)
+        val packet = parser.parse(InlinedFixtures.PLI_BASIC)
         assertEquals("*:-1:stcp", packet.endpoint)
     }
 }

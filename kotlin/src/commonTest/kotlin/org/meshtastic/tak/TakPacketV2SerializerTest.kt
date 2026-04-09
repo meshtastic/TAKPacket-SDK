@@ -209,7 +209,7 @@ class TakPacketV2SerializerTest {
     @Test
     fun parseToProtobufRoundTripForAllFixtures() {
         val parser = CotXmlParser()
-        for ((name, xml) in TestFixtures.ALL) {
+        for ((name, xml) in InlinedFixtures.ALL) {
             val packet = parser.parse(xml)
             val bytes = TakPacketV2Serializer.serialize(packet)
             val deserialized = TakPacketV2Serializer.deserialize(bytes)

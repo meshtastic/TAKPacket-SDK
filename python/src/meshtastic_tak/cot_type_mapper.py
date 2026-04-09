@@ -78,6 +78,14 @@ COTTYPE_B_I_V = 73
 COTTYPE_B_F_T_R = 74
 COTTYPE_B_F_T_A = 75
 
+# --- Typed geometry CoT types (v2 protocol extension) ---
+COTTYPE_U_D_F_M = 76         # Freehand telestration
+COTTYPE_U_D_P = 77           # Closed polygon
+COTTYPE_B_M_P_S_M = 78       # Spot map marker
+COTTYPE_B_M_P_C = 79         # Checkpoint
+COTTYPE_U_R_B_C_C = 80       # Ranging circle
+COTTYPE_U_R_B_BULLSEYE = 81  # Bullseye with range rings
+
 # CotHow enum values
 COTHOW_UNSPECIFIED = 0
 COTHOW_H_E = 1
@@ -126,6 +134,10 @@ _STRING_TO_TYPE = {
     "a-u-G-E-V": COTTYPE_A_U_G_E_V, "a-f-S-N-N-R": COTTYPE_A_F_S_N_N_R,
     "a-f-F-B": COTTYPE_A_F_F_B, "b-m-p-s-p-loc": COTTYPE_B_M_P_S_P_LOC,
     "b-i-v": COTTYPE_B_I_V, "b-f-t-r": COTTYPE_B_F_T_R, "b-f-t-a": COTTYPE_B_F_T_A,
+    # Typed geometry additions (v2 protocol extension)
+    "u-d-f-m": COTTYPE_U_D_F_M, "u-d-p": COTTYPE_U_D_P,
+    "b-m-p-s-m": COTTYPE_B_M_P_S_M, "b-m-p-c": COTTYPE_B_M_P_C,
+    "u-r-b-c-c": COTTYPE_U_R_B_C_C, "u-r-b-bullseye": COTTYPE_U_R_B_BULLSEYE,
 }
 _TYPE_TO_STRING = {v: k for k, v in _STRING_TO_TYPE.items()}
 

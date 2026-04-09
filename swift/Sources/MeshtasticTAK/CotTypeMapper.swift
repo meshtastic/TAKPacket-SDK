@@ -61,6 +61,13 @@ public enum CotTypeMapper {
         "a-f-G-E-V-C-U": .aFGEVCU, "a-f-G-E-V-C-ps": .aFGEVCPs,
         "a-u-G-E-V": .aUGEV, "a-f-S-N-N-R": .aFSNNR, "a-f-F-B": .aFFB,
         "b-m-p-s-p-loc": .bMPSPLoc, "b-i-v": .bIV, "b-f-t-r": .bFTR, "b-f-t-a": .bFTA,
+        // Typed geometry additions (v2 protocol extension)
+        "u-d-f-m": .uDFM,
+        "u-d-p": .uDP,
+        "b-m-p-s-m": .bMPSM,
+        "b-m-p-c": .bMPC,
+        "u-r-b-c-c": .uRBCC,
+        "u-r-b-bullseye": .uRBBullseye,
     ]
 
     private static let typeToStr: [CotType: String] = {

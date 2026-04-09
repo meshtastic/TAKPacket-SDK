@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text;
+using Meshtastic.Protobufs;
 
 namespace Meshtastic.TAK;
 
@@ -19,12 +21,38 @@ public class CotXmlBuilder
         [7] = "RTO", [8] = "K9",
     };
 
+    private static readonly Dictionary<Route.Types.Method, string> RouteMethodNames = new()
+    {
+        [Route.Types.Method.Driving] = "Driving",
+        [Route.Types.Method.Walking] = "Walking",
+        [Route.Types.Method.Flying] = "Flying",
+        [Route.Types.Method.Swimming] = "Swimming",
+        [Route.Types.Method.Watercraft] = "Watercraft",
+    };
+
+    private static readonly Dictionary<Route.Types.Direction, string> RouteDirectionNames = new()
+    {
+        [Route.Types.Direction.Infil] = "Infil",
+        [Route.Types.Direction.Exfil] = "Exfil",
+    };
+
+    private static readonly Dictionary<uint, string> BearingRefNames = new()
+    {
+        [1] = "M", [2] = "T", [3] = "G",
+    };
+
     private static string GeoSrcName(int src) => src switch
     {
         1 => "GPS", 2 => "USER", 3 => "NETWORK", _ => "???",
     };
 
     private static string Esc(string s) => System.Security.SecurityElement.Escape(s) ?? s;
+
+    /// <summary>
+    /// Render a double using invariant culture so locales with comma
+    /// decimal separators (e.g. de-DE) don't break CoT XML parsing.
+    /// </summary>
+    private static string F(double d) => d.ToString("R", CultureInfo.InvariantCulture);
 
     public string Build(Meshtastic.Protobufs.TAKPacketV2 pkt)
     {
@@ -84,20 +112,193 @@ public class CotXmlBuilder
         if (!string.IsNullOrEmpty(pkt.DeviceCallsign))
             sb.AppendLine($"    <uid Droid=\"{Esc(pkt.DeviceCallsign)}\"/>");
 
-        if (pkt.PayloadVariantCase == Meshtastic.Protobufs.TAKPacketV2.PayloadVariantOneofCase.Chat)
-            sb.AppendLine($"    <remarks>{Esc(pkt.Chat.Message)}</remarks>");
-        else if (pkt.PayloadVariantCase == Meshtastic.Protobufs.TAKPacketV2.PayloadVariantOneofCase.Aircraft && !string.IsNullOrEmpty(pkt.Aircraft.Icao))
+        switch (pkt.PayloadVariantCase)
         {
-            var tag = $"    <_aircot_ icao=\"{Esc(pkt.Aircraft.Icao)}\"";
-            if (!string.IsNullOrEmpty(pkt.Aircraft.Registration)) tag += $" reg=\"{Esc(pkt.Aircraft.Registration)}\"";
-            if (!string.IsNullOrEmpty(pkt.Aircraft.Flight)) tag += $" flight=\"{Esc(pkt.Aircraft.Flight)}\"";
-            if (!string.IsNullOrEmpty(pkt.Aircraft.Category)) tag += $" cat=\"{Esc(pkt.Aircraft.Category)}\"";
-            if (!string.IsNullOrEmpty(pkt.Aircraft.CotHostId)) tag += $" cot_host_id=\"{Esc(pkt.Aircraft.CotHostId)}\"";
-            sb.AppendLine(tag + "/>");
+            case TAKPacketV2.PayloadVariantOneofCase.Chat:
+                sb.AppendLine($"    <remarks>{Esc(pkt.Chat.Message)}</remarks>");
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.Aircraft when !string.IsNullOrEmpty(pkt.Aircraft.Icao):
+            {
+                var tag = $"    <_aircot_ icao=\"{Esc(pkt.Aircraft.Icao)}\"";
+                if (!string.IsNullOrEmpty(pkt.Aircraft.Registration)) tag += $" reg=\"{Esc(pkt.Aircraft.Registration)}\"";
+                if (!string.IsNullOrEmpty(pkt.Aircraft.Flight)) tag += $" flight=\"{Esc(pkt.Aircraft.Flight)}\"";
+                if (!string.IsNullOrEmpty(pkt.Aircraft.Category)) tag += $" cat=\"{Esc(pkt.Aircraft.Category)}\"";
+                if (!string.IsNullOrEmpty(pkt.Aircraft.CotHostId)) tag += $" cot_host_id=\"{Esc(pkt.Aircraft.CotHostId)}\"";
+                sb.AppendLine(tag + "/>");
+                break;
+            }
+            case TAKPacketV2.PayloadVariantOneofCase.Shape:
+                EmitShape(sb, pkt.Shape, pkt.LatitudeI, pkt.LongitudeI);
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.Marker:
+                EmitMarker(sb, pkt.Marker);
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.Rab:
+                EmitRab(sb, pkt.Rab, pkt.LatitudeI, pkt.LongitudeI);
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.Route:
+                EmitRoute(sb, pkt.Route, pkt.LatitudeI, pkt.LongitudeI);
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.RawDetail:
+                // Fallback path (TakCompressor.CompressBestOf): emit the
+                // raw bytes verbatim as the inner content of <detail>.
+                // No re-escaping — bytes pass through so the receiver
+                // round trip stays byte-exact with the source XML.
+                if (pkt.RawDetail.Length > 0)
+                {
+                    var text = pkt.RawDetail.ToStringUtf8();
+                    sb.Append(text);
+                    if (!text.EndsWith('\n')) sb.AppendLine();
+                }
+                break;
         }
 
         sb.AppendLine("  </detail>");
         sb.Append("</event>");
         return sb.ToString();
+    }
+
+    // --- Typed geometry emitters ----------------------------------------
+
+    private void EmitShape(StringBuilder sb, DrawnShape shape, int eventLatI, int eventLonI)
+    {
+        var strokeArgb = AtakPalette.ResolveColor(shape.StrokeColor, shape.StrokeArgb);
+        var fillArgb = AtakPalette.ResolveColor(shape.FillColor, shape.FillArgb);
+        var strokeVal = unchecked((int)strokeArgb);
+        var fillVal = unchecked((int)fillArgb);
+
+        var style = shape.Style;
+        var emitStroke = style == DrawnShape.Types.StyleMode.StrokeOnly ||
+            style == DrawnShape.Types.StyleMode.StrokeAndFill ||
+            (style == DrawnShape.Types.StyleMode.Unspecified && strokeVal != 0);
+        var emitFill = style == DrawnShape.Types.StyleMode.FillOnly ||
+            style == DrawnShape.Types.StyleMode.StrokeAndFill ||
+            (style == DrawnShape.Types.StyleMode.Unspecified && fillVal != 0);
+
+        var kind = shape.Kind;
+        if (kind == DrawnShape.Types.Kind.Circle ||
+            kind == DrawnShape.Types.Kind.RangingCircle ||
+            kind == DrawnShape.Types.Kind.Bullseye)
+        {
+            if (shape.MajorCm > 0 || shape.MinorCm > 0)
+            {
+                var majorM = shape.MajorCm / 100.0;
+                var minorM = shape.MinorCm / 100.0;
+                sb.AppendLine("    <shape>");
+                sb.AppendLine($"      <ellipse major=\"{F(majorM)}\" minor=\"{F(minorM)}\" angle=\"{shape.AngleDeg}\"/>");
+                sb.AppendLine("    </shape>");
+            }
+        }
+        else
+        {
+            foreach (var v in shape.Vertices)
+            {
+                var vlat = (eventLatI + v.LatDeltaI) / 1e7;
+                var vlon = (eventLonI + v.LonDeltaI) / 1e7;
+                sb.AppendLine($"    <link point=\"{F(vlat)},{F(vlon)}\"/>");
+            }
+        }
+
+        if (kind == DrawnShape.Types.Kind.Bullseye)
+        {
+            var parts = new List<string>();
+            if (shape.BullseyeDistanceDm > 0)
+                parts.Add($"distance=\"{F(shape.BullseyeDistanceDm / 10.0)}\"");
+            if (BearingRefNames.TryGetValue(shape.BullseyeBearingRef, out var refStr))
+                parts.Add($"bearingRef=\"{refStr}\"");
+            if ((shape.BullseyeFlags & 0x01) != 0) parts.Add("rangeRingVisible=\"true\"");
+            if ((shape.BullseyeFlags & 0x02) != 0) parts.Add("hasRangeRings=\"true\"");
+            if ((shape.BullseyeFlags & 0x04) != 0) parts.Add("edgeToCenter=\"true\"");
+            if ((shape.BullseyeFlags & 0x08) != 0) parts.Add("mils=\"true\"");
+            if (!string.IsNullOrEmpty(shape.BullseyeUidRef))
+                parts.Add($"bullseyeUID=\"{Esc(shape.BullseyeUidRef)}\"");
+            sb.AppendLine(parts.Count > 0
+                ? $"    <bullseye {string.Join(" ", parts)}/>"
+                : "    <bullseye/>");
+        }
+
+        if (emitStroke)
+        {
+            sb.AppendLine($"    <strokeColor value=\"{strokeVal}\"/>");
+            if (shape.StrokeWeightX10 > 0)
+                sb.AppendLine($"    <strokeWeight value=\"{F(shape.StrokeWeightX10 / 10.0)}\"/>");
+        }
+        if (emitFill)
+        {
+            sb.AppendLine($"    <fillColor value=\"{fillVal}\"/>");
+        }
+        sb.AppendLine($"    <labels_on value=\"{(shape.LabelsOn ? "true" : "false")}\"/>");
+    }
+
+    private void EmitMarker(StringBuilder sb, Marker marker)
+    {
+        if (marker.Readiness) sb.AppendLine("    <status readiness=\"true\"/>");
+        if (!string.IsNullOrEmpty(marker.ParentUid))
+        {
+            var tag = $"    <link uid=\"{Esc(marker.ParentUid)}\"";
+            if (!string.IsNullOrEmpty(marker.ParentType)) tag += $" type=\"{Esc(marker.ParentType)}\"";
+            if (!string.IsNullOrEmpty(marker.ParentCallsign)) tag += $" parent_callsign=\"{Esc(marker.ParentCallsign)}\"";
+            tag += " relation=\"p-p\"";
+            sb.AppendLine(tag + "/>");
+        }
+        var colorArgb = AtakPalette.ResolveColor(marker.Color, marker.ColorArgb);
+        var colorVal = unchecked((int)colorArgb);
+        if (colorVal != 0) sb.AppendLine($"    <color argb=\"{colorVal}\"/>");
+        if (!string.IsNullOrEmpty(marker.Iconset))
+            sb.AppendLine($"    <usericon iconsetpath=\"{Esc(marker.Iconset)}\"/>");
+    }
+
+    private void EmitRab(StringBuilder sb, RangeAndBearing rab, int eventLatI, int eventLonI)
+    {
+        var anchorLatI = eventLatI + (rab.Anchor?.LatDeltaI ?? 0);
+        var anchorLonI = eventLonI + (rab.Anchor?.LonDeltaI ?? 0);
+        if (anchorLatI != 0 || anchorLonI != 0)
+        {
+            var alat = anchorLatI / 1e7;
+            var alon = anchorLonI / 1e7;
+            var tag = "    <link";
+            if (!string.IsNullOrEmpty(rab.AnchorUid)) tag += $" uid=\"{Esc(rab.AnchorUid)}\"";
+            tag += $" relation=\"p-p\" type=\"b-m-p-w\" point=\"{F(alat)},{F(alon)}\"";
+            sb.AppendLine(tag + "/>");
+        }
+        if (rab.RangeCm > 0)
+            sb.AppendLine($"    <range value=\"{F(rab.RangeCm / 100.0)}\"/>");
+        if (rab.BearingCdeg > 0)
+            sb.AppendLine($"    <bearing value=\"{F(rab.BearingCdeg / 100.0)}\"/>");
+        var strokeArgb = AtakPalette.ResolveColor(rab.StrokeColor, rab.StrokeArgb);
+        var strokeVal = unchecked((int)strokeArgb);
+        if (strokeVal != 0) sb.AppendLine($"    <strokeColor value=\"{strokeVal}\"/>");
+        if (rab.StrokeWeightX10 > 0)
+            sb.AppendLine($"    <strokeWeight value=\"{F(rab.StrokeWeightX10 / 10.0)}\"/>");
+    }
+
+    private void EmitRoute(StringBuilder sb, Route route, int eventLatI, int eventLonI)
+    {
+        sb.AppendLine("    <__routeinfo/>");
+        var parts = new List<string>();
+        if (RouteMethodNames.TryGetValue(route.Method, out var method))
+            parts.Add($"method=\"{method}\"");
+        if (RouteDirectionNames.TryGetValue(route.Direction, out var dir))
+            parts.Add($"direction=\"{dir}\"");
+        if (!string.IsNullOrEmpty(route.Prefix))
+            parts.Add($"prefix=\"{Esc(route.Prefix)}\"");
+        if (route.StrokeWeightX10 > 0)
+            parts.Add($"stroke=\"{route.StrokeWeightX10 / 10}\"");
+        sb.AppendLine(parts.Count > 0
+            ? $"    <link_attr {string.Join(" ", parts)}/>"
+            : "    <link_attr/>");
+
+        foreach (var link in route.Links)
+        {
+            var llat = (eventLatI + (link.Point?.LatDeltaI ?? 0)) / 1e7;
+            var llon = (eventLonI + (link.Point?.LonDeltaI ?? 0)) / 1e7;
+            var linkType = link.LinkType == 1 ? "b-m-p-c" : "b-m-p-w";
+            var linkParts = new List<string>();
+            if (!string.IsNullOrEmpty(link.Uid)) linkParts.Add($"uid=\"{Esc(link.Uid)}\"");
+            linkParts.Add($"type=\"{linkType}\"");
+            if (!string.IsNullOrEmpty(link.Callsign)) linkParts.Add($"callsign=\"{Esc(link.Callsign)}\"");
+            linkParts.Add($"point=\"{F(llat)},{F(llon)}\"");
+            sb.AppendLine($"    <link {string.Join(" ", linkParts)}/>");
+        }
     }
 }

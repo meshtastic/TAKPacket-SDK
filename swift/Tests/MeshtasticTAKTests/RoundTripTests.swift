@@ -1,81 +1,86 @@
 import XCTest
+import Testing
 @testable import MeshtasticTAK
 
-final class RoundTripTests: XCTestCase {
+// MARK: - Parameterized round-trip (Swift Testing)
+//
+// Uses the Swift Testing framework's native `@Test(arguments:)` so each
+// fixture produces its own individually-counted test case. XCTest has no
+// equivalent — an XCTest function that loops over fixtures internally
+// counts as ONE test regardless of how many fixtures it exercises, which
+// is why the earlier `XCTContext.runActivity`-based version reported only
+// 32 total Swift tests while the other four platforms reported 100+.
+// Swift Testing runs alongside XCTest in the same target, so the specific
+// parse tests below keep using XCTestCase.
+
+@Suite("RoundTrip")
+struct RoundTripSuite {
 
     let parser = CotXmlParser()
     let builder = CotXmlBuilder()
     let compressor = TakCompressor()
 
-    func loadFixture(_ name: String) throws -> String {
-        let url = Bundle.module.url(forResource: "Fixtures/cot_xml/\(name)", withExtension: "xml")!
-        return try String(contentsOf: url, encoding: .utf8)
-    }
-
-    // MARK: - Helper for round-trip validation
-
-    func assertRoundTrip(_ fixture: String, file: StaticString = #file, line: UInt = #line) throws {
-        let xml = try loadFixture(fixture)
+    @Test("full round-trip preserves fields", arguments: TestFixtures.fixtureNames)
+    func fullRoundTripPreservesFields(_ fixture: String) throws {
+        let xml = try TestFixtures.loadFixture(fixture)
         let packet = parser.parse(xml)
-        XCTAssertFalse(packet.uid.isEmpty, "UID empty for \(fixture)", file: file, line: line)
+        #expect(!packet.uid.isEmpty, "UID empty for \(fixture)")
 
         let wirePayload = try compressor.compress(packet)
         let decompressed = try compressor.decompress(wirePayload)
 
-        XCTAssertEqual(packet.cotTypeID, decompressed.cotTypeID, "cotTypeId mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.how, decompressed.how, "how mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.callsign, decompressed.callsign, "callsign mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.team, decompressed.team, "team mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.latitudeI, decompressed.latitudeI, "lat mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.longitudeI, decompressed.longitudeI, "lon mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.altitude, decompressed.altitude, "alt mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.battery, decompressed.battery, "battery mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.uid, decompressed.uid, "uid mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.speed, decompressed.speed, "speed mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.course, decompressed.course, "course mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.role, decompressed.role, "role mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.deviceCallsign, decompressed.deviceCallsign, "deviceCallsign mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.takVersion, decompressed.takVersion, "takVersion mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.takPlatform, decompressed.takPlatform, "takPlatform mismatch in \(fixture)", file: file, line: line)
-        XCTAssertEqual(packet.endpoint, decompressed.endpoint, "endpoint mismatch in \(fixture)", file: file, line: line)
+        #expect(packet.cotTypeID == decompressed.cotTypeID, "cotTypeId mismatch in \(fixture)")
+        #expect(packet.how == decompressed.how, "how mismatch in \(fixture)")
+        #expect(packet.callsign == decompressed.callsign, "callsign mismatch in \(fixture)")
+        #expect(packet.team == decompressed.team, "team mismatch in \(fixture)")
+        #expect(packet.latitudeI == decompressed.latitudeI, "lat mismatch in \(fixture)")
+        #expect(packet.longitudeI == decompressed.longitudeI, "lon mismatch in \(fixture)")
+        #expect(packet.altitude == decompressed.altitude, "alt mismatch in \(fixture)")
+        #expect(packet.battery == decompressed.battery, "battery mismatch in \(fixture)")
+        #expect(packet.uid == decompressed.uid, "uid mismatch in \(fixture)")
+        #expect(packet.speed == decompressed.speed, "speed mismatch in \(fixture)")
+        #expect(packet.course == decompressed.course, "course mismatch in \(fixture)")
+        #expect(packet.role == decompressed.role, "role mismatch in \(fixture)")
+        #expect(packet.deviceCallsign == decompressed.deviceCallsign, "deviceCallsign mismatch in \(fixture)")
+        #expect(packet.takVersion == decompressed.takVersion, "takVersion mismatch in \(fixture)")
+        #expect(packet.takPlatform == decompressed.takPlatform, "takPlatform mismatch in \(fixture)")
+        #expect(packet.endpoint == decompressed.endpoint, "endpoint mismatch in \(fixture)")
 
         // Payload-specific field assertions
         switch packet.payloadVariant {
         case .chat(let origChat):
             guard case .chat(let decChat) = decompressed.payloadVariant else {
-                XCTFail("Payload type mismatch in \(fixture)", file: file, line: line); return
+                Issue.record("Payload type mismatch in \(fixture)"); return
             }
-            XCTAssertEqual(origChat.message, decChat.message, "chat.message mismatch in \(fixture)", file: file, line: line)
-            XCTAssertEqual(origChat.to, decChat.to, "chat.to mismatch in \(fixture)", file: file, line: line)
+            #expect(origChat.message == decChat.message, "chat.message mismatch in \(fixture)")
+            #expect(origChat.to == decChat.to, "chat.to mismatch in \(fixture)")
         case .aircraft(let origAc):
             guard case .aircraft(let decAc) = decompressed.payloadVariant else {
-                XCTFail("Payload type mismatch in \(fixture)", file: file, line: line); return
+                Issue.record("Payload type mismatch in \(fixture)"); return
             }
-            XCTAssertEqual(origAc.icao, decAc.icao, "aircraft.icao mismatch in \(fixture)", file: file, line: line)
-            XCTAssertEqual(origAc.registration, decAc.registration, "aircraft.registration mismatch in \(fixture)", file: file, line: line)
-            XCTAssertEqual(origAc.flight, decAc.flight, "aircraft.flight mismatch in \(fixture)", file: file, line: line)
-            XCTAssertEqual(origAc.squawk, decAc.squawk, "aircraft.squawk mismatch in \(fixture)", file: file, line: line)
+            #expect(origAc.icao == decAc.icao, "aircraft.icao mismatch in \(fixture)")
+            #expect(origAc.registration == decAc.registration, "aircraft.registration mismatch in \(fixture)")
+            #expect(origAc.flight == decAc.flight, "aircraft.flight mismatch in \(fixture)")
+            #expect(origAc.squawk == decAc.squawk, "aircraft.squawk mismatch in \(fixture)")
         default:
             break
         }
 
         let rebuiltXml = builder.build(decompressed)
-        XCTAssertTrue(rebuiltXml.contains("<event"), "Rebuilt XML missing <event> for \(fixture)", file: file, line: line)
+        #expect(rebuiltXml.contains("<event"), "Rebuilt XML missing <event> for \(fixture)")
     }
+}
 
-    // MARK: - Per-fixture round-trip tests
+// MARK: - Specific parse tests (XCTest)
 
-    func testRoundTrip_pliBasic() throws { try assertRoundTrip("pli_basic") }
-    func testRoundTrip_pliFull() throws { try assertRoundTrip("pli_full") }
-    func testRoundTrip_pliWebtak() throws { try assertRoundTrip("pli_webtak") }
-    func testRoundTrip_geochatSimple() throws { try assertRoundTrip("geochat_simple") }
-    func testRoundTrip_aircraftAdsb() throws { try assertRoundTrip("aircraft_adsb") }
-    func testRoundTrip_aircraftHostile() throws { try assertRoundTrip("aircraft_hostile") }
-    func testRoundTrip_deleteEvent() throws { try assertRoundTrip("delete_event") }
-    func testRoundTrip_casevac() throws { try assertRoundTrip("casevac") }
-    func testRoundTrip_alertTic() throws { try assertRoundTrip("alert_tic") }
+final class RoundTripTests: XCTestCase {
 
-    // MARK: - Specific parsing tests
+    let parser = CotXmlParser()
+    let compressor = TakCompressor()
+
+    func loadFixture(_ name: String) throws -> String {
+        try TestFixtures.loadFixture(name)
+    }
 
     func testPliBasicParsesCorrectly() throws {
         let xml = try loadFixture("pli_basic")

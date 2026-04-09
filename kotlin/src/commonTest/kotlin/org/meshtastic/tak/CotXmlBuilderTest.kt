@@ -148,7 +148,7 @@ class CotXmlBuilderTest {
 
     @Test
     fun parseRoundTripPreservesFieldsForAllFixtures() {
-        for ((name, xml) in TestFixtures.ALL) {
+        for ((name, xml) in InlinedFixtures.ALL) {
             val packet = parser.parse(xml)
             val rebuiltXml = builder.build(packet)
 

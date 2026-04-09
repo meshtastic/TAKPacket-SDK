@@ -1,1 +1,0 @@
-<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><event version="2.0" uid="evil" type="a-f-G-U-C" how="m-g" time="2026-01-01T00:00:00Z" start="2026-01-01T00:00:00Z" stale="2026-01-01T00:01:00Z"><point lat="0" lon="0" hae="0" ce="0" le="0"/><detail><contact callsign="&xxe;"/></detail></event>

@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0" uid="ICAOF1E2D3" type="a-n-A-C-F" how="m-g" time="2026-03-15T17:45:00Z" start="2026-03-15T17:45:00Z" stale="2026-03-15T17:45:45Z">
-  <point lat="39.8561" lon="-104.6737" hae="3048" ce="9999999" le="9999999"/>
-  <detail><contact callsign="DAL417-N338DN-A3"/><track speed="223.58" course="76.16"/><UID Droid="DAL417-N338DN-A3"/><_radio rssi="-19.4" gps="true"/><link uid="ANDROID-f1e2d3c4b5a69788" type="a-f-G-U" relation="p-p"/><remarks>f1e2d3 ICAO: F1E2D3 REG: N338DN Flight: DAL417 Type: A321 Squawk: 3456 DO-260B Category: A3     #adsbreceiver</remarks><_flow-tags_ TAK-Server-e9a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5="2026-03-15T17:45:00Z"/></detail>
-</event>

@@ -3,12 +3,21 @@ package org.meshtastic.tak
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
 
 /**
  * Compression tests: verify all fixtures compress under LoRa MTU
  * and generate the compression-report.md living document.
+ *
+ * The `generate compression report` test ALSO writes the golden .pb and .bin
+ * files to `testdata/protobuf/` and `testdata/golden/`. It is the canonical
+ * fixture generator for the entire SDK — all other platforms (Swift, Python,
+ * C#, TypeScript) load the bytes this test writes and validate against them.
+ *
+ * Fixture discovery is dynamic: [TestFixtures] enumerates the XML files under
+ * `testdata/cot_xml/` so dropping a new fixture in that directory automatically
+ * adds it to every test in the suite with zero code edits.
  */
 class CompressionTest {
 
@@ -19,37 +28,10 @@ class CompressionTest {
     private val parser = CotXmlParser()
     private val compressor = TakCompressor()
 
-    private val fixtures = listOf(
-        "pli_basic.xml",
-        "pli_full.xml",
-        "pli_webtak.xml",
-        "geochat_simple.xml",
-        "aircraft_adsb.xml",
-        "aircraft_hostile.xml",
-        "delete_event.xml",
-        "casevac.xml",
-        "alert_tic.xml",
-    )
-
-    private fun loadFixture(name: String): String {
-        val path = File("../testdata/cot_xml/$name")
-        return path.readText()
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = [
-        "pli_basic.xml",
-        "pli_full.xml",
-        "pli_webtak.xml",
-        "geochat_simple.xml",
-        "aircraft_adsb.xml",
-        "aircraft_hostile.xml",
-        "delete_event.xml",
-        "casevac.xml",
-        "alert_tic.xml",
-    ])
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("org.meshtastic.tak.TestFixtures#allFixtureFilenames")
     fun `compressed payload fits under LoRa MTU`(fixture: String) {
-        val xml = loadFixture(fixture)
+        val xml = TestFixtures.loadFixture(fixture)
         val packet = parser.parse(xml)
         val result = compressor.compressWithStats(packet)
 
@@ -63,8 +45,8 @@ class CompressionTest {
         var totalXml = 0
         var totalCompressed = 0
 
-        for (fixture in fixtures) {
-            val xml = loadFixture(fixture)
+        for (fixture in TestFixtures.filenames) {
+            val xml = TestFixtures.loadFixture(fixture)
             val packet = parser.parse(xml)
             val result = compressor.compressWithStats(packet)
             totalXml += xml.length
@@ -80,7 +62,7 @@ class CompressionTest {
     fun `generate compression report`() {
         val report = StringBuilder()
         report.appendLine("# TAKPacket-SDK Compression Report")
-        report.appendLine("Generated: ${java.time.LocalDate.now()} | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)")
+        report.appendLine("Generated: ${java.time.LocalDate.now()} | Dictionary: v2 (non-aircraft 16KB + aircraft 4KB)")
         report.appendLine()
 
         data class Row(
@@ -95,8 +77,8 @@ class CompressionTest {
 
         val rows = mutableListOf<Row>()
 
-        for (fixture in fixtures) {
-            val xml = loadFixture(fixture)
+        for (fixture in TestFixtures.filenames) {
+            val xml = TestFixtures.loadFixture(fixture)
             val packet = parser.parse(xml)
             val result = compressor.compressWithStats(packet)
             val ratio = xml.length.toDouble() / result.compressedSize
@@ -149,26 +131,26 @@ class CompressionTest {
         reportFile.writeText(report.toString())
 
         // Also write golden files
-        val goldenDir = File("../testdata/golden")
-        goldenDir.mkdirs()
-        for (fixture in fixtures) {
-            val xml = loadFixture(fixture)
+        TestFixtures.goldenDir.mkdirs()
+        for (fixture in TestFixtures.filenames) {
+            val xml = TestFixtures.loadFixture(fixture)
             val packet = parser.parse(xml)
             val wirePayload = compressor.compress(packet)
-            val goldenFile = File(goldenDir, fixture.removeSuffix(".xml") + ".bin")
+            val goldenFile = File(TestFixtures.goldenDir, fixture.removeSuffix(".xml") + ".bin")
             goldenFile.writeBytes(wirePayload)
         }
+        println("Golden files written to: ${TestFixtures.goldenDir.absolutePath}")
 
         // Also write protobuf intermediate files
-        val protoDir = File("../testdata/protobuf")
-        protoDir.mkdirs()
-        for (fixture in fixtures) {
-            val xml = loadFixture(fixture)
+        TestFixtures.protobufDir.mkdirs()
+        for (fixture in TestFixtures.filenames) {
+            val xml = TestFixtures.loadFixture(fixture)
             val packet = parser.parse(xml)
             val protobuf = TakPacketV2Serializer.serialize(packet)
-            val pbFile = File(protoDir, fixture.removeSuffix(".xml") + ".pb")
+            val pbFile = File(TestFixtures.protobufDir, fixture.removeSuffix(".xml") + ".pb")
             pbFile.writeBytes(protobuf)
         }
+        println("Protobuf files written to: ${TestFixtures.protobufDir.absolutePath}")
 
         assertTrue(reportFile.exists(), "Compression report should be generated")
         assertTrue(allUnderMtu, "All messages must fit under LoRa MTU")

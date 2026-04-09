@@ -111,9 +111,38 @@ test_swift() {
         fail "Swift: tests failed (exit code $rc)"
         return 1
     fi
-    local count
-    count=$(echo "$output" | grep "Executed.*tests" | tail -1 | grep -oE 'Executed [0-9]+' | grep -oE '[0-9]+')
-    pass "Swift: $count tests"
+
+    # Swift has two coexisting test frameworks in this target:
+    #
+    #   * XCTest reports its count as `Executed N tests, with M failures`
+    #     on the final `All tests` summary line. Each `func test…()` is one
+    #     test; parameterized tests are not supported natively.
+    #
+    #   * Swift Testing (`import Testing`) reports per-function summaries
+    #     as `Test "…" with N test cases passed` when the function is
+    #     declared with `@Test(arguments: …)`. The Swift Testing top-level
+    #     `Test run with N tests` line counts @Test FUNCTIONS, not cases,
+    #     so a parameterized test over 18 fixtures still shows as "1 test"
+    #     in that line — misleading when comparing against the other
+    #     platforms which all expand parameterized cases in their counts.
+    #
+    # We report the sum of both: XCTest executed count + Swift Testing
+    # parameterized cases + any non-parameterized Swift Testing functions.
+    local xct_count st_cases st_total st_param_funcs st_nonparam total
+    xct_count=$(echo "$output" | grep "Executed.*tests" | tail -1 | grep -oE 'Executed [0-9]+' | grep -oE '[0-9]+')
+    xct_count=${xct_count:-0}
+    # Sum all "with N test cases passed" lines (one per parameterized @Test).
+    st_cases=$(echo "$output" | grep -oE 'with [0-9]+ test cases passed' | grep -oE '[0-9]+' | awk '{s+=$1} END {print s+0}')
+    # Swift Testing's own top-level total counts @Test functions; parameterized
+    # ones collapse to 1 and non-parameterized stay as 1. Subtract the
+    # parameterized-function count to get the non-parameterized remainder.
+    st_total=$(echo "$output" | grep -oE 'Test run with [0-9]+ tests? in' | tail -1 | grep -oE '[0-9]+' | head -1)
+    st_total=${st_total:-0}
+    st_param_funcs=$(echo "$output" | grep -cE 'with [0-9]+ test cases passed' || true)
+    st_nonparam=$((st_total - st_param_funcs))
+    [ $st_nonparam -lt 0 ] && st_nonparam=0
+    total=$((xct_count + st_cases + st_nonparam))
+    pass "Swift: $total tests"
 }
 
 test_python() {
@@ -273,7 +302,7 @@ build_artifacts() {
     # Kotlin JAR
     log "Building Kotlin JAR..."
     cd "$SCRIPT_DIR/kotlin"
-    if command -v ./gradlew &>/dev/null; then
+    if [ -x ./gradlew ]; then
         ./gradlew jvmJar --quiet
     else
         gradle jvmJar --quiet
