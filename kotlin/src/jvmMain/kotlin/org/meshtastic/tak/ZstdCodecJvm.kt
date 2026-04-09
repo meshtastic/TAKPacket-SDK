@@ -3,38 +3,37 @@ package org.meshtastic.tak
 import com.github.luben.zstd.Zstd
 import com.github.luben.zstd.ZstdDictCompress
 import com.github.luben.zstd.ZstdDictDecompress
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * JVM implementation of [ZstdCodec] using zstd-jni.
+ *
+ * Compressor and decompressor caches are thread-safe ([ConcurrentHashMap])
+ * so the singleton can be used safely from multiple threads.
  */
 actual object ZstdCodec {
-    private val compressors = mutableMapOf<Pair<Int, Int>, ZstdDictCompress>()
-    private val decompressors = mutableMapOf<Int, ZstdDictDecompress>()
+    private val compressors = ConcurrentHashMap<Pair<Int, Int>, ZstdDictCompress>()
+    private val decompressors = ConcurrentHashMap<Int, ZstdDictDecompress>()
 
-    private fun ensureCompressor(dictId: Int, level: Int) {
-        val key = dictId to level
-        if (key !in compressors) {
+    private fun ensureCompressor(dictId: Int, level: Int): ZstdDictCompress =
+        compressors.computeIfAbsent(dictId to level) {
             val dictBytes = DictionaryProvider.getDictionary(dictId)
                 ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
-            compressors[key] = ZstdDictCompress(dictBytes, level)
+            ZstdDictCompress(dictBytes, level)
         }
-    }
 
-    private fun ensureDecompressor(dictId: Int) {
-        if (dictId !in decompressors) {
+    private fun ensureDecompressor(dictId: Int): ZstdDictDecompress =
+        decompressors.computeIfAbsent(dictId) {
             val dictBytes = DictionaryProvider.getDictionary(dictId)
                 ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
-            decompressors[dictId] = ZstdDictDecompress(dictBytes)
+            ZstdDictDecompress(dictBytes)
         }
-    }
 
     actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray {
-        ensureCompressor(dictId, level)
-        return Zstd.compress(data, compressors[dictId to level]!!)
+        return Zstd.compress(data, ensureCompressor(dictId, level))
     }
 
     actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray {
-        ensureDecompressor(dictId)
-        return Zstd.decompress(data, decompressors[dictId]!!, maxSize)
+        return Zstd.decompress(data, ensureDecompressor(dictId), maxSize)
     }
 }

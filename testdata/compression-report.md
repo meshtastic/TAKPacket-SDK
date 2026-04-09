@@ -1,5 +1,5 @@
 # TAKPacket-SDK Compression Report
-Generated: 2026-04-09 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
+Generated: 2026-04-09 | Dictionary: v2 (non-aircraft 16KB + aircraft 4KB)
 
 ## Summary
 | Metric | Value |

@@ -284,6 +284,11 @@ class CotXmlParser {
                             }
                             "status" -> {
                                 battery = reader.getAttributeValue(null, "battery")?.toIntOrNull() ?: 0
+                                val readinessAttr = reader.getAttributeValue(null, "readiness")
+                                if (readinessAttr != null) {
+                                    markerReadiness = readinessAttr.equals("true", ignoreCase = true)
+                                    hasMarkerData = true
+                                }
                             }
                             "track" -> {
                                 speed = reader.getAttributeValue(null, "speed")?.toDoubleOrNull() ?: 0.0
@@ -507,8 +512,9 @@ class CotXmlParser {
                         currentElement = ""
                     }
                     EventType.TEXT, EventType.CDSECT -> {
-                        // Capture remarks text
-                        if (inDetail) {
+                        // Capture text only inside <remarks> — not arbitrary text
+                        // nodes like <color>ffffffff</color> inside shape style blocks.
+                        if (inDetail && currentElement == "remarks") {
                             val text = reader.text.trim()
                             if (text.isNotEmpty()) {
                                 remarksText = text

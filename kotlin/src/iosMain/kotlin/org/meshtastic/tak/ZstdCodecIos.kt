@@ -5,6 +5,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
+import platform.Foundation.NSLock
 import zstd.ZSTD_CCtx
 import zstd.ZSTD_CDict
 import zstd.ZSTD_DCtx
@@ -29,14 +30,27 @@ import zstd.ZSTD_isError
  * Uses ZSTD_compress_usingCDict / ZSTD_decompress_usingDDict for dictionary-based
  * compression and decompression. Contexts and dictionaries are lazily created and cached.
  *
+ * All mutable state is guarded by [lock] so this singleton is safe to call from
+ * multiple threads (e.g. concurrent `TakCompressor` instances).
+ *
  * The consuming iOS app must link against libzstd (e.g. via CocoaPods, SPM, or vendored xcframework).
  */
 @OptIn(ExperimentalForeignApi::class)
 actual object ZstdCodec {
+    private val lock = NSLock()
     private var cCtx: CPointer<ZSTD_CCtx>? = null
     private var dCtx: CPointer<ZSTD_DCtx>? = null
     private val cDicts = mutableMapOf<Pair<Int, Int>, CPointer<ZSTD_CDict>>()
     private val dDicts = mutableMapOf<Int, CPointer<ZSTD_DDict>>()
+
+    private fun <T> synchronized(block: () -> T): T {
+        lock.lock()
+        try {
+            return block()
+        } finally {
+            lock.unlock()
+        }
+    }
 
     private fun getOrCreateCCtx(): CPointer<ZSTD_CCtx> =
         cCtx ?: (ZSTD_createCCtx() ?: error("Failed to create ZSTD_CCtx")).also { cCtx = it }
@@ -69,7 +83,7 @@ actual object ZstdCodec {
             }
         }
 
-    actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray {
+    actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray = synchronized {
         val ctx = getOrCreateCCtx()
         val cDict = getOrCreateCDict(dictId, level)
         val maxSize = ZSTD_compressBound(data.size.toULong())
@@ -93,10 +107,10 @@ actual object ZstdCodec {
             error("Zstd compression failed: $errorName")
         }
 
-        return destBuffer.copyOf(compressedSize.toInt())
+        destBuffer.copyOf(compressedSize.toInt())
     }
 
-    actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray {
+    actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray = synchronized {
         val ctx = getOrCreateDCtx()
         val dDict = getOrCreateDDict(dictId)
         val destBuffer = ByteArray(maxSize)
@@ -119,7 +133,7 @@ actual object ZstdCodec {
             error("Zstd decompression failed: $errorName")
         }
 
-        return destBuffer.copyOf(decompressedSize.toInt())
+        destBuffer.copyOf(decompressedSize.toInt())
     }
 
     /**
@@ -127,7 +141,7 @@ actual object ZstdCodec {
      * Call this when the codec is no longer needed to avoid memory leaks
      * in long-running apps or tests.
      */
-    fun release() {
+    fun release() = synchronized {
         cCtx?.let { ZSTD_freeCCtx(it) }
         cCtx = null
         dCtx?.let { ZSTD_freeDCtx(it) }

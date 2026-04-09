@@ -17,6 +17,13 @@ class CotTypeMapperTest {
         assertEquals(CotTypeMapper.COTTYPE_B_R_F_H_C, CotTypeMapper.typeToEnum("b-r-f-h-c"))
         assertEquals(CotTypeMapper.COTTYPE_B_A_O_OPN, CotTypeMapper.typeToEnum("b-a-o-opn"))
         assertEquals(CotTypeMapper.COTTYPE_U_D_F, CotTypeMapper.typeToEnum("u-d-f"))
+        // Typed geometry types (76..81)
+        assertEquals(CotTypeMapper.COTTYPE_U_D_F_M, CotTypeMapper.typeToEnum("u-d-f-m"))
+        assertEquals(CotTypeMapper.COTTYPE_U_D_P, CotTypeMapper.typeToEnum("u-d-p"))
+        assertEquals(CotTypeMapper.COTTYPE_B_M_P_S_M, CotTypeMapper.typeToEnum("b-m-p-s-m"))
+        assertEquals(CotTypeMapper.COTTYPE_B_M_P_C, CotTypeMapper.typeToEnum("b-m-p-c"))
+        assertEquals(CotTypeMapper.COTTYPE_U_R_B_C_C, CotTypeMapper.typeToEnum("u-r-b-c-c"))
+        assertEquals(CotTypeMapper.COTTYPE_U_R_B_BULLSEYE, CotTypeMapper.typeToEnum("u-r-b-bullseye"))
     }
 
     @Test
@@ -28,7 +35,8 @@ class CotTypeMapperTest {
 
     @Test
     fun enumValuesRoundTripThroughString() {
-        for (enumVal in 1..75) {
+        // Cover all known enum values including typed geometry types (76..81)
+        for (enumVal in 1..81) {
             val str = CotTypeMapper.typeToString(enumVal)
             if (str != null) {
                 assertEquals(enumVal, CotTypeMapper.typeToEnum(str),
