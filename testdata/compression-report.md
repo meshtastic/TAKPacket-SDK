@@ -1,38 +1,64 @@
 # TAKPacket-SDK Compression Report
-Generated: 2026-04-08 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
+Generated: 2026-04-09 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 
 ## Summary
 | Metric | Value |
 |--------|-------|
-| Total test messages | 9 |
+| Total test messages | 22 |
 | 100% under 237B | YES |
-| Median compressed size | 113B |
-| Median compression ratio | 6.4x |
-| Worst case | 160B (67% of LoRa MTU) |
+| Median compressed size | 130B |
+| Median compression ratio | 5.4x |
+| Worst case | 216B (91% of LoRa MTU) |
 
 ## Per-Message Results
 | Fixture | CoT Type | XML Size | Proto Size | Compressed | Ratio | Dict |
 |---------|----------|----------|------------|------------|-------|------|
+| aircraft_adsb | a-n-A-C-F | 716B | 120B | 110B | 6.5x | aircraft |
+| aircraft_hostile | a-h-A-M-F-F | 613B | 108B | 113B | 5.4x | aircraft |
+| alert_tic | b-a-o-opn | 408B | 49B | 63B | 6.5x | non-aircraft |
+| casevac | b-r-f-h-c | 595B | 90B | 86B | 6.9x | non-aircraft |
+| delete_event | t-x-d-d | 476B | 99B | 91B | 5.2x | non-aircraft |
+| drawing_circle | u-d-c-c | 930B | 114B | 98B | 9.5x | non-aircraft |
+| drawing_freeform | u-d-f | 779B | 144B | 158B | 4.9x | non-aircraft |
+| drawing_polygon | u-d-p | 778B | 140B | 154B | 5.1x | non-aircraft |
+| drawing_rectangle | u-d-r | 755B | 137B | 151B | 5.0x | non-aircraft |
+| drawing_telestration | u-d-f-m | 2018B | 356B | 216B | 9.3x | non-aircraft |
+| geochat_simple | b-t-f | 836B | 144B | 130B | 6.4x | non-aircraft |
+| marker_2525 | a-u-G | 712B | 163B | 135B | 5.3x | non-aircraft |
+| marker_icon_set | a-u-G | 734B | 185B | 134B | 5.5x | non-aircraft |
+| marker_spot | b-m-p-s-m | 721B | 164B | 140B | 5.2x | non-aircraft |
 | pli_basic | a-f-G-U-C | 446B | 64B | 63B | 7.1x | non-aircraft |
-| pli_full | a-f-G-U-C | 750B | 189B | 160B | 4.7x | non-aircraft |
-| pli_webtak | a-f-G-U-C-I | 665B | 138B | 147B | 4.5x | non-aircraft |
-| geochat_simple | b-t-f | 829B | 138B | 130B | 6.4x | non-aircraft |
-| aircraft_adsb | a-n-A-C-F | 715B | 120B | 113B | 6.3x | aircraft |
-| aircraft_hostile | a-h-A-M-F-F | 623B | 114B | 115B | 5.4x | aircraft |
-| delete_event | t-x-d-d | 476B | 48B | 62B | 7.7x | non-aircraft |
-| casevac | b-r-f-h-c | 594B | 53B | 67B | 8.9x | non-aircraft |
-| alert_tic | b-a-o-opn | 406B | 49B | 63B | 6.4x | non-aircraft |
+| pli_full | a-f-G-U-C | 754B | 192B | 141B | 5.3x | non-aircraft |
+| pli_webtak | a-f-G-U-C-I | 668B | 191B | 155B | 4.3x | non-aircraft |
+| ranging_bullseye | u-r-b-bullseye | 767B | 111B | 125B | 6.1x | non-aircraft |
+| ranging_circle | u-r-b-c-c | 669B | 109B | 123B | 5.4x | non-aircraft |
+| ranging_line | u-rb-a | 623B | 95B | 109B | 5.7x | non-aircraft |
+| route_3wp | b-m-r | 849B | 185B | 167B | 5.1x | non-aircraft |
+| waypoint | b-m-p-w | 571B | 124B | 115B | 5.0x | non-aircraft |
 
 ## Size Distribution
 ```
-delete_event           62B |#############
-pli_basic              63B |#############
 alert_tic              63B |#############
-casevac                67B |##############
-aircraft_adsb         113B |#######################
-aircraft_hostile      115B |########################
+pli_basic              63B |#############
+casevac                86B |##################
+delete_event           91B |###################
+drawing_circle         98B |####################
+ranging_line          109B |######################
+aircraft_adsb         110B |#######################
+aircraft_hostile      113B |#######################
+waypoint              115B |########################
+ranging_circle        123B |#########################
+ranging_bullseye      125B |##########################
 geochat_simple        130B |###########################
-pli_webtak            147B |###############################
-pli_full              160B |#################################
+marker_icon_set       134B |############################
+marker_2525           135B |############################
+marker_spot           140B |#############################
+pli_full              141B |#############################
+drawing_rectangle     151B |###############################
+drawing_polygon       154B |################################
+pli_webtak            155B |################################
+drawing_freeform      158B |#################################
+route_3wp             167B |###################################
+drawing_telestration  216B |#############################################
 LoRa MTU              237B |##################################################
 ```

@@ -83,6 +83,68 @@ class TakCompressor:
             raise ValueError(f"Protobuf parsing failed: {e}") from e
         return pkt
 
+    def compress_best_of(
+        self,
+        packet: atak_pb2.TAKPacketV2,
+        raw_detail_bytes: bytes,
+    ) -> bytes:
+        """Compress with whichever format yields the smaller wire payload.
+
+        Tries both the fully-typed :class:`TAKPacketV2` (the default
+        :meth:`compress` path) and a ``raw_detail`` fallback carrying the
+        original ``<detail>`` bytes, then returns the smaller of the two.
+
+        On every bundled fixture the typed path wins — delta-encoded
+        geometry and palette-enum colors compress much tighter than raw
+        XML tag names, even with a 16KB zstd dictionary.  This method is a
+        safety net for CoT types the structured parser can't decompose or
+        for shapes with geometry beyond ``MAX_VERTICES`` that would
+        otherwise be silently truncated.
+
+        The fallback path strips detail-derived top-level fields
+        (callsign, takVersion, …) from the alternate packet so the
+        ``<detail>`` content isn't duplicated on the wire; the receiver
+        re-parses those fields out of the raw bytes if needed.
+
+        :param packet:           Typed-variant packet from
+                                 :meth:`CotXmlParser.parse`.
+        :param raw_detail_bytes: Raw ``<detail>`` inner bytes from
+                                 :meth:`CotXmlParser.extract_raw_detail_bytes`.
+        :returns: Whichever wire payload is smaller.  Ties go to the typed
+                  packet since it preserves strong typing on the receiver.
+        """
+        typed_wire = self.compress(packet)
+        if not raw_detail_bytes:
+            return typed_wire
+
+        # Clear every detail-derived top-level field in the fallback packet.
+        # These come from <contact>, <__group>, <status>, <track>, <takv>,
+        # <precisionlocation>, and <uid Droid="…"/> — all of which live
+        # inside <detail>, so they'd be duplicated if we shipped them both
+        # as proto fields and inside raw_detail.  The envelope (uid,
+        # cot_type_id, how, stale, lat/lon/alt) stays intact.
+        raw_packet = atak_pb2.TAKPacketV2()
+        raw_packet.CopyFrom(packet)
+        raw_packet.callsign = ""
+        raw_packet.team = 0
+        raw_packet.role = 0
+        raw_packet.battery = 0
+        raw_packet.speed = 0
+        raw_packet.course = 0
+        raw_packet.device_callsign = ""
+        raw_packet.tak_version = ""
+        raw_packet.tak_device = ""
+        raw_packet.tak_platform = ""
+        raw_packet.tak_os = ""
+        raw_packet.endpoint = ""
+        raw_packet.phone = ""
+        raw_packet.geo_src = 0
+        raw_packet.alt_src = 0
+        raw_packet.raw_detail = raw_detail_bytes  # sets the oneof
+
+        raw_wire = self.compress(raw_packet)
+        return raw_wire if len(raw_wire) < len(typed_wire) else typed_wire
+
     def compress_with_stats(self, packet: atak_pb2.TAKPacketV2) -> CompressionResult:
         """Compress and return stats for reporting."""
         protobuf_bytes = packet.SerializeToString()

@@ -1,4 +1,4 @@
 [submodule "protobufs"]
 	path = protobufs
 	url = https://github.com/meshtastic/protobufs.git
-	branch = tak_v2
+	branch = takv2_geometry

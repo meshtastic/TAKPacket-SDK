@@ -9,11 +9,16 @@ FIXTURES_DIR = os.path.join(TESTDATA_DIR, "cot_xml")
 GOLDEN_DIR = os.path.join(TESTDATA_DIR, "golden")
 PROTOBUF_DIR = os.path.join(TESTDATA_DIR, "protobuf")
 
-FIXTURE_NAMES = [
-    "pli_basic", "pli_full", "pli_webtak",
-    "geochat_simple", "aircraft_adsb", "aircraft_hostile",
-    "delete_event", "casevac", "alert_tic",
-]
+# Dynamically enumerate all XML fixtures in the shared testdata directory so new
+# fixtures can be added without editing this list. Kotlin's CompressionTest is
+# the canonical generator for the corresponding .pb and .bin files — run it
+# first when adding new fixtures, then the Python suite will pick them up on
+# the next pytest invocation. Sorted for stable test ordering.
+FIXTURE_NAMES = sorted(
+    os.path.splitext(f)[0]
+    for f in os.listdir(FIXTURES_DIR)
+    if f.endswith(".xml")
+)
 
 
 def load_fixture_xml(name: str) -> str:

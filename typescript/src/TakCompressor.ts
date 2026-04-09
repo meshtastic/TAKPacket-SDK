@@ -103,6 +103,68 @@ export class TakCompressor {
     }
   }
 
+  /**
+   * Compress a packet using whichever format yields the smaller wire payload:
+   * the fully-typed TAKPacketV2 (the default {@link compress} path) or a
+   * `raw_detail` fallback carrying the original `<detail>` bytes.
+   *
+   * On every bundled fixture the typed path wins — delta-encoded geometry
+   * and palette-enum colors compress much tighter than raw XML tag names,
+   * even with a 16KB zstd dictionary.  This method is a safety net for CoT
+   * types the structured parser can't decompose or for shapes with geometry
+   * beyond `MAX_VERTICES` that would otherwise be silently truncated.
+   *
+   * The fallback packet has every detail-derived top-level field (callsign,
+   * takVersion, …) stripped so the `<detail>` content isn't duplicated on
+   * the wire; the receiver re-parses those fields out of the raw bytes.
+   *
+   * @param packet          Typed-variant packet from `parseCotXml`.
+   * @param rawDetailBytes  Raw `<detail>` inner bytes from
+   *                        {@link extractRawDetailBytes}.
+   * @returns Whichever wire payload is smaller.  Ties go to the typed packet
+   *          since it preserves strong typing on the receiver side.
+   */
+  async compressBestOf(
+    packet: Record<string, unknown>,
+    rawDetailBytes: Buffer,
+  ): Promise<Buffer> {
+    const typedWire = await this.compress(packet);
+    if (rawDetailBytes.length === 0) return typedWire;
+
+    // Build the raw_detail fallback packet by cloning the typed packet and
+    // stripping every detail-derived top-level field.  Leaves the envelope
+    // (uid, cotTypeId, how, stale, lat/lon/alt) intact.  Setting rawDetail
+    // sets the oneof and clears the previous payload_variant case.
+    const rawPacket: Record<string, unknown> = { ...packet };
+    delete rawPacket.callsign;
+    delete rawPacket.team;
+    delete rawPacket.role;
+    delete rawPacket.battery;
+    delete rawPacket.speed;
+    delete rawPacket.course;
+    delete rawPacket.deviceCallsign;
+    delete rawPacket.takVersion;
+    delete rawPacket.takDevice;
+    delete rawPacket.takPlatform;
+    delete rawPacket.takOs;
+    delete rawPacket.endpoint;
+    delete rawPacket.phone;
+    delete rawPacket.geoSrc;
+    delete rawPacket.altSrc;
+    // Clear the existing oneof variant before setting raw_detail.
+    delete rawPacket.pli;
+    delete rawPacket.chat;
+    delete rawPacket.aircraft;
+    delete rawPacket.shape;
+    delete rawPacket.marker;
+    delete rawPacket.rab;
+    delete rawPacket.route;
+    rawPacket.rawDetail = rawDetailBytes;
+
+    const rawWire = await this.compress(rawPacket);
+    return rawWire.length < typedWire.length ? rawWire : typedWire;
+  }
+
   /** Compress with stats for reporting. */
   async compressWithStats(packet: Record<string, unknown>): Promise<CompressionResult> {
     const TAKPacketV2 = await getTAKPacketV2Type();

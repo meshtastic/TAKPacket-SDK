@@ -25,6 +25,31 @@ class CotXmlBuilder {
             7 to "RTO", 8 to "K9",
         )
 
+        // --- Reverse lookups for route/bullseye fields -------------------
+        // Mirrors CotXmlParser's forward maps — the parser → builder round
+        // trip must preserve the original attribute strings.
+        private val routeMethodIntToName = mapOf(
+            1 to "Driving", 2 to "Walking", 3 to "Flying",
+            4 to "Swimming", 5 to "Watercraft",
+        )
+        private val routeDirectionIntToName = mapOf(
+            1 to "Infil", 2 to "Exfil",
+        )
+        private val bearingRefIntToName = mapOf(
+            1 to "M", 2 to "T", 3 to "G",
+        )
+
+        // --- DrawnShape Kind values (mirror atak.proto) ------------------
+        private const val SHAPE_KIND_CIRCLE = 1
+        private const val SHAPE_KIND_RANGING_CIRCLE = 6
+        private const val SHAPE_KIND_BULLSEYE = 7
+
+        // --- DrawnShape StyleMode values (mirror atak.proto) -------------
+        private const val STYLE_UNSPECIFIED = 0
+        private const val STYLE_STROKE_ONLY = 1
+        private const val STYLE_FILL_ONLY = 2
+        private const val STYLE_STROKE_AND_FILL = 3
+
         private fun geoSrcToString(src: Int): String = when (src) {
             1 -> "GPS"
             2 -> "USER"
@@ -34,6 +59,15 @@ class CotXmlBuilder {
 
         private val isoFormatter = DateTimeFormatter.ISO_INSTANT
     }
+
+    /**
+     * Resolve the ARGB int to emit in XML. When [paletteTeam] references
+     * one of the 14 palette entries we emit its canonical ARGB constant;
+     * otherwise we fall back to the exact [argb] bits carried on the wire
+     * so custom user-picked colors round-trip byte-for-byte.
+     */
+    private fun resolveColor(paletteTeam: Int, argb: Int): Int =
+        AtakPalette.teamToArgb(paletteTeam) ?: argb
 
     /**
      * Build a CoT XML event string from a TakPacketV2Data.
@@ -132,7 +166,174 @@ class CotXmlBuilder {
                     sb.append("/>\n")
                 }
             }
-            else -> { /* PLI and delete events have no extra detail elements */ }
+            is TakPacketV2Data.Payload.DrawnShape -> {
+                val strokeVal = resolveColor(payload.strokeColor, payload.strokeArgb)
+                val fillVal = resolveColor(payload.fillColor, payload.fillArgb)
+                val emitStroke = payload.style == STYLE_STROKE_ONLY ||
+                    payload.style == STYLE_STROKE_AND_FILL ||
+                    (payload.style == STYLE_UNSPECIFIED && strokeVal != 0)
+                val emitFill = payload.style == STYLE_FILL_ONLY ||
+                    payload.style == STYLE_STROKE_AND_FILL ||
+                    (payload.style == STYLE_UNSPECIFIED && fillVal != 0)
+
+                // Circle-like kinds (circle, ranging circle, bullseye) use <shape><ellipse/></shape>.
+                // Polyline-like kinds (rectangle, polygon, freeform, telestration) use
+                // top-level <link point="lat,lon"/> siblings that the parser picks up as vertices.
+                val kind = payload.kind
+                if (kind == SHAPE_KIND_CIRCLE || kind == SHAPE_KIND_RANGING_CIRCLE || kind == SHAPE_KIND_BULLSEYE) {
+                    if (payload.majorCm > 0 || payload.minorCm > 0) {
+                        val majorM = payload.majorCm / 100.0
+                        val minorM = payload.minorCm / 100.0
+                        sb.append("    <shape>\n")
+                        sb.append("""      <ellipse major="$majorM" minor="$minorM" angle="${payload.angleDeg}"/>""")
+                        sb.append("\n")
+                        sb.append("    </shape>\n")
+                    }
+                } else {
+                    for (v in payload.vertices) {
+                        val vlat = v.latI / 1e7
+                        val vlon = v.lonI / 1e7
+                        sb.append("""    <link point="$vlat,$vlon"/>""")
+                        sb.append("\n")
+                    }
+                }
+
+                // Bullseye-specific element — lives inside <detail>, not <shape>.
+                if (kind == SHAPE_KIND_BULLSEYE) {
+                    sb.append("    <bullseye")
+                    if (payload.bullseyeDistanceDm > 0) {
+                        val distM = payload.bullseyeDistanceDm / 10.0
+                        sb.append(""" distance="$distM"""")
+                    }
+                    bearingRefIntToName[payload.bullseyeBearingRef]?.let {
+                        sb.append(""" bearingRef="$it"""")
+                    }
+                    if (payload.bullseyeFlags and 0x01 != 0) sb.append(""" rangeRingVisible="true"""")
+                    if (payload.bullseyeFlags and 0x02 != 0) sb.append(""" hasRangeRings="true"""")
+                    if (payload.bullseyeFlags and 0x04 != 0) sb.append(""" edgeToCenter="true"""")
+                    if (payload.bullseyeFlags and 0x08 != 0) sb.append(""" mils="true"""")
+                    if (payload.bullseyeUidRef.isNotEmpty()) {
+                        sb.append(""" bullseyeUID="${esc(payload.bullseyeUidRef)}"""")
+                    }
+                    sb.append("/>\n")
+                }
+
+                if (emitStroke) {
+                    sb.append("""    <strokeColor value="$strokeVal"/>""")
+                    sb.append("\n")
+                    if (payload.strokeWeightX10 > 0) {
+                        val w = payload.strokeWeightX10 / 10.0
+                        sb.append("""    <strokeWeight value="$w"/>""")
+                        sb.append("\n")
+                    }
+                }
+                if (emitFill) {
+                    sb.append("""    <fillColor value="$fillVal"/>""")
+                    sb.append("\n")
+                }
+                sb.append("""    <labels_on value="${payload.labelsOn}"/>""")
+                sb.append("\n")
+            }
+            is TakPacketV2Data.Payload.Marker -> {
+                if (payload.readiness) {
+                    sb.append("""    <status readiness="true"/>""")
+                    sb.append("\n")
+                }
+                if (payload.parentUid.isNotEmpty()) {
+                    sb.append("    <link")
+                    sb.append(""" uid="${esc(payload.parentUid)}"""")
+                    if (payload.parentType.isNotEmpty()) {
+                        sb.append(""" type="${esc(payload.parentType)}"""")
+                    }
+                    if (payload.parentCallsign.isNotEmpty()) {
+                        sb.append(""" parent_callsign="${esc(payload.parentCallsign)}"""")
+                    }
+                    sb.append(""" relation="p-p"/>""")
+                    sb.append("\n")
+                }
+                val colorVal = resolveColor(payload.color, payload.colorArgb)
+                if (colorVal != 0) {
+                    sb.append("""    <color argb="$colorVal"/>""")
+                    sb.append("\n")
+                }
+                if (payload.iconset.isNotEmpty()) {
+                    sb.append("""    <usericon iconsetpath="${esc(payload.iconset)}"/>""")
+                    sb.append("\n")
+                }
+            }
+            is TakPacketV2Data.Payload.RangeAndBearing -> {
+                if (payload.anchorLatI != 0 || payload.anchorLonI != 0) {
+                    val alat = payload.anchorLatI / 1e7
+                    val alon = payload.anchorLonI / 1e7
+                    sb.append("    <link")
+                    if (payload.anchorUid.isNotEmpty()) {
+                        sb.append(""" uid="${esc(payload.anchorUid)}"""")
+                    }
+                    sb.append(""" relation="p-p" type="b-m-p-w" point="$alat,$alon"/>""")
+                    sb.append("\n")
+                }
+                if (payload.rangeCm > 0) {
+                    val rangeM = payload.rangeCm / 100.0
+                    sb.append("""    <range value="$rangeM"/>""")
+                    sb.append("\n")
+                }
+                if (payload.bearingCdeg > 0) {
+                    val bearingDeg = payload.bearingCdeg / 100.0
+                    sb.append("""    <bearing value="$bearingDeg"/>""")
+                    sb.append("\n")
+                }
+                val strokeVal = resolveColor(payload.strokeColor, payload.strokeArgb)
+                if (strokeVal != 0) {
+                    sb.append("""    <strokeColor value="$strokeVal"/>""")
+                    sb.append("\n")
+                }
+                if (payload.strokeWeightX10 > 0) {
+                    val w = payload.strokeWeightX10 / 10.0
+                    sb.append("""    <strokeWeight value="$w"/>""")
+                    sb.append("\n")
+                }
+            }
+            is TakPacketV2Data.Payload.RawDetail -> {
+                // Fallback path (`TakCompressor.compressBestOf`): raw bytes
+                // of the original <detail> element are shipped verbatim.
+                // Emit them inside the <detail>…</detail> wrapper without
+                // any normalization so the receiver's round trip preserves
+                // attribute order and whitespace identically to the source.
+                if (payload.bytes.isNotEmpty()) {
+                    sb.append(String(payload.bytes, Charsets.UTF_8))
+                    if (!sb.endsWith("\n")) sb.append("\n")
+                }
+            }
+            is TakPacketV2Data.Payload.Route -> {
+                sb.append("    <__routeinfo/>\n")
+                sb.append("    <link_attr")
+                routeMethodIntToName[payload.method]?.let { sb.append(""" method="$it"""") }
+                routeDirectionIntToName[payload.direction]?.let { sb.append(""" direction="$it"""") }
+                if (payload.prefix.isNotEmpty()) {
+                    sb.append(""" prefix="${esc(payload.prefix)}"""")
+                }
+                if (payload.strokeWeightX10 > 0) {
+                    val sw = payload.strokeWeightX10 / 10
+                    sb.append(""" stroke="$sw"""")
+                }
+                sb.append("/>\n")
+                for (link in payload.links) {
+                    val llat = link.latI / 1e7
+                    val llon = link.lonI / 1e7
+                    sb.append("    <link")
+                    if (link.uid.isNotEmpty()) {
+                        sb.append(""" uid="${esc(link.uid)}"""")
+                    }
+                    val linkType = if (link.linkType == 1) "b-m-p-c" else "b-m-p-w"
+                    sb.append(""" type="$linkType"""")
+                    if (link.callsign.isNotEmpty()) {
+                        sb.append(""" callsign="${esc(link.callsign)}"""")
+                    }
+                    sb.append(""" point="$llat,$llon"/>""")
+                    sb.append("\n")
+                }
+            }
+            else -> { /* PLI, None, RawDetail — no extra detail elements */ }
         }
 
         sb.append("  </detail>\n")

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<event version="2.0" uid="ICAO-B7C8D9" type="a-h-A-M-F-F" how="m-g" time="2026-03-15T18:20:00Z" start="2026-03-15T18:20:00Z" stale="2026-03-15T18:20:48Z">
-  <point lat="41.2524" lon="-95.9980" hae="10000" ce="9999999" le="9999999"/>
-  <detail><contact callsign="N789ZZ-N789ZZ-HAWK"/><remarks>N789ZZ N789ZZ B7C8D9 Cat:A6 Type:HAWK cotbridge@example.takserver</remarks><_aircot_ flight="N789ZZ" reg="N789ZZ" cat="A6" icao="B7C8D9" cot_host_id="cotbridge@example.takserver" type="HAWK"/><_flow-tags_ TAK-Server-e9a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5="2026-03-15T18:20:00Z"/></detail>
+<event version="2.0" uid="ICAO-000002" type="a-h-A-M-F-F" how="m-g" time="2026-03-15T18:20:00Z" start="2026-03-15T18:20:00Z" stale="2026-03-15T18:20:48Z">
+  <point lat="15.00000" lon="160.00200" hae="10000" ce="9999999" le="9999999"/>
+  <detail><contact callsign="TST200-NTEST2-HAWK"/><remarks>TST200 NTEST2 000002 Cat:A6 Type:HAWK sim-host@example.test</remarks><_aircot_ flight="TST200" reg="NTEST2" cat="A6" icao="000002" cot_host_id="sim-host@example.test" type="HAWK"/><_flow-tags_ TAK-Server-00000000000000000000000000000001="2026-03-15T18:20:00Z"/></detail>
 </event>

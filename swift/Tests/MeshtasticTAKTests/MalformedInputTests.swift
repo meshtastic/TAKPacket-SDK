@@ -6,8 +6,7 @@ final class MalformedInputTests: XCTestCase {
     let compressor = TakCompressor()
 
     func loadMalformed(_ name: String) -> Data {
-        let url = Bundle.module.url(forResource: "Fixtures/malformed/\(name)", withExtension: nil)!
-        return try! Data(contentsOf: url)
+        (try? TestFixtures.loadMalformed(name)) ?? Data()
     }
 
     func testRejectsEmptyPayload() {
@@ -47,18 +46,16 @@ final class MalformedInputTests: XCTestCase {
 
     // Security attack tests
 
-    func testRejectsXmlWithDoctype() {
-        let url = Bundle.module.url(forResource: "Fixtures/malformed/xml_doctype", withExtension: "xml")!
-        let xml = try! String(contentsOf: url, encoding: .utf8)
+    func testRejectsXmlWithDoctype() throws {
+        let xml = try TestFixtures.loadMalformedXml("xml_doctype.xml")
         let parser = CotXmlParser()
         let result = parser.parse(xml)
         // Parser should return empty packet (rejected DOCTYPE)
         XCTAssertTrue(result.uid.isEmpty, "DOCTYPE XML should produce empty/rejected result")
     }
 
-    func testRejectsXmlWithEntityExpansion() {
-        let url = Bundle.module.url(forResource: "Fixtures/malformed/xml_entity_expansion", withExtension: "xml")!
-        let xml = try! String(contentsOf: url, encoding: .utf8)
+    func testRejectsXmlWithEntityExpansion() throws {
+        let xml = try TestFixtures.loadMalformedXml("xml_entity_expansion.xml")
         let parser = CotXmlParser()
         let result = parser.parse(xml)
         XCTAssertTrue(result.uid.isEmpty, "Entity expansion XML should produce empty/rejected result")
