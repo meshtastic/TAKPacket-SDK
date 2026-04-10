@@ -536,7 +536,9 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             }
 
         case "status":
-            packet.battery = UInt32(attributes["battery"] ?? "0") ?? 0
+            let bat = UInt32(attributes["battery"] ?? "0") ?? 0
+            if bat > 0 { packet.battery = bat }
+            if attributes["readiness"] == "true" { markerReadiness = true }
 
         case "track":
             // ATAK stationary targets emit speed="-1.0" / course="-1.0" as a
@@ -812,10 +814,14 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
                 }
                 hasTaskData = true
             } else if cotTypeStr.hasPrefix("b-a-") {
-                if emergencyAuthoringUid.isEmpty {
-                    emergencyAuthoringUid = u
-                } else if cotTypeStr == "b-a-o-can" && emergencyCancelReferenceUid.isEmpty {
-                    emergencyCancelReferenceUid = u
+                if linkType.hasPrefix("b-a-") {
+                    if emergencyCancelReferenceUid.isEmpty {
+                        emergencyCancelReferenceUid = u
+                    }
+                } else {
+                    if emergencyAuthoringUid.isEmpty {
+                        emergencyAuthoringUid = u
+                    }
                 }
                 hasEmergencyData = true
             } else {

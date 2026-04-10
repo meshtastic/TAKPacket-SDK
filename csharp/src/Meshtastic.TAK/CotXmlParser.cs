@@ -365,9 +365,17 @@ public class CotXmlParser
                 }
                 else if (typeStr.StartsWith("b-a-"))
                 {
-                    // Emergency authoring link: the p-p link on a b-a-*
-                    // event references the unit that raised the alert.
-                    if (emergencyAuthoringUid.Length == 0) emergencyAuthoringUid = linkUid;
+                    // Emergency links: a b-a-* event may carry two p-p links:
+                    //   1. authoring link (type a-f-*): who raised the alert
+                    //   2. cancel-reference link (type b-a-*): the alert being cancelled
+                    if (linkType.StartsWith("b-a-"))
+                    {
+                        if (emergencyCancelReferenceUid.Length == 0) emergencyCancelReferenceUid = linkUid;
+                    }
+                    else
+                    {
+                        if (emergencyAuthoringUid.Length == 0) emergencyAuthoringUid = linkUid;
+                    }
                     hasEmergencyData = true;
                 }
                 else

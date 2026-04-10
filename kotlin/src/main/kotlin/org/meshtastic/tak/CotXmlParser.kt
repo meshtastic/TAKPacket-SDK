@@ -473,7 +473,9 @@ class CotXmlParser {
                             roleName = parser.getAttributeValue(null, "role") ?: ""
                         }
                         "status" -> {
-                            battery = parser.getAttributeValue(null, "battery")?.toIntOrNull() ?: 0
+                            val bat = parser.getAttributeValue(null, "battery")?.toIntOrNull()
+                            if (bat != null && bat > 0) battery = bat
+                            if (parser.getAttributeValue(null, "readiness") == "true") markerReadiness = true
                         }
                         "track" -> {
                             speed = parser.getAttributeValue(null, "speed")?.toDoubleOrNull() ?: 0.0
@@ -768,10 +770,17 @@ class CotXmlParser {
                                     }
                                     hasTaskData = true
                                 } else if (cotTypeStr.startsWith("b-a-")) {
-                                    // Emergency authoring link: the p-p link on a b-a-*
-                                    // event references the unit that raised the alert.
-                                    if (emergencyAuthoringUid.isEmpty()) {
-                                        emergencyAuthoringUid = linkUidAttr
+                                    // Emergency links: a b-a-* event may carry two p-p links:
+                                    //   1. authoring link (type a-f-*): who raised the alert
+                                    //   2. cancel-reference link (type b-a-*): the alert being cancelled
+                                    if (linkType.startsWith("b-a-")) {
+                                        if (emergencyCancelReferenceUid.isEmpty()) {
+                                            emergencyCancelReferenceUid = linkUidAttr
+                                        }
+                                    } else {
+                                        if (emergencyAuthoringUid.isEmpty()) {
+                                            emergencyAuthoringUid = linkUidAttr
+                                        }
                                     }
                                     hasEmergencyData = true
                                 } else {

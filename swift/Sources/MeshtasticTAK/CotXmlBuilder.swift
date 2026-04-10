@@ -142,6 +142,21 @@ public class CotXmlBuilder {
                 if !ac.cotHostID.isEmpty { s += " cot_host_id=\"\(esc(ac.cotHostID))\"" }
                 s += "/>\n"
             }
+            if ac.squawk > 0 {
+                var parts: [String] = []
+                if !ac.icao.isEmpty { parts.append("ICAO: \(ac.icao)") }
+                if !ac.registration.isEmpty { parts.append("REG: \(ac.registration)") }
+                if !ac.aircraftType.isEmpty { parts.append("Type: \(ac.aircraftType)") }
+                parts.append("Squawk: \(ac.squawk)")
+                if !ac.flight.isEmpty { parts.append("Flight: \(ac.flight)") }
+                s += "    <remarks>\(esc(parts.joined(separator: " ")))</remarks>\n"
+            }
+            if ac.rssiX10 != 0 {
+                let rssi = Double(ac.rssiX10) / 10.0
+                s += "    <_radio rssi=\"\(rssi)\""
+                if ac.gps { s += " gps=\"true\"" }
+                s += "/>\n"
+            }
         case .shape(let shape):
             s += emitShape(shape, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
         case .marker(let marker):
@@ -310,7 +325,7 @@ public class CotXmlBuilder {
         if let d = Self.routeDirectionIntToName[route.direction] { s += " direction=\"\(d)\"" }
         if !route.prefix.isEmpty { s += " prefix=\"\(esc(route.prefix))\"" }
         if route.strokeWeightX10 > 0 {
-            let sw = route.strokeWeightX10 / 10
+            let sw = Double(route.strokeWeightX10) / 10.0
             s += " stroke=\"\(sw)\""
         }
         s += "/>\n"

@@ -160,6 +160,18 @@ class CotXmlBuilder:
                 if ac.category: parts.append(f'cat="{escape(ac.category)}"')
                 if ac.cot_host_id: parts.append(f'cot_host_id="{escape(ac.cot_host_id)}"')
                 lines.append(f'    <_aircot_ {" ".join(parts)}/>')
+                if ac.squawk > 0:
+                    rparts = []
+                    if ac.icao: rparts.append(f'ICAO: {ac.icao}')
+                    if ac.registration: rparts.append(f'REG: {ac.registration}')
+                    if ac.aircraft_type: rparts.append(f'Type: {ac.aircraft_type}')
+                    rparts.append(f'Squawk: {ac.squawk}')
+                    if ac.flight: rparts.append(f'Flight: {ac.flight}')
+                    lines.append(f'    <remarks>{escape(" ".join(rparts))}</remarks>')
+                if ac.rssi_x10 != 0:
+                    rssi_val = ac.rssi_x10 / 10.0
+                    gps_attr = ' gps="true"' if ac.gps else ''
+                    lines.append(f'    <_radio rssi="{rssi_val}"{gps_attr}/>')
         elif which == "shape":
             self._emit_shape(lines, packet.shape, packet.latitude_i, packet.longitude_i)
         elif which == "marker":
@@ -312,7 +324,7 @@ class CotXmlBuilder:
         if route.prefix:
             parts.append(f'prefix="{escape(route.prefix)}"')
         if route.stroke_weight_x10 > 0:
-            sw = route.stroke_weight_x10 // 10
+            sw = route.stroke_weight_x10 / 10.0
             parts.append(f'stroke="{sw}"')
         if parts:
             lines.append(f'    <link_attr {" ".join(parts)}/>')

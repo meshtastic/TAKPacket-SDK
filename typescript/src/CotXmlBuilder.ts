@@ -191,6 +191,25 @@ export function buildCotXml(packet: Record<string, unknown>): string {
       if (aircraft.cotHostId) tag += ` cot_host_id="${esc(String(aircraft.cotHostId))}"`;
       lines.push(tag + "/>");
     }
+    // Squawk and aircraft metadata as remarks text (ATAK parses these from remarks)
+    const squawk = (aircraft.squawk as number) ?? 0;
+    if (squawk > 0) {
+      const parts: string[] = [];
+      if (icao) parts.push(`ICAO: ${icao}`);
+      if (aircraft.registration) parts.push(`REG: ${aircraft.registration}`);
+      if (aircraft.aircraftType) parts.push(`Type: ${aircraft.aircraftType}`);
+      parts.push(`Squawk: ${squawk}`);
+      if (aircraft.flight) parts.push(`Flight: ${aircraft.flight}`);
+      lines.push(`    <remarks>${esc(parts.join(" "))}</remarks>`);
+    }
+    // ADS-B receiver metadata
+    const rssiX10 = (aircraft.rssiX10 as number) ?? 0;
+    if (rssiX10 !== 0) {
+      const rssi = rssiX10 / 10.0;
+      let radioTag = `    <_radio rssi="${rssi}"`;
+      if (aircraft.gps) radioTag += ` gps="true"`;
+      lines.push(radioTag + "/>");
+    }
   } else if (shape) {
     emitShape(lines, shape, eventLatI, eventLonI);
   } else if (marker) {
@@ -351,7 +370,7 @@ function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: n
   const prefix = (route.prefix as string) ?? "";
   if (prefix) parts.push(`prefix="${esc(prefix)}"`);
   const strokeWeightX10 = (route.strokeWeightX10 as number) ?? 0;
-  if (strokeWeightX10 > 0) parts.push(`stroke="${Math.floor(strokeWeightX10 / 10)}"`);
+  if (strokeWeightX10 > 0) parts.push(`stroke="${strokeWeightX10 / 10}"`);
   lines.push(parts.length > 0 ? `    <link_attr ${parts.join(" ")}/>` : "    <link_attr/>");
 
   const links = (route.links as Array<Record<string, unknown>>) ?? [];

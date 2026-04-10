@@ -211,6 +211,25 @@ public class CotXmlBuilder
                 if (!string.IsNullOrEmpty(pkt.Aircraft.Category)) tag += $" cat=\"{Esc(pkt.Aircraft.Category)}\"";
                 if (!string.IsNullOrEmpty(pkt.Aircraft.CotHostId)) tag += $" cot_host_id=\"{Esc(pkt.Aircraft.CotHostId)}\"";
                 sb.AppendLine(tag + "/>");
+                // Squawk and aircraft metadata as remarks text
+                if (pkt.Aircraft.Squawk > 0)
+                {
+                    var parts = new List<string>();
+                    if (!string.IsNullOrEmpty(pkt.Aircraft.Icao)) parts.Add($"ICAO: {pkt.Aircraft.Icao}");
+                    if (!string.IsNullOrEmpty(pkt.Aircraft.Registration)) parts.Add($"REG: {pkt.Aircraft.Registration}");
+                    if (!string.IsNullOrEmpty(pkt.Aircraft.AircraftType)) parts.Add($"Type: {pkt.Aircraft.AircraftType}");
+                    parts.Add($"Squawk: {pkt.Aircraft.Squawk}");
+                    if (!string.IsNullOrEmpty(pkt.Aircraft.Flight)) parts.Add($"Flight: {pkt.Aircraft.Flight}");
+                    sb.AppendLine($"    <remarks>{Esc(string.Join(" ", parts))}</remarks>");
+                }
+                // ADS-B receiver metadata
+                if (pkt.Aircraft.RssiX10 != 0)
+                {
+                    var rssi = pkt.Aircraft.RssiX10 / 10.0;
+                    var radioTag = $"    <_radio rssi=\"{rssi}\"";
+                    if (pkt.Aircraft.Gps) radioTag += " gps=\"true\"";
+                    sb.AppendLine(radioTag + "/>");
+                }
                 break;
             }
             case TAKPacketV2.PayloadVariantOneofCase.Shape:
@@ -379,7 +398,7 @@ public class CotXmlBuilder
         if (!string.IsNullOrEmpty(route.Prefix))
             parts.Add($"prefix=\"{Esc(route.Prefix)}\"");
         if (route.StrokeWeightX10 > 0)
-            parts.Add($"stroke=\"{route.StrokeWeightX10 / 10}\"");
+            parts.Add($"stroke=\"{F(route.StrokeWeightX10 / 10.0)}\"");
         sb.AppendLine(parts.Count > 0
             ? $"    <link_attr {string.Join(" ", parts)}/>"
             : "    <link_attr/>");

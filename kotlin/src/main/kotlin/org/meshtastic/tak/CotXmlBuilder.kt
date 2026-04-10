@@ -232,6 +232,25 @@ class CotXmlBuilder {
                     if (payload.cotHostId.isNotEmpty()) sb.append(""" cot_host_id="${esc(payload.cotHostId)}"""")
                     sb.append("/>\n")
                 }
+                // Squawk (transponder code) — emitted as a remarks field since
+                // ATAK parses it from remarks text when no _aircot_ squawk attr.
+                if (payload.squawk > 0) {
+                    val rem = StringBuilder()
+                    if (payload.icao.isNotEmpty()) rem.append("ICAO: ${payload.icao}")
+                    if (payload.registration.isNotEmpty()) rem.append(" REG: ${payload.registration}")
+                    if (payload.aircraftType.isNotEmpty()) rem.append(" Type: ${payload.aircraftType}")
+                    rem.append(" Squawk: ${payload.squawk}")
+                    if (payload.flight.isNotEmpty()) rem.append(" Flight: ${payload.flight}")
+                    sb.append("""    <remarks>${esc(rem.toString().trim())}</remarks>""")
+                    sb.append("\n")
+                }
+                // ADS-B receiver metadata
+                if (payload.rssiX10 != 0) {
+                    val rssi = payload.rssiX10 / 10.0
+                    sb.append("""    <_radio rssi="$rssi"""")
+                    if (payload.gps) sb.append(""" gps="true"""")
+                    sb.append("/>\n")
+                }
             }
             is TakPacketV2Data.Payload.DrawnShape -> {
                 val strokeVal = resolveColor(payload.strokeColor, payload.strokeArgb)
@@ -381,7 +400,7 @@ class CotXmlBuilder {
                     sb.append(""" prefix="${esc(payload.prefix)}"""")
                 }
                 if (payload.strokeWeightX10 > 0) {
-                    val sw = payload.strokeWeightX10 / 10
+                    val sw = payload.strokeWeightX10 / 10.0
                     sb.append(""" stroke="$sw"""")
                 }
                 sb.append("/>\n")
