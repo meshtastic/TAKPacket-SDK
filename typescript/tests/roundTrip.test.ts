@@ -219,6 +219,22 @@ describe("RoundTrip", () => {
     expect(Number(pkt.battery)).toBeGreaterThan(0);
   });
 
+  it("PLI stationary clamps negative speed and course to zero", () => {
+    // Regression for an iOS crash where ATAK's <track speed="-1.0"
+    // course="-1.0"/> sentinel for stationary / unknown targets tripped a
+    // Double -> UInt32 conversion trap in the Swift parser. The proto
+    // field is uint32 on all platforms, so the fix is to clamp negatives
+    // to 0 rather than wrap them into huge unsigned values. The TS parser
+    // additionally strips proto3 zero defaults from the returned object,
+    // so a clamped-to-0 field is absent rather than literally 0 — both
+    // representations encode to the same wire bytes.
+    const pkt = parseCotXml(loadFixtureXml("pli_stationary"));
+    expect((pkt.speed as number | undefined) ?? 0).toBe(0);
+    expect((pkt.course as number | undefined) ?? 0).toBe(0);
+    expect(pkt.callsign).toBe("iPadTAKAware");
+    expect(pkt.pli).toBe(true);
+  });
+
   it("handles uncompressed 0xFF payload", async () => {
     const { getTAKPacketV2Type } = await import("../src/proto.js");
     const TAKPacketV2 = await getTAKPacketV2Type();

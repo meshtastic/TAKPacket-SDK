@@ -147,6 +147,22 @@ final class RoundTripTests: XCTestCase {
         }
     }
 
+    func testPliStationaryClampsNegativeSpeedAndCourse() throws {
+        // Regression for an iOS crash where ATAK's <track speed="-1.0"
+        // course="-1.0"/> sentinel for stationary / unknown targets tripped a
+        // Double -> UInt32 conversion trap in the Swift parser. The proto
+        // field is uint32 on all platforms, so the fix is to clamp negatives
+        // to 0 rather than wrap them into huge unsigned values.
+        let xml = try loadFixture("pli_stationary")
+        let packet = parser.parse(xml)
+        XCTAssertEqual(packet.speed, 0, "Negative speed must clamp to 0")
+        XCTAssertEqual(packet.course, 0, "Negative course must clamp to 0")
+        XCTAssertEqual(packet.callsign, "iPadTAKAware")
+        guard case .pli = packet.payloadVariant else {
+            XCTFail("Expected PLI payload"); return
+        }
+    }
+
     func testUncompressed0xFFRoundTrip() throws {
         var packet = TAKPacketV2()
         packet.cotTypeID = .aFGUC

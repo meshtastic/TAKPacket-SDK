@@ -306,6 +306,22 @@ public class TakTests
         Assert.True(pkt.Battery > 0, "Battery should be > 0");
     }
 
+    [Fact]
+    public void Parse_PliStationary_ClampsNegativeSpeedAndCourse()
+    {
+        // Regression for an iOS crash where ATAK's <track speed="-1.0"
+        // course="-1.0"/> sentinel for stationary / unknown targets tripped a
+        // Double -> UInt32 conversion trap in the Swift parser. The proto
+        // field is uint32 on all platforms; the C# cast `(uint)negativeDouble`
+        // is undefined behavior and typically wraps to a huge value, so the
+        // parser must clamp before the cast.
+        var pkt = _parser.Parse(LoadXml("pli_stationary"));
+        Assert.Equal(0u, pkt.Speed);
+        Assert.Equal(0u, pkt.Course);
+        Assert.Equal("iPadTAKAware", pkt.Callsign);
+        Assert.True(pkt.Pli);
+    }
+
     // === Rebuilt XML ===
 
     [Theory]

@@ -109,6 +109,21 @@ def test_pli_full_all_fields():
     assert pkt.battery > 0
 
 
+def test_pli_stationary_clamps_negative_speed_and_course():
+    """Regression for an iOS crash where ATAK's <track speed="-1.0"
+    course="-1.0"/> sentinel for stationary / unknown targets tripped a
+    Double -> UInt32 conversion trap in the Swift parser. The proto
+    field is uint32 on all platforms, so the fix is to clamp negatives
+    to 0 rather than wrap them into huge unsigned values.
+    """
+    xml = load_fixture_xml("pli_stationary")
+    pkt = parser.parse(xml)
+    assert pkt.speed == 0, "Negative speed must clamp to 0"
+    assert pkt.course == 0, "Negative course must clamp to 0"
+    assert pkt.callsign == "iPadTAKAware"
+    assert pkt.WhichOneof("payload_variant") == "pli"
+
+
 def test_uncompressed_payload_round_trips():
     """Simulate firmware TAK_TRACKER: flags=0xFF + raw protobuf."""
     from meshtastic_tak import atak_pb2
