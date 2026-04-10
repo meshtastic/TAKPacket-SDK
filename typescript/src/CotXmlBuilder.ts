@@ -158,7 +158,28 @@ export function buildCotXml(packet: Record<string, unknown>): string {
       // distinguishes delivered (b-t-f-d) vs read (b-t-f-r).
       lines.push(`    <link uid="${esc(receiptForUid)}" relation="p-p" type="b-t-f"/>`);
     } else {
-      lines.push(`    <remarks>${esc((chat.message as string) ?? "")}</remarks>`);
+      // Reconstruct the full __chat element that ATAK/iTAK needs
+      // for routing and display. GeoChat event UID format:
+      // GeoChat.{senderUid}.{chatroom}.{messageId}
+      const uid = String(packet.uid ?? "");
+      const gcParts = uid.split(".");
+      // split(".") on "GeoChat.sender.chatroom.msgId" → exactly 4 parts
+      // when the chatroom name contains no dots (the standard case).
+      if (gcParts.length >= 4 && gcParts[0] === "GeoChat") {
+        const senderUid = gcParts[1];
+        const msgId = gcParts[gcParts.length - 1];
+        const chatroom = gcParts.slice(2, -1).join(".");
+        const senderCs = (chat.toCallsign as string) || String(packet.callsign ?? "") || "UNKNOWN";
+        const msg = (chat.message as string) ?? "";
+        lines.push(`    <__chat parent="RootContactGroup" groupOwner="false" messageId="${esc(msgId)}" chatroom="${esc(chatroom)}" id="${esc(chatroom)}" senderCallsign="${esc(senderCs)}">`);
+        lines.push(`      <chatgrp uid0="${esc(senderUid)}" uid1="${esc(chatroom)}" id="${esc(chatroom)}"/>`);
+        lines.push(`    </__chat>`);
+        lines.push(`    <link uid="${esc(senderUid)}" type="a-f-G-U-C" relation="p-p"/>`);
+        lines.push(`    <__serverdestination destinations="0.0.0.0:4242:tcp:${esc(senderUid)}"/>`);
+        lines.push(`    <remarks source="BAO.F.ATAK.${esc(senderUid)}" to="${esc(chatroom)}" time="${now}">${esc(msg)}</remarks>`);
+      } else {
+        lines.push(`    <remarks>${esc((chat.message as string) ?? "")}</remarks>`);
+      }
     }
   } else if (aircraft) {
     const icao = aircraft.icao as string ?? "";

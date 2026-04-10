@@ -117,7 +117,40 @@ class CotXmlBuilder:
                     f'relation="p-p" type="b-t-f"/>'
                 )
             else:
-                lines.append(f'    <remarks>{escape(chat.message)}</remarks>')
+                # Reconstruct the full __chat element that ATAK/iTAK needs
+                # for routing and display. GeoChat event UID format:
+                # GeoChat.{senderUid}.{chatroom}.{messageId}
+                gc_parts = packet.uid.split(".", 3)
+                if len(gc_parts) == 4 and gc_parts[0] == "GeoChat":
+                    sender_uid = gc_parts[1]
+                    chatroom = gc_parts[2]
+                    msg_id = gc_parts[3]
+                    sender_cs = (chat.to_callsign or packet.callsign or "UNKNOWN")
+                    lines.append(
+                        f'    <__chat parent="RootContactGroup" groupOwner="false"'
+                        f' messageId="{escape(msg_id)}" chatroom="{escape(chatroom)}"'
+                        f' id="{escape(chatroom)}" senderCallsign="{escape(sender_cs)}">'
+                    )
+                    lines.append(
+                        f'      <chatgrp uid0="{escape(sender_uid)}"'
+                        f' uid1="{escape(chatroom)}" id="{escape(chatroom)}"/>'
+                    )
+                    lines.append('    </__chat>')
+                    lines.append(
+                        f'    <link uid="{escape(sender_uid)}"'
+                        f' type="a-f-G-U-C" relation="p-p"/>'
+                    )
+                    lines.append(
+                        f'    <__serverdestination destinations='
+                        f'"0.0.0.0:4242:tcp:{escape(sender_uid)}"/>'
+                    )
+                    lines.append(
+                        f'    <remarks source="BAO.F.ATAK.{escape(sender_uid)}"'
+                        f' to="{escape(chatroom)}" time="{time_str}">'
+                        f'{escape(chat.message)}</remarks>'
+                    )
+                else:
+                    lines.append(f'    <remarks>{escape(chat.message)}</remarks>')
         elif which == "aircraft":
             ac = packet.aircraft
             if ac.icao:

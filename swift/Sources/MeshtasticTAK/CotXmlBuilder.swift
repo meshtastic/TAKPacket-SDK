@@ -108,7 +108,29 @@ public class CotXmlBuilder {
                 // distinguishes delivered vs read.
                 s += "    <link uid=\"\(esc(chat.receiptForUid))\" relation=\"p-p\" type=\"b-t-f\"/>\n"
             } else {
-                s += "    <remarks>\(esc(chat.message))</remarks>\n"
+                // Reconstruct the full __chat element that ATAK/iTAK needs
+                // for routing and display. GeoChat event UID format:
+                // GeoChat.{senderUid}.{chatroom}.{messageId}
+                let gcParts = packet.uid.split(separator: ".", maxSplits: 3).map(String.init)
+                if gcParts.count == 4 && gcParts[0] == "GeoChat" {
+                    let senderUid = gcParts[1]
+                    let chatroom = gcParts[2]
+                    let msgId = gcParts[3]
+                    let senderCs: String = {
+                        if !chat.toCallsign.isEmpty { return chat.toCallsign }
+                        return packet.callsign.isEmpty ? "UNKNOWN" : packet.callsign
+                    }()
+                    s += "    <__chat parent=\"RootContactGroup\" groupOwner=\"false\""
+                    s += " messageId=\"\(esc(msgId))\" chatroom=\"\(esc(chatroom))\""
+                    s += " id=\"\(esc(chatroom))\" senderCallsign=\"\(esc(senderCs))\">\n"
+                    s += "      <chatgrp uid0=\"\(esc(senderUid))\" uid1=\"\(esc(chatroom))\" id=\"\(esc(chatroom))\"/>\n"
+                    s += "    </__chat>\n"
+                    s += "    <link uid=\"\(esc(senderUid))\" type=\"a-f-G-U-C\" relation=\"p-p\"/>\n"
+                    s += "    <__serverdestination destinations=\"0.0.0.0:4242:tcp:\(esc(senderUid))\"/>\n"
+                    s += "    <remarks source=\"BAO.F.ATAK.\(esc(senderUid))\" to=\"\(esc(chatroom))\" time=\"\(now)\">\(esc(chat.message))</remarks>\n"
+                } else {
+                    s += "    <remarks>\(esc(chat.message))</remarks>\n"
+                }
             }
         case .aircraft(let ac):
             if !ac.icao.isEmpty {

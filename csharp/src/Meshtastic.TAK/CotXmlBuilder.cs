@@ -178,7 +178,29 @@ public class CotXmlBuilder
                 }
                 else
                 {
-                    sb.AppendLine($"    <remarks>{Esc(pkt.Chat.Message)}</remarks>");
+                    // Reconstruct the full __chat element that ATAK/iTAK needs
+                    // for routing and display. GeoChat event UID format:
+                    // GeoChat.{senderUid}.{chatroom}.{messageId}
+                    var gcParts = pkt.Uid.Split('.', 4);
+                    if (gcParts.Length == 4 && gcParts[0] == "GeoChat")
+                    {
+                        var senderUid = gcParts[1];
+                        var chatroom = gcParts[2];
+                        var msgId = gcParts[3];
+                        var senderCs = !string.IsNullOrEmpty(pkt.Chat.ToCallsign)
+                            ? pkt.Chat.ToCallsign
+                            : (!string.IsNullOrEmpty(pkt.Callsign) ? pkt.Callsign : "UNKNOWN");
+                        sb.AppendLine($"    <__chat parent=\"RootContactGroup\" groupOwner=\"false\" messageId=\"{Esc(msgId)}\" chatroom=\"{Esc(chatroom)}\" id=\"{Esc(chatroom)}\" senderCallsign=\"{Esc(senderCs)}\">");
+                        sb.AppendLine($"      <chatgrp uid0=\"{Esc(senderUid)}\" uid1=\"{Esc(chatroom)}\" id=\"{Esc(chatroom)}\"/>");
+                        sb.AppendLine("    </__chat>");
+                        sb.AppendLine($"    <link uid=\"{Esc(senderUid)}\" type=\"a-f-G-U-C\" relation=\"p-p\"/>");
+                        sb.AppendLine($"    <__serverdestination destinations=\"0.0.0.0:4242:tcp:{Esc(senderUid)}\"/>");
+                        sb.AppendLine($"    <remarks source=\"BAO.F.ATAK.{Esc(senderUid)}\" to=\"{Esc(chatroom)}\" time=\"{timeStr}\">{Esc(pkt.Chat.Message)}</remarks>");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"    <remarks>{Esc(pkt.Chat.Message)}</remarks>");
+                    }
                 }
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Aircraft when !string.IsNullOrEmpty(pkt.Aircraft.Icao):

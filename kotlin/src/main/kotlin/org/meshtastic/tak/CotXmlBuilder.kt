@@ -193,8 +193,33 @@ class CotXmlBuilder {
                     sb.append("""    <link uid="${esc(payload.receiptForUid)}" relation="p-p" type="b-t-f"/>""")
                     sb.append("\n")
                 } else {
-                    sb.append("""    <remarks>${esc(payload.message)}</remarks>""")
-                    sb.append("\n")
+                    // Reconstruct the full __chat element that ATAK/iTAK
+                    // needs for routing and display. The GeoChat event UID
+                    // encodes: GeoChat.{senderUid}.{chatroom}.{messageId}
+                    val gcParts = packet.uid.split(".", limit = 4)
+                    if (gcParts.size == 4 && gcParts[0] == "GeoChat") {
+                        val senderUid = gcParts[1]
+                        val chatroom = gcParts[2]
+                        val msgId = gcParts[3]
+                        val senderCs = payload.toCallsign?.ifEmpty { null }
+                            ?: packet.callsign.ifEmpty { "UNKNOWN" }
+                        sb.append("    <__chat parent=\"RootContactGroup\" groupOwner=\"false\"")
+                        sb.append(""" messageId="${esc(msgId)}" chatroom="${esc(chatroom)}"""")
+                        sb.append(""" id="${esc(chatroom)}" senderCallsign="${esc(senderCs)}">""")
+                        sb.append("\n")
+                        sb.append("""      <chatgrp uid0="${esc(senderUid)}" uid1="${esc(chatroom)}" id="${esc(chatroom)}"/>""")
+                        sb.append("\n")
+                        sb.append("    </__chat>\n")
+                        sb.append("""    <link uid="${esc(senderUid)}" type="a-f-G-U-C" relation="p-p"/>""")
+                        sb.append("\n")
+                        sb.append("""    <__serverdestination destinations="0.0.0.0:4242:tcp:${esc(senderUid)}"/>""")
+                        sb.append("\n")
+                        sb.append("""    <remarks source="BAO.F.ATAK.${esc(senderUid)}" to="${esc(chatroom)}" time="$timeStr">${esc(payload.message)}</remarks>""")
+                        sb.append("\n")
+                    } else {
+                        sb.append("""    <remarks>${esc(payload.message)}</remarks>""")
+                        sb.append("\n")
+                    }
                 }
             }
             is TakPacketV2Data.Payload.Aircraft -> {
