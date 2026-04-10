@@ -539,10 +539,16 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             packet.battery = UInt32(attributes["battery"] ?? "0") ?? 0
 
         case "track":
+            // ATAK stationary targets emit speed="-1.0" / course="-1.0" as a
+            // sentinel for "unknown / not moving". The proto field is uint32
+            // (cm/s for speed, degrees×100 for course), so a naive
+            // UInt32(spd * 100) call on a negative Double traps with
+            // "value cannot be converted to UInt32". Clamp to 0 and round
+            // to preserve precision on legitimate positive values.
             let spd = Double(attributes["speed"] ?? "0") ?? 0
             let crs = Double(attributes["course"] ?? "0") ?? 0
-            packet.speed = UInt32(spd * 100)
-            packet.course = UInt32(crs * 100)
+            packet.speed = UInt32(max(0, (spd * 100).rounded()))
+            packet.course = UInt32(max(0, (crs * 100).rounded()))
 
         case "takv":
             packet.takVersion = attributes["version"] ?? ""

@@ -399,8 +399,12 @@ class CotXmlParser:
                 if elem.get("readiness") == "true":
                     marker_readiness = True
             elif tag == "track":
-                pkt.speed = int(float(elem.get("speed", "0")) * 100)
-                pkt.course = int(float(elem.get("course", "0")) * 100)
+                # Proto field is uint32 (cm/s for speed, deg*100 for course).
+                # ATAK writes speed="-1.0" for stationary / unknown; clamp
+                # negatives to 0 so protobuf serialization doesn't blow up
+                # with an OverflowError or corrupt the wire as 2^32 - N.
+                pkt.speed = max(0, int(float(elem.get("speed", "0")) * 100))
+                pkt.course = max(0, int(float(elem.get("course", "0")) * 100))
             elif tag == "takv":
                 pkt.tak_version = elem.get("version", "")
                 pkt.tak_device = elem.get("device", "")

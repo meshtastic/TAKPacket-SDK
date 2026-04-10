@@ -2,7 +2,7 @@
 
 Shared libraries for converting ATAK Cursor-on-Target (CoT) XML to Meshtastic's TAKPacketV2 protobuf format and compressing it for LoRa transport using zstd dictionary compression.
 
-This SDK is the single source of truth for CoT conversion and compression across all Meshtastic client platforms. Each language implementation produces interoperable compressed payloads, validated by 22 shared test fixtures and 643 cross-platform tests.
+This SDK is the single source of truth for CoT conversion and compression across all Meshtastic client platforms. Each language implementation produces interoperable compressed payloads, validated by 31 shared test fixtures and 868 cross-platform tests.
 
 ## Architecture
 
@@ -10,7 +10,7 @@ This SDK is the single source of truth for CoT conversion and compression across
 flowchart LR
     subgraph "Sending App"
         A["CoT XML\n(~400-2300 bytes)"] -->|CotXmlParser| B["TAKPacketV2\nProtobuf\n(typed variants)"]
-        B -->|TakCompressor| C["Wire Payload\n(median 130B,\nmax 216B)"]
+        B -->|TakCompressor| C["Wire Payload\n(median 113B,\nmax 216B)"]
     end
     C -->|"LoRa / Meshtastic\n(≤237 byte MTU)"| D["Wire Payload"]
     subgraph "Receiving App"
@@ -26,13 +26,16 @@ flowchart LR
 `CotXmlParser` extracts structured fields from a CoT XML event and maps them into a `TAKPacketV2` protobuf message. The parser recognizes all major CoT categories and decomposes each into a strongly-typed `payload_variant` case:
 
 - **PLI** (position location info) — the default for ground units
-- **GeoChat** — team chat with sender/recipient metadata
+- **GeoChat** — team chat with sender/recipient metadata, plus delivered/read receipts
 - **Aircraft track** — ADS-B, military air tracks, with ICAO/reg/flight/category fields
-- **Drawn shapes** — circles, rectangles, polygons, freeform polylines, telestrations, ranging circles, bullseyes
-- **Markers** — spot, waypoint, checkpoint, self-position, 2525 symbols, spot maps, custom icons
+- **Drawn shapes** — circles, rectangles, polygons, freeform polylines, telestrations, ranging circles, bullseyes, ellipses, 2D/3D vehicles
+- **Markers** — spot, waypoint, checkpoint, self-position, 2525 symbols, spot maps, custom icons, mission points (GoTo / IP / CP / OP), image markers
 - **Range-and-bearing lines** — anchor + range + bearing + stroke
 - **Routes** — ordered waypoint + control point sequences with travel method and direction
-- **Delete events, CASEVAC, alerts** — fall into the PLI envelope with their CoT type string
+- **CASEVAC reports** — 9-line MEDEVAC with precedence, patient counts, equipment / terrain bitfields, HLZ marking, security, comms frequency
+- **Emergency alerts** — 911 / troops-in-contact / geo-fence breach / cancel with authoring and cancel-reference UIDs
+- **Tasking requests** — engagement / observation / recon / rescue tasks with priority, status, target, assignee, and note
+- **Delete events** — fall into the PLI envelope with the `t-x-d-d` CoT type string
 
 When a detail element doesn't fit any typed variant, the SDK offers a `raw_detail` fallback via [Smart Compress Mode](#smart-compress-mode).
 
@@ -53,9 +56,9 @@ Two pre-trained zstd dictionaries are used because aircraft and non-aircraft CoT
 
 | Metric | Value |
 |---|---|
-| Total test messages | 22 |
+| Total test messages | 31 |
 | 100% under 237B LoRa MTU | ✅ YES |
-| Median compressed size | **130B** |
+| Median compressed size | **113B** |
 | Median compression ratio | **5.4×** |
 | Worst case | 216B (91% of LoRa MTU — `drawing_telestration`) |
 
@@ -109,11 +112,11 @@ See [`WIRE_FORMAT.md`](WIRE_FORMAT.md) for the full specification including erro
 | 39 | `emergency` | `EmergencyAlert` | `b-a-o-tbl`, `b-a-o-pan`, `b-a-o-opn`, `b-a-g`, `b-a-o-c`, `b-a-o-can` | Emergency / 911 alert |
 | 40 | `task` | `TaskRequest` | `t-s` | Tasking / engagement request |
 
-Every geometry variant uses **delta-encoded** `GeoPoint` vertices (`sint32` offsets from the event anchor) so a 32-vertex telestration clustered inside 100m encodes in ~60 bytes of vertex data instead of ~320 bytes with absolute coordinates. Color fields use a two-field encoding: a `Team` palette enum for the 14 ATAK-standard colors (2 bytes on the wire) plus a `fixed32 _argb` fallback for custom user-picked colors (5 bytes). Round-trip is byte-exact — custom colors are never quantized to the nearest palette entry.
+Every geometry variant uses **delta-encoded** `CotGeoPoint` vertices (`sint32` offsets from the event anchor) so a 32-vertex telestration clustered inside 100m encodes in ~60 bytes of vertex data instead of ~320 bytes with absolute coordinates. Color fields use a two-field encoding: a `Team` palette enum for the 14 ATAK-standard colors (2 bytes on the wire) plus a `fixed32 _argb` fallback for custom user-picked colors (5 bytes). Round-trip is byte-exact — custom colors are never quantized to the nearest palette entry.
 
 ### DrawnShape (tag 34)
 
-Covers seven tactical graphic kinds. The shape's anchor point lives on `TAKPacketV2.latitude_i`/`longitude_i`; geometry vertices are in a repeated `GeoPoint` field delta-encoded from that anchor.
+Covers ten tactical graphic kinds. The shape's anchor point lives on `TAKPacketV2.latitude_i`/`longitude_i`; geometry vertices are in a repeated `CotGeoPoint` field delta-encoded from that anchor.
 
 | Kind value | Name | Wire fields used |
 |---|---|---|
@@ -149,7 +152,7 @@ let packet = parser.parse(drawingPolygonXml)
 if case .shape(let shape) = packet.payloadVariant,
    shape.kind == .polygon {
     for vertex in shape.vertices {
-        // GeoPoint is delta-encoded from the event anchor.
+        // CotGeoPoint is delta-encoded from the event anchor.
         let lat = Double(packet.latitudeI + vertex.latDeltaI) / 1e7
         let lon = Double(packet.longitudeI + vertex.lonDeltaI) / 1e7
         print("  (\(lat), \(lon))")
@@ -159,7 +162,7 @@ if case .shape(let shape) = packet.payloadVariant,
 
 ### Marker (tag 35)
 
-Fixed markers with a `Kind` enum covering the common ATAK categories. `iconset` holds the full iconset path verbatim (no prefix stripping) — round-trip works for `COT_MAPPING_SPOTMAP/…`, `COT_MAPPING_2525B/…`, and custom `UUID/group/icon.png` paths.
+Fixed markers with a `Kind` enum covering the common ATAK categories plus the mission-point set that ATAK CIV added in 4.x (GoTo / Initial Point / Contact Point / Observation Post) and standalone image markers. `iconset` holds the full iconset path verbatim (no prefix stripping) — round-trip works for `COT_MAPPING_SPOTMAP/…`, `COT_MAPPING_2525B/…`, and custom `UUID/group/icon.png` paths.
 
 | Kind value | Name | Typical CoT type |
 |---|---|---|
@@ -189,7 +192,7 @@ if packet.HasField("marker"):
 
 ### RangeAndBearing (tag 36)
 
-Single-leg range-and-bearing line. The anchor endpoint is a `GeoPoint` delta-encoded from the event point, so an anchor identical to the event (common for self-anchored RAB) encodes in zero bytes.
+Single-leg range-and-bearing line. The anchor endpoint is a `CotGeoPoint` delta-encoded from the event point, so an anchor identical to the event (common for self-anchored RAB) encodes in zero bytes.
 
 **TypeScript — extract range, bearing, and reconstruct the anchor:**
 ```typescript
@@ -258,20 +261,21 @@ val packet = TakPacketV2Data(
     cotTypeId = CotTypeMapper.typeToEnum("b-r-f-h-c"),
     how = CotTypeMapper.howToEnum("h-g-i-g-o"),
     callsign = "MEDEVAC-1",
+    uid = "medevac-01",
     latitudeI = (18.1 * 1e7).roundToInt(),
     longitudeI = (140.1 * 1e7).roundToInt(),
     payload = TakPacketV2Data.Payload.CasevacReport(
         precedence = CotXmlParser.PRECEDENCE_URGENT,
         litterPatients = 2,
         ambulatoryPatients = 1,
-        equipmentFlags = 0x02 or 0x04,  // hoist + extraction
+        equipmentFlags = 0x02 or 0x04,       // hoist + extraction
         security = CotXmlParser.SECURITY_POSSIBLE_ENEMY,
         hlzMarking = CotXmlParser.HLZ_MARKING_SMOKE,
         zoneMarker = "Green smoke",
         frequency = "38.90",
     ),
 )
-val wire = TakCompressor().compress(TakPacketV2Serializer.toProto(packet))
+val wire = TakCompressor().compress(packet)  // ~99B, well under LoRa MTU
 ```
 
 ### EmergencyAlert (tag 39)

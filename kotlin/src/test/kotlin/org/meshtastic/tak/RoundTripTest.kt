@@ -157,6 +157,22 @@ class RoundTripTest {
     }
 
     @Test
+    fun `PLI stationary clamps negative speed and course to zero`() {
+        // Regression for an iOS crash where ATAK's <track speed="-1.0"
+        // course="-1.0"/> sentinel for stationary / unknown targets tripped a
+        // Double -> UInt32 conversion trap in the Swift parser. The proto
+        // field is uint32 on all platforms, so the fix is to clamp negatives
+        // to 0 rather than wrap them into huge unsigned values.
+        val xml = loadFixture("pli_stationary.xml")
+        val packet = parser.parse(xml)
+
+        assertEquals(0, packet.speed, "Negative speed must clamp to 0")
+        assertEquals(0, packet.course, "Negative course must clamp to 0")
+        assertEquals("iPadTAKAware", packet.callsign)
+        assertTrue(packet.payload is TakPacketV2Data.Payload.Pli)
+    }
+
+    @Test
     fun `PLI full parses all fields`() {
         val xml = loadFixture("pli_full.xml")
         val packet = parser.parse(xml)

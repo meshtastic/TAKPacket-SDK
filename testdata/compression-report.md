@@ -4,9 +4,9 @@ Generated: 2026-04-09 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 ## Summary
 | Metric | Value |
 |--------|-------|
-| Total test messages | 31 |
+| Total test messages | 32 |
 | 100% under 237B | YES |
-| Median compressed size | 113B |
+| Median compressed size | 115B |
 | Median compression ratio | 5.4x |
 | Worst case | 216B (91% of LoRa MTU) |
 
@@ -37,6 +37,7 @@ Generated: 2026-04-09 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 | marker_tank | a-h-G-E-V-A-T | 698B | 137B | 111B | 6.3x | non-aircraft |
 | pli_basic | a-f-G-U-C | 446B | 64B | 62B | 7.2x | non-aircraft |
 | pli_full | a-f-G-U-C | 754B | 192B | 140B | 5.4x | non-aircraft |
+| pli_stationary | a-f-G-U-C | 620B | 151B | 140B | 4.4x | non-aircraft |
 | pli_webtak | a-f-G-U-C-I | 668B | 191B | 152B | 4.4x | non-aircraft |
 | ranging_bullseye | u-r-b-bullseye | 767B | 111B | 125B | 6.1x | non-aircraft |
 | ranging_circle | u-r-b-c-c | 669B | 109B | 123B | 5.4x | non-aircraft |
@@ -71,6 +72,7 @@ geochat_simple        128B |###########################
 marker_2525           135B |############################
 marker_spot           140B |#############################
 pli_full              140B |#############################
+pli_stationary        140B |#############################
 drawing_rectangle     151B |###############################
 pli_webtak            152B |################################
 drawing_polygon       154B |################################

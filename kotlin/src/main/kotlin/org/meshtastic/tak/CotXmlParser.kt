@@ -962,8 +962,13 @@ class CotXmlParser {
             latitudeI = (lat * 1e7).roundToInt(),
             longitudeI = (lon * 1e7).roundToInt(),
             altitude = hae.roundToInt(),
-            speed = (speed * 100).roundToInt(),   // m/s -> cm/s
-            course = (course * 100).roundToInt(),  // degrees -> degrees*100
+            // Proto type is uint32 (cm/s / deg×100). ATAK emits `speed=-1.0`
+            // as a stationary/unknown sentinel — negatives would corrupt the
+            // wire as a huge unsigned value when the serializer crosses the
+            // Int→uint32 boundary. Clamp here so only non-negative values
+            // ever leave the parser.
+            speed = maxOf(0, (speed * 100).roundToInt()),   // m/s -> cm/s
+            course = maxOf(0, (course * 100).roundToInt()),  // degrees -> degrees*100
             battery = battery,
             geoSrc = parseGeoSrc(geoSrc),
             altSrc = parseGeoSrc(altSrc),

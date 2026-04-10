@@ -399,8 +399,15 @@ public class CotXmlParser
                     if (el.Attribute("readiness")?.Value == "true") markerReadiness = true;
                     break;
                 case "track":
-                    pkt.Speed = (uint)(double.Parse(el.Attribute("speed")?.Value ?? "0") * 100);
-                    pkt.Course = (uint)(double.Parse(el.Attribute("course")?.Value ?? "0") * 100);
+                    // Proto field is uint32 (cm/s for speed, deg*100 for
+                    // course). ATAK emits speed="-1.0" for stationary /
+                    // unknown targets; casting a negative double to uint
+                    // in C# is undefined behavior (typically wraps to a
+                    // huge value). Clamp to 0 first.
+                    var spdCs = double.Parse(el.Attribute("speed")?.Value ?? "0") * 100;
+                    var crsCs = double.Parse(el.Attribute("course")?.Value ?? "0") * 100;
+                    pkt.Speed = (uint)Math.Max(0, Math.Round(spdCs));
+                    pkt.Course = (uint)Math.Max(0, Math.Round(crsCs));
                     break;
                 case "takv":
                     pkt.TakVersion = el.Attribute("version")?.Value ?? "";

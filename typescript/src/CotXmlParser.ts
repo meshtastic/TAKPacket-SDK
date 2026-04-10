@@ -284,8 +284,12 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
     latitudeI,
     longitudeI,
     altitude: Math.round(parseFloat(point["@_hae"] ?? "0")),
-    speed: Math.round(parseFloat(track["@_speed"] ?? "0") * 100),
-    course: Math.round(parseFloat(track["@_course"] ?? "0") * 100),
+    // Proto field is uint32 (cm/s for speed, deg*100 for course). ATAK
+    // writes speed="-1.0" for stationary / unknown targets; protobufjs
+    // silently wraps a negative number to 2^32 - N on the wire, which
+    // corrupts round-trip. Clamp here instead.
+    speed: Math.max(0, Math.round(parseFloat(track["@_speed"] ?? "0") * 100)),
+    course: Math.max(0, Math.round(parseFloat(track["@_course"] ?? "0") * 100)),
     battery: parseInt(status["@_battery"] ?? "0") || 0,
     geoSrc: GEO_SRC[precision["@_geopointsrc"]] ?? 0,
     altSrc: GEO_SRC[precision["@_altsrc"]] ?? 0,
