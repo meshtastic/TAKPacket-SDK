@@ -199,6 +199,95 @@ public class TakTests
     }
 
     [Fact]
+    public void Parse_CasevacMedlineFullFields()
+    {
+        var pkt = _parser.Parse(LoadXml("casevac_medline"));
+        Assert.NotNull(pkt.Casevac);
+        var c = pkt.Casevac;
+        Assert.Equal(CasevacReport.Types.Precedence.Urgent, c.Precedence);
+        Assert.True(c.LitterPatients > 0);
+        Assert.True((c.EquipmentFlags & 0x02) == 0x02, "hoist flag must round-trip");
+        Assert.NotEqual(CasevacReport.Types.HlzMarking.Unspecified, c.HlzMarking);
+        Assert.Equal("38.90", c.Frequency);
+    }
+
+    [Fact]
+    public void Parse_Emergency911()
+    {
+        var pkt = _parser.Parse(LoadXml("emergency_911"));
+        Assert.NotNull(pkt.Emergency);
+        Assert.Equal(EmergencyAlert.Types.Type.Alert911, pkt.Emergency.Type);
+        Assert.NotEmpty(pkt.Emergency.AuthoringUid);
+    }
+
+    [Fact]
+    public void Parse_EmergencyCancel()
+    {
+        var pkt = _parser.Parse(LoadXml("emergency_cancel"));
+        Assert.NotNull(pkt.Emergency);
+        Assert.Equal(EmergencyAlert.Types.Type.Cancel, pkt.Emergency.Type);
+    }
+
+    [Fact]
+    public void Parse_TaskEngage()
+    {
+        var pkt = _parser.Parse(LoadXml("task_engage"));
+        Assert.NotNull(pkt.Task);
+        var t = pkt.Task;
+        Assert.Equal("engage", t.TaskType);
+        Assert.Equal("target-01", t.TargetUid);
+        Assert.Equal("ANDROID-0000000000000005", t.AssigneeUid);
+        Assert.Equal(TaskRequest.Types.Priority.High, t.Priority);
+        Assert.Equal(TaskRequest.Types.Status.Pending, t.Status);
+        Assert.Equal("cover by fire", t.Note);
+    }
+
+    [Fact]
+    public void Parse_ChatReceiptDelivered()
+    {
+        var pkt = _parser.Parse(LoadXml("chat_receipt_delivered"));
+        Assert.NotNull(pkt.Chat);
+        Assert.Equal(GeoChat.Types.ReceiptType.Delivered, pkt.Chat.ReceiptType);
+        Assert.NotEmpty(pkt.Chat.ReceiptForUid);
+    }
+
+    [Fact]
+    public void Parse_ChatReceiptRead()
+    {
+        var pkt = _parser.Parse(LoadXml("chat_receipt_read"));
+        Assert.NotNull(pkt.Chat);
+        Assert.Equal(GeoChat.Types.ReceiptType.Read, pkt.Chat.ReceiptType);
+        Assert.NotEmpty(pkt.Chat.ReceiptForUid);
+    }
+
+    [Fact]
+    public void Parse_DrawingEllipse()
+    {
+        var pkt = _parser.Parse(LoadXml("drawing_ellipse"));
+        Assert.NotNull(pkt.Shape);
+        Assert.Equal(DrawnShape.Types.Kind.Ellipse, pkt.Shape.Kind);
+        Assert.True(pkt.Shape.MajorCm > 0);
+        Assert.True(pkt.Shape.MinorCm > 0);
+    }
+
+    [Fact]
+    public void Parse_MarkerGoto()
+    {
+        var pkt = _parser.Parse(LoadXml("marker_goto"));
+        Assert.NotNull(pkt.Marker);
+        Assert.Equal(Marker.Types.Kind.GoToPoint, pkt.Marker.Kind);
+    }
+
+    [Fact]
+    public void Parse_MarkerTank_UsesNumericCotTypeId()
+    {
+        var pkt = _parser.Parse(LoadXml("marker_tank"));
+        // a-h-G-E-V-A-T → one of the new 2525 tank enum entries (82+)
+        Assert.True((int)pkt.CotTypeId >= 82);
+        Assert.Empty(pkt.CotTypeStr);
+    }
+
+    [Fact]
     public void Parse_AlertTic()
     {
         var pkt = _parser.Parse(LoadXml("alert_tic"));

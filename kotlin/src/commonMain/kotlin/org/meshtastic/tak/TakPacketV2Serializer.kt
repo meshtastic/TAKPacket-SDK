@@ -2,10 +2,12 @@ package org.meshtastic.tak
 
 import okio.ByteString.Companion.toByteString
 import org.meshtastic.proto.AircraftTrack
+import org.meshtastic.proto.CasevacReport
 import org.meshtastic.proto.CotGeoPoint
 import org.meshtastic.proto.CotHow
 import org.meshtastic.proto.CotType
 import org.meshtastic.proto.DrawnShape
+import org.meshtastic.proto.EmergencyAlert
 import org.meshtastic.proto.GeoChat
 import org.meshtastic.proto.GeoPointSource
 import org.meshtastic.proto.Marker
@@ -13,6 +15,7 @@ import org.meshtastic.proto.MemberRole
 import org.meshtastic.proto.RangeAndBearing
 import org.meshtastic.proto.Route
 import org.meshtastic.proto.TAKPacketV2
+import org.meshtastic.proto.TaskRequest
 import org.meshtastic.proto.Team
 
 /**
@@ -30,6 +33,9 @@ object TakPacketV2Serializer {
         var markerPayload: Marker? = null
         var rabPayload: RangeAndBearing? = null
         var routePayload: Route? = null
+        var casevacPayload: CasevacReport? = null
+        var emergencyPayload: EmergencyAlert? = null
+        var taskPayload: TaskRequest? = null
 
         when (val payload = data.payload) {
             is TakPacketV2Data.Payload.Pli -> {
@@ -40,6 +46,9 @@ object TakPacketV2Serializer {
                     message = payload.message,
                     to = payload.to ?: "",
                     to_callsign = payload.toCallsign ?: "",
+                    receipt_for_uid = payload.receiptForUid,
+                    receipt_type = GeoChat.ReceiptType.fromValue(payload.receiptType)
+                        ?: GeoChat.ReceiptType.ReceiptType_None,
                 )
             }
             is TakPacketV2Data.Payload.Aircraft -> {
@@ -130,6 +139,48 @@ object TakPacketV2Serializer {
                     },
                 )
             }
+            is TakPacketV2Data.Payload.CasevacReport -> {
+                casevacPayload = CasevacReport(
+                    precedence = CasevacReport.Precedence.fromValue(payload.precedence)
+                        ?: CasevacReport.Precedence.Precedence_Unspecified,
+                    equipment_flags = payload.equipmentFlags,
+                    litter_patients = payload.litterPatients,
+                    ambulatory_patients = payload.ambulatoryPatients,
+                    security = CasevacReport.Security.fromValue(payload.security)
+                        ?: CasevacReport.Security.Security_Unspecified,
+                    hlz_marking = CasevacReport.HlzMarking.fromValue(payload.hlzMarking)
+                        ?: CasevacReport.HlzMarking.HlzMarking_Unspecified,
+                    zone_marker = payload.zoneMarker,
+                    us_military = payload.usMilitary,
+                    us_civilian = payload.usCivilian,
+                    non_us_military = payload.nonUsMilitary,
+                    non_us_civilian = payload.nonUsCivilian,
+                    epw = payload.epw,
+                    child = payload.child,
+                    terrain_flags = payload.terrainFlags,
+                    frequency = payload.frequency,
+                )
+            }
+            is TakPacketV2Data.Payload.EmergencyAlert -> {
+                emergencyPayload = EmergencyAlert(
+                    type = EmergencyAlert.Type.fromValue(payload.type)
+                        ?: EmergencyAlert.Type.Type_Unspecified,
+                    authoring_uid = payload.authoringUid,
+                    cancel_reference_uid = payload.cancelReferenceUid,
+                )
+            }
+            is TakPacketV2Data.Payload.TaskRequest -> {
+                taskPayload = TaskRequest(
+                    task_type = payload.taskType,
+                    target_uid = payload.targetUid,
+                    assignee_uid = payload.assigneeUid,
+                    priority = TaskRequest.Priority.fromValue(payload.priority)
+                        ?: TaskRequest.Priority.Priority_Unspecified,
+                    status = TaskRequest.Status.fromValue(payload.status)
+                        ?: TaskRequest.Status.Status_Unspecified,
+                    note = payload.note,
+                )
+            }
             is TakPacketV2Data.Payload.None -> { /* all payloads remain null */ }
         }
 
@@ -165,6 +216,9 @@ object TakPacketV2Serializer {
             marker = markerPayload,
             rab = rabPayload,
             route = routePayload,
+            casevac = casevacPayload,
+            emergency = emergencyPayload,
+            task = taskPayload,
         )
 
         return proto.encode()
@@ -178,6 +232,8 @@ object TakPacketV2Serializer {
                 message = proto.chat!!.message,
                 to = proto.chat!!.to?.ifEmpty { null },
                 toCallsign = proto.chat!!.to_callsign?.ifEmpty { null },
+                receiptForUid = proto.chat!!.receipt_for_uid,
+                receiptType = proto.chat!!.receipt_type.value,
             )
             proto.aircraft != null -> TakPacketV2Data.Payload.Aircraft(
                 icao = proto.aircraft!!.icao,
@@ -260,6 +316,45 @@ object TakPacketV2Serializer {
                     parentType = marker.parent_type,
                     parentCallsign = marker.parent_callsign,
                     iconset = marker.iconset,
+                )
+            }
+            proto.casevac != null -> {
+                val casevac = proto.casevac!!
+                TakPacketV2Data.Payload.CasevacReport(
+                    precedence = casevac.precedence.value,
+                    equipmentFlags = casevac.equipment_flags,
+                    litterPatients = casevac.litter_patients,
+                    ambulatoryPatients = casevac.ambulatory_patients,
+                    security = casevac.security.value,
+                    hlzMarking = casevac.hlz_marking.value,
+                    zoneMarker = casevac.zone_marker,
+                    usMilitary = casevac.us_military,
+                    usCivilian = casevac.us_civilian,
+                    nonUsMilitary = casevac.non_us_military,
+                    nonUsCivilian = casevac.non_us_civilian,
+                    epw = casevac.epw,
+                    child = casevac.child,
+                    terrainFlags = casevac.terrain_flags,
+                    frequency = casevac.frequency,
+                )
+            }
+            proto.emergency != null -> {
+                val emergency = proto.emergency!!
+                TakPacketV2Data.Payload.EmergencyAlert(
+                    type = emergency.type.value,
+                    authoringUid = emergency.authoring_uid,
+                    cancelReferenceUid = emergency.cancel_reference_uid,
+                )
+            }
+            proto.task != null -> {
+                val task = proto.task!!
+                TakPacketV2Data.Payload.TaskRequest(
+                    taskType = task.task_type,
+                    targetUid = task.target_uid,
+                    assigneeUid = task.assignee_uid,
+                    priority = task.priority.value,
+                    status = task.status.value,
+                    note = task.note,
                 )
             }
             proto.raw_detail != null -> TakPacketV2Data.Payload.RawDetail(proto.raw_detail!!.toByteArray())

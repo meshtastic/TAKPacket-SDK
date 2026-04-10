@@ -24,12 +24,43 @@ const BEARING_REF_NAMES: Record<number, string> = { 1: "M", 2: "T", 3: "G" };
 const SHAPE_KIND_CIRCLE = 1;
 const SHAPE_KIND_RANGING_CIRCLE = 6;
 const SHAPE_KIND_BULLSEYE = 7;
+const SHAPE_KIND_ELLIPSE = 8;
 
 // DrawnShape.StyleMode
 const STYLE_UNSPECIFIED = 0;
 const STYLE_STROKE_ONLY = 1;
 const STYLE_FILL_ONLY = 2;
 const STYLE_STROKE_AND_FILL = 3;
+
+// --- CasevacReport reverse lookups (mirror CotXmlParser maps) -----------
+const PRECEDENCE_INT_TO_NAME: Record<number, string> = {
+  1: "Urgent", 2: "Urgent Surgical", 3: "Priority",
+  4: "Routine", 5: "Convenience",
+};
+const HLZ_MARKING_INT_TO_NAME: Record<number, string> = {
+  1: "Panels", 2: "Pyro", 3: "Smoke", 4: "None", 5: "Other",
+};
+const SECURITY_INT_TO_NAME: Record<number, string> = {
+  1: "N", 2: "P", 3: "E", 4: "X",
+};
+
+// --- EmergencyAlert reverse lookups ------------------------------------
+const EMERGENCY_TYPE_INT_TO_NAME: Record<number, string> = {
+  1: "911 Alert", 2: "Ring The Bell", 3: "In Contact",
+  4: "Geo-fence Breached", 5: "Custom", 6: "Cancel",
+};
+
+// --- TaskRequest reverse lookups ---------------------------------------
+const TASK_PRIORITY_INT_TO_NAME: Record<number, string> = {
+  1: "Low", 2: "Normal", 3: "High", 4: "Critical",
+};
+const TASK_STATUS_INT_TO_NAME: Record<number, string> = {
+  1: "Pending", 2: "Acknowledged", 3: "In Progress",
+  4: "Completed", 5: "Cancelled",
+};
+
+// --- GeoChat ReceiptType -----------------------------------------------
+const RECEIPT_TYPE_NONE = 0;
 
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -106,17 +137,29 @@ export function buildCotXml(packet: Record<string, unknown>): string {
   if (deviceCallsign) lines.push(`    <uid Droid="${esc(deviceCallsign)}"/>`);
 
   // Payload-specific
-  const chat = packet.chat as Record<string, string> | undefined;
+  const chat = packet.chat as Record<string, unknown> | undefined;
   const aircraft = packet.aircraft as Record<string, unknown> | undefined;
   const shape = packet.shape as Record<string, unknown> | undefined;
   const marker = packet.marker as Record<string, unknown> | undefined;
   const rab = packet.rab as Record<string, unknown> | undefined;
   const route = packet.route as Record<string, unknown> | undefined;
+  const casevac = packet.casevac as Record<string, unknown> | undefined;
+  const emergency = packet.emergency as Record<string, unknown> | undefined;
+  const task = packet.task as Record<string, unknown> | undefined;
   const eventLatI = (packet.latitudeI as number) ?? 0;
   const eventLonI = (packet.longitudeI as number) ?? 0;
 
   if (chat) {
-    lines.push(`    <remarks>${esc(chat.message ?? "")}</remarks>`);
+    const receiptType = (chat.receiptType as number) ?? RECEIPT_TYPE_NONE;
+    const receiptForUid = (chat.receiptForUid as string) ?? "";
+    if (receiptType !== RECEIPT_TYPE_NONE && receiptForUid) {
+      // Delivered / read receipt: emit a <link> pointing at the
+      // original message UID. The envelope cot_type_id already
+      // distinguishes delivered (b-t-f-d) vs read (b-t-f-r).
+      lines.push(`    <link uid="${esc(receiptForUid)}" relation="p-p" type="b-t-f"/>`);
+    } else {
+      lines.push(`    <remarks>${esc((chat.message as string) ?? "")}</remarks>`);
+    }
   } else if (aircraft) {
     const icao = aircraft.icao as string ?? "";
     if (icao) {
@@ -135,6 +178,12 @@ export function buildCotXml(packet: Record<string, unknown>): string {
     emitRab(lines, rab, eventLatI, eventLonI);
   } else if (route) {
     emitRoute(lines, route, eventLatI, eventLonI);
+  } else if (casevac) {
+    emitCasevac(lines, casevac);
+  } else if (emergency) {
+    emitEmergency(lines, emergency);
+  } else if (task) {
+    emitTask(lines, task);
   } else if (packet.rawDetail) {
     // Fallback path (`TakCompressor.compressBestOf`): raw bytes of the
     // original <detail> element are shipped verbatim and re-emitted
@@ -173,7 +222,12 @@ function emitShape(lines: string[], shape: Record<string, unknown>, eventLatI: n
   const minorCm = (shape.minorCm as number) ?? 0;
   const angleDeg = (shape.angleDeg as number) ?? 360;
 
-  if (kind === SHAPE_KIND_CIRCLE || kind === SHAPE_KIND_RANGING_CIRCLE || kind === SHAPE_KIND_BULLSEYE) {
+  if (
+    kind === SHAPE_KIND_CIRCLE ||
+    kind === SHAPE_KIND_RANGING_CIRCLE ||
+    kind === SHAPE_KIND_BULLSEYE ||
+    kind === SHAPE_KIND_ELLIPSE
+  ) {
     if (majorCm > 0 || minorCm > 0) {
       lines.push("    <shape>");
       lines.push(`      <ellipse major="${majorCm / 100}" minor="${minorCm / 100}" angle="${angleDeg}"/>`);
@@ -293,5 +347,114 @@ function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: n
     if (callsign) linkParts.push(`callsign="${esc(callsign)}"`);
     linkParts.push(`point="${llat},${llon}"`);
     lines.push(`    <link ${linkParts.join(" ")}/>`);
+  }
+}
+
+function emitCasevac(lines: string[], casevac: Record<string, unknown>): void {
+  const parts: string[] = [];
+  const precedence = (casevac.precedence as number) ?? 0;
+  const precedenceName = PRECEDENCE_INT_TO_NAME[precedence];
+  if (precedenceName) parts.push(`precedence="${precedenceName}"`);
+
+  // Equipment bitfield flags
+  const eq = (casevac.equipmentFlags as number) ?? 0;
+  if (eq & 0x01) parts.push(`none="true"`);
+  if (eq & 0x02) parts.push(`hoist="true"`);
+  if (eq & 0x04) parts.push(`extraction_equipment="true"`);
+  if (eq & 0x08) parts.push(`ventilator="true"`);
+  if (eq & 0x10) parts.push(`blood="true"`);
+
+  const litter = (casevac.litterPatients as number) ?? 0;
+  if (litter > 0) parts.push(`litter="${litter}"`);
+  const ambulatory = (casevac.ambulatoryPatients as number) ?? 0;
+  if (ambulatory > 0) parts.push(`ambulatory="${ambulatory}"`);
+
+  const security = (casevac.security as number) ?? 0;
+  const securityName = SECURITY_INT_TO_NAME[security];
+  if (securityName) parts.push(`security="${securityName}"`);
+
+  const hlz = (casevac.hlzMarking as number) ?? 0;
+  const hlzName = HLZ_MARKING_INT_TO_NAME[hlz];
+  if (hlzName) parts.push(`hlz_marking="${hlzName}"`);
+
+  const zoneMarker = (casevac.zoneMarker as string) ?? "";
+  if (zoneMarker) parts.push(`zone_prot_marker="${esc(zoneMarker)}"`);
+
+  const usMil = (casevac.usMilitary as number) ?? 0;
+  if (usMil > 0) parts.push(`us_military="${usMil}"`);
+  const usCiv = (casevac.usCivilian as number) ?? 0;
+  if (usCiv > 0) parts.push(`us_civilian="${usCiv}"`);
+  const nonUsMil = (casevac.nonUsMilitary as number) ?? 0;
+  if (nonUsMil > 0) parts.push(`non_us_military="${nonUsMil}"`);
+  const nonUsCiv = (casevac.nonUsCivilian as number) ?? 0;
+  if (nonUsCiv > 0) parts.push(`non_us_civilian="${nonUsCiv}"`);
+  const epw = (casevac.epw as number) ?? 0;
+  if (epw > 0) parts.push(`epw="${epw}"`);
+  const child = (casevac.child as number) ?? 0;
+  if (child > 0) parts.push(`child="${child}"`);
+
+  // Terrain bitfield flags
+  const tf = (casevac.terrainFlags as number) ?? 0;
+  if (tf & 0x01) parts.push(`terrain_slope="true"`);
+  if (tf & 0x02) parts.push(`terrain_rough="true"`);
+  if (tf & 0x04) parts.push(`terrain_loose="true"`);
+  if (tf & 0x08) parts.push(`terrain_trees="true"`);
+  if (tf & 0x10) parts.push(`terrain_wires="true"`);
+  if (tf & 0x20) parts.push(`terrain_other="true"`);
+
+  const frequency = (casevac.frequency as string) ?? "";
+  if (frequency) parts.push(`freq="${esc(frequency)}"`);
+
+  lines.push(parts.length > 0 ? `    <_medevac_ ${parts.join(" ")}/>` : "    <_medevac_/>");
+}
+
+function emitEmergency(lines: string[], emergency: Record<string, unknown>): void {
+  const type = (emergency.type as number) ?? 0;
+  const parts: string[] = [];
+  if (type === 6) {
+    // Cancel: ATAK writes <emergency cancel="true"/> rather than
+    // type="Cancel" so receivers can branch on a boolean.
+    parts.push(`cancel="true"`);
+  } else {
+    const name = EMERGENCY_TYPE_INT_TO_NAME[type];
+    if (name) parts.push(`type="${name}"`);
+  }
+  lines.push(parts.length > 0 ? `    <emergency ${parts.join(" ")}/>` : "    <emergency/>");
+
+  const authoringUid = (emergency.authoringUid as string) ?? "";
+  if (authoringUid) {
+    lines.push(`    <link uid="${esc(authoringUid)}" relation="p-p" type="a-f-G-U-C"/>`);
+  }
+  const cancelReferenceUid = (emergency.cancelReferenceUid as string) ?? "";
+  if (cancelReferenceUid) {
+    lines.push(`    <link uid="${esc(cancelReferenceUid)}" relation="p-p" type="b-a-o-tbl"/>`);
+  }
+}
+
+function emitTask(lines: string[], task: Record<string, unknown>): void {
+  const parts: string[] = [];
+  const taskType = (task.taskType as string) ?? "";
+  if (taskType) parts.push(`type="${esc(taskType)}"`);
+
+  const priority = (task.priority as number) ?? 0;
+  const priorityName = TASK_PRIORITY_INT_TO_NAME[priority];
+  if (priorityName) parts.push(`priority="${priorityName}"`);
+
+  const status = (task.status as number) ?? 0;
+  const statusName = TASK_STATUS_INT_TO_NAME[status];
+  if (statusName) parts.push(`status="${statusName}"`);
+
+  const assigneeUid = (task.assigneeUid as string) ?? "";
+  if (assigneeUid) parts.push(`assignee="${esc(assigneeUid)}"`);
+
+  const note = (task.note as string) ?? "";
+  if (note) parts.push(`note="${esc(note)}"`);
+
+  lines.push(parts.length > 0 ? `    <task ${parts.join(" ")}/>` : "    <task/>");
+
+  // Target link
+  const targetUid = (task.targetUid as string) ?? "";
+  if (targetUid) {
+    lines.push(`    <link uid="${esc(targetUid)}" relation="p-p" type="a-f-G"/>`);
   }
 }

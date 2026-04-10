@@ -35,8 +35,8 @@ class CotTypeMapperTest {
 
     @Test
     fun enumValuesRoundTripThroughString() {
-        // Cover all known enum values including typed geometry types (76..81)
-        for (enumVal in 1..81) {
+        // Cover all known enum values including expanded coverage (82..124)
+        for (enumVal in 1..124) {
             val str = CotTypeMapper.typeToString(enumVal)
             if (str != null) {
                 assertEquals(enumVal, CotTypeMapper.typeToEnum(str),

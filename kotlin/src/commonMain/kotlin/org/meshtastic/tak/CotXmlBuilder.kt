@@ -42,6 +42,40 @@ class CotXmlBuilder {
         private const val SHAPE_KIND_CIRCLE = 1
         private const val SHAPE_KIND_RANGING_CIRCLE = 6
         private const val SHAPE_KIND_BULLSEYE = 7
+        private const val SHAPE_KIND_ELLIPSE = 8
+
+        // --- CasevacReport reverse lookups (mirror CotXmlParser maps) ----
+        private val precedenceIntToName = mapOf(
+            1 to "Urgent", 2 to "Urgent Surgical", 3 to "Priority",
+            4 to "Routine", 5 to "Convenience",
+        )
+        private val hlzMarkingIntToName = mapOf(
+            1 to "Panels", 2 to "Pyro", 3 to "Smoke",
+            4 to "None", 5 to "Other",
+        )
+        private val securityIntToName = mapOf(
+            1 to "N", 2 to "P", 3 to "E", 4 to "X",
+        )
+
+        // --- EmergencyAlert reverse lookups ------------------------------
+        private val emergencyTypeIntToName = mapOf(
+            1 to "911 Alert", 2 to "Ring The Bell", 3 to "In Contact",
+            4 to "Geo-fence Breached", 5 to "Custom", 6 to "Cancel",
+        )
+
+        // --- TaskRequest reverse lookups ---------------------------------
+        private val taskPriorityIntToName = mapOf(
+            1 to "Low", 2 to "Normal", 3 to "High", 4 to "Critical",
+        )
+        private val taskStatusIntToName = mapOf(
+            1 to "Pending", 2 to "Acknowledged", 3 to "In Progress",
+            4 to "Completed", 5 to "Cancelled",
+        )
+
+        // --- GeoChat ReceiptType ----------------------------------------
+        private const val RECEIPT_TYPE_NONE = 0
+        private const val RECEIPT_TYPE_DELIVERED = 1
+        private const val RECEIPT_TYPE_READ = 2
 
         // --- DrawnShape StyleMode values (mirror atak.proto) -------------
         private const val STYLE_UNSPECIFIED = 0
@@ -150,8 +184,16 @@ class CotXmlBuilder {
         // Payload-specific detail elements
         when (val payload = packet.payload) {
             is TakPacketV2Data.Payload.Chat -> {
-                sb.append("""    <remarks>${esc(payload.message)}</remarks>""")
-                sb.append("\n")
+                if (payload.receiptType != RECEIPT_TYPE_NONE && payload.receiptForUid.isNotEmpty()) {
+                    // Delivered / read receipt: emit a <link> pointing at the
+                    // original message UID. The envelope cot_type_id already
+                    // distinguishes delivered (b-t-f-d) vs read (b-t-f-r).
+                    sb.append("""    <link uid="${esc(payload.receiptForUid)}" relation="p-p" type="b-t-f"/>""")
+                    sb.append("\n")
+                } else {
+                    sb.append("""    <remarks>${esc(payload.message)}</remarks>""")
+                    sb.append("\n")
+                }
             }
             is TakPacketV2Data.Payload.Aircraft -> {
                 if (payload.icao.isNotEmpty()) {
@@ -178,7 +220,8 @@ class CotXmlBuilder {
                 // Polyline-like kinds (rectangle, polygon, freeform, telestration) use
                 // top-level <link point="lat,lon"/> siblings that the parser picks up as vertices.
                 val kind = payload.kind
-                if (kind == SHAPE_KIND_CIRCLE || kind == SHAPE_KIND_RANGING_CIRCLE || kind == SHAPE_KIND_BULLSEYE) {
+                if (kind == SHAPE_KIND_CIRCLE || kind == SHAPE_KIND_RANGING_CIRCLE ||
+                    kind == SHAPE_KIND_BULLSEYE || kind == SHAPE_KIND_ELLIPSE) {
                     if (payload.majorCm > 0 || payload.minorCm > 0) {
                         val majorM = payload.majorCm / 100.0
                         val minorM = payload.minorCm / 100.0
@@ -328,6 +371,95 @@ class CotXmlBuilder {
                         sb.append(""" callsign="${esc(link.callsign)}"""")
                     }
                     sb.append(""" point="$llat,$llon"/>""")
+                    sb.append("\n")
+                }
+            }
+            is TakPacketV2Data.Payload.CasevacReport -> {
+                sb.append("    <_medevac_")
+                precedenceIntToName[payload.precedence]?.let {
+                    sb.append(""" precedence="$it"""")
+                }
+                // Equipment bitfield flags
+                if (payload.equipmentFlags and 0x01 != 0) sb.append(""" none="true"""")
+                if (payload.equipmentFlags and 0x02 != 0) sb.append(""" hoist="true"""")
+                if (payload.equipmentFlags and 0x04 != 0) sb.append(""" extraction_equipment="true"""")
+                if (payload.equipmentFlags and 0x08 != 0) sb.append(""" ventilator="true"""")
+                if (payload.equipmentFlags and 0x10 != 0) sb.append(""" blood="true"""")
+                if (payload.litterPatients > 0) sb.append(""" litter="${payload.litterPatients}"""")
+                if (payload.ambulatoryPatients > 0) sb.append(""" ambulatory="${payload.ambulatoryPatients}"""")
+                securityIntToName[payload.security]?.let {
+                    sb.append(""" security="$it"""")
+                }
+                hlzMarkingIntToName[payload.hlzMarking]?.let {
+                    sb.append(""" hlz_marking="$it"""")
+                }
+                if (payload.zoneMarker.isNotEmpty()) {
+                    sb.append(""" zone_prot_marker="${esc(payload.zoneMarker)}"""")
+                }
+                if (payload.usMilitary > 0) sb.append(""" us_military="${payload.usMilitary}"""")
+                if (payload.usCivilian > 0) sb.append(""" us_civilian="${payload.usCivilian}"""")
+                if (payload.nonUsMilitary > 0) sb.append(""" non_us_military="${payload.nonUsMilitary}"""")
+                if (payload.nonUsCivilian > 0) sb.append(""" non_us_civilian="${payload.nonUsCivilian}"""")
+                if (payload.epw > 0) sb.append(""" epw="${payload.epw}"""")
+                if (payload.child > 0) sb.append(""" child="${payload.child}"""")
+                // Terrain bitfield flags
+                if (payload.terrainFlags and 0x01 != 0) sb.append(""" terrain_slope="true"""")
+                if (payload.terrainFlags and 0x02 != 0) sb.append(""" terrain_rough="true"""")
+                if (payload.terrainFlags and 0x04 != 0) sb.append(""" terrain_loose="true"""")
+                if (payload.terrainFlags and 0x08 != 0) sb.append(""" terrain_trees="true"""")
+                if (payload.terrainFlags and 0x10 != 0) sb.append(""" terrain_wires="true"""")
+                if (payload.terrainFlags and 0x20 != 0) sb.append(""" terrain_other="true"""")
+                if (payload.frequency.isNotEmpty()) {
+                    sb.append(""" freq="${esc(payload.frequency)}"""")
+                }
+                sb.append("/>\n")
+            }
+            is TakPacketV2Data.Payload.EmergencyAlert -> {
+                // <emergency type="…"/> element carries the alert type; if
+                // the EmergencyAlert.type is Cancel (6) we emit cancel="true"
+                // to match ATAK's cancel encoding.
+                sb.append("    <emergency")
+                if (payload.type == 6) {
+                    sb.append(""" cancel="true"""")
+                } else {
+                    emergencyTypeIntToName[payload.type]?.let {
+                        sb.append(""" type="$it"""")
+                    }
+                }
+                sb.append("/>\n")
+                // Authoring link — <link uid="…" relation="p-p" type="a-f-G-U-C"/>
+                if (payload.authoringUid.isNotEmpty()) {
+                    sb.append("    <link")
+                    sb.append(""" uid="${esc(payload.authoringUid)}"""")
+                    sb.append(""" relation="p-p" type="a-f-G-U-C"/>""")
+                    sb.append("\n")
+                }
+                if (payload.cancelReferenceUid.isNotEmpty()) {
+                    sb.append("""    <link uid="${esc(payload.cancelReferenceUid)}" relation="p-p" type="b-a-o-tbl"/>""")
+                    sb.append("\n")
+                }
+            }
+            is TakPacketV2Data.Payload.TaskRequest -> {
+                sb.append("    <task")
+                if (payload.taskType.isNotEmpty()) {
+                    sb.append(""" type="${esc(payload.taskType)}"""")
+                }
+                taskPriorityIntToName[payload.priority]?.let {
+                    sb.append(""" priority="$it"""")
+                }
+                taskStatusIntToName[payload.status]?.let {
+                    sb.append(""" status="$it"""")
+                }
+                if (payload.assigneeUid.isNotEmpty()) {
+                    sb.append(""" assignee="${esc(payload.assigneeUid)}"""")
+                }
+                if (payload.note.isNotEmpty()) {
+                    sb.append(""" note="${esc(payload.note)}"""")
+                }
+                sb.append("/>\n")
+                // Target link
+                if (payload.targetUid.isNotEmpty()) {
+                    sb.append("""    <link uid="${esc(payload.targetUid)}" relation="p-p" type="a-f-G"/>""")
                     sb.append("\n")
                 }
             }

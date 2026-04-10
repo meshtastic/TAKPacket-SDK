@@ -28,6 +28,19 @@ public static class CotTypeMapper
         // Typed geometry additions (v2 protocol extension)
         ["u-d-f-m"] = 76, ["u-d-p"] = 77, ["b-m-p-s-m"] = 78, ["b-m-p-c"] = 79,
         ["u-r-b-c-c"] = 80, ["u-r-b-bullseye"] = 81,
+        // Expanded coverage (values 82-124)
+        ["a-f-G-E-V-A"] = 82, ["a-n-A"] = 83,
+        ["a-u-G-U-C-F"] = 84, ["a-n-G-U-C-F"] = 85, ["a-h-G-U-C-F"] = 86, ["a-f-G-U-C-F"] = 87,
+        ["a-u-G-I"] = 88, ["a-n-G-I"] = 89, ["a-h-G-I"] = 90, ["a-f-G-I"] = 91,
+        ["a-u-G-E-X-M"] = 92, ["a-n-G-E-X-M"] = 93, ["a-h-G-E-X-M"] = 94, ["a-f-G-E-X-M"] = 95,
+        ["a-u-S"] = 96, ["a-n-S"] = 97, ["a-h-S"] = 98,
+        ["a-u-G-U-C-I-d"] = 99, ["a-n-G-U-C-I-d"] = 100, ["a-h-G-U-C-I-d"] = 101, ["a-f-G-U-C-I-d"] = 102,
+        ["a-u-G-E-V-A-T"] = 103, ["a-n-G-E-V-A-T"] = 104, ["a-h-G-E-V-A-T"] = 105, ["a-f-G-E-V-A-T"] = 106,
+        ["a-u-G-U-C-I"] = 107, ["a-n-G-U-C-I"] = 108, ["a-h-G-U-C-I"] = 109,
+        ["a-n-G-E-V"] = 110, ["a-h-G-E-V"] = 111, ["a-f-G-E-V"] = 112,
+        ["b-m-p-w-GOTO"] = 113, ["b-m-p-c-ip"] = 114, ["b-m-p-c-cp"] = 115, ["b-m-p-s-p-op"] = 116,
+        ["u-d-v"] = 117, ["u-d-v-m"] = 118, ["u-d-c-e"] = 119,
+        ["b-i-x-i"] = 120, ["b-t-f-d"] = 121, ["b-t-f-r"] = 122, ["b-a-o-c"] = 123, ["t-s"] = 124,
     };
 
     private static readonly Dictionary<int, string> TypeToStr =

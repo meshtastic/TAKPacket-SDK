@@ -159,6 +159,9 @@ export class TakCompressor {
     delete rawPacket.marker;
     delete rawPacket.rab;
     delete rawPacket.route;
+    delete rawPacket.casevac;
+    delete rawPacket.emergency;
+    delete rawPacket.task;
     rawPacket.rawDetail = rawDetailBytes;
 
     const rawWire = await this.compress(rawPacket);

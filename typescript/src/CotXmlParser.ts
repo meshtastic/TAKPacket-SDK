@@ -36,6 +36,9 @@ const SHAPE_KIND_BY_COT_TYPE: Record<string, number> = {
   "u-d-p": 5,          // Polygon
   "u-r-b-c-c": 6,      // RangingCircle
   "u-r-b-bullseye": 7, // Bullseye
+  "u-d-c-e": 8,        // Ellipse
+  "u-d-v": 9,          // Vehicle2D
+  "u-d-v-m": 10,       // Vehicle3D
 };
 
 // DrawnShape.StyleMode constants
@@ -53,17 +56,72 @@ const MARKER_KIND_SELF_POSITION = 4;
 const MARKER_KIND_SYMBOL_2525 = 5;
 const MARKER_KIND_SPOT_MAP = 6;
 const MARKER_KIND_CUSTOM_ICON = 7;
+const MARKER_KIND_GO_TO_POINT = 8;
+const MARKER_KIND_INITIAL_POINT = 9;
+const MARKER_KIND_CONTACT_POINT = 10;
+const MARKER_KIND_OBSERVATION_POST = 11;
+const MARKER_KIND_IMAGE_MARKER = 12;
 
 function markerKindFromCotType(cotType: string, iconset: string): number {
   if (cotType === "b-m-p-s-m") return MARKER_KIND_SPOT;
   if (cotType === "b-m-p-w") return MARKER_KIND_WAYPOINT;
   if (cotType === "b-m-p-c") return MARKER_KIND_CHECKPOINT;
   if (cotType === "b-m-p-s-p-i" || cotType === "b-m-p-s-p-loc") return MARKER_KIND_SELF_POSITION;
+  if (cotType === "b-m-p-w-GOTO") return MARKER_KIND_GO_TO_POINT;
+  if (cotType === "b-m-p-c-ip") return MARKER_KIND_INITIAL_POINT;
+  if (cotType === "b-m-p-c-cp") return MARKER_KIND_CONTACT_POINT;
+  if (cotType === "b-m-p-s-p-op") return MARKER_KIND_OBSERVATION_POST;
+  if (cotType === "b-i-x-i") return MARKER_KIND_IMAGE_MARKER;
   if (iconset.startsWith("COT_MAPPING_2525B")) return MARKER_KIND_SYMBOL_2525;
   if (iconset.startsWith("COT_MAPPING_SPOTMAP")) return MARKER_KIND_SPOT_MAP;
   if (iconset.length > 0) return MARKER_KIND_CUSTOM_ICON;
   return MARKER_KIND_UNSPECIFIED;
 }
+
+// --- CasevacReport / EmergencyAlert / TaskRequest mappings -------------
+
+const PRECEDENCE_MAP: Record<string, number> = {
+  A: 1, URGENT: 1, Urgent: 1,
+  B: 2, "URGENT SURGICAL": 2, "Urgent Surgical": 2,
+  C: 3, PRIORITY: 3, Priority: 3,
+  D: 4, ROUTINE: 4, Routine: 4,
+  E: 5, CONVENIENCE: 5, Convenience: 5,
+};
+const HLZ_MARKING_MAP: Record<string, number> = {
+  Panels: 1, Pyro: 2, Pyrotechnic: 2,
+  Smoke: 3, None: 4, Other: 5,
+};
+const SECURITY_MAP: Record<string, number> = {
+  N: 1, "No Enemy": 1,
+  P: 2, "Possible Enemy": 2,
+  E: 3, "Enemy In Area": 3,
+  X: 4, "Enemy In Armed Contact": 4,
+};
+const EMERGENCY_TYPE_MAP: Record<string, number> = {
+  "911 Alert": 1, "911": 1,
+  "Ring The Bell": 2, "Ring the Bell": 2,
+  "In Contact": 3, "Troops In Contact": 3,
+  "Geo-fence Breached": 4, "Geo Fence Breached": 4,
+  Custom: 5, Cancel: 6,
+};
+const EMERGENCY_TYPE_BY_COT: Record<string, number> = {
+  "b-a-o-tbl": 1, "b-a-o-pan": 2, "b-a-o-opn": 3,
+  "b-a-g": 4, "b-a-o-c": 5, "b-a-o-can": 6,
+};
+const TASK_PRIORITY_MAP: Record<string, number> = {
+  Low: 1, Normal: 2, Medium: 2, High: 3, Critical: 4,
+};
+const TASK_STATUS_MAP: Record<string, number> = {
+  Pending: 1, Acknowledged: 2,
+  InProgress: 3, "In Progress": 3,
+  Completed: 4, Done: 4,
+  Cancelled: 5, Canceled: 5,
+};
+
+// GeoChat ReceiptType
+const RECEIPT_TYPE_NONE = 0;
+const RECEIPT_TYPE_DELIVERED = 1;
+const RECEIPT_TYPE_READ = 2;
 
 /**
  * Extract the inner bytes of the `<detail>` element from a CoT XML event,
@@ -226,8 +284,12 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
     latitudeI,
     longitudeI,
     altitude: Math.round(parseFloat(point["@_hae"] ?? "0")),
-    speed: Math.round(parseFloat(track["@_speed"] ?? "0") * 100),
-    course: Math.round(parseFloat(track["@_course"] ?? "0") * 100),
+    // Proto field is uint32 (cm/s for speed, deg*100 for course). ATAK
+    // writes speed="-1.0" for stationary / unknown targets; protobufjs
+    // silently wraps a negative number to 2^32 - N on the wire, which
+    // corrupts round-trip. Clamp here instead.
+    speed: Math.max(0, Math.round(parseFloat(track["@_speed"] ?? "0") * 100)),
+    course: Math.max(0, Math.round(parseFloat(track["@_course"] ?? "0") * 100)),
     battery: parseInt(status["@_battery"] ?? "0") || 0,
     geoSrc: GEO_SRC[precision["@_geopointsrc"]] ?? 0,
     altSrc: GEO_SRC[precision["@_altsrc"]] ?? 0,
@@ -348,6 +410,90 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
     }
   }
 
+  // --- CasevacReport extraction ----------------------------------------
+  let hasCasevacData = false;
+  let casevacPrecedence = 0;
+  let casevacEquipmentFlags = 0;
+  let casevacLitterPatients = 0;
+  let casevacAmbulatoryPatients = 0;
+  let casevacSecurity = 0;
+  let casevacHlzMarking = 0;
+  let casevacZoneMarker = "";
+  let casevacUsMilitary = 0;
+  let casevacUsCivilian = 0;
+  let casevacNonUsMilitary = 0;
+  let casevacNonUsCivilian = 0;
+  let casevacEpw = 0;
+  let casevacChild = 0;
+  let casevacTerrainFlags = 0;
+  let casevacFrequency = "";
+  const medevacElem = detail._medevac_;
+  if (medevacElem) {
+    hasCasevacData = true;
+    casevacPrecedence = PRECEDENCE_MAP[medevacElem["@_precedence"] ?? ""] ?? 0;
+    let eq = 0;
+    if (medevacElem["@_none"] === "true") eq |= 0x01;
+    if (medevacElem["@_hoist"] === "true") eq |= 0x02;
+    if (medevacElem["@_extraction_equipment"] === "true") eq |= 0x04;
+    if (medevacElem["@_ventilator"] === "true") eq |= 0x08;
+    if (medevacElem["@_blood"] === "true") eq |= 0x10;
+    casevacEquipmentFlags = eq;
+    casevacLitterPatients = parseInt(medevacElem["@_litter"] ?? "0", 10) || 0;
+    casevacAmbulatoryPatients = parseInt(medevacElem["@_ambulatory"] ?? "0", 10) || 0;
+    casevacSecurity = SECURITY_MAP[medevacElem["@_security"] ?? ""] ?? 0;
+    casevacHlzMarking = HLZ_MARKING_MAP[medevacElem["@_hlz_marking"] ?? ""] ?? 0;
+    casevacZoneMarker = medevacElem["@_zone_prot_marker"] ?? "";
+    casevacUsMilitary = parseInt(medevacElem["@_us_military"] ?? "0", 10) || 0;
+    casevacUsCivilian = parseInt(medevacElem["@_us_civilian"] ?? "0", 10) || 0;
+    casevacNonUsMilitary = parseInt(medevacElem["@_non_us_military"] ?? "0", 10) || 0;
+    casevacNonUsCivilian = parseInt(medevacElem["@_non_us_civilian"] ?? "0", 10) || 0;
+    casevacEpw = parseInt(medevacElem["@_epw"] ?? "0", 10) || 0;
+    casevacChild = parseInt(medevacElem["@_child"] ?? "0", 10) || 0;
+    let tf = 0;
+    if (medevacElem["@_terrain_slope"] === "true") tf |= 0x01;
+    if (medevacElem["@_terrain_rough"] === "true") tf |= 0x02;
+    if (medevacElem["@_terrain_loose"] === "true") tf |= 0x04;
+    if (medevacElem["@_terrain_trees"] === "true") tf |= 0x08;
+    if (medevacElem["@_terrain_wires"] === "true") tf |= 0x10;
+    if (medevacElem["@_terrain_other"] === "true") tf |= 0x20;
+    casevacTerrainFlags = tf;
+    casevacFrequency = medevacElem["@_freq"] ?? "";
+  }
+
+  // --- EmergencyAlert extraction ---------------------------------------
+  let hasEmergencyData = false;
+  let emergencyType = 0;
+  const emergencyElem = detail.emergency;
+  if (emergencyElem) {
+    hasEmergencyData = true;
+    const typeAttr = emergencyElem["@_type"] ?? "";
+    emergencyType = EMERGENCY_TYPE_MAP[typeAttr] ?? EMERGENCY_TYPE_BY_COT[typeStr] ?? 0;
+    if (emergencyElem["@_cancel"] === "true") {
+      emergencyType = 6;
+    }
+  }
+
+  // --- TaskRequest extraction ------------------------------------------
+  let hasTaskData = false;
+  let taskTypeTag = "";
+  let taskPriority = 0;
+  let taskStatus = 0;
+  let taskNote = "";
+  let taskAssigneeUid = "";
+  // Task target UID is populated later by the link walker below from
+  // the first p-p link on a t-s event — it references the map item
+  // being tasked, not the task element itself.
+  let taskTargetUid = "";
+  const taskElem = detail.task ?? detail._task_;
+  if (taskElem) {
+    hasTaskData = true;
+    taskTypeTag = taskElem["@_type"] ?? "";
+    taskPriority = TASK_PRIORITY_MAP[taskElem["@_priority"] ?? ""] ?? 0;
+    taskStatus = TASK_STATUS_MAP[taskElem["@_status"] ?? ""] ?? 0;
+    taskNote = taskElem["@_note"] ?? "";
+    taskAssigneeUid = taskElem["@_assignee"] ?? "";
+  }
+
   // Walk <link> children to collect shape vertices, route waypoints,
   // RAB anchor, and marker parent links.
   const verticesAbs: { lat: number; lon: number }[] = [];
@@ -366,6 +512,13 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
   let hasRouteLinks = false;
   let hasRabAnchorLink = false;
   let hasMarkerParentLink = false;
+
+  // Chat receipt / task target / emergency authoring state: populated
+  // from link elements whose context depends on the outer CoT type.
+  let chatReceiptForUid = "";
+  let chatReceiptType = RECEIPT_TYPE_NONE;
+  let emergencyAuthoringUid = "";
+  const emergencyCancelReferenceUid = "";
 
   for (const link of toArray<Record<string, string>>(detail.link)) {
     const linkUid = link["@_uid"];
@@ -417,10 +570,33 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
         }
       }
     } else if (linkUid && relation === "p-p" && linkType) {
-      markerParentUid = linkUid;
-      markerParentType = linkType;
-      if (parentCallsign) markerParentCallsign = parentCallsign;
-      hasMarkerParentLink = true;
+      // Chat receipts: <link uid="…original-message-uid…"
+      // relation="p-p" type="b-t-f"/> on a b-t-f-d or b-t-f-r
+      // event is a receipt pointing at the acknowledged message.
+      if (typeStr === "b-t-f-d" || typeStr === "b-t-f-r") {
+        if (chatReceiptForUid === "") chatReceiptForUid = linkUid;
+        chatReceiptType = typeStr === "b-t-f-d"
+          ? RECEIPT_TYPE_DELIVERED
+          : RECEIPT_TYPE_READ;
+        hasChat = true;
+      } else if (typeStr === "t-s") {
+        // Task target link: first non-self-ref p-p link on
+        // a t-s event is the target being tasked.
+        if (taskTargetUid === "") taskTargetUid = linkUid;
+        hasTaskData = true;
+      } else if (typeStr.startsWith("b-a-")) {
+        // Emergency authoring link: the p-p link on a b-a-*
+        // event references the unit that raised the alert.
+        if (emergencyAuthoringUid === "") emergencyAuthoringUid = linkUid;
+        hasEmergencyData = true;
+      } else {
+        // Marker parent link: no point attribute, p-p relation,
+        // references a parent TAK user by UID + cot type.
+        markerParentUid = linkUid;
+        markerParentType = linkType;
+        if (parentCallsign) markerParentCallsign = parentCallsign;
+        hasMarkerParentLink = true;
+      }
     }
   }
 
@@ -435,11 +611,20 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
   else if (sawStrokeColor) shapeStyle = STYLE_STROKE_ONLY;
   else if (sawFillColor) shapeStyle = STYLE_FILL_ONLY;
 
-  // Payload priority: chat > aircraft > route > rab > shape > marker > pli.
+  // Payload priority: chat > aircraft > route > rab > shape > marker >
+  // casevac > emergency > task > pli.
+  //
+  // Chat wins first to keep parity with pre-v2 behavior; chat receipts
+  // (b-t-f-d / b-t-f-r) ride on the same Chat variant with receipt fields
+  // populated. CASEVAC / emergency / task fall below shape/marker so a
+  // drawing that happens to carry stray medevac attributes doesn't
+  // mis-dispatch.
   if (hasChat) {
-    const chat: Record<string, string> = { message: remarksText };
+    const chat: Record<string, unknown> = { message: remarksText };
     if (chatTo) chat.to = chatTo;
     if (chatToCs) chat.toCallsign = chatToCs;
+    if (chatReceiptForUid) chat.receiptForUid = chatReceiptForUid;
+    if (chatReceiptType !== RECEIPT_TYPE_NONE) chat.receiptType = chatReceiptType;
     pkt.chat = chat;
   } else if (hasAircraft) {
     pkt.aircraft = {
@@ -500,6 +685,41 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
       parentType: markerParentType,
       parentCallsign: markerParentCallsign,
       iconset: markerIconset,
+    });
+  } else if (hasCasevacData) {
+    pkt.casevac = stripZeros({
+      precedence: casevacPrecedence,
+      equipmentFlags: casevacEquipmentFlags,
+      litterPatients: casevacLitterPatients,
+      ambulatoryPatients: casevacAmbulatoryPatients,
+      security: casevacSecurity,
+      hlzMarking: casevacHlzMarking,
+      zoneMarker: casevacZoneMarker,
+      usMilitary: casevacUsMilitary,
+      usCivilian: casevacUsCivilian,
+      nonUsMilitary: casevacNonUsMilitary,
+      nonUsCivilian: casevacNonUsCivilian,
+      epw: casevacEpw,
+      child: casevacChild,
+      terrainFlags: casevacTerrainFlags,
+      frequency: casevacFrequency,
+    });
+  } else if (hasEmergencyData) {
+    pkt.emergency = stripZeros({
+      type: emergencyType !== 0
+        ? emergencyType
+        : (EMERGENCY_TYPE_BY_COT[typeStr] ?? 0),
+      authoringUid: emergencyAuthoringUid,
+      cancelReferenceUid: emergencyCancelReferenceUid,
+    });
+  } else if (hasTaskData) {
+    pkt.task = stripZeros({
+      taskType: taskTypeTag,
+      targetUid: taskTargetUid,
+      assigneeUid: taskAssigneeUid,
+      priority: taskPriority,
+      status: taskStatus,
+      note: taskNote,
     });
   } else {
     pkt.pli = true;

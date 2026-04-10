@@ -42,6 +42,9 @@ _SHAPE_KIND_TELESTRATION = 4
 _SHAPE_KIND_POLYGON = 5
 _SHAPE_KIND_RANGING_CIRCLE = 6
 _SHAPE_KIND_BULLSEYE = 7
+_SHAPE_KIND_ELLIPSE = 8
+_SHAPE_KIND_VEHICLE_2D = 9
+_SHAPE_KIND_VEHICLE_3D = 10
 
 _SHAPE_KIND_BY_COT_TYPE = {
     "u-d-c-c": _SHAPE_KIND_CIRCLE,
@@ -51,6 +54,9 @@ _SHAPE_KIND_BY_COT_TYPE = {
     "u-d-p": _SHAPE_KIND_POLYGON,
     "u-r-b-c-c": _SHAPE_KIND_RANGING_CIRCLE,
     "u-r-b-bullseye": _SHAPE_KIND_BULLSEYE,
+    "u-d-c-e": _SHAPE_KIND_ELLIPSE,
+    "u-d-v": _SHAPE_KIND_VEHICLE_2D,
+    "u-d-v-m": _SHAPE_KIND_VEHICLE_3D,
 }
 
 # DrawnShape.StyleMode constants
@@ -68,6 +74,11 @@ _MARKER_KIND_SELF_POSITION = 4
 _MARKER_KIND_SYMBOL_2525 = 5
 _MARKER_KIND_SPOT_MAP = 6
 _MARKER_KIND_CUSTOM_ICON = 7
+_MARKER_KIND_GO_TO_POINT = 8
+_MARKER_KIND_INITIAL_POINT = 9
+_MARKER_KIND_CONTACT_POINT = 10
+_MARKER_KIND_OBSERVATION_POST = 11
+_MARKER_KIND_IMAGE_MARKER = 12
 
 
 def _marker_kind_from_cot_type(cot_type: str, iconset: str) -> int:
@@ -80,6 +91,16 @@ def _marker_kind_from_cot_type(cot_type: str, iconset: str) -> int:
         return _MARKER_KIND_CHECKPOINT
     if cot_type in ("b-m-p-s-p-i", "b-m-p-s-p-loc"):
         return _MARKER_KIND_SELF_POSITION
+    if cot_type == "b-m-p-w-GOTO":
+        return _MARKER_KIND_GO_TO_POINT
+    if cot_type == "b-m-p-c-ip":
+        return _MARKER_KIND_INITIAL_POINT
+    if cot_type == "b-m-p-c-cp":
+        return _MARKER_KIND_CONTACT_POINT
+    if cot_type == "b-m-p-s-p-op":
+        return _MARKER_KIND_OBSERVATION_POST
+    if cot_type == "b-i-x-i":
+        return _MARKER_KIND_IMAGE_MARKER
     if iconset.startswith("COT_MAPPING_2525B"):
         return _MARKER_KIND_SYMBOL_2525
     if iconset.startswith("COT_MAPPING_SPOTMAP"):
@@ -87,6 +108,55 @@ def _marker_kind_from_cot_type(cot_type: str, iconset: str) -> int:
     if iconset:
         return _MARKER_KIND_CUSTOM_ICON
     return _MARKER_KIND_UNSPECIFIED
+
+
+# CasevacReport enum mappings
+_PRECEDENCE_MAP = {
+    "A": 1, "URGENT": 1, "Urgent": 1,
+    "B": 2, "URGENT SURGICAL": 2, "Urgent Surgical": 2,
+    "C": 3, "PRIORITY": 3, "Priority": 3,
+    "D": 4, "ROUTINE": 4, "Routine": 4,
+    "E": 5, "CONVENIENCE": 5, "Convenience": 5,
+}
+_HLZ_MARKING_MAP = {
+    "Panels": 1, "Pyro": 2, "Pyrotechnic": 2,
+    "Smoke": 3, "None": 4, "Other": 5,
+}
+_SECURITY_MAP = {
+    "N": 1, "No Enemy": 1,
+    "P": 2, "Possible Enemy": 2,
+    "E": 3, "Enemy In Area": 3,
+    "X": 4, "Enemy In Armed Contact": 4,
+}
+
+# EmergencyAlert.Type mappings
+_EMERGENCY_TYPE_MAP = {
+    "911 Alert": 1, "911": 1,
+    "Ring The Bell": 2, "Ring the Bell": 2,
+    "In Contact": 3, "Troops In Contact": 3,
+    "Geo-fence Breached": 4, "Geo Fence Breached": 4,
+    "Custom": 5, "Cancel": 6,
+}
+_EMERGENCY_TYPE_BY_COT = {
+    "b-a-o-tbl": 1, "b-a-o-pan": 2, "b-a-o-opn": 3,
+    "b-a-g": 4, "b-a-o-c": 5, "b-a-o-can": 6,
+}
+
+# TaskRequest mappings
+_TASK_PRIORITY_MAP = {
+    "Low": 1, "Normal": 2, "Medium": 2, "High": 3, "Critical": 4,
+}
+_TASK_STATUS_MAP = {
+    "Pending": 1, "Acknowledged": 2,
+    "InProgress": 3, "In Progress": 3,
+    "Completed": 4, "Done": 4,
+    "Cancelled": 5, "Canceled": 5,
+}
+
+# GeoChat ReceiptType constants
+_RECEIPT_TYPE_NONE = 0
+_RECEIPT_TYPE_DELIVERED = 1
+_RECEIPT_TYPE_READ = 2
 
 
 class CotXmlParser:
@@ -178,11 +248,51 @@ class CotXmlParser:
         route_method = 0
         route_direction = 0
 
+        # --- CasevacReport accumulators ---
+        has_casevac_data = False
+        casevac_precedence = 0
+        casevac_equipment_flags = 0
+        casevac_litter_patients = 0
+        casevac_ambulatory_patients = 0
+        casevac_security = 0
+        casevac_hlz_marking = 0
+        casevac_zone_marker = ""
+        casevac_us_military = 0
+        casevac_us_civilian = 0
+        casevac_non_us_military = 0
+        casevac_non_us_civilian = 0
+        casevac_epw = 0
+        casevac_child = 0
+        casevac_terrain_flags = 0
+        casevac_frequency = ""
+
+        # --- EmergencyAlert accumulators ---
+        has_emergency_data = False
+        emergency_type_int = 0
+        emergency_authoring_uid = ""
+        emergency_cancel_reference_uid = ""
+
+        # --- TaskRequest accumulators ---
+        has_task_data = False
+        task_type_tag = ""
+        task_target_uid = ""
+        task_assignee_uid = ""
+        task_priority = 0
+        task_status = 0
+        task_note = ""
+
+        # --- GeoChat receipt accumulators ---
+        chat_receipt_for_uid = ""
+        chat_receipt_type = 0
+
         def handle_link(elem):
             nonlocal has_rab_data, rab_anchor_lat_i, rab_anchor_lon_i, rab_anchor_uid
             nonlocal has_route_data, route_truncated
             nonlocal has_shape_data, vertices_truncated
             nonlocal has_marker_data, marker_parent_uid, marker_parent_type, marker_parent_callsign
+            nonlocal has_chat, chat_receipt_for_uid, chat_receipt_type
+            nonlocal has_task_data, task_target_uid
+            nonlocal has_emergency_data, emergency_authoring_uid, emergency_cancel_reference_uid
             link_uid = elem.get("uid")
             point_attr = elem.get("point")
             link_type = elem.get("type", "")
@@ -238,12 +348,33 @@ class CotXmlParser:
                     else:
                         vertices_truncated = True
             elif link_uid is not None and relation == "p-p" and link_type:
-                # Marker parent link
-                marker_parent_uid = link_uid
-                marker_parent_type = link_type
-                if parent_callsign:
-                    marker_parent_callsign = parent_callsign
-                has_marker_data = True
+                # Chat receipt — b-t-f-d / b-t-f-r reference the original message
+                if cot_type_str in ("b-t-f-d", "b-t-f-r"):
+                    if not chat_receipt_for_uid:
+                        chat_receipt_for_uid = link_uid
+                    chat_receipt_type = (
+                        _RECEIPT_TYPE_DELIVERED
+                        if cot_type_str == "b-t-f-d"
+                        else _RECEIPT_TYPE_READ
+                    )
+                    has_chat = True
+                elif cot_type_str == "t-s":
+                    if not task_target_uid:
+                        task_target_uid = link_uid
+                    has_task_data = True
+                elif cot_type_str.startswith("b-a-"):
+                    if not emergency_authoring_uid:
+                        emergency_authoring_uid = link_uid
+                    elif cot_type_str == "b-a-o-can" and not emergency_cancel_reference_uid:
+                        emergency_cancel_reference_uid = link_uid
+                    has_emergency_data = True
+                else:
+                    # Marker parent link
+                    marker_parent_uid = link_uid
+                    marker_parent_type = link_type
+                    if parent_callsign:
+                        marker_parent_callsign = parent_callsign
+                    has_marker_data = True
 
         for elem in detail:
             tag = elem.tag
@@ -268,8 +399,12 @@ class CotXmlParser:
                 if elem.get("readiness") == "true":
                     marker_readiness = True
             elif tag == "track":
-                pkt.speed = int(float(elem.get("speed", "0")) * 100)
-                pkt.course = int(float(elem.get("course", "0")) * 100)
+                # Proto field is uint32 (cm/s for speed, deg*100 for course).
+                # ATAK writes speed="-1.0" for stationary / unknown; clamp
+                # negatives to 0 so protobuf serialization doesn't blow up
+                # with an OverflowError or corrupt the wire as 2^32 - N.
+                pkt.speed = max(0, int(float(elem.get("speed", "0")) * 100))
+                pkt.course = max(0, int(float(elem.get("course", "0")) * 100))
             elif tag == "takv":
                 pkt.tak_version = elem.get("version", "")
                 pkt.tak_device = elem.get("device", "")
@@ -396,6 +531,73 @@ class CotXmlParser:
                             stroke_weight_x10 = sw * 10
                     except ValueError:
                         pass
+            elif tag == "_medevac_":
+                has_casevac_data = True
+                casevac_precedence = _PRECEDENCE_MAP.get(elem.get("precedence", ""), 0)
+                eq = 0
+                if elem.get("none") == "true": eq |= 0x01
+                if elem.get("hoist") == "true": eq |= 0x02
+                if elem.get("extraction_equipment") == "true": eq |= 0x04
+                if elem.get("ventilator") == "true": eq |= 0x08
+                if elem.get("blood") == "true": eq |= 0x10
+                casevac_equipment_flags = eq
+                try:
+                    casevac_litter_patients = int(elem.get("litter", "0"))
+                except ValueError:
+                    pass
+                try:
+                    casevac_ambulatory_patients = int(elem.get("ambulatory", "0"))
+                except ValueError:
+                    pass
+                casevac_security = _SECURITY_MAP.get(elem.get("security", ""), 0)
+                casevac_hlz_marking = _HLZ_MARKING_MAP.get(elem.get("hlz_marking", ""), 0)
+                casevac_zone_marker = elem.get("zone_prot_marker", "")
+                for attr_name, var in (
+                    ("us_military", "us_military"),
+                    ("us_civilian", "us_civilian"),
+                    ("non_us_military", "non_us_military"),
+                    ("non_us_civilian", "non_us_civilian"),
+                    ("epw", "epw"),
+                    ("child", "child"),
+                ):
+                    try:
+                        val = int(elem.get(attr_name, "0"))
+                    except ValueError:
+                        val = 0
+                    if var == "us_military": casevac_us_military = val
+                    elif var == "us_civilian": casevac_us_civilian = val
+                    elif var == "non_us_military": casevac_non_us_military = val
+                    elif var == "non_us_civilian": casevac_non_us_civilian = val
+                    elif var == "epw": casevac_epw = val
+                    elif var == "child": casevac_child = val
+                tf = 0
+                if elem.get("terrain_slope") == "true": tf |= 0x01
+                if elem.get("terrain_rough") == "true": tf |= 0x02
+                if elem.get("terrain_loose") == "true": tf |= 0x04
+                if elem.get("terrain_trees") == "true": tf |= 0x08
+                if elem.get("terrain_wires") == "true": tf |= 0x10
+                if elem.get("terrain_other") == "true": tf |= 0x20
+                casevac_terrain_flags = tf
+                casevac_frequency = elem.get("freq", "")
+            elif tag == "emergency":
+                has_emergency_data = True
+                type_attr = elem.get("type", "")
+                emergency_type_int = _EMERGENCY_TYPE_MAP.get(
+                    type_attr, _EMERGENCY_TYPE_BY_COT.get(cot_type_str, 0)
+                )
+                if elem.get("cancel") == "true":
+                    emergency_type_int = 6
+            elif tag in ("task", "_task_"):
+                has_task_data = True
+                task_type_tag = elem.get("type", "")
+                task_priority = _TASK_PRIORITY_MAP.get(elem.get("priority", ""), 0)
+                task_status = _TASK_STATUS_MAP.get(elem.get("status", ""), 0)
+                note_attr = elem.get("note", "")
+                if note_attr:
+                    task_note = note_attr
+                assignee_attr = elem.get("assignee", "")
+                if assignee_attr:
+                    task_assignee_uid = assignee_attr
 
         # Parse aircraft from remarks if ICAO not yet found
         if not icao and remarks_text:
@@ -430,6 +632,10 @@ class CotXmlParser:
             chat.message = remarks_text
             if chat_to: chat.to = chat_to
             if chat_to_cs: chat.to_callsign = chat_to_cs
+            if chat_receipt_for_uid:
+                chat.receipt_for_uid = chat_receipt_for_uid
+            if chat_receipt_type:
+                chat.receipt_type = chat_receipt_type
         elif has_aircraft:
             ac = pkt.aircraft
             ac.icao = icao
@@ -497,6 +703,36 @@ class CotXmlParser:
             marker.parent_type = marker_parent_type
             marker.parent_callsign = marker_parent_callsign
             marker.iconset = marker_iconset
+        elif has_casevac_data:
+            c = pkt.casevac
+            c.precedence = casevac_precedence
+            c.equipment_flags = casevac_equipment_flags
+            c.litter_patients = casevac_litter_patients
+            c.ambulatory_patients = casevac_ambulatory_patients
+            c.security = casevac_security
+            c.hlz_marking = casevac_hlz_marking
+            c.zone_marker = casevac_zone_marker
+            c.us_military = casevac_us_military
+            c.us_civilian = casevac_us_civilian
+            c.non_us_military = casevac_non_us_military
+            c.non_us_civilian = casevac_non_us_civilian
+            c.epw = casevac_epw
+            c.child = casevac_child
+            c.terrain_flags = casevac_terrain_flags
+            c.frequency = casevac_frequency
+        elif has_emergency_data:
+            e = pkt.emergency
+            e.type = emergency_type_int or _EMERGENCY_TYPE_BY_COT.get(cot_type_str, 0)
+            e.authoring_uid = emergency_authoring_uid
+            e.cancel_reference_uid = emergency_cancel_reference_uid
+        elif has_task_data:
+            t = pkt.task
+            t.task_type = task_type_tag
+            t.target_uid = task_target_uid
+            t.assignee_uid = task_assignee_uid
+            t.priority = task_priority
+            t.status = task_status
+            t.note = task_note
         else:
             pkt.pli = True
 

@@ -35,10 +35,20 @@ data class TakPacketV2Data(
     sealed class Payload {
         object None : Payload()
         data class Pli(val value: Boolean = true) : Payload()
+        /**
+         * ATAK GeoChat message — both regular chat (b-t-f) and delivered /
+         * read receipts (b-t-f-d / b-t-f-r). Receipts leave [message] empty
+         * and set [receiptForUid] + [receiptType] to link back to the
+         * outbound message's event UID.
+         */
         data class Chat(
             val message: String = "",
             val to: String? = null,
             val toCallsign: String? = null,
+            /** UID of the chat message this event is acknowledging. */
+            val receiptForUid: String = "",
+            /** Receipt kind: 0 = none (regular chat), 1 = delivered, 2 = read. */
+            val receiptType: Int = 0,
         ) : Payload()
         data class Aircraft(
             val icao: String = "",
@@ -173,6 +183,91 @@ data class TakPacketV2Data(
                 val linkType: Int = 0,
             )
         }
+
+        // --- Expanded structured payloads (tag 38/39/40) -------------------
+
+        /**
+         * 9-line MEDEVAC request (CoT type `b-r-f-h-c`).
+         *
+         * Maps to the `CasevacReport` protobuf message at payload_variant
+         * tag 38. The envelope (uid, cot_type_id, latitude_i/longitude_i,
+         * altitude, callsign) carries Line 1 (location) and Line 2 (callsign);
+         * the fields below carry the structured 9-line record.
+         *
+         * Every numeric field defaults to 0 (proto3 default); senders omit
+         * lines they don't have. `precedence`, `hlzMarking`, `security`
+         * are enum int values matching `CasevacReport.*` in atak.proto.
+         */
+        data class CasevacReport(
+            /** One of Precedence_* constants (1..5). */
+            val precedence: Int = 0,
+            /**
+             * Line 4 equipment bitfield.
+             * bit 0 = none, 1 = hoist, 2 = extraction, 3 = ventilator, 4 = blood.
+             */
+            val equipmentFlags: Int = 0,
+            /** Line 5 litter (stretcher-bound) patient count. */
+            val litterPatients: Int = 0,
+            /** Line 5 ambulatory (walking) patient count. */
+            val ambulatoryPatients: Int = 0,
+            /** One of Security_* constants (1..4). */
+            val security: Int = 0,
+            /** One of HlzMarking_* constants (1..5). */
+            val hlzMarking: Int = 0,
+            /** Line 7 supplementary zone marker text (e.g. "Green smoke"). */
+            val zoneMarker: String = "",
+            // Line 8 patient nationality counts
+            val usMilitary: Int = 0,
+            val usCivilian: Int = 0,
+            val nonUsMilitary: Int = 0,
+            val nonUsCivilian: Int = 0,
+            val epw: Int = 0,
+            val child: Int = 0,
+            /**
+             * Line 9 terrain/obstacles bitfield.
+             * bit 0 = slope, 1 = rough, 2 = loose, 3 = trees, 4 = wires, 5 = other.
+             */
+            val terrainFlags: Int = 0,
+            /** Line 2 radio frequency / callsign metadata. */
+            val frequency: String = "",
+        ) : Payload()
+
+        /**
+         * Emergency alert / 911 beacon. Covers CoT types b-a-o-tbl (911),
+         * b-a-o-pan (ring the bell), b-a-o-opn (in contact), b-a-g (geo-fence
+         * breached), b-a-o-c (custom), b-a-o-can (cancel).
+         *
+         * Maps to the `EmergencyAlert` protobuf message at payload_variant
+         * tag 39.
+         */
+        data class EmergencyAlert(
+            /** One of Type_* constants (1..6): 911, RingTheBell, InContact, GeoFenceBreached, Custom, Cancel. */
+            val type: Int = 0,
+            /** UID of the unit raising the alert. */
+            val authoringUid: String = "",
+            /** For Type_Cancel: UID of the alert being cancelled. Empty otherwise. */
+            val cancelReferenceUid: String = "",
+        ) : Payload()
+
+        /**
+         * Task / engage request (CoT type `t-s`).
+         *
+         * Maps to the `TaskRequest` protobuf message at payload_variant
+         * tag 40. The requester UID is implicit from TAKPacketV2.uid.
+         */
+        data class TaskRequest(
+            /** Short task category tag (e.g. "engage", "observe", "recon"). */
+            val taskType: String = "",
+            /** UID of the map item being tasked. */
+            val targetUid: String = "",
+            /** UID of the assigned unit. Empty = unassigned / broadcast. */
+            val assigneeUid: String = "",
+            /** One of Priority_* constants (1..4). */
+            val priority: Int = 0,
+            /** One of Status_* constants (1..5). */
+            val status: Int = 0,
+            val note: String = "",
+        ) : Payload()
     }
 
     /** Convenience: get the CoT type as a string, resolving enum or fallback. */

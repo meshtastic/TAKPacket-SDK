@@ -102,7 +102,14 @@ public class CotXmlBuilder {
         // Payload-specific elements
         switch packet.payloadVariant {
         case .chat(let chat):
-            s += "    <remarks>\(esc(chat.message))</remarks>\n"
+            if chat.receiptType != .none && !chat.receiptForUid.isEmpty {
+                // Delivered / read receipt: emit a <link> pointing at the
+                // original message UID. The envelope cot_type_id already
+                // distinguishes delivered vs read.
+                s += "    <link uid=\"\(esc(chat.receiptForUid))\" relation=\"p-p\" type=\"b-t-f\"/>\n"
+            } else {
+                s += "    <remarks>\(esc(chat.message))</remarks>\n"
+            }
         case .aircraft(let ac):
             if !ac.icao.isEmpty {
                 s += "    <_aircot_"
@@ -121,6 +128,12 @@ public class CotXmlBuilder {
             s += emitRab(rab, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
         case .route(let route):
             s += emitRoute(route, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
+        case .casevac(let c):
+            s += emitCasevac(c)
+        case .emergency(let e):
+            s += emitEmergency(e)
+        case .task(let t):
+            s += emitTask(t)
         case .rawDetail(let bytes):
             // Fallback path (`TakCompressor.compressBestOf`): the original
             // <detail> inner bytes are shipped verbatim and re-emitted
@@ -288,6 +301,98 @@ public class CotXmlBuilder {
             s += " type=\"\(linkType)\""
             if !link.callsign.isEmpty { s += " callsign=\"\(esc(link.callsign))\"" }
             s += " point=\"\(llat),\(llon)\"/>\n"
+        }
+        return s
+    }
+
+    private static let precedenceIntToName: [CasevacReport.Precedence: String] = [
+        .urgent: "Urgent", .urgentSurgical: "Urgent Surgical",
+        .priority: "Priority", .routine: "Routine", .convenience: "Convenience",
+    ]
+    private static let hlzMarkingIntToName: [CasevacReport.HlzMarking: String] = [
+        .panels: "Panels", .pyroSignal: "Pyro", .smoke: "Smoke",
+        .none: "None", .other: "Other",
+    ]
+    private static let securityIntToName: [CasevacReport.Security: String] = [
+        .noEnemy: "N", .possibleEnemy: "P",
+        .enemyInArea: "E", .enemyInArmedContact: "X",
+    ]
+    private static let emergencyTypeIntToName: [EmergencyAlert.TypeEnum: String] = [
+        .alert911: "911 Alert", .ringTheBell: "Ring The Bell",
+        .inContact: "In Contact", .geoFenceBreached: "Geo-fence Breached",
+        .custom: "Custom", .cancel: "Cancel",
+    ]
+    private static let taskPriorityIntToName: [TaskRequest.Priority: String] = [
+        .low: "Low", .normal: "Normal", .high: "High", .critical: "Critical",
+    ]
+    private static let taskStatusIntToName: [TaskRequest.Status: String] = [
+        .pending: "Pending", .acknowledged: "Acknowledged",
+        .inProgress: "In Progress", .completed: "Completed", .cancelled: "Cancelled",
+    ]
+
+    private func emitCasevac(_ c: CasevacReport) -> String {
+        var s = "    <_medevac_"
+        if let p = Self.precedenceIntToName[c.precedence] {
+            s += " precedence=\"\(p)\""
+        }
+        if c.equipmentFlags & 0x01 != 0 { s += " none=\"true\"" }
+        if c.equipmentFlags & 0x02 != 0 { s += " hoist=\"true\"" }
+        if c.equipmentFlags & 0x04 != 0 { s += " extraction_equipment=\"true\"" }
+        if c.equipmentFlags & 0x08 != 0 { s += " ventilator=\"true\"" }
+        if c.equipmentFlags & 0x10 != 0 { s += " blood=\"true\"" }
+        if c.litterPatients > 0 { s += " litter=\"\(c.litterPatients)\"" }
+        if c.ambulatoryPatients > 0 { s += " ambulatory=\"\(c.ambulatoryPatients)\"" }
+        if let sec = Self.securityIntToName[c.security] {
+            s += " security=\"\(sec)\""
+        }
+        if let hlz = Self.hlzMarkingIntToName[c.hlzMarking] {
+            s += " hlz_marking=\"\(hlz)\""
+        }
+        if !c.zoneMarker.isEmpty { s += " zone_prot_marker=\"\(esc(c.zoneMarker))\"" }
+        if c.usMilitary > 0 { s += " us_military=\"\(c.usMilitary)\"" }
+        if c.usCivilian > 0 { s += " us_civilian=\"\(c.usCivilian)\"" }
+        if c.nonUsMilitary > 0 { s += " non_us_military=\"\(c.nonUsMilitary)\"" }
+        if c.nonUsCivilian > 0 { s += " non_us_civilian=\"\(c.nonUsCivilian)\"" }
+        if c.epw > 0 { s += " epw=\"\(c.epw)\"" }
+        if c.child > 0 { s += " child=\"\(c.child)\"" }
+        if c.terrainFlags & 0x01 != 0 { s += " terrain_slope=\"true\"" }
+        if c.terrainFlags & 0x02 != 0 { s += " terrain_rough=\"true\"" }
+        if c.terrainFlags & 0x04 != 0 { s += " terrain_loose=\"true\"" }
+        if c.terrainFlags & 0x08 != 0 { s += " terrain_trees=\"true\"" }
+        if c.terrainFlags & 0x10 != 0 { s += " terrain_wires=\"true\"" }
+        if c.terrainFlags & 0x20 != 0 { s += " terrain_other=\"true\"" }
+        if !c.frequency.isEmpty { s += " freq=\"\(esc(c.frequency))\"" }
+        s += "/>\n"
+        return s
+    }
+
+    private func emitEmergency(_ e: EmergencyAlert) -> String {
+        var s = "    <emergency"
+        if e.type == .cancel {
+            s += " cancel=\"true\""
+        } else if let t = Self.emergencyTypeIntToName[e.type] {
+            s += " type=\"\(t)\""
+        }
+        s += "/>\n"
+        if !e.authoringUid.isEmpty {
+            s += "    <link uid=\"\(esc(e.authoringUid))\" relation=\"p-p\" type=\"a-f-G-U-C\"/>\n"
+        }
+        if !e.cancelReferenceUid.isEmpty {
+            s += "    <link uid=\"\(esc(e.cancelReferenceUid))\" relation=\"p-p\" type=\"b-a-o-tbl\"/>\n"
+        }
+        return s
+    }
+
+    private func emitTask(_ t: TaskRequest) -> String {
+        var s = "    <task"
+        if !t.taskType.isEmpty { s += " type=\"\(esc(t.taskType))\"" }
+        if let p = Self.taskPriorityIntToName[t.priority] { s += " priority=\"\(p)\"" }
+        if let st = Self.taskStatusIntToName[t.status] { s += " status=\"\(st)\"" }
+        if !t.assigneeUid.isEmpty { s += " assignee=\"\(esc(t.assigneeUid))\"" }
+        if !t.note.isEmpty { s += " note=\"\(esc(t.note))\"" }
+        s += "/>\n"
+        if !t.targetUid.isEmpty {
+            s += "    <link uid=\"\(esc(t.targetUid))\" relation=\"p-p\" type=\"a-f-G\"/>\n"
         }
         return s
     }

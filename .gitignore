@@ -65,3 +65,10 @@ dist/
 # Test outputs (generated, not committed except compression-report.md)
 **/test-reports/
 
+.codex/config.toml
+.cursor/mcp.json
+.gemini/settings.json
+.zed/settings.json
+config/mcporter.json
+.mcp.json
+opencode.json

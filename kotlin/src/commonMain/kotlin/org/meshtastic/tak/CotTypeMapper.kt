@@ -97,6 +97,73 @@ object CotTypeMapper {
     const val COTTYPE_U_R_B_C_C = 80       // Ranging circle
     const val COTTYPE_U_R_B_BULLSEYE = 81  // Bullseye with range rings
 
+    // --- Expanded coverage (values 82-124) --------------------------------
+    // Covers ATAK-CIV quick-drop pallet types, mission-specific points,
+    // chat receipts, emergency beacons, and tasking. No new payload variants
+    // beyond what atak.proto already defines (CasevacReport, EmergencyAlert,
+    // TaskRequest at tags 38/39/40 and GeoChat receipt extension on tag 31).
+
+    // PLI self-reporting (1)
+    const val COTTYPE_A_F_G_E_V_A = 82     // Friendly armored vehicle self-PLI
+    // 2525 quick-drop: basic affiliation gaps (1)
+    const val COTTYPE_A_N_A = 83           // Neutral aircraft
+    // 2525 artillery (4)
+    const val COTTYPE_A_U_G_U_C_F = 84
+    const val COTTYPE_A_N_G_U_C_F = 85
+    const val COTTYPE_A_H_G_U_C_F = 86
+    const val COTTYPE_A_F_G_U_C_F = 87
+    // 2525 building (4)
+    const val COTTYPE_A_U_G_I = 88
+    const val COTTYPE_A_N_G_I = 89
+    const val COTTYPE_A_H_G_I = 90
+    const val COTTYPE_A_F_G_I = 91
+    // 2525 mine (4)
+    const val COTTYPE_A_U_G_E_X_M = 92
+    const val COTTYPE_A_N_G_E_X_M = 93
+    const val COTTYPE_A_H_G_E_X_M = 94
+    const val COTTYPE_A_F_G_E_X_M = 95
+    // 2525 ship (3; a-f-S already at 17)
+    const val COTTYPE_A_U_S = 96
+    const val COTTYPE_A_N_S = 97
+    const val COTTYPE_A_H_S = 98
+    // 2525 sniper (4) — lowercase `d` suffix distinguishes from troops
+    const val COTTYPE_A_U_G_U_C_I_D = 99
+    const val COTTYPE_A_N_G_U_C_I_D = 100
+    const val COTTYPE_A_H_G_U_C_I_D = 101
+    const val COTTYPE_A_F_G_U_C_I_D = 102
+    // 2525 tank (4)
+    const val COTTYPE_A_U_G_E_V_A_T = 103
+    const val COTTYPE_A_N_G_E_V_A_T = 104
+    const val COTTYPE_A_H_G_E_V_A_T = 105
+    const val COTTYPE_A_F_G_E_V_A_T = 106
+    // 2525 troops (3; a-f-G-U-C-I already at 2)
+    const val COTTYPE_A_U_G_U_C_I = 107
+    const val COTTYPE_A_N_G_U_C_I = 108
+    const val COTTYPE_A_H_G_U_C_I = 109
+    // 2525 generic vehicle (3; a-u-G-E-V already at 69)
+    const val COTTYPE_A_N_G_E_V = 110
+    const val COTTYPE_A_H_G_E_V = 111
+    const val COTTYPE_A_F_G_E_V = 112
+    // Mission-specific points (4)
+    const val COTTYPE_B_M_P_W_GOTO = 113   // Go To / bloodhound
+    const val COTTYPE_B_M_P_C_IP = 114     // Initial point
+    const val COTTYPE_B_M_P_C_CP = 115     // Contact point
+    const val COTTYPE_B_M_P_S_P_OP = 116   // Observation post
+    // Vehicle drawings (2)
+    const val COTTYPE_U_D_V = 117          // 2D vehicle outline
+    const val COTTYPE_U_D_V_M = 118        // 3D vehicle model
+    // Drawing shapes (1)
+    const val COTTYPE_U_D_C_E = 119        // Ellipse
+    // Image / media marker (1)
+    const val COTTYPE_B_I_X_I = 120        // Quick Pic image marker
+    // GeoChat receipts (2) — note COTTYPE_B_F_T_R at 74 is a DIFFERENT type
+    const val COTTYPE_B_T_F_D = 121        // Chat delivered receipt
+    const val COTTYPE_B_T_F_R = 122        // Chat read receipt
+    // Custom emergency (1)
+    const val COTTYPE_B_A_O_C = 123        // Custom emergency beacon
+    // Tasking (1)
+    const val COTTYPE_T_S = 124            // Task / engage request
+
     // CotHow enum values from atak.proto
     const val COTHOW_UNSPECIFIED = 0
     const val COTHOW_H_E = 1
@@ -190,6 +257,51 @@ object CotTypeMapper {
         "b-m-p-c" to COTTYPE_B_M_P_C,
         "u-r-b-c-c" to COTTYPE_U_R_B_C_C,
         "u-r-b-bullseye" to COTTYPE_U_R_B_BULLSEYE,
+        // Expanded coverage (values 82-124) — ATAK-CIV quick-drop pallet,
+        // mission points, receipts, emergency, tasking.
+        "a-f-G-E-V-A" to COTTYPE_A_F_G_E_V_A,
+        "a-n-A" to COTTYPE_A_N_A,
+        "a-u-G-U-C-F" to COTTYPE_A_U_G_U_C_F,
+        "a-n-G-U-C-F" to COTTYPE_A_N_G_U_C_F,
+        "a-h-G-U-C-F" to COTTYPE_A_H_G_U_C_F,
+        "a-f-G-U-C-F" to COTTYPE_A_F_G_U_C_F,
+        "a-u-G-I" to COTTYPE_A_U_G_I,
+        "a-n-G-I" to COTTYPE_A_N_G_I,
+        "a-h-G-I" to COTTYPE_A_H_G_I,
+        "a-f-G-I" to COTTYPE_A_F_G_I,
+        "a-u-G-E-X-M" to COTTYPE_A_U_G_E_X_M,
+        "a-n-G-E-X-M" to COTTYPE_A_N_G_E_X_M,
+        "a-h-G-E-X-M" to COTTYPE_A_H_G_E_X_M,
+        "a-f-G-E-X-M" to COTTYPE_A_F_G_E_X_M,
+        "a-u-S" to COTTYPE_A_U_S,
+        "a-n-S" to COTTYPE_A_N_S,
+        "a-h-S" to COTTYPE_A_H_S,
+        "a-u-G-U-C-I-d" to COTTYPE_A_U_G_U_C_I_D,
+        "a-n-G-U-C-I-d" to COTTYPE_A_N_G_U_C_I_D,
+        "a-h-G-U-C-I-d" to COTTYPE_A_H_G_U_C_I_D,
+        "a-f-G-U-C-I-d" to COTTYPE_A_F_G_U_C_I_D,
+        "a-u-G-E-V-A-T" to COTTYPE_A_U_G_E_V_A_T,
+        "a-n-G-E-V-A-T" to COTTYPE_A_N_G_E_V_A_T,
+        "a-h-G-E-V-A-T" to COTTYPE_A_H_G_E_V_A_T,
+        "a-f-G-E-V-A-T" to COTTYPE_A_F_G_E_V_A_T,
+        "a-u-G-U-C-I" to COTTYPE_A_U_G_U_C_I,
+        "a-n-G-U-C-I" to COTTYPE_A_N_G_U_C_I,
+        "a-h-G-U-C-I" to COTTYPE_A_H_G_U_C_I,
+        "a-n-G-E-V" to COTTYPE_A_N_G_E_V,
+        "a-h-G-E-V" to COTTYPE_A_H_G_E_V,
+        "a-f-G-E-V" to COTTYPE_A_F_G_E_V,
+        "b-m-p-w-GOTO" to COTTYPE_B_M_P_W_GOTO,
+        "b-m-p-c-ip" to COTTYPE_B_M_P_C_IP,
+        "b-m-p-c-cp" to COTTYPE_B_M_P_C_CP,
+        "b-m-p-s-p-op" to COTTYPE_B_M_P_S_P_OP,
+        "u-d-v" to COTTYPE_U_D_V,
+        "u-d-v-m" to COTTYPE_U_D_V_M,
+        "u-d-c-e" to COTTYPE_U_D_C_E,
+        "b-i-x-i" to COTTYPE_B_I_X_I,
+        "b-t-f-d" to COTTYPE_B_T_F_D,
+        "b-t-f-r" to COTTYPE_B_T_F_R,
+        "b-a-o-c" to COTTYPE_B_A_O_C,
+        "t-s" to COTTYPE_T_S,
     )
 
     private val typeToString = stringToType.entries.associate { (k, v) -> v to k }
