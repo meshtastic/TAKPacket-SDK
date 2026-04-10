@@ -1,0 +1,38 @@
+name: Publish to Maven Central
+
+# Gated: only runs when manually triggered from the Actions tab.
+# Requires repository secrets: MAVEN_CENTRAL_USERNAME, MAVEN_CENTRAL_PASSWORD,
+# SIGNING_KEY_ID, SIGNING_PASSWORD, GPG_KEY_CONTENTS.
+on:
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish KMP artifacts to Maven Central
+    # macOS required for iOS/Apple target artifacts
+    runs-on: macOS-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Run tests before publishing
+        working-directory: kotlin
+        run: ./gradlew jvmTest --quiet
+
+      - name: Publish to Maven Central
+        working-directory: kotlin
+        run: ./gradlew publishToMavenCentral --no-configuration-cache
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.GPG_KEY_CONTENTS }}

@@ -2,6 +2,7 @@ plugins {
     kotlin("multiplatform") version "2.1.20"
     kotlin("plugin.serialization") version "2.1.20"
     id("com.squareup.wire") version "5.2.0"
+    id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
 group = "org.meshtastic"
@@ -88,4 +89,38 @@ kotlin {
 
 tasks.named<Test>("jvmTest") {
     useJUnitPlatform()
+}
+
+mavenPublishing {
+    publishToMavenCentral()
+
+    signAllPublications()
+
+    coordinates(group.toString(), "takpacket-sdk", version.toString())
+
+    pom {
+        name = "TAKPacket-SDK"
+        description = "Cross-platform CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic."
+        inceptionYear = "2025"
+        url = "https://github.com/meshtastic/TAKPacket-SDK"
+        licenses {
+            license {
+                name = "GNU General Public License v3.0"
+                url = "https://www.gnu.org/licenses/gpl-3.0.txt"
+                distribution = "https://www.gnu.org/licenses/gpl-3.0.txt"
+            }
+        }
+        developers {
+            developer {
+                id = "meshtastic"
+                name = "Meshtastic"
+                url = "https://github.com/meshtastic"
+            }
+        }
+        scm {
+            url = "https://github.com/meshtastic/TAKPacket-SDK"
+            connection = "scm:git:git://github.com/meshtastic/TAKPacket-SDK.git"
+            developerConnection = "scm:git:ssh://git@github.com/meshtastic/TAKPacket-SDK.git"
+        }
+    }
 }
