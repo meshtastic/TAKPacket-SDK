@@ -244,7 +244,10 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
   if (chatElem["@_senderCallsign"] !== undefined || chatElem["@_id"] !== undefined) {
     hasChat = true;
     chatToCs = chatElem["@_senderCallsign"];
-    chatTo = chatElem["@_id"];
+    // "All Chat Rooms" is the broadcast sentinel — omit from proto
+    // so the field costs 0 bytes on the wire instead of 16.
+    const chatId = chatElem["@_id"];
+    chatTo = chatId === "All Chat Rooms" ? undefined : chatId;
   }
 
   // Parse ICAO from remarks

@@ -583,7 +583,10 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         case "__chat":
             hasChatData = true
             chatToCallsign = attributes["senderCallsign"]
-            chatTo = attributes["id"]
+            let chatId = attributes["id"]
+            // "All Chat Rooms" is the broadcast sentinel — omit from proto
+            // so the field costs 0 bytes on the wire instead of 16.
+            chatTo = (chatId == "All Chat Rooms") ? nil : chatId
 
         case "link":
             handleLink(attributes: attributes)

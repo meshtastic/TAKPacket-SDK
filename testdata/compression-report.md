@@ -29,7 +29,7 @@ Generated: 2026-04-10 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 | drawing_telestration | u-d-f-m | 2018B | 356B | 216B | 9.3x | non-aircraft |
 | emergency_911 | b-a-o-tbl | 478B | 85B | 87B | 5.5x | non-aircraft |
 | emergency_cancel | b-a-o-can | 539B | 100B | 94B | 5.7x | non-aircraft |
-| geochat_simple | b-t-f | 836B | 144B | 128B | 6.5x | non-aircraft |
+| geochat_simple | b-t-f | 836B | 128B | 122B | 6.9x | non-aircraft |
 | marker_2525 | a-u-G | 712B | 163B | 135B | 5.3x | non-aircraft |
 | marker_goto | b-m-p-w-GOTO | 558B | 98B | 93B | 6.0x | non-aircraft |
 | marker_icon_set | a-u-G | 734B | 185B | 159B | 4.6x | non-aircraft |
@@ -65,10 +65,10 @@ aircraft_adsb         110B |#######################
 marker_tank           111B |#######################
 aircraft_hostile      113B |#######################
 waypoint              115B |########################
+geochat_simple        122B |#########################
 ranging_circle        123B |#########################
 ranging_bullseye      125B |##########################
 drawing_circle        128B |###########################
-geochat_simple        128B |###########################
 marker_2525           135B |############################
 marker_spot           140B |#############################
 pli_full              140B |#############################

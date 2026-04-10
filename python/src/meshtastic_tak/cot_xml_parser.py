@@ -436,7 +436,10 @@ class CotXmlParser:
             elif tag == "__chat":
                 has_chat = True
                 chat_to_cs = elem.get("senderCallsign")
-                chat_to = elem.get("id")
+                # "All Chat Rooms" is the broadcast sentinel — omit from proto
+                # so the field costs 0 bytes on the wire instead of 16.
+                chat_id = elem.get("id")
+                chat_to = None if chat_id == "All Chat Rooms" else chat_id
             elif tag == "remarks":
                 remarks_text = (elem.text or "").strip()
             elif tag == "link":

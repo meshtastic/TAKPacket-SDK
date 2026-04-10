@@ -446,7 +446,10 @@ public class CotXmlParser
                 case "__chat":
                     hasChat = true;
                     chatToCs = el.Attribute("senderCallsign")?.Value;
-                    chatTo = el.Attribute("id")?.Value;
+                    // "All Chat Rooms" is the broadcast sentinel — omit from proto
+                    // so the field costs 0 bytes on the wire instead of 16.
+                    var chatId = el.Attribute("id")?.Value;
+                    chatTo = chatId == "All Chat Rooms" ? null : chatId;
                     break;
                 case "remarks":
                     remarksText = el.Value.Trim();

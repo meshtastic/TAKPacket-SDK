@@ -514,7 +514,10 @@ class CotXmlParser {
                         "__chat" -> {
                             hasChatData = true
                             chatToCallsign = parser.getAttributeValue(null, "senderCallsign")
-                            chatTo = parser.getAttributeValue(null, "id")
+                            val chatId = parser.getAttributeValue(null, "id")
+                            // "All Chat Rooms" is the broadcast sentinel — omit from proto
+                            // so the field costs 0 bytes on the wire instead of 16.
+                            chatTo = if (chatId == "All Chat Rooms") null else chatId
                         }
                         // --- Drawn shape elements --------------------------
                         "shape" -> {
