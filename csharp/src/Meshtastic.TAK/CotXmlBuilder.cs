@@ -178,7 +178,29 @@ public class CotXmlBuilder
                 }
                 else
                 {
-                    sb.AppendLine($"    <remarks>{Esc(pkt.Chat.Message)}</remarks>");
+                    // Reconstruct the full __chat element that ATAK/iTAK needs
+                    // for routing and display. GeoChat event UID format:
+                    // GeoChat.{senderUid}.{chatroom}.{messageId}
+                    var gcParts = pkt.Uid.Split('.', 4);
+                    if (gcParts.Length == 4 && gcParts[0] == "GeoChat")
+                    {
+                        var senderUid = gcParts[1];
+                        var chatroom = gcParts[2];
+                        var msgId = gcParts[3];
+                        var senderCs = !string.IsNullOrEmpty(pkt.Chat.ToCallsign)
+                            ? pkt.Chat.ToCallsign
+                            : (!string.IsNullOrEmpty(pkt.Callsign) ? pkt.Callsign : "UNKNOWN");
+                        sb.AppendLine($"    <__chat parent=\"RootContactGroup\" groupOwner=\"false\" messageId=\"{Esc(msgId)}\" chatroom=\"{Esc(chatroom)}\" id=\"{Esc(chatroom)}\" senderCallsign=\"{Esc(senderCs)}\">");
+                        sb.AppendLine($"      <chatgrp uid0=\"{Esc(senderUid)}\" uid1=\"{Esc(chatroom)}\" id=\"{Esc(chatroom)}\"/>");
+                        sb.AppendLine("    </__chat>");
+                        sb.AppendLine($"    <link uid=\"{Esc(senderUid)}\" type=\"a-f-G-U-C\" relation=\"p-p\"/>");
+                        sb.AppendLine($"    <__serverdestination destinations=\"0.0.0.0:4242:tcp:{Esc(senderUid)}\"/>");
+                        sb.AppendLine($"    <remarks source=\"BAO.F.ATAK.{Esc(senderUid)}\" to=\"{Esc(chatroom)}\" time=\"{timeStr}\">{Esc(pkt.Chat.Message)}</remarks>");
+                    }
+                    else
+                    {
+                        sb.AppendLine($"    <remarks>{Esc(pkt.Chat.Message)}</remarks>");
+                    }
                 }
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Aircraft when !string.IsNullOrEmpty(pkt.Aircraft.Icao):
@@ -189,6 +211,25 @@ public class CotXmlBuilder
                 if (!string.IsNullOrEmpty(pkt.Aircraft.Category)) tag += $" cat=\"{Esc(pkt.Aircraft.Category)}\"";
                 if (!string.IsNullOrEmpty(pkt.Aircraft.CotHostId)) tag += $" cot_host_id=\"{Esc(pkt.Aircraft.CotHostId)}\"";
                 sb.AppendLine(tag + "/>");
+                // Squawk and aircraft metadata as remarks text
+                if (pkt.Aircraft.Squawk > 0)
+                {
+                    var parts = new List<string>();
+                    if (!string.IsNullOrEmpty(pkt.Aircraft.Icao)) parts.Add($"ICAO: {pkt.Aircraft.Icao}");
+                    if (!string.IsNullOrEmpty(pkt.Aircraft.Registration)) parts.Add($"REG: {pkt.Aircraft.Registration}");
+                    if (!string.IsNullOrEmpty(pkt.Aircraft.AircraftType)) parts.Add($"Type: {pkt.Aircraft.AircraftType}");
+                    parts.Add($"Squawk: {pkt.Aircraft.Squawk}");
+                    if (!string.IsNullOrEmpty(pkt.Aircraft.Flight)) parts.Add($"Flight: {pkt.Aircraft.Flight}");
+                    sb.AppendLine($"    <remarks>{Esc(string.Join(" ", parts))}</remarks>");
+                }
+                // ADS-B receiver metadata
+                if (pkt.Aircraft.RssiX10 != 0)
+                {
+                    var rssi = pkt.Aircraft.RssiX10 / 10.0;
+                    var radioTag = $"    <_radio rssi=\"{rssi}\"";
+                    if (pkt.Aircraft.Gps) radioTag += " gps=\"true\"";
+                    sb.AppendLine(radioTag + "/>");
+                }
                 break;
             }
             case TAKPacketV2.PayloadVariantOneofCase.Shape:
@@ -357,7 +398,7 @@ public class CotXmlBuilder
         if (!string.IsNullOrEmpty(route.Prefix))
             parts.Add($"prefix=\"{Esc(route.Prefix)}\"");
         if (route.StrokeWeightX10 > 0)
-            parts.Add($"stroke=\"{route.StrokeWeightX10 / 10}\"");
+            parts.Add($"stroke=\"{F(route.StrokeWeightX10 / 10.0)}\"");
         sb.AppendLine(parts.Count > 0
             ? $"    <link_attr {string.Join(" ", parts)}/>"
             : "    <link_attr/>");

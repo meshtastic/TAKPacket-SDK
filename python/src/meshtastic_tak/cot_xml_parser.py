@@ -363,10 +363,12 @@ class CotXmlParser:
                         task_target_uid = link_uid
                     has_task_data = True
                 elif cot_type_str.startswith("b-a-"):
-                    if not emergency_authoring_uid:
-                        emergency_authoring_uid = link_uid
-                    elif cot_type_str == "b-a-o-can" and not emergency_cancel_reference_uid:
-                        emergency_cancel_reference_uid = link_uid
+                    if link_type.startswith("b-a-"):
+                        if not emergency_cancel_reference_uid:
+                            emergency_cancel_reference_uid = link_uid
+                    else:
+                        if not emergency_authoring_uid:
+                            emergency_authoring_uid = link_uid
                     has_emergency_data = True
                 else:
                     # Marker parent link
@@ -393,7 +395,9 @@ class CotXmlParser:
                 battery = elem.get("battery")
                 if battery is not None:
                     try:
-                        pkt.battery = int(battery)
+                        bval = int(battery)
+                        if bval > 0:
+                            pkt.battery = bval
                     except ValueError:
                         pass
                 if elem.get("readiness") == "true":

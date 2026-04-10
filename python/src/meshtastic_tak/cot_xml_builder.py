@@ -117,7 +117,40 @@ class CotXmlBuilder:
                     f'relation="p-p" type="b-t-f"/>'
                 )
             else:
-                lines.append(f'    <remarks>{escape(chat.message)}</remarks>')
+                # Reconstruct the full __chat element that ATAK/iTAK needs
+                # for routing and display. GeoChat event UID format:
+                # GeoChat.{senderUid}.{chatroom}.{messageId}
+                gc_parts = packet.uid.split(".", 3)
+                if len(gc_parts) == 4 and gc_parts[0] == "GeoChat":
+                    sender_uid = gc_parts[1]
+                    chatroom = gc_parts[2]
+                    msg_id = gc_parts[3]
+                    sender_cs = (chat.to_callsign or packet.callsign or "UNKNOWN")
+                    lines.append(
+                        f'    <__chat parent="RootContactGroup" groupOwner="false"'
+                        f' messageId="{escape(msg_id)}" chatroom="{escape(chatroom)}"'
+                        f' id="{escape(chatroom)}" senderCallsign="{escape(sender_cs)}">'
+                    )
+                    lines.append(
+                        f'      <chatgrp uid0="{escape(sender_uid)}"'
+                        f' uid1="{escape(chatroom)}" id="{escape(chatroom)}"/>'
+                    )
+                    lines.append('    </__chat>')
+                    lines.append(
+                        f'    <link uid="{escape(sender_uid)}"'
+                        f' type="a-f-G-U-C" relation="p-p"/>'
+                    )
+                    lines.append(
+                        f'    <__serverdestination destinations='
+                        f'"0.0.0.0:4242:tcp:{escape(sender_uid)}"/>'
+                    )
+                    lines.append(
+                        f'    <remarks source="BAO.F.ATAK.{escape(sender_uid)}"'
+                        f' to="{escape(chatroom)}" time="{time_str}">'
+                        f'{escape(chat.message)}</remarks>'
+                    )
+                else:
+                    lines.append(f'    <remarks>{escape(chat.message)}</remarks>')
         elif which == "aircraft":
             ac = packet.aircraft
             if ac.icao:
@@ -127,6 +160,18 @@ class CotXmlBuilder:
                 if ac.category: parts.append(f'cat="{escape(ac.category)}"')
                 if ac.cot_host_id: parts.append(f'cot_host_id="{escape(ac.cot_host_id)}"')
                 lines.append(f'    <_aircot_ {" ".join(parts)}/>')
+                if ac.squawk > 0:
+                    rparts = []
+                    if ac.icao: rparts.append(f'ICAO: {ac.icao}')
+                    if ac.registration: rparts.append(f'REG: {ac.registration}')
+                    if ac.aircraft_type: rparts.append(f'Type: {ac.aircraft_type}')
+                    rparts.append(f'Squawk: {ac.squawk}')
+                    if ac.flight: rparts.append(f'Flight: {ac.flight}')
+                    lines.append(f'    <remarks>{escape(" ".join(rparts))}</remarks>')
+                if ac.rssi_x10 != 0:
+                    rssi_val = ac.rssi_x10 / 10.0
+                    gps_attr = ' gps="true"' if ac.gps else ''
+                    lines.append(f'    <_radio rssi="{rssi_val}"{gps_attr}/>')
         elif which == "shape":
             self._emit_shape(lines, packet.shape, packet.latitude_i, packet.longitude_i)
         elif which == "marker":
@@ -279,7 +324,7 @@ class CotXmlBuilder:
         if route.prefix:
             parts.append(f'prefix="{escape(route.prefix)}"')
         if route.stroke_weight_x10 > 0:
-            sw = route.stroke_weight_x10 // 10
+            sw = route.stroke_weight_x10 / 10.0
             parts.append(f'stroke="{sw}"')
         if parts:
             lines.append(f'    <link_attr {" ".join(parts)}/>')

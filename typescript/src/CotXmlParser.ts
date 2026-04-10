@@ -518,7 +518,7 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
   let chatReceiptForUid = "";
   let chatReceiptType = RECEIPT_TYPE_NONE;
   let emergencyAuthoringUid = "";
-  const emergencyCancelReferenceUid = "";
+  let emergencyCancelReferenceUid = "";
 
   for (const link of toArray<Record<string, string>>(detail.link)) {
     const linkUid = link["@_uid"];
@@ -585,9 +585,14 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
         if (taskTargetUid === "") taskTargetUid = linkUid;
         hasTaskData = true;
       } else if (typeStr.startsWith("b-a-")) {
-        // Emergency authoring link: the p-p link on a b-a-*
-        // event references the unit that raised the alert.
-        if (emergencyAuthoringUid === "") emergencyAuthoringUid = linkUid;
+        // Emergency links: a b-a-* event may carry two p-p links:
+        //   1. authoring link (type a-f-*): who raised the alert
+        //   2. cancel-reference link (type b-a-*): the alert being cancelled
+        if (linkType.startsWith("b-a-")) {
+          if (emergencyCancelReferenceUid === "") emergencyCancelReferenceUid = linkUid;
+        } else {
+          if (emergencyAuthoringUid === "") emergencyAuthoringUid = linkUid;
+        }
         hasEmergencyData = true;
       } else {
         // Marker parent link: no point attribute, p-p relation,

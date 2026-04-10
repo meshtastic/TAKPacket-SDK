@@ -191,8 +191,33 @@ class CotXmlBuilder {
                     sb.append("""    <link uid="${esc(payload.receiptForUid)}" relation="p-p" type="b-t-f"/>""")
                     sb.append("\n")
                 } else {
-                    sb.append("""    <remarks>${esc(payload.message)}</remarks>""")
-                    sb.append("\n")
+                    // Reconstruct the full __chat element that ATAK/iTAK
+                    // needs for routing and display. The GeoChat event UID
+                    // encodes: GeoChat.{senderUid}.{chatroom}.{messageId}
+                    val gcParts = packet.uid.split(".", limit = 4)
+                    if (gcParts.size == 4 && gcParts[0] == "GeoChat") {
+                        val senderUid = gcParts[1]
+                        val chatroom = gcParts[2]
+                        val msgId = gcParts[3]
+                        val senderCs = payload.toCallsign?.ifEmpty { null }
+                            ?: packet.callsign.ifEmpty { "UNKNOWN" }
+                        sb.append("    <__chat parent=\"RootContactGroup\" groupOwner=\"false\"")
+                        sb.append(""" messageId="${esc(msgId)}" chatroom="${esc(chatroom)}"""")
+                        sb.append(""" id="${esc(chatroom)}" senderCallsign="${esc(senderCs)}">""")
+                        sb.append("\n")
+                        sb.append("""      <chatgrp uid0="${esc(senderUid)}" uid1="${esc(chatroom)}" id="${esc(chatroom)}"/>""")
+                        sb.append("\n")
+                        sb.append("    </__chat>\n")
+                        sb.append("""    <link uid="${esc(senderUid)}" type="a-f-G-U-C" relation="p-p"/>""")
+                        sb.append("\n")
+                        sb.append("""    <__serverdestination destinations="0.0.0.0:4242:tcp:${esc(senderUid)}"/>""")
+                        sb.append("\n")
+                        sb.append("""    <remarks source="BAO.F.ATAK.${esc(senderUid)}" to="${esc(chatroom)}" time="$timeStr">${esc(payload.message)}</remarks>""")
+                        sb.append("\n")
+                    } else {
+                        sb.append("""    <remarks>${esc(payload.message)}</remarks>""")
+                        sb.append("\n")
+                    }
                 }
             }
             is TakPacketV2Data.Payload.Aircraft -> {
@@ -203,6 +228,25 @@ class CotXmlBuilder {
                     if (payload.flight.isNotEmpty()) sb.append(""" flight="${esc(payload.flight)}"""")
                     if (payload.category.isNotEmpty()) sb.append(""" cat="${esc(payload.category)}"""")
                     if (payload.cotHostId.isNotEmpty()) sb.append(""" cot_host_id="${esc(payload.cotHostId)}"""")
+                    sb.append("/>\n")
+                }
+                // Squawk (transponder code) — emitted as a remarks field since
+                // ATAK parses it from remarks text when no _aircot_ squawk attr.
+                if (payload.squawk > 0) {
+                    val rem = StringBuilder()
+                    if (payload.icao.isNotEmpty()) rem.append("ICAO: ${payload.icao}")
+                    if (payload.registration.isNotEmpty()) rem.append(" REG: ${payload.registration}")
+                    if (payload.aircraftType.isNotEmpty()) rem.append(" Type: ${payload.aircraftType}")
+                    rem.append(" Squawk: ${payload.squawk}")
+                    if (payload.flight.isNotEmpty()) rem.append(" Flight: ${payload.flight}")
+                    sb.append("""    <remarks>${esc(rem.toString().trim())}</remarks>""")
+                    sb.append("\n")
+                }
+                // ADS-B receiver metadata
+                if (payload.rssiX10 != 0) {
+                    val rssi = payload.rssiX10 / 10.0
+                    sb.append("""    <_radio rssi="$rssi"""")
+                    if (payload.gps) sb.append(""" gps="true"""")
                     sb.append("/>\n")
                 }
             }
@@ -354,7 +398,7 @@ class CotXmlBuilder {
                     sb.append(""" prefix="${esc(payload.prefix)}"""")
                 }
                 if (payload.strokeWeightX10 > 0) {
-                    val sw = payload.strokeWeightX10 / 10
+                    val sw = payload.strokeWeightX10 / 10.0
                     sb.append(""" stroke="$sw"""")
                 }
                 sb.append("/>\n")

@@ -158,7 +158,28 @@ export function buildCotXml(packet: Record<string, unknown>): string {
       // distinguishes delivered (b-t-f-d) vs read (b-t-f-r).
       lines.push(`    <link uid="${esc(receiptForUid)}" relation="p-p" type="b-t-f"/>`);
     } else {
-      lines.push(`    <remarks>${esc((chat.message as string) ?? "")}</remarks>`);
+      // Reconstruct the full __chat element that ATAK/iTAK needs
+      // for routing and display. GeoChat event UID format:
+      // GeoChat.{senderUid}.{chatroom}.{messageId}
+      const uid = String(packet.uid ?? "");
+      const gcParts = uid.split(".");
+      // split(".") on "GeoChat.sender.chatroom.msgId" → exactly 4 parts
+      // when the chatroom name contains no dots (the standard case).
+      if (gcParts.length >= 4 && gcParts[0] === "GeoChat") {
+        const senderUid = gcParts[1];
+        const msgId = gcParts[gcParts.length - 1];
+        const chatroom = gcParts.slice(2, -1).join(".");
+        const senderCs = (chat.toCallsign as string) || String(packet.callsign ?? "") || "UNKNOWN";
+        const msg = (chat.message as string) ?? "";
+        lines.push(`    <__chat parent="RootContactGroup" groupOwner="false" messageId="${esc(msgId)}" chatroom="${esc(chatroom)}" id="${esc(chatroom)}" senderCallsign="${esc(senderCs)}">`);
+        lines.push(`      <chatgrp uid0="${esc(senderUid)}" uid1="${esc(chatroom)}" id="${esc(chatroom)}"/>`);
+        lines.push(`    </__chat>`);
+        lines.push(`    <link uid="${esc(senderUid)}" type="a-f-G-U-C" relation="p-p"/>`);
+        lines.push(`    <__serverdestination destinations="0.0.0.0:4242:tcp:${esc(senderUid)}"/>`);
+        lines.push(`    <remarks source="BAO.F.ATAK.${esc(senderUid)}" to="${esc(chatroom)}" time="${now}">${esc(msg)}</remarks>`);
+      } else {
+        lines.push(`    <remarks>${esc((chat.message as string) ?? "")}</remarks>`);
+      }
     }
   } else if (aircraft) {
     const icao = aircraft.icao as string ?? "";
@@ -169,6 +190,25 @@ export function buildCotXml(packet: Record<string, unknown>): string {
       if (aircraft.category) tag += ` cat="${esc(String(aircraft.category))}"`;
       if (aircraft.cotHostId) tag += ` cot_host_id="${esc(String(aircraft.cotHostId))}"`;
       lines.push(tag + "/>");
+    }
+    // Squawk and aircraft metadata as remarks text (ATAK parses these from remarks)
+    const squawk = (aircraft.squawk as number) ?? 0;
+    if (squawk > 0) {
+      const parts: string[] = [];
+      if (icao) parts.push(`ICAO: ${icao}`);
+      if (aircraft.registration) parts.push(`REG: ${aircraft.registration}`);
+      if (aircraft.aircraftType) parts.push(`Type: ${aircraft.aircraftType}`);
+      parts.push(`Squawk: ${squawk}`);
+      if (aircraft.flight) parts.push(`Flight: ${aircraft.flight}`);
+      lines.push(`    <remarks>${esc(parts.join(" "))}</remarks>`);
+    }
+    // ADS-B receiver metadata
+    const rssiX10 = (aircraft.rssiX10 as number) ?? 0;
+    if (rssiX10 !== 0) {
+      const rssi = rssiX10 / 10.0;
+      let radioTag = `    <_radio rssi="${rssi}"`;
+      if (aircraft.gps) radioTag += ` gps="true"`;
+      lines.push(radioTag + "/>");
     }
   } else if (shape) {
     emitShape(lines, shape, eventLatI, eventLonI);
@@ -330,7 +370,7 @@ function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: n
   const prefix = (route.prefix as string) ?? "";
   if (prefix) parts.push(`prefix="${esc(prefix)}"`);
   const strokeWeightX10 = (route.strokeWeightX10 as number) ?? 0;
-  if (strokeWeightX10 > 0) parts.push(`stroke="${Math.floor(strokeWeightX10 / 10)}"`);
+  if (strokeWeightX10 > 0) parts.push(`stroke="${strokeWeightX10 / 10}"`);
   lines.push(parts.length > 0 ? `    <link_attr ${parts.join(" ")}/>` : "    <link_attr/>");
 
   const links = (route.links as Array<Record<string, unknown>>) ?? [];

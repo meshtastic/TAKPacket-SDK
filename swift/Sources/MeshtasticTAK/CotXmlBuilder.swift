@@ -108,7 +108,29 @@ public class CotXmlBuilder {
                 // distinguishes delivered vs read.
                 s += "    <link uid=\"\(esc(chat.receiptForUid))\" relation=\"p-p\" type=\"b-t-f\"/>\n"
             } else {
-                s += "    <remarks>\(esc(chat.message))</remarks>\n"
+                // Reconstruct the full __chat element that ATAK/iTAK needs
+                // for routing and display. GeoChat event UID format:
+                // GeoChat.{senderUid}.{chatroom}.{messageId}
+                let gcParts = packet.uid.split(separator: ".", maxSplits: 3).map(String.init)
+                if gcParts.count == 4 && gcParts[0] == "GeoChat" {
+                    let senderUid = gcParts[1]
+                    let chatroom = gcParts[2]
+                    let msgId = gcParts[3]
+                    let senderCs: String = {
+                        if !chat.toCallsign.isEmpty { return chat.toCallsign }
+                        return packet.callsign.isEmpty ? "UNKNOWN" : packet.callsign
+                    }()
+                    s += "    <__chat parent=\"RootContactGroup\" groupOwner=\"false\""
+                    s += " messageId=\"\(esc(msgId))\" chatroom=\"\(esc(chatroom))\""
+                    s += " id=\"\(esc(chatroom))\" senderCallsign=\"\(esc(senderCs))\">\n"
+                    s += "      <chatgrp uid0=\"\(esc(senderUid))\" uid1=\"\(esc(chatroom))\" id=\"\(esc(chatroom))\"/>\n"
+                    s += "    </__chat>\n"
+                    s += "    <link uid=\"\(esc(senderUid))\" type=\"a-f-G-U-C\" relation=\"p-p\"/>\n"
+                    s += "    <__serverdestination destinations=\"0.0.0.0:4242:tcp:\(esc(senderUid))\"/>\n"
+                    s += "    <remarks source=\"BAO.F.ATAK.\(esc(senderUid))\" to=\"\(esc(chatroom))\" time=\"\(now)\">\(esc(chat.message))</remarks>\n"
+                } else {
+                    s += "    <remarks>\(esc(chat.message))</remarks>\n"
+                }
             }
         case .aircraft(let ac):
             if !ac.icao.isEmpty {
@@ -118,6 +140,21 @@ public class CotXmlBuilder {
                 if !ac.flight.isEmpty { s += " flight=\"\(esc(ac.flight))\"" }
                 if !ac.category.isEmpty { s += " cat=\"\(esc(ac.category))\"" }
                 if !ac.cotHostID.isEmpty { s += " cot_host_id=\"\(esc(ac.cotHostID))\"" }
+                s += "/>\n"
+            }
+            if ac.squawk > 0 {
+                var parts: [String] = []
+                if !ac.icao.isEmpty { parts.append("ICAO: \(ac.icao)") }
+                if !ac.registration.isEmpty { parts.append("REG: \(ac.registration)") }
+                if !ac.aircraftType.isEmpty { parts.append("Type: \(ac.aircraftType)") }
+                parts.append("Squawk: \(ac.squawk)")
+                if !ac.flight.isEmpty { parts.append("Flight: \(ac.flight)") }
+                s += "    <remarks>\(esc(parts.joined(separator: " ")))</remarks>\n"
+            }
+            if ac.rssiX10 != 0 {
+                let rssi = Double(ac.rssiX10) / 10.0
+                s += "    <_radio rssi=\"\(rssi)\""
+                if ac.gps { s += " gps=\"true\"" }
                 s += "/>\n"
             }
         case .shape(let shape):
@@ -288,7 +325,7 @@ public class CotXmlBuilder {
         if let d = Self.routeDirectionIntToName[route.direction] { s += " direction=\"\(d)\"" }
         if !route.prefix.isEmpty { s += " prefix=\"\(esc(route.prefix))\"" }
         if route.strokeWeightX10 > 0 {
-            let sw = route.strokeWeightX10 / 10
+            let sw = Double(route.strokeWeightX10) / 10.0
             s += " stroke=\"\(sw)\""
         }
         s += "/>\n"

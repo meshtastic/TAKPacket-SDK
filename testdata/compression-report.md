@@ -1,5 +1,5 @@
 # TAKPacket-SDK Compression Report
-Generated: 2026-04-09 | Dictionary: v2 (non-aircraft 16KB + aircraft 4KB)
+Generated: 2026-04-10 | Dictionary: v2 (non-aircraft 16KB + aircraft 4KB)
 
 ## Summary
 | Metric | Value |
@@ -28,7 +28,7 @@ Generated: 2026-04-09 | Dictionary: v2 (non-aircraft 16KB + aircraft 4KB)
 | drawing_rectangle | u-d-r | 755B | 137B | 151B | 5.0x | non-aircraft |
 | drawing_telestration | u-d-f-m | 2018B | 356B | 216B | 9.3x | non-aircraft |
 | emergency_911 | b-a-o-tbl | 478B | 85B | 87B | 5.5x | non-aircraft |
-| emergency_cancel | b-a-o-can | 539B | 86B | 87B | 6.2x | non-aircraft |
+| emergency_cancel | b-a-o-can | 539B | 100B | 94B | 5.7x | non-aircraft |
 | geochat_simple | b-t-f | 836B | 144B | 128B | 6.5x | non-aircraft |
 | marker_2525 | a-u-G | 712B | 163B | 135B | 5.3x | non-aircraft |
 | marker_goto | b-m-p-w-GOTO | 558B | 98B | 93B | 6.0x | non-aircraft |
@@ -52,10 +52,10 @@ pli_basic              62B |#############
 alert_tic              63B |#############
 casevac                86B |##################
 emergency_911          87B |##################
-emergency_cancel       87B |##################
 delete_event           91B |###################
 drawing_ellipse        91B |###################
 marker_goto            93B |###################
+emergency_cancel       94B |###################
 casevac_medline        99B |####################
 task_engage           106B |######################
 ranging_line          109B |######################
