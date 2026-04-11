@@ -495,7 +495,7 @@ latitude_i: 120000000          longitude_i: 910000000
 altitude: -30                  speed: 120 (cm/s)      course: 14275 (deg×100)
 battery: 88                    team: 5 (Cyan)          role: 1 (TeamMember)
 geo_src: 1 (GPS)               alt_src: 1 (GPS)
-endpoint: "*:-1:stcp"          phone: "+15550000001"
+endpoint: "" (normalized)       phone: "+15550000001"
 pli: true
 ```
 
@@ -503,7 +503,7 @@ pli: true
 |-------|------|-----------|
 | Raw XML | 754 B | — |
 | Stripped | ~400 B | -47% |
-| Compressed | **140 B** | **81% total** |
+| Compressed | **151 B** | **80% total** |
 
 ---
 
@@ -541,7 +541,7 @@ chat {
 |-------|------|-----------|
 | Raw XML | 1,031 B | — |
 | Stripped | ~700 B | -32% |
-| Compressed | **122 B** | **88% total** |
+| Compressed | **80 B** | **92% total** |
 
 ---
 
@@ -613,7 +613,7 @@ shape {
 |-------|------|-----------|
 | Raw XML | 945 B | — |
 | Stripped | ~500 B | -47% |
-| Compressed | **149 B** | **84% total** |
+| Compressed | **101 B** | **87% total** |
 
 ---
 
@@ -660,7 +660,7 @@ shape {
 |-------|------|-----------|
 | Raw XML | 851 B | — |
 | Stripped | ~450 B | -47% |
-| Compressed | **120 B** | **86% total** |
+| Compressed | **90 B** | **90% total** |
 
 ---
 
@@ -723,7 +723,7 @@ route {
 |-------|------|-----------|
 | Raw XML | 890 B | — |
 | Stripped | ~600 B | -33% |
-| Compressed | **~200 B** | **78% total** |
+| Compressed | **116 B** | **87% total** |
 
 > **Note:** Routes are the tightest fit under the 225B LoRa MTU. Each waypoint adds ~30-40 compressed bytes. Routes with 4+ waypoints may exceed the limit.
 
@@ -784,7 +784,7 @@ marker {
 |-------|------|-----------|
 | Raw XML | 721 B | — |
 | Stripped | ~400 B | -44% |
-| Compressed | **140 B** | **81% total** |
+| Compressed | **81 B** | **89% total** |
 
 ---
 
@@ -792,14 +792,27 @@ marker {
 
 | Payload Type | Raw XML | Compressed | Ratio | Fits LoRa? |
 |-------------|---------|------------|-------|------------|
-| PLI (position) | 754 B | 140 B | 5.4x | ✅ |
-| GeoChat (text) | 1,031 B | 122 B | 8.5x | ✅ |
-| Rectangle (4 vertices) | 945 B | 149 B | 6.3x | ✅ |
-| Circle (ellipse) | 851 B | 120 B | 7.1x | ✅ |
-| Route (3 waypoints) | 890 B | ~200 B | 4.5x | ✅ (tight) |
-| Marker (spot) | 721 B | 140 B | 5.2x | ✅ |
+| PLI (position) | 754 B | 151 B | 5.0x | ✅ |
+| GeoChat (text) | 1,031 B | 80 B | 12.9x | ✅ |
+| Rectangle (4 vertices) | 945 B | 101 B | 9.4x | ✅ |
+| Circle (ellipse) | 851 B | 90 B | 9.5x | ✅ |
+| Route (3 waypoints) | 890 B | 116 B | 7.7x | ✅ |
+| Marker (spot) | 721 B | 81 B | 8.9x | ✅ |
 
-Median compression ratio across all fixture types: **~6x** (400-2300 bytes XML → 62-216 bytes wire).
+Median compression ratio across all fixture types: **~8x** (400-2300 bytes XML → 56-211 bytes wire).
+
+### Wire Optimizations
+
+The SDK applies several optimizations to minimize wire payload size:
+
+| Optimization | Savings | Description |
+|-------------|---------|-------------|
+| **Endpoint normalization** | ~20 B/msg | Default endpoints (`0.0.0.0:4242:tcp`, `*:-1:stcp`) normalized to empty; builder restores the default on reconstruction |
+| **Broadcast sentinel** | ~16 B/chat | `chat.to = "All Chat Rooms"` normalized to null (proto field omitted) |
+| **Element stripping** | ~100-200 B/msg | Non-essential XML elements (`<takv>`, `<voice>`, `<precisionLocation>`, `<__geofence>`, `<marti>`, etc.) stripped before SDK parsing |
+| **`???` attribute removal** | ~10-30 B/msg | Attributes with value `"???"` (unknown placeholders) stripped universally |
+| **Delta vertex encoding** | ~50% vs abs | Shape/route vertices stored as deltas from the event anchor point |
+| **zstd dictionary v3** | ~5-8x | Dictionaries trained on 700 real-world protobuf samples covering all payload types |
 
 ## Supported Platforms
 
