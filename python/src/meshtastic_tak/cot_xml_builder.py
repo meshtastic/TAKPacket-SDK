@@ -31,6 +31,7 @@ _BEARING_REF_INT_TO_NAME = {1: "M", 2: "T", 3: "G"}
 _SHAPE_KIND_CIRCLE = 1
 _SHAPE_KIND_RANGING_CIRCLE = 6
 _SHAPE_KIND_BULLSEYE = 7
+_SHAPE_KIND_ELLIPSE = 8
 
 # DrawnShape.StyleMode
 _STYLE_UNSPECIFIED = 0
@@ -220,7 +221,7 @@ class CotXmlBuilder:
         )
 
         kind = shape.kind
-        if kind in (_SHAPE_KIND_CIRCLE, _SHAPE_KIND_RANGING_CIRCLE, _SHAPE_KIND_BULLSEYE):
+        if kind in (_SHAPE_KIND_CIRCLE, _SHAPE_KIND_RANGING_CIRCLE, _SHAPE_KIND_BULLSEYE, _SHAPE_KIND_ELLIPSE):
             if shape.major_cm > 0 or shape.minor_cm > 0:
                 major_m = shape.major_cm / 100.0
                 minor_m = shape.minor_cm / 100.0

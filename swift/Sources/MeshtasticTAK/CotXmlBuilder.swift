@@ -209,7 +209,7 @@ public class CotXmlBuilder {
         // emit vertices as <link point> siblings that the parser treats as
         // the shape's vertex list.
         let kind = shape.kind
-        if kind == .circle || kind == .rangingCircle || kind == .bullseye {
+        if kind == .circle || kind == .rangingCircle || kind == .bullseye || kind == .ellipse {
             if shape.majorCm > 0 || shape.minorCm > 0 {
                 let majorM = Double(shape.majorCm) / 100.0
                 let minorM = Double(shape.minorCm) / 100.0
