@@ -303,7 +303,8 @@ public class CotXmlParser
             {
                 var parts = pointAttr.Split(',');
                 if (parts.Length < 2) return;
-                if (!double.TryParse(parts[0], out var plat) || !double.TryParse(parts[1], out var plon)) return;
+                // Trim whitespace — iTAK uses "lat, lon" with a space after comma
+                if (!double.TryParse(parts[0].Trim(), out var plat) || !double.TryParse(parts[1].Trim(), out var plon)) return;
                 var plati = (int)(plat * 1e7);
                 var ploni = (int)(plon * 1e7);
 

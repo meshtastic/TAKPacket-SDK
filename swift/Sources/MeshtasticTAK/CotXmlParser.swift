@@ -766,8 +766,9 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         if let pt = pointAttr {
             let parts = pt.split(separator: ",")
             guard parts.count >= 2 else { return }
-            let plat = Double(parts[0]) ?? 0
-            let plon = Double(parts[1]) ?? 0
+            // Trim whitespace — iTAK uses "lat, lon" with a space after comma
+            let plat = Double(parts[0].trimmingCharacters(in: .whitespaces)) ?? 0
+            let plon = Double(parts[1].trimmingCharacters(in: .whitespaces)) ?? 0
             let plati = Int32(plat * 1e7)
             let ploni = Int32(plon * 1e7)
 

@@ -312,8 +312,9 @@ class CotXmlParser:
                 if len(parts) < 2:
                     return
                 try:
-                    plat = float(parts[0])
-                    plon = float(parts[1])
+                    # Strip whitespace — iTAK uses "lat, lon" with space after comma
+                    plat = float(parts[0].strip())
+                    plon = float(parts[1].strip())
                 except ValueError:
                     return
                 plati = int(plat * 1e7)

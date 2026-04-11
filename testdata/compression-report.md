@@ -4,7 +4,7 @@ Generated: 2026-04-10 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 ## Summary
 | Metric | Value |
 |--------|-------|
-| Total test messages | 32 |
+| Total test messages | 33 |
 | 100% under 237B | YES |
 | Median compressed size | 115B |
 | Median compression ratio | 5.4x |
@@ -26,6 +26,7 @@ Generated: 2026-04-10 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 | drawing_freeform | u-d-f | 779B | 144B | 158B | 4.9x | non-aircraft |
 | drawing_polygon | u-d-p | 778B | 140B | 154B | 5.1x | non-aircraft |
 | drawing_rectangle | u-d-r | 755B | 137B | 151B | 5.0x | non-aircraft |
+| drawing_rectangle_itak | u-d-r | 744B | 147B | 147B | 5.1x | non-aircraft |
 | drawing_telestration | u-d-f-m | 2018B | 356B | 216B | 9.3x | non-aircraft |
 | emergency_911 | b-a-o-tbl | 478B | 85B | 87B | 5.5x | non-aircraft |
 | emergency_cancel | b-a-o-can | 539B | 100B | 94B | 5.7x | non-aircraft |
@@ -73,6 +74,7 @@ marker_2525           135B |############################
 marker_spot           140B |#############################
 pli_full              140B |#############################
 pli_stationary        140B |#############################
+drawing_rectangle_itak  147B |###############################
 drawing_rectangle     151B |###############################
 pli_webtak            152B |################################
 drawing_polygon       154B |################################
