@@ -78,6 +78,9 @@ class CotXmlBuilder {
         private const val RECEIPT_TYPE_DELIVERED = 1
         private const val RECEIPT_TYPE_READ = 2
 
+        /** Default endpoint emitted when the proto field is empty (normalized at parse time). */
+        private const val DEFAULT_ENDPOINT = "0.0.0.0:4242:tcp"
+
         // --- DrawnShape StyleMode values (mirror atak.proto) -------------
         private const val STYLE_UNSPECIFIED = 0
         private const val STYLE_STROKE_ONLY = 1
@@ -140,8 +143,8 @@ class CotXmlBuilder {
 
         // Contact
         if (packet.callsign.isNotEmpty()) {
-            sb.append("""    <contact callsign="${esc(packet.callsign)}"""")
-            if (packet.endpoint.isNotEmpty()) sb.append(""" endpoint="${esc(packet.endpoint)}"""")
+            val ep = packet.endpoint.ifEmpty { DEFAULT_ENDPOINT }
+            sb.append("""    <contact callsign="${esc(packet.callsign)}" endpoint="$ep"""")
             if (packet.phone.isNotEmpty()) sb.append(""" phone="${esc(packet.phone)}"""")
             sb.append("/>\n")
         }

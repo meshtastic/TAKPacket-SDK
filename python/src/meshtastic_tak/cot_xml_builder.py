@@ -82,8 +82,8 @@ class CotXmlBuilder:
         ]
 
         if packet.callsign:
-            parts = [f'callsign="{escape(packet.callsign)}"']
-            if packet.endpoint: parts.append(f'endpoint="{escape(packet.endpoint)}"')
+            ep = packet.endpoint or "0.0.0.0:4242:tcp"
+            parts = [f'callsign="{escape(packet.callsign)}"', f'endpoint="{escape(ep)}"']
             if packet.phone: parts.append(f'phone="{escape(packet.phone)}"')
             lines.append(f'    <contact {" ".join(parts)}/>')
 

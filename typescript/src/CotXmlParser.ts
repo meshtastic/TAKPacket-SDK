@@ -303,7 +303,8 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
     takDevice: takv["@_device"] ?? "",
     takPlatform: takv["@_platform"] ?? "",
     takOs: takv["@_os"] ?? "",
-    endpoint: contact["@_endpoint"] ?? "",
+    // Normalize default TAK endpoints to empty — saves ~20 wire bytes
+    endpoint: (() => { const ep = contact["@_endpoint"] ?? ""; return (ep === "0.0.0.0:4242:tcp" || ep === "*:-1:stcp") ? "" : ep; })(),
     phone: contact["@_phone"] ?? "",
   };
 

@@ -101,8 +101,8 @@ export function buildCotXml(packet: Record<string, unknown>): string {
 
   const callsign = packet.callsign as string ?? "";
   if (callsign) {
-    let tag = `    <contact callsign="${esc(callsign)}"`;
-    if (packet.endpoint) tag += ` endpoint="${esc(String(packet.endpoint))}"`;
+    const ep = String(packet.endpoint ?? "") || "0.0.0.0:4242:tcp";
+    let tag = `    <contact callsign="${esc(callsign)}" endpoint="${esc(ep)}"`;
     if (packet.phone) tag += ` phone="${esc(String(packet.phone))}"`;
     lines.push(tag + "/>");
   }

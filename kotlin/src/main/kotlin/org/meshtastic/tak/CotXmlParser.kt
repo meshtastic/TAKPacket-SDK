@@ -465,7 +465,10 @@ class CotXmlParser {
                         }
                         "contact" -> {
                             callsign = parser.getAttributeValue(null, "callsign") ?: ""
-                            endpoint = parser.getAttributeValue(null, "endpoint") ?: endpoint
+                            // Normalize default TAK endpoints to empty — saves ~20 bytes
+                            // on the wire. The builder emits "0.0.0.0:4242:tcp" when empty.
+                            val ep = parser.getAttributeValue(null, "endpoint") ?: ""
+                            endpoint = if (ep == "0.0.0.0:4242:tcp" || ep == "*:-1:stcp") "" else ep
                             phone = parser.getAttributeValue(null, "phone") ?: phone
                         }
                         "__group" -> {

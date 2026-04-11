@@ -6,8 +6,8 @@ Generated: 2026-04-11 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 |--------|-------|
 | Total test messages | 40 |
 | 100% under 237B | YES |
-| Median compressed size | 93B |
-| Median compression ratio | 6.6x |
+| Median compressed size | 92B |
+| Median compression ratio | 6.8x |
 | Worst case | 210B (88% of LoRa MTU) |
 
 ## Per-Message Results
@@ -40,12 +40,12 @@ Generated: 2026-04-11 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 | marker_icon_set | a-u-G | 734B | 185B | 125B | 5.9x | non-aircraft |
 | marker_spot | b-m-p-s-m | 721B | 164B | 81B | 8.9x | non-aircraft |
 | marker_tank | a-h-G-E-V-A-T | 698B | 137B | 92B | 7.6x | non-aircraft |
-| pli_basic | a-f-G-U-C | 446B | 64B | 69B | 6.5x | non-aircraft |
-| pli_full | a-f-G-U-C | 754B | 192B | 164B | 4.6x | non-aircraft |
-| pli_itak | a-f-G-U-C | 534B | 95B | 93B | 5.7x | non-aircraft |
-| pli_stationary | a-f-G-U-C | 620B | 151B | 127B | 4.9x | non-aircraft |
-| pli_takaware | a-f-G-U-C | 540B | 112B | 100B | 5.4x | non-aircraft |
-| pli_webtak | a-f-G-U-C-I | 668B | 191B | 155B | 4.3x | non-aircraft |
+| pli_basic | a-f-G-U-C | 446B | 52B | 56B | 8.0x | non-aircraft |
+| pli_full | a-f-G-U-C | 754B | 180B | 151B | 5.0x | non-aircraft |
+| pli_itak | a-f-G-U-C | 534B | 83B | 82B | 6.5x | non-aircraft |
+| pli_stationary | a-f-G-U-C | 620B | 139B | 113B | 5.5x | non-aircraft |
+| pli_takaware | a-f-G-U-C | 540B | 100B | 86B | 6.3x | non-aircraft |
+| pli_webtak | a-f-G-U-C-I | 668B | 179B | 142B | 4.7x | non-aircraft |
 | ranging_bullseye | u-r-b-bullseye | 767B | 111B | 103B | 7.4x | non-aircraft |
 | ranging_circle | u-r-b-c-c | 669B | 109B | 88B | 7.6x | non-aircraft |
 | ranging_line | u-rb-a | 623B | 95B | 92B | 6.8x | non-aircraft |
@@ -56,10 +56,10 @@ Generated: 2026-04-11 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 
 ## Size Distribution
 ```
+pli_basic              56B |###########
 geochat_broadcast      59B |############
 alert_tic              63B |#############
 marker_goto            65B |#############
-pli_basic              69B |##############
 drawing_ellipse        71B |##############
 geochat_dm             74B |###############
 waypoint               75B |###############
@@ -67,33 +67,33 @@ casevac                79B |################
 geochat_simple         80B |################
 drawing_circle_large   81B |#################
 marker_spot            81B |#################
+pli_itak               82B |#################
 emergency_911          83B |#################
 delete_event           84B |#################
 chat_receipt_delivered   86B |##################
 chat_receipt_read      86B |##################
+pli_takaware           86B |##################
 ranging_circle         88B |##################
 emergency_cancel       89B |##################
 drawing_circle         90B |##################
 marker_tank            92B |###################
 ranging_line           92B |###################
-pli_itak               93B |###################
 task_engage            94B |###################
 casevac_medline        99B |####################
-pli_takaware          100B |#####################
 drawing_rectangle     101B |#####################
 ranging_bullseye      103B |#####################
 marker_2525           105B |######################
 aircraft_adsb         109B |######################
+pli_stationary        113B |#######################
 aircraft_hostile      114B |########################
 route_3wp             116B |########################
 drawing_rectangle_itak  118B |########################
 drawing_polygon       121B |#########################
 marker_icon_set       125B |##########################
 drawing_freeform      126B |##########################
-pli_stationary        127B |##########################
 marker_goto_itak      130B |###########################
-pli_webtak            155B |################################
-pli_full              164B |##################################
+pli_webtak            142B |#############################
+pli_full              151B |###############################
 route_itak_3wp        171B |####################################
 drawing_telestration  210B |############################################
 LoRa MTU              237B |##################################################

@@ -138,8 +138,8 @@ public class CotXmlBuilder
 
         if (!string.IsNullOrEmpty(pkt.Callsign))
         {
-            var tag = $"    <contact callsign=\"{Esc(pkt.Callsign)}\"";
-            if (!string.IsNullOrEmpty(pkt.Endpoint)) tag += $" endpoint=\"{Esc(pkt.Endpoint)}\"";
+            var ep = string.IsNullOrEmpty(pkt.Endpoint) ? "0.0.0.0:4242:tcp" : pkt.Endpoint;
+            var tag = $"    <contact callsign=\"{Esc(pkt.Callsign)}\" endpoint=\"{Esc(ep)}\"";
             if (!string.IsNullOrEmpty(pkt.Phone)) tag += $" phone=\"{Esc(pkt.Phone)}\"";
             sb.AppendLine(tag + "/>");
         }

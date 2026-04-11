@@ -524,7 +524,10 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
         case "contact":
             packet.callsign = attributes["callsign"] ?? ""
-            if let ep = attributes["endpoint"] { packet.endpoint = ep }
+            // Normalize default TAK endpoints to empty — saves ~20 wire bytes
+            if let ep = attributes["endpoint"], ep != "0.0.0.0:4242:tcp" && ep != "*:-1:stcp" {
+                packet.endpoint = ep
+            }
             if let ph = attributes["phone"] { packet.phone = ph }
 
         case "__group":

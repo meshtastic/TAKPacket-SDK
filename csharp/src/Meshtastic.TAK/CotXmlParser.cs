@@ -395,7 +395,10 @@ public class CotXmlParser
             {
                 case "contact":
                     pkt.Callsign = el.Attribute("callsign")?.Value ?? "";
-                    if (el.Attribute("endpoint") is { } ep) pkt.Endpoint = ep.Value;
+                    // Normalize default TAK endpoints to empty — saves ~20 wire bytes
+                    if (el.Attribute("endpoint") is { } epAttr &&
+                        epAttr.Value != "0.0.0.0:4242:tcp" && epAttr.Value != "*:-1:stcp")
+                        pkt.Endpoint = epAttr.Value;
                     if (el.Attribute("phone") is { } ph) pkt.Phone = ph.Value;
                     break;
                 case "__group":

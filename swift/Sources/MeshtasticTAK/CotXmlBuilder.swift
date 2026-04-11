@@ -57,8 +57,8 @@ public class CotXmlBuilder {
         s += "  <detail>\n"
 
         if !packet.callsign.isEmpty {
-            s += "    <contact callsign=\"\(esc(packet.callsign))\""
-            if !packet.endpoint.isEmpty { s += " endpoint=\"\(esc(packet.endpoint))\"" }
+            let ep = packet.endpoint.isEmpty ? "0.0.0.0:4242:tcp" : packet.endpoint
+            s += "    <contact callsign=\"\(esc(packet.callsign))\" endpoint=\"\(esc(ep))\""
             if !packet.phone.isEmpty { s += " phone=\"\(esc(packet.phone))\"" }
             s += "/>\n"
         }
