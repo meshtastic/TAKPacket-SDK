@@ -92,6 +92,15 @@ class CotXmlBuilder {
         }
 
         private val isoFormatter = DateTimeFormatter.ISO_INSTANT
+
+        /** Convert an ARGB int to ABGR hex string (KML color format). */
+        private fun argbToAbgrHex(argb: Int): String {
+            val a = (argb ushr 24) and 0xFF
+            val r = (argb ushr 16) and 0xFF
+            val g = (argb ushr 8) and 0xFF
+            val b = argb and 0xFF
+            return "%02x%02x%02x%02x".format(a, b, g, r)
+        }
     }
 
     /**
@@ -271,9 +280,18 @@ class CotXmlBuilder {
                     if (payload.majorCm > 0 || payload.minorCm > 0) {
                         val majorM = payload.majorCm / 100.0
                         val minorM = payload.minorCm / 100.0
+                        val strokeW = payload.strokeWeightX10 / 10.0
                         sb.append("    <shape>\n")
                         sb.append("""      <ellipse major="$majorM" minor="$minorM" angle="${payload.angleDeg}"/>""")
                         sb.append("\n")
+                        // KML style link — iTAK requires this to render circles/ellipses.
+                        // ATAK uses ABGR hex encoding for KML colors, not ARGB.
+                        sb.append("""      <link uid="${esc(packet.uid)}.Style" type="b-x-KmlStyle" relation="p-c">""")
+                        sb.append("""<Style><LineStyle><color>${argbToAbgrHex(strokeVal)}</color><width>$strokeW</width></LineStyle>""")
+                        if (fillVal != 0) {
+                            sb.append("""<PolyStyle><color>${argbToAbgrHex(fillVal)}</color></PolyStyle>""")
+                        }
+                        sb.append("</Style></link>\n")
                         sb.append("    </shape>\n")
                     }
                 } else {

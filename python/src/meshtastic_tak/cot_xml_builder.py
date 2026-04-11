@@ -33,6 +33,15 @@ _SHAPE_KIND_RANGING_CIRCLE = 6
 _SHAPE_KIND_BULLSEYE = 7
 _SHAPE_KIND_ELLIPSE = 8
 
+
+def _argb_to_abgr_hex(argb: int) -> str:
+    """Convert ARGB int to ABGR hex string (KML color format)."""
+    a = (argb >> 24) & 0xFF
+    r = (argb >> 16) & 0xFF
+    g = (argb >> 8) & 0xFF
+    b = argb & 0xFF
+    return f"{a:02x}{b:02x}{g:02x}{r:02x}"
+
 # DrawnShape.StyleMode
 _STYLE_UNSPECIFIED = 0
 _STYLE_STROKE_ONLY = 1
@@ -174,7 +183,7 @@ class CotXmlBuilder:
                     gps_attr = ' gps="true"' if ac.gps else ''
                     lines.append(f'    <_radio rssi="{rssi_val}"{gps_attr}/>')
         elif which == "shape":
-            self._emit_shape(lines, packet.shape, packet.latitude_i, packet.longitude_i)
+            self._emit_shape(lines, packet.shape, packet.latitude_i, packet.longitude_i, packet.uid)
         elif which == "marker":
             self._emit_marker(lines, packet.marker)
         elif which == "rab":
@@ -203,7 +212,7 @@ class CotXmlBuilder:
 
     # --- Typed geometry emitters ----------------------------------------
 
-    def _emit_shape(self, lines: list, shape, event_lat_i: int, event_lon_i: int) -> None:
+    def _emit_shape(self, lines: list, shape, event_lat_i: int, event_lon_i: int, uid: str = "") -> None:
         stroke_argb = atak_palette.resolve_color(shape.stroke_color, shape.stroke_argb)
         fill_argb = atak_palette.resolve_color(shape.fill_color, shape.fill_argb)
         stroke_val = _argb_to_signed(stroke_argb)
@@ -225,8 +234,17 @@ class CotXmlBuilder:
             if shape.major_cm > 0 or shape.minor_cm > 0:
                 major_m = shape.major_cm / 100.0
                 minor_m = shape.minor_cm / 100.0
+                stroke_w = shape.stroke_weight_x10 / 10.0
                 lines.append("    <shape>")
                 lines.append(f'      <ellipse major="{major_m}" minor="{minor_m}" angle="{shape.angle_deg}"/>')
+                # KML style link — iTAK requires this to render circles/ellipses
+                stroke_abgr = _argb_to_abgr_hex(stroke_val)
+                kml = f'      <link uid="{escape(uid)}.Style" type="b-x-KmlStyle" relation="p-c">'
+                kml += f'<Style><LineStyle><color>{stroke_abgr}</color><width>{stroke_w}</width></LineStyle>'
+                if fill_val != 0:
+                    kml += f'<PolyStyle><color>{_argb_to_abgr_hex(fill_val)}</color></PolyStyle>'
+                kml += '</Style></link>'
+                lines.append(kml)
                 lines.append("    </shape>")
         else:
             # Rectangle, polygon, freeform, telestration: vertices as <link point>

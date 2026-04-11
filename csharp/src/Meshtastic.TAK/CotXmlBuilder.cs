@@ -101,6 +101,16 @@ public class CotXmlBuilder
 
     private static string Esc(string s) => System.Security.SecurityElement.Escape(s) ?? s;
 
+    /// <summary>Convert ARGB int to ABGR hex string (KML color format).</summary>
+    private static string ArgbToAbgrHex(int argb)
+    {
+        var a = (argb >> 24) & 0xFF;
+        var r = (argb >> 16) & 0xFF;
+        var g = (argb >> 8) & 0xFF;
+        var b = argb & 0xFF;
+        return $"{a:x2}{b:x2}{g:x2}{r:x2}";
+    }
+
     /// <summary>
     /// Render a double using invariant culture so locales with comma
     /// decimal separators (e.g. de-DE) don't break CoT XML parsing.
@@ -233,7 +243,7 @@ public class CotXmlBuilder
                 break;
             }
             case TAKPacketV2.PayloadVariantOneofCase.Shape:
-                EmitShape(sb, pkt.Shape, pkt.LatitudeI, pkt.LongitudeI);
+                EmitShape(sb, pkt.Shape, pkt.LatitudeI, pkt.LongitudeI, pkt.Uid);
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Marker:
                 EmitMarker(sb, pkt.Marker);
@@ -274,7 +284,7 @@ public class CotXmlBuilder
 
     // --- Typed geometry emitters ----------------------------------------
 
-    private void EmitShape(StringBuilder sb, DrawnShape shape, int eventLatI, int eventLonI)
+    private void EmitShape(StringBuilder sb, DrawnShape shape, int eventLatI, int eventLonI, string uid = "")
     {
         var strokeArgb = AtakPalette.ResolveColor(shape.StrokeColor, shape.StrokeArgb);
         var fillArgb = AtakPalette.ResolveColor(shape.FillColor, shape.FillArgb);
@@ -299,8 +309,14 @@ public class CotXmlBuilder
             {
                 var majorM = shape.MajorCm / 100.0;
                 var minorM = shape.MinorCm / 100.0;
+                var strokeW = shape.StrokeWeightX10 / 10.0;
                 sb.AppendLine("    <shape>");
                 sb.AppendLine($"      <ellipse major=\"{F(majorM)}\" minor=\"{F(minorM)}\" angle=\"{shape.AngleDeg}\"/>");
+                // KML style link — iTAK requires this to render circles/ellipses
+                sb.Append($"      <link uid=\"{Esc(uid)}.Style\" type=\"b-x-KmlStyle\" relation=\"p-c\">");
+                sb.Append($"<Style><LineStyle><color>{ArgbToAbgrHex(strokeVal)}</color><width>{F(strokeW)}</width></LineStyle>");
+                if (fillVal != 0) sb.Append($"<PolyStyle><color>{ArgbToAbgrHex(fillVal)}</color></PolyStyle>");
+                sb.AppendLine("</Style></link>");
                 sb.AppendLine("    </shape>");
             }
         }

@@ -67,6 +67,15 @@ function esc(s: string): string {
           .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
+/** Convert ARGB int to ABGR hex string (KML color format). */
+function argbToAbgrHex(argb: number): string {
+  const a = (argb >>> 24) & 0xFF;
+  const r = (argb >>> 16) & 0xFF;
+  const g = (argb >>> 8) & 0xFF;
+  const b = argb & 0xFF;
+  return [a, b, g, r].map(c => c.toString(16).padStart(2, "0")).join("");
+}
+
 /** Convert unsigned 32-bit ARGB back to ATAK's signed Int32 XML form. */
 function argbToSigned(argb: number): number {
   return argb | 0;
@@ -211,7 +220,7 @@ export function buildCotXml(packet: Record<string, unknown>): string {
       lines.push(radioTag + "/>");
     }
   } else if (shape) {
-    emitShape(lines, shape, eventLatI, eventLonI);
+    emitShape(lines, shape, eventLatI, eventLonI, String(packet.uid ?? ""));
   } else if (marker) {
     emitMarker(lines, marker);
   } else if (rab) {
@@ -243,7 +252,7 @@ export function buildCotXml(packet: Record<string, unknown>): string {
 
 // --- Typed geometry emitters -------------------------------------------
 
-function emitShape(lines: string[], shape: Record<string, unknown>, eventLatI: number, eventLonI: number): void {
+function emitShape(lines: string[], shape: Record<string, unknown>, eventLatI: number, eventLonI: number, uid: string = ""): void {
   const kind = (shape.kind as number) ?? 0;
   const style = (shape.style as number) ?? STYLE_UNSPECIFIED;
   const strokeArgb = resolveColor((shape.strokeColor as number) ?? 0, (shape.strokeArgb as number) ?? 0);
@@ -269,8 +278,15 @@ function emitShape(lines: string[], shape: Record<string, unknown>, eventLatI: n
     kind === SHAPE_KIND_ELLIPSE
   ) {
     if (majorCm > 0 || minorCm > 0) {
+      const strokeW = strokeWeightX10 / 10;
       lines.push("    <shape>");
       lines.push(`      <ellipse major="${majorCm / 100}" minor="${minorCm / 100}" angle="${angleDeg}"/>`);
+      // KML style link — iTAK requires this to render circles/ellipses
+      let kml = `      <link uid="${esc(uid)}.Style" type="b-x-KmlStyle" relation="p-c">`;
+      kml += `<Style><LineStyle><color>${argbToAbgrHex(strokeVal)}</color><width>${strokeW}</width></LineStyle>`;
+      if (fillVal !== 0) kml += `<PolyStyle><color>${argbToAbgrHex(fillVal)}</color></PolyStyle>`;
+      kml += `</Style></link>`;
+      lines.push(kml);
       lines.push("    </shape>");
     }
   } else {

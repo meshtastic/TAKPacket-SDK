@@ -133,6 +133,14 @@ Covers ten tactical graphic kinds. The shape's anchor point lives on `TAKPacketV
 
 `StyleMode` discriminates `StrokeOnly` vs `FillOnly` vs `StrokeAndFill`, preserving the distinction between *"this polyline has no fill"* and *"this shape has a transparent black fill"*.
 
+**KML Style Links:** Circle and ellipse shapes include a `<link type="b-x-KmlStyle">` element inside `<shape>` for iTAK compatibility. ATAK encodes colors in KML's **ABGR hex format** (not ARGB). The builder converts `stroke_argb`/`fill_argb` proto fields (ARGB int32) to ABGR hex strings automatically:
+
+| Proto field (ARGB) | KML hex (ABGR) | Example |
+|---|---|---|
+| `0xFFFF0000` (opaque red) | `ff0000ff` | `<color>ff0000ff</color>` |
+| `0x9F00FF00` (semi-transparent green) | `9f00ff00` | `<color>9f00ff00</color>` |
+| `0x00000000` (transparent) | not emitted | PolyStyle omitted |
+
 **Kotlin — parse a drawing_circle and read its structured fields:**
 ```kotlin
 val parser = CotXmlParser()

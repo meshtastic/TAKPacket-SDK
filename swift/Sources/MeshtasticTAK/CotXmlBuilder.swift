@@ -158,7 +158,7 @@ public class CotXmlBuilder {
                 s += "/>\n"
             }
         case .shape(let shape):
-            s += emitShape(shape, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
+            s += emitShape(shape, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI, uid: packet.uid)
         case .marker(let marker):
             s += emitMarker(marker)
         case .rab(let rab):
@@ -191,7 +191,7 @@ public class CotXmlBuilder {
 
     // MARK: - Typed geometry emitters
 
-    private func emitShape(_ shape: DrawnShape, eventLatI: Int32, eventLonI: Int32) -> String {
+    private func emitShape(_ shape: DrawnShape, eventLatI: Int32, eventLonI: Int32, uid: String) -> String {
         var s = ""
         // ATAK XML writes colors as signed Int32 decimal (e.g. -65536 for red).
         // The proto-generated `_argb` fields are UInt32; bit-cast on emit.
@@ -213,8 +213,16 @@ public class CotXmlBuilder {
             if shape.majorCm > 0 || shape.minorCm > 0 {
                 let majorM = Double(shape.majorCm) / 100.0
                 let minorM = Double(shape.minorCm) / 100.0
+                let strokeW = Double(shape.strokeWeightX10) / 10.0
                 s += "    <shape>\n"
                 s += "      <ellipse major=\"\(majorM)\" minor=\"\(minorM)\" angle=\"\(shape.angleDeg)\"/>\n"
+                // KML style link — iTAK requires this to render circles/ellipses.
+                s += "      <link uid=\"\(esc(uid)).Style\" type=\"b-x-KmlStyle\" relation=\"p-c\">"
+                s += "<Style><LineStyle><color>\(Self.argbToAbgrHex(strokeVal))</color><width>\(strokeW)</width></LineStyle>"
+                if fillVal != 0 {
+                    s += "<PolyStyle><color>\(Self.argbToAbgrHex(fillVal))</color></PolyStyle>"
+                }
+                s += "</Style></link>\n"
                 s += "    </shape>\n"
             }
         } else {
@@ -432,6 +440,15 @@ public class CotXmlBuilder {
             s += "    <link uid=\"\(esc(t.targetUid))\" relation=\"p-p\" type=\"a-f-G\"/>\n"
         }
         return s
+    }
+
+    /// Convert ARGB int to ABGR hex string (KML color format).
+    private static func argbToAbgrHex(_ argb: Int32) -> String {
+        let a = (argb >> 24) & 0xFF
+        let r = (argb >> 16) & 0xFF
+        let g = (argb >> 8) & 0xFF
+        let b = argb & 0xFF
+        return String(format: "%02x%02x%02x%02x", a, b, g, r)
     }
 
     private func esc(_ s: String) -> String {
