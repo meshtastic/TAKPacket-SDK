@@ -686,7 +686,7 @@ shape {
 </event>
 ```
 
-**After stripping** (~600 bytes) — `<precisionLocation>`, `<marti/>`, `???` attributes removed
+**After stripping** (~500 bytes) — `<precisionLocation>`, `<marti/>`, `???` attrs, `routetype`, `order`, `color`, empty `callsign` removed
 ```xml
 <event version="2.0" uid="139A3009-..." type="b-m-r" ...>
   <point lat="34.74829435592147" lon="-92.43520215509216" hae="0.0" .../>
@@ -698,7 +698,7 @@ shape {
           point="34.74650551240878,-92.43195557866541"/>
     <link uid="A5449578-..." callsign="VDO" type="b-m-p-w"
           point="34.748578593226505,-92.4354345620684"/>
-    <link_attr color="-65281" method="Walking" prefix="CP" direction="Infil"/>
+    <link_attr method="Walking" prefix="CP" direction="Infil"/>
   </detail>
 </event>
 ```
@@ -722,10 +722,10 @@ route {
 | Stage | Size | Reduction |
 |-------|------|-----------|
 | Raw XML | 890 B | — |
-| Stripped | ~600 B | -33% |
+| Stripped | ~500 B | -44% |
 | Compressed | **116 B** | **87% total** |
 
-> **Note:** Routes are the tightest fit under the 225B LoRa MTU. Each waypoint adds ~30-40 compressed bytes. Routes with 4+ waypoints may exceed the limit.
+> **Note:** Routes are the tightest fit under the 225B LoRa MTU. Each waypoint adds ~25-35 compressed bytes. The stripper removes `routetype`, `order`, `color`, and empty `callsign` attributes from `<link_attr>` and checkpoint links to save ~60+ bytes. Routes with 5+ waypoints may still exceed the limit — consider splitting into multiple route segments.
 
 ---
 
@@ -809,10 +809,12 @@ The SDK applies several optimizations to minimize wire payload size:
 |-------------|---------|-------------|
 | **Endpoint normalization** | ~20 B/msg | Default endpoints (`0.0.0.0:4242:tcp`, `*:-1:stcp`) normalized to empty; builder restores the default on reconstruction |
 | **Broadcast sentinel** | ~16 B/chat | `chat.to = "All Chat Rooms"` normalized to null (proto field omitted) |
-| **Element stripping** | ~100-200 B/msg | Non-essential XML elements (`<takv>`, `<voice>`, `<precisionLocation>`, `<__geofence>`, `<marti>`, etc.) stripped before SDK parsing |
-| **`???` attribute removal** | ~10-30 B/msg | Attributes with value `"???"` (unknown placeholders) stripped universally |
+| **Element stripping** | ~100-200 B/msg | Non-essential XML elements (`<takv>`, `<voice>`, `<precisionLocation>`, `<__geofence>`, `<marti>`, `<__shapeExtras>`, `<creator>`, `<tog>`, `<archive>`, `<strokeStyle>`, empty `<remarks>`) stripped before SDK parsing |
+| **Attribute stripping** | ~30-80 B/msg | Display-only attributes stripped: `routetype`, `order`, `color` (from `<link_attr>`), `access`, empty `callsign`/`phone`, and all `"???"` placeholder values |
 | **Delta vertex encoding** | ~50% vs abs | Shape/route vertices stored as deltas from the event anchor point |
 | **zstd dictionary v3** | ~5-8x | Dictionaries trained on 700 real-world protobuf samples covering all payload types |
+
+**Stripped elements and attributes are not needed for rendering** — the SDK extracts all structurally meaningful data (coordinates, waypoints, colors, stroke weight, method, direction, prefix) into typed proto fields. The stripped metadata is display-only, UI-state, or redundant with proto fields.
 
 ## Supported Platforms
 
