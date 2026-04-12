@@ -252,7 +252,7 @@ public class CotXmlBuilder
                 EmitRab(sb, pkt.Rab, pkt.LatitudeI, pkt.LongitudeI);
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Route:
-                EmitRoute(sb, pkt.Route, pkt.LatitudeI, pkt.LongitudeI);
+                EmitRoute(sb, pkt.Route, pkt.LatitudeI, pkt.LongitudeI, pkt.Uid, pkt.Remarks);
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Casevac:
                 EmitCasevac(sb, pkt.Casevac);
@@ -275,6 +275,17 @@ public class CotXmlBuilder
                     if (!text.EndsWith('\n')) sb.AppendLine();
                 }
                 break;
+        }
+
+        // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
+        // Chat uses GeoChat.Message; Aircraft synthesizes from ICAO fields; Route handles
+        // remarks in its own block above. All other types emit here.
+        if (!string.IsNullOrEmpty(pkt.Remarks)
+            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Chat
+            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Aircraft
+            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Route)
+        {
+            sb.AppendLine($"    <remarks>{Esc(pkt.Remarks)}</remarks>");
         }
 
         sb.AppendLine("  </detail>");
@@ -403,9 +414,25 @@ public class CotXmlBuilder
             sb.AppendLine($"    <strokeWeight value=\"{F(rab.StrokeWeightX10 / 10.0)}\"/>");
     }
 
-    private void EmitRoute(StringBuilder sb, Route route, int eventLatI, int eventLonI)
+    private void EmitRoute(StringBuilder sb, Route route, int eventLatI, int eventLonI, string eventUid = "", string remarks = "")
     {
-        sb.AppendLine("    <__routeinfo/>");
+        // Emit <link> elements BEFORE <link_attr> (ATAK expects waypoints first)
+        for (var idx = 0; idx < route.Links.Count; idx++)
+        {
+            var link = route.Links[idx];
+            var llat = (eventLatI + (link.Point?.LatDeltaI ?? 0)) / 1e7;
+            var llon = (eventLonI + (link.Point?.LonDeltaI ?? 0)) / 1e7;
+            var linkType = link.LinkType == 1 ? "b-m-p-c" : "b-m-p-w";
+            // Generate deterministic uid when not present
+            var uid = string.IsNullOrEmpty(link.Uid) ? $"{eventUid}-{idx}" : link.Uid;
+            var linkParts = new List<string>();
+            linkParts.Add($"uid=\"{Esc(uid)}\"");
+            linkParts.Add($"type=\"{linkType}\"");
+            if (!string.IsNullOrEmpty(link.Callsign)) linkParts.Add($"callsign=\"{Esc(link.Callsign)}\"");
+            // ATAK expects 3-component point: lat,lon,hae
+            linkParts.Add($"point=\"{F(llat)},{F(llon)},0\" relation=\"c\"");
+            sb.AppendLine($"    <link {string.Join(" ", linkParts)}/>");
+        }
         var parts = new List<string>();
         if (RouteMethodNames.TryGetValue(route.Method, out var method))
             parts.Add($"method=\"{method}\"");
@@ -418,19 +445,13 @@ public class CotXmlBuilder
         sb.AppendLine(parts.Count > 0
             ? $"    <link_attr {string.Join(" ", parts)}/>"
             : "    <link_attr/>");
-
-        foreach (var link in route.Links)
-        {
-            var llat = (eventLatI + (link.Point?.LatDeltaI ?? 0)) / 1e7;
-            var llon = (eventLonI + (link.Point?.LonDeltaI ?? 0)) / 1e7;
-            var linkType = link.LinkType == 1 ? "b-m-p-c" : "b-m-p-w";
-            var linkParts = new List<string>();
-            if (!string.IsNullOrEmpty(link.Uid)) linkParts.Add($"uid=\"{Esc(link.Uid)}\"");
-            linkParts.Add($"type=\"{linkType}\"");
-            if (!string.IsNullOrEmpty(link.Callsign)) linkParts.Add($"callsign=\"{Esc(link.Callsign)}\"");
-            linkParts.Add($"point=\"{F(llat)},{F(llon)}\"");
-            sb.AppendLine($"    <link {string.Join(" ", linkParts)}/>");
-        }
+        // Conditional remarks element (route block handles its own remarks)
+        if (!string.IsNullOrEmpty(remarks))
+            sb.AppendLine($"    <remarks>{Esc(remarks)}</remarks>");
+        else
+            sb.AppendLine("    <remarks/>");
+        // routeinfo with navcues child (after link_attr)
+        sb.AppendLine("    <__routeinfo><__navcues/></__routeinfo>");
     }
 
     private void EmitCasevac(StringBuilder sb, CasevacReport c)

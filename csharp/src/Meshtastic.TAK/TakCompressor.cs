@@ -142,6 +142,34 @@ public class TakCompressor
         return rawWire.Length < typedWire.Length ? rawWire : typedWire;
     }
 
+    /// <summary>
+    /// Compress a packet, stripping remarks if the result exceeds
+    /// <paramref name="maxWireBytes"/>.
+    /// </summary>
+    /// <remarks>
+    /// First attempts compression with remarks intact.  If the wire payload
+    /// fits within <paramref name="maxWireBytes"/>, returns it as-is.
+    /// Otherwise, clears the remarks field and re-compresses.  Returns
+    /// <c>null</c> if even the stripped packet exceeds the limit (caller
+    /// should drop the packet).
+    /// </remarks>
+    /// <param name="packet">The packet with remarks populated.</param>
+    /// <param name="maxWireBytes">Maximum allowed wire payload size (e.g. 225).</param>
+    /// <returns>The wire payload, or <c>null</c> if the packet is too large
+    /// even without remarks.</returns>
+    public byte[]? CompressWithRemarksFallback(TAKPacketV2 packet, int maxWireBytes)
+    {
+        var full = Compress(packet);
+        if (full.Length <= maxWireBytes) return full;
+
+        // Strip remarks and retry
+        if (string.IsNullOrEmpty(packet.Remarks)) return null;
+        var stripped = packet.Clone();
+        stripped.Remarks = "";
+        var strippedWire = Compress(stripped);
+        return strippedWire.Length <= maxWireBytes ? strippedWire : null;
+    }
+
     public CompressionResult CompressWithStats(Meshtastic.Protobufs.TAKPacketV2 packet)
     {
         var protoBytes = packet.ToByteArray();

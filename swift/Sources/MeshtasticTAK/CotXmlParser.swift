@@ -399,6 +399,11 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             packet.pli = true
         }
 
+        // Populate top-level remarks for non-chat types
+        if !hasChatData && !remarksText.isEmpty {
+            packet.remarks = remarksText
+        }
+
         return packet
     }
 

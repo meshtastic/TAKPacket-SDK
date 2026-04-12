@@ -164,7 +164,7 @@ public class CotXmlBuilder {
         case .rab(let rab):
             s += emitRab(rab, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
         case .route(let route):
-            s += emitRoute(route, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
+            s += emitRoute(route, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI, eventUid: packet.uid, remarks: packet.remarks)
         case .casevac(let c):
             s += emitCasevac(c)
         case .emergency(let e):
@@ -182,6 +182,16 @@ public class CotXmlBuilder {
             }
         default:
             break
+        }
+
+        // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text
+        if !packet.remarks.isEmpty {
+            let isChat = packet.hasChat
+            let isAircraft = packet.hasAircraft
+            let isRoute = packet.hasRoute
+            if !isChat && !isAircraft && !isRoute {
+                s += "    <remarks>\(esc(packet.remarks))</remarks>\n"
+            }
         }
 
         s += "  </detail>\n"
@@ -326,8 +336,24 @@ public class CotXmlBuilder {
         return s
     }
 
-    private func emitRoute(_ route: Route, eventLatI: Int32, eventLonI: Int32) -> String {
-        var s = "    <__routeinfo/>\n"
+    private func emitRoute(_ route: Route, eventLatI: Int32, eventLonI: Int32, eventUid: String, remarks: String = "") -> String {
+        var s = ""
+        // Emit <link> elements BEFORE <link_attr> and <__routeinfo> —
+        // ATAK's parser expects waypoints first, then route metadata.
+        for (idx, link) in route.links.enumerated() {
+            let llat = Double(eventLatI + link.point.latDeltaI) / 1e7
+            let llon = Double(eventLonI + link.point.lonDeltaI) / 1e7
+            s += "    <link"
+            // ATAK requires uid on waypoint links for internal marker
+            // creation. Generate a deterministic one when not present.
+            let uid = link.uid.isEmpty ? "\(eventUid)-\(idx)" : link.uid
+            s += " uid=\"\(esc(uid))\""
+            let linkType = link.linkType == 1 ? "b-m-p-c" : "b-m-p-w"
+            s += " type=\"\(linkType)\""
+            if !link.callsign.isEmpty { s += " callsign=\"\(esc(link.callsign))\"" }
+            // ATAK expects 3-component point: lat,lon,hae
+            s += " point=\"\(llat),\(llon),0\" relation=\"c\"/>\n"
+        }
         s += "    <link_attr"
         if let m = Self.routeMethodIntToName[route.method] { s += " method=\"\(m)\"" }
         if let d = Self.routeDirectionIntToName[route.direction] { s += " direction=\"\(d)\"" }
@@ -337,16 +363,12 @@ public class CotXmlBuilder {
             s += " stroke=\"\(sw)\""
         }
         s += "/>\n"
-        for link in route.links {
-            let llat = Double(eventLatI + link.point.latDeltaI) / 1e7
-            let llon = Double(eventLonI + link.point.lonDeltaI) / 1e7
-            s += "    <link"
-            if !link.uid.isEmpty { s += " uid=\"\(esc(link.uid))\"" }
-            let linkType = link.linkType == 1 ? "b-m-p-c" : "b-m-p-w"
-            s += " type=\"\(linkType)\""
-            if !link.callsign.isEmpty { s += " callsign=\"\(esc(link.callsign))\"" }
-            s += " point=\"\(llat),\(llon)\"/>\n"
+        if !remarks.isEmpty {
+            s += "    <remarks>\(esc(remarks))</remarks>\n"
+        } else {
+            s += "    <remarks/>\n"
         }
+        s += "    <__routeinfo><__navcues/></__routeinfo>\n"
         return s
     }
 

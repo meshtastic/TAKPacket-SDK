@@ -746,6 +746,11 @@ class CotXmlParser:
         else:
             pkt.pli = True
 
+        # For non-chat types, propagate remarks_text as the top-level remarks field.
+        # Chat uses GeoChat.message for the text; remarks stays empty.
+        if not has_chat and remarks_text:
+            pkt.remarks = remarks_text
+
         return pkt
 
     @staticmethod

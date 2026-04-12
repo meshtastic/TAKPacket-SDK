@@ -997,6 +997,7 @@ class CotXmlParser {
             takOs = takOs,
             endpoint = endpoint,
             phone = phone,
+            remarks = if (hasChatData) "" else remarksText,
             payload = payload,
         )
     }

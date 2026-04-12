@@ -168,6 +168,33 @@ export class TakCompressor {
     return rawWire.length < typedWire.length ? rawWire : typedWire;
   }
 
+  /**
+   * Compress a packet, stripping remarks if the result exceeds maxWireBytes.
+   *
+   * First attempts compression with remarks intact. If the wire payload
+   * fits within maxWireBytes, returns it as-is. Otherwise, clears the
+   * remarks field and re-compresses. Returns null if even the stripped
+   * packet exceeds the limit (caller should drop the packet).
+   *
+   * @param packet       The packet with remarks populated.
+   * @param maxWireBytes Maximum allowed wire payload size (e.g. 225).
+   * @returns The wire payload, or null if the packet is too large even
+   *          without remarks.
+   */
+  async compressWithRemarksFallback(
+    packet: Record<string, unknown>,
+    maxWireBytes: number,
+  ): Promise<Buffer | null> {
+    const full = await this.compress(packet);
+    if (full.length <= maxWireBytes) return full;
+
+    // Strip remarks and retry
+    const remarks = (packet.remarks as string) ?? "";
+    if (!remarks) return null;
+    const stripped = await this.compress({ ...packet, remarks: "" });
+    return stripped.length <= maxWireBytes ? stripped : null;
+  }
+
   /** Compress with stats for reporting. */
   async compressWithStats(packet: Record<string, unknown>): Promise<CompressionResult> {
     const TAKPacketV2 = await getTAKPacketV2Type();

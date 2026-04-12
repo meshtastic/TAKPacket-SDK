@@ -734,5 +734,11 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
     pkt.pli = true;
   }
 
+  // For non-chat types, propagate remarksText as the top-level remarks field.
+  // Chat uses GeoChat.message for the text; remarks stays empty.
+  if (!hasChat && remarksText) {
+    pkt.remarks = remarksText;
+  }
+
   return stripZeros(pkt);
 }

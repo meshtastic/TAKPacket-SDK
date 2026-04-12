@@ -34,6 +34,10 @@ object TakPacketV2Serializer {
             .setEndpoint(data.endpoint)
             .setPhone(data.phone)
 
+        if (data.remarks.isNotEmpty()) {
+            builder.setRemarks(data.remarks)
+        }
+
         if (data.cotTypeStr != null) {
             builder.setCotTypeStr(data.cotTypeStr)
         }
@@ -336,6 +340,7 @@ object TakPacketV2Serializer {
             takOs = proto.takOs,
             endpoint = proto.endpoint,
             phone = proto.phone,
+            remarks = proto.remarks,
             payload = payload,
         )
     }

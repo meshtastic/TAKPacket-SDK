@@ -118,6 +118,23 @@ public class TakCompressor {
         return rawWire.count < typedWire.count ? rawWire : typedWire
     }
 
+    /// Compress a packet, stripping remarks if the result exceeds `maxWireBytes`.
+    ///
+    /// First attempts compression with remarks intact. If the wire payload
+    /// fits within `maxWireBytes`, returns it as-is. Otherwise, clears the
+    /// remarks field and re-compresses. Returns `nil` if even the stripped
+    /// packet exceeds the limit (caller should drop the packet).
+    public func compressWithRemarksFallback(_ packet: TAKPacketV2, maxWireBytes: Int) throws -> Data? {
+        let full = try compress(packet)
+        if full.count <= maxWireBytes { return full }
+
+        guard !packet.remarks.isEmpty else { return nil }
+        var stripped = packet
+        stripped.remarks = ""
+        let strippedWire = try compress(stripped)
+        return strippedWire.count <= maxWireBytes ? strippedWire : nil
+    }
+
     /// Compress and return stats for reporting.
     public func compressWithStats(_ packet: TAKPacketV2) throws -> CompressionResult {
         let protobufBytes = try packet.serializedData()

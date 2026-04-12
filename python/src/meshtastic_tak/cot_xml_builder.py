@@ -189,7 +189,7 @@ class CotXmlBuilder:
         elif which == "rab":
             self._emit_rab(lines, packet.rab, packet.latitude_i, packet.longitude_i)
         elif which == "route":
-            self._emit_route(lines, packet.route, packet.latitude_i, packet.longitude_i)
+            self._emit_route(lines, packet.route, packet.latitude_i, packet.longitude_i, packet.uid, packet.remarks)
         elif which == "casevac":
             self._emit_casevac(lines, packet.casevac)
         elif which == "emergency":
@@ -204,6 +204,12 @@ class CotXmlBuilder:
             if packet.raw_detail:
                 text = packet.raw_detail.decode("utf-8", errors="replace")
                 lines.append(text)
+
+        # Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
+        # Chat uses GeoChat.message; Aircraft synthesizes from ICAO fields; Route handles
+        # remarks in its own block above. All other types emit here.
+        if packet.remarks and which not in ("chat", "aircraft", "route"):
+            lines.append(f'    <remarks>{escape(packet.remarks)}</remarks>')
 
         lines.append('  </detail>')
         lines.append('</event>')
@@ -331,8 +337,21 @@ class CotXmlBuilder:
             w = rab.stroke_weight_x10 / 10.0
             lines.append(f'    <strokeWeight value="{w}"/>')
 
-    def _emit_route(self, lines: list, route, event_lat_i: int, event_lon_i: int) -> None:
-        lines.append('    <__routeinfo/>')
+    def _emit_route(self, lines: list, route, event_lat_i: int, event_lon_i: int, event_uid: str = "", remarks: str = "") -> None:
+        # Emit <link> elements BEFORE <link_attr> (ATAK expects waypoints first)
+        for idx, link in enumerate(route.links):
+            llat = (event_lat_i + link.point.lat_delta_i) / 1e7
+            llon = (event_lon_i + link.point.lon_delta_i) / 1e7
+            link_type = "b-m-p-c" if link.link_type == 1 else "b-m-p-w"
+            # Generate deterministic uid when not present
+            uid = link.uid if link.uid else f"{event_uid}-{idx}"
+            parts = [f'uid="{escape(uid)}"']
+            parts.append(f'type="{link_type}"')
+            if link.callsign:
+                parts.append(f'callsign="{escape(link.callsign)}"')
+            # ATAK expects 3-component point: lat,lon,hae
+            parts.append(f'point="{llat},{llon},0" relation="c"')
+            lines.append(f'    <link {" ".join(parts)}/>')
         parts = []
         method_name = _ROUTE_METHOD_INT_TO_NAME.get(route.method)
         if method_name:
@@ -349,18 +368,13 @@ class CotXmlBuilder:
             lines.append(f'    <link_attr {" ".join(parts)}/>')
         else:
             lines.append('    <link_attr/>')
-        for link in route.links:
-            llat = (event_lat_i + link.point.lat_delta_i) / 1e7
-            llon = (event_lon_i + link.point.lon_delta_i) / 1e7
-            link_type = "b-m-p-c" if link.link_type == 1 else "b-m-p-w"
-            parts = []
-            if link.uid:
-                parts.append(f'uid="{escape(link.uid)}"')
-            parts.append(f'type="{link_type}"')
-            if link.callsign:
-                parts.append(f'callsign="{escape(link.callsign)}"')
-            parts.append(f'point="{llat},{llon}"')
-            lines.append(f'    <link {" ".join(parts)}/>')
+        # Conditional remarks element (route block handles its own remarks)
+        if remarks:
+            lines.append(f'    <remarks>{escape(remarks)}</remarks>')
+        else:
+            lines.append('    <remarks/>')
+        # routeinfo with navcues child (after link_attr)
+        lines.append('    <__routeinfo><__navcues/></__routeinfo>')
 
     # --- CasevacReport / EmergencyAlert / TaskRequest reverse lookups ----
 

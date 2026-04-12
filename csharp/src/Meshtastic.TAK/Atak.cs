@@ -251,7 +251,7 @@ namespace Meshtastic.Protobufs {
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.CasevacReport), global::Meshtastic.Protobufs.CasevacReport.Parser, new[]{ "Precedence", "EquipmentFlags", "LitterPatients", "AmbulatoryPatients", "Security", "HlzMarking", "ZoneMarker", "UsMilitary", "UsCivilian", "NonUsMilitary", "NonUsCivilian", "Epw", "Child", "TerrainFlags", "Frequency" }, null, new[]{ typeof(global::Meshtastic.Protobufs.CasevacReport.Types.Precedence), typeof(global::Meshtastic.Protobufs.CasevacReport.Types.HlzMarking), typeof(global::Meshtastic.Protobufs.CasevacReport.Types.Security) }, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.EmergencyAlert), global::Meshtastic.Protobufs.EmergencyAlert.Parser, new[]{ "Type", "AuthoringUid", "CancelReferenceUid" }, null, new[]{ typeof(global::Meshtastic.Protobufs.EmergencyAlert.Types.Type) }, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TaskRequest), global::Meshtastic.Protobufs.TaskRequest.Parser, new[]{ "TaskType", "TargetUid", "AssigneeUid", "Priority", "Status", "Note" }, null, new[]{ typeof(global::Meshtastic.Protobufs.TaskRequest.Types.Priority), typeof(global::Meshtastic.Protobufs.TaskRequest.Types.Status) }, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKPacketV2), global::Meshtastic.Protobufs.TAKPacketV2.Parser, new[]{ "CotTypeId", "How", "Callsign", "Team", "Role", "LatitudeI", "LongitudeI", "Altitude", "Speed", "Course", "Battery", "GeoSrc", "AltSrc", "Uid", "DeviceCallsign", "StaleSeconds", "TakVersion", "TakDevice", "TakPlatform", "TakOs", "Endpoint", "Phone", "CotTypeStr", "Pli", "Chat", "Aircraft", "RawDetail", "Shape", "Marker", "Rab", "Route", "Casevac", "Emergency", "Task" }, new[]{ "PayloadVariant" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKPacketV2), global::Meshtastic.Protobufs.TAKPacketV2.Parser, new[]{ "CotTypeId", "How", "Callsign", "Team", "Role", "LatitudeI", "LongitudeI", "Altitude", "Speed", "Course", "Battery", "GeoSrc", "AltSrc", "Uid", "DeviceCallsign", "StaleSeconds", "TakVersion", "TakDevice", "TakPlatform", "TakOs", "Endpoint", "Phone", "CotTypeStr", "Remarks", "Pli", "Chat", "Aircraft", "RawDetail", "Shape", "Marker", "Rab", "Route", "Casevac", "Emergency", "Task" }, new[]{ "PayloadVariant" }, null, null, null)
           }));
     }
     #endregion
@@ -8443,6 +8443,7 @@ namespace Meshtastic.Protobufs {
       endpoint_ = other.endpoint_;
       phone_ = other.phone_;
       cotTypeStr_ = other.cotTypeStr_;
+      remarks_ = other.remarks_;
       switch (other.PayloadVariantCase) {
         case PayloadVariantOneofCase.Pli:
           Pli = other.Pli;
@@ -8857,6 +8858,26 @@ namespace Meshtastic.Protobufs {
       }
     }
 
+    /// <summary>Field number for the "remarks" field.</summary>
+    public const int RemarksFieldNumber = 24;
+    private string remarks_ = "";
+    /// <summary>
+    ///
+    /// Optional remarks / free-text annotation from the &lt;remarks&gt; element.
+    /// Populated for non-GeoChat payload types (shapes, markers, routes, etc.)
+    /// when the original CoT event carried non-empty remarks text.
+    /// GeoChat messages carry their text in GeoChat.message instead.
+    /// Empty string (proto3 default) means no remarks were present.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Remarks {
+      get { return remarks_; }
+      set {
+        remarks_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     /// <summary>Field number for the "pli" field.</summary>
     public const int PliFieldNumber = 30;
     /// <summary>
@@ -9133,6 +9154,7 @@ namespace Meshtastic.Protobufs {
       if (Endpoint != other.Endpoint) return false;
       if (Phone != other.Phone) return false;
       if (CotTypeStr != other.CotTypeStr) return false;
+      if (Remarks != other.Remarks) return false;
       if (Pli != other.Pli) return false;
       if (!object.Equals(Chat, other.Chat)) return false;
       if (!object.Equals(Aircraft, other.Aircraft)) return false;
@@ -9175,6 +9197,7 @@ namespace Meshtastic.Protobufs {
       if (Endpoint.Length != 0) hash ^= Endpoint.GetHashCode();
       if (Phone.Length != 0) hash ^= Phone.GetHashCode();
       if (CotTypeStr.Length != 0) hash ^= CotTypeStr.GetHashCode();
+      if (Remarks.Length != 0) hash ^= Remarks.GetHashCode();
       if (HasPli) hash ^= Pli.GetHashCode();
       if (payloadVariantCase_ == PayloadVariantOneofCase.Chat) hash ^= Chat.GetHashCode();
       if (payloadVariantCase_ == PayloadVariantOneofCase.Aircraft) hash ^= Aircraft.GetHashCode();
@@ -9296,6 +9319,10 @@ namespace Meshtastic.Protobufs {
       if (CotTypeStr.Length != 0) {
         output.WriteRawTag(186, 1);
         output.WriteString(CotTypeStr);
+      }
+      if (Remarks.Length != 0) {
+        output.WriteRawTag(194, 1);
+        output.WriteString(Remarks);
       }
       if (HasPli) {
         output.WriteRawTag(240, 1);
@@ -9443,6 +9470,10 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(186, 1);
         output.WriteString(CotTypeStr);
       }
+      if (Remarks.Length != 0) {
+        output.WriteRawTag(194, 1);
+        output.WriteString(Remarks);
+      }
       if (HasPli) {
         output.WriteRawTag(240, 1);
         output.WriteBool(Pli);
@@ -9566,6 +9597,9 @@ namespace Meshtastic.Protobufs {
       if (CotTypeStr.Length != 0) {
         size += 2 + pb::CodedOutputStream.ComputeStringSize(CotTypeStr);
       }
+      if (Remarks.Length != 0) {
+        size += 2 + pb::CodedOutputStream.ComputeStringSize(Remarks);
+      }
       if (HasPli) {
         size += 2 + 1;
       }
@@ -9679,6 +9713,9 @@ namespace Meshtastic.Protobufs {
       }
       if (other.CotTypeStr.Length != 0) {
         CotTypeStr = other.CotTypeStr;
+      }
+      if (other.Remarks.Length != 0) {
+        Remarks = other.Remarks;
       }
       switch (other.PayloadVariantCase) {
         case PayloadVariantOneofCase.Pli:
@@ -9852,6 +9889,10 @@ namespace Meshtastic.Protobufs {
           }
           case 186: {
             CotTypeStr = input.ReadString();
+            break;
+          }
+          case 194: {
+            Remarks = input.ReadString();
             break;
           }
           case 240: {
@@ -10052,6 +10093,10 @@ namespace Meshtastic.Protobufs {
           }
           case 186: {
             CotTypeStr = input.ReadString();
+            break;
+          }
+          case 194: {
+            Remarks = input.ReadString();
             break;
           }
           case 240: {

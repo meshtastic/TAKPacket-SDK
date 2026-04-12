@@ -813,6 +813,11 @@ public class CotXmlParser
         }
         else pkt.Pli = true;
 
+        // For non-chat types, propagate remarksText as the top-level remarks field.
+        // Chat uses GeoChat.Message for the text; remarks stays empty.
+        if (!hasChat && !string.IsNullOrEmpty(remarksText))
+            pkt.Remarks = remarksText;
+
         return pkt;
     }
 

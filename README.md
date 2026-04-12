@@ -451,6 +451,8 @@ On the 31 bundled fixtures `compressBestOf()` picks the typed variant 100% of th
 
 End-to-end walkthroughs showing actual CoT XML from ATAK/iTAK being compressed for LoRa mesh transmission. Each example shows the raw XML, what gets stripped before compression, the resulting proto structure, and the final compressed wire payload. The LoRa MTU limit is **225 bytes**.
 
+> **Two-phase optimization:** The examples below show two reduction stages. First, the app strips non-essential XML *elements* (`<takv>`, `<voice>`, `<precisionLocation>`, etc.) before the SDK sees the XML. Second, the SDK parser eliminates further redundancy at parse time: `version="2.0"` is not stored (hardcoded on rebuild), `time` and `start` are discarded (rebuilt from receiver clock), `stale` becomes a compact `staleSeconds` varint (delta from time), and `ce`/`le` sentinels are dropped (hardcoded `9999999` on rebuild). The "After stripping" blocks below show the XML after phase 1 only — the event-envelope attributes visible there are **NOT on the wire**.
+
 ### PLI — Position Report (`a-f-G-U-C`)
 
 **Raw CoT XML from TAK client** (754 bytes)
@@ -686,24 +688,24 @@ shape {
 </event>
 ```
 
-**After stripping** (~500 bytes) — `<precisionLocation>`, `<marti/>`, `???` attrs, `routetype`, `order`, `color`, empty `callsign` removed
+**After stripping** (~380 bytes) — `<precisionLocation>`, `<marti/>`, `???` attrs, `routetype`, `order`, `color`, empty `callsign`, and waypoint `uid` attrs removed
 ```xml
 <event version="2.0" uid="139A3009-..." type="b-m-r" ...>
   <point lat="34.74829435592147" lon="-92.43520215509216" hae="0.0" .../>
   <detail>
     <contact callsign="Route - 04/11 06:48:00"/>
-    <link uid="D71306C3-..." callsign="SP" type="b-m-p-w"
+    <link callsign="SP" type="b-m-p-w"
           point="34.74829435592147,-92.43520215509216"/>
-    <link uid="06BDF9C8-..." type="b-m-p-c"
+    <link type="b-m-p-c"
           point="34.74650551240878,-92.43195557866541"/>
-    <link uid="A5449578-..." callsign="VDO" type="b-m-p-w"
+    <link callsign="VDO" type="b-m-p-w"
           point="34.748578593226505,-92.4354345620684"/>
     <link_attr method="Walking" prefix="CP" direction="Infil"/>
   </detail>
 </event>
 ```
 
-**TAKPacketV2 proto fields** — waypoints delta-encoded, method/direction as compact fields
+**TAKPacketV2 proto fields** — waypoints delta-encoded, UIDs omitted (receiver derives)
 ```
 cot_type_id: 10 (b-m-r)       how: 1 (h-e)
 callsign: "Route - 04/11 06:48:00"
@@ -712,9 +714,9 @@ route {
   method: 1 (Walking)          direction: 1 (Infil)     prefix: "CP"
   stroke_weight_x10: 30
   links: [
-    { lat_i: 347482943, lon_i: -924352021, uid: "D71306C3-...", callsign: "SP",  link_type: 0 }
-    { lat_i: 347465055, lon_i: -924319555, uid: "06BDF9C8-...",                  link_type: 1 }
-    { lat_i: 347485785, lon_i: -924354345, uid: "A5449578-...", callsign: "VDO", link_type: 0 }
+    { lat_i: 347482943, lon_i: -924352021, callsign: "SP",  link_type: 0 }
+    { lat_i: 347465055, lon_i: -924319555,                   link_type: 1 }
+    { lat_i: 347485785, lon_i: -924354345, callsign: "VDO", link_type: 0 }
   ]
 }
 ```
@@ -722,10 +724,17 @@ route {
 | Stage | Size | Reduction |
 |-------|------|-----------|
 | Raw XML | 890 B | — |
-| Stripped | ~500 B | -44% |
-| Compressed | **116 B** | **87% total** |
+| Stripped | ~380 B | -57% |
+| Compressed | **~80 B** | **91% total** |
 
-> **Note:** Routes are the tightest fit under the 225B LoRa MTU. Each waypoint adds ~25-35 compressed bytes. The stripper removes `routetype`, `order`, `color`, and empty `callsign` attributes from `<link_attr>` and checkpoint links to save ~60+ bytes. Routes with 5+ waypoints may still exceed the limit — consider splitting into multiple route segments.
+> **Note:** Routes are the tightest fit under the 225B LoRa MTU. The stripper removes waypoint `uid` attributes (~40 bytes each in proto wire format), `routetype`, `order`, `color`, and empty `callsign` attributes. Without UID stripping, a 5-waypoint route compresses to ~271 bytes (over the 225B limit); with it, even routes with 5-6 waypoints fit comfortably. The builder generates deterministic UIDs (`{eventUid}-{index}`) on reconstruction so ATAK can create internal waypoint markers.
+
+**Route reconstruction details:** The `CotXmlBuilder` emits route elements in the order ATAK expects:
+1. `<link>` waypoints first — each with `uid`, `type`, `callsign`, 3-component `point="lat,lon,hae"`, and `relation="c"`
+2. `<link_attr>` with `method`, `direction`, `prefix`, `stroke`
+3. `<__routeinfo><__navcues/></__routeinfo>` (non-self-closing, with navcues child)
+
+The stale time for routes (and all static CoT types) is extended to a minimum of 15 minutes before mesh transmission to survive multi-hop LoRa delivery. iTAK uses a 2-minute stale for routes which expires before mesh delivery completes.
 
 ---
 
@@ -796,10 +805,10 @@ marker {
 | GeoChat (text) | 1,031 B | 80 B | 12.9x | ✅ |
 | Rectangle (4 vertices) | 945 B | 101 B | 9.4x | ✅ |
 | Circle (ellipse) | 851 B | 90 B | 9.5x | ✅ |
-| Route (3 waypoints) | 890 B | 116 B | 7.7x | ✅ |
+| Route (3 waypoints) | 890 B | ~80 B | 11.1x | ✅ |
 | Marker (spot) | 721 B | 81 B | 8.9x | ✅ |
 
-Median compression ratio across all fixture types: **~8x** (400-2300 bytes XML → 56-211 bytes wire).
+Median compression ratio across all fixture types: **~9x** (400-2300 bytes XML → 56-211 bytes wire).
 
 ### Wire Optimizations
 
@@ -811,10 +820,39 @@ The SDK applies several optimizations to minimize wire payload size:
 | **Broadcast sentinel** | ~16 B/chat | `chat.to = "All Chat Rooms"` normalized to null (proto field omitted) |
 | **Element stripping** | ~100-200 B/msg | Non-essential XML elements (`<takv>`, `<voice>`, `<precisionLocation>`, `<__geofence>`, `<marti>`, `<__shapeExtras>`, `<creator>`, `<tog>`, `<archive>`, `<strokeStyle>`, empty `<remarks>`) stripped before SDK parsing |
 | **Attribute stripping** | ~30-80 B/msg | Display-only attributes stripped: `routetype`, `order`, `color` (from `<link_attr>`), `access`, empty `callsign`/`phone`, and all `"???"` placeholder values |
+| **Route waypoint UID stripping** | ~40 B/waypoint | UUID `uid` attributes stripped from route `<link>` elements before compression. Builder generates deterministic UIDs (`{eventUid}-{index}`) on reconstruction. Saves ~120 bytes proto for a 3-waypoint route |
+| **Stale time extension** | 0 B (metadata) | Static CoT types (routes `b-m-r`, shapes `u-d-*`, markers `b-m-p-*`) get a minimum 15-minute stale TTL before mesh transmission. Prevents iTAK's 2-min stale from expiring during multi-hop LoRa delivery |
 | **Delta vertex encoding** | ~50% vs abs | Shape/route vertices stored as deltas from the event anchor point |
 | **zstd dictionary v3** | ~5-8x | Dictionaries trained on 700 real-world protobuf samples covering all payload types |
 
 **Stripped elements and attributes are not needed for rendering** — the SDK extracts all structurally meaningful data (coordinates, waypoints, colors, stroke weight, method, direction, prefix) into typed proto fields. The stripped metadata is display-only, UI-state, or redundant with proto fields.
+
+### Route Delivery via Data Package (ATAK)
+
+ATAK silently ignores `b-m-r` route CoT events received over TCP streaming connections. Routes are only accepted from KML/GPX file import, TAK Server mission sync, or data packages auto-imported from `/sdcard/atak/tools/datapackage/`. iTAK does not have this limitation.
+
+The Meshtastic Android app works around this by converting mesh-received routes into KML data packages:
+
+1. Route arrives from mesh as a compressed TAKPacketV2
+2. SDK decompresses and reconstructs the route XML with waypoint coordinates
+3. `RouteDataPackageGenerator` extracts waypoints and generates a KML `<LineString>`
+4. KML is packaged in a MissionPackageManifest v2 zip with `manifest.xml`
+5. Zip is written to `/sdcard/atak/tools/datapackage/{routeUid}.zip`
+6. ATAK auto-imports the data package and renders the route in Route Manager
+
+```
+Route over LoRa mesh (135 bytes)
+    ↓ TakCompressor.decompress()
+Route CoT XML (waypoints, method, direction)
+    ↓ RouteDataPackageGenerator.generateDataPackage()
+{routeUid}.zip
+├── {routeUid}.kml      ← KML LineString with lon,lat,hae coordinates
+└── manifest.xml         ← MissionPackageManifest v2
+    ↓ AtakFileWriter.writeToImportDir()
+/sdcard/atak/tools/datapackage/{routeUid}.zip
+    ↓ ATAK auto-import
+Route rendered in ATAK Route Manager
+```
 
 ## Supported Platforms
 
