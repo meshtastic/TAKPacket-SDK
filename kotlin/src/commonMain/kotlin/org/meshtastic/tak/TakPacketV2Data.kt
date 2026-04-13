@@ -1,26 +1,66 @@
 package org.meshtastic.tak
 
 /**
- * Platform-agnostic data class representing a TAKPacketV2.
- * This is the SDK's internal representation, decoupled from any specific
- * protobuf library. Each platform serializes/deserializes this to protobuf
- * wire format using its native protobuf library.
+ * Platform-agnostic data class representing a parsed TAKPacketV2 CoT event.
+ *
+ * This is the SDK's canonical in-memory representation, fully decoupled from
+ * both the source XML and the Wire KMP protobuf classes. All coordinates are
+ * stored as fixed-point integers (degrees * 1e7) for lossless round-trip
+ * through the protobuf wire format.
+ *
+ * ## Lifecycle
+ *
+ * ```
+ * CoT XML ──► CotXmlParser.parse() ──► TakPacketV2Data
+ *     ──► TakCompressor.compress()  ──► wire payload (bytes)
+ *     ──► TakCompressor.decompress()──► TakPacketV2Data
+ *     ──► CotXmlBuilder.build()     ──► CoT XML
+ * ```
+ *
+ * @property cotTypeId   Enum-mapped CoT type (e.g. [CotTypeMapper.COTTYPE_A_F_G_U_C]).
+ *                       [CotTypeMapper.COTTYPE_OTHER] when the type string has no known mapping.
+ * @property cotTypeStr  Original CoT type string, set only when [cotTypeId] is
+ *                       [CotTypeMapper.COTTYPE_OTHER]. `null` otherwise to save wire bytes.
+ * @property how         Enum-mapped CoT "how" attribute (e.g. [CotTypeMapper.COTHOW_M_G]).
+ * @property callsign    Human-readable station identifier from `<contact callsign="…"/>`.
+ * @property team        `Team` enum value (1..14) from `<__group name="…"/>`, or 0 if absent.
+ * @property role        `MemberRole` enum value from `<__group role="…"/>`, or 0 if absent.
+ * @property latitudeI   Latitude in degrees * 1e7 (e.g. 377749000 = 37.7749°N).
+ * @property longitudeI  Longitude in degrees * 1e7.
+ * @property altitude    Altitude in meters above the WGS-84 ellipsoid (HAE).
+ * @property speed       Ground speed in centimeters per second.
+ * @property course      Heading in degrees * 100 (0..36000).
+ * @property battery     Battery percentage (0..100), from `<status battery="…"/>`.
+ * @property geoSrc      `GeoPointSource` enum for the position fix source.
+ * @property altSrc      `GeoPointSource` enum for the altitude fix source.
+ * @property uid         Unique event identifier from the `<event uid="…">` attribute.
+ * @property deviceCallsign  Device-level callsign from `<uid Droid="…"/>`.
+ * @property staleSeconds    Seconds between the event's `time` and `stale` timestamps.
+ * @property takVersion  TAK client version string from `<takv version="…"/>`.
+ * @property takDevice   TAK client device model from `<takv device="…"/>`.
+ * @property takPlatform TAK client platform name from `<takv platform="…"/>`.
+ * @property takOs       TAK client OS version from `<takv os="…"/>`.
+ * @property endpoint    TAK server endpoint from `<contact endpoint="…"/>`.
+ *                       Empty when the source uses a default endpoint.
+ * @property phone       Phone number from `<contact phone="…"/>`, if present.
+ * @property remarks     Free-text remarks from `<remarks>` (empty for chat payloads).
+ * @property payload     Typed payload variant — see [Payload] sealed interface.
  */
 public data class TakPacketV2Data(
     val cotTypeId: Int = CotTypeMapper.COTTYPE_OTHER,
     val cotTypeStr: String? = null,
     val how: Int = CotTypeMapper.COTHOW_UNSPECIFIED,
     val callsign: String = "",
-    val team: Int = 0,    // Team enum value
-    val role: Int = 0,    // MemberRole enum value
-    val latitudeI: Int = 0,   // degrees * 1e7
-    val longitudeI: Int = 0,  // degrees * 1e7
-    val altitude: Int = 0,    // meters HAE
-    val speed: Int = 0,       // cm/s
-    val course: Int = 0,      // degrees * 100
-    val battery: Int = 0,     // 0-100
-    val geoSrc: Int = 0,      // GeoPointSource enum
-    val altSrc: Int = 0,      // GeoPointSource enum
+    val team: Int = 0,
+    val role: Int = 0,
+    val latitudeI: Int = 0,
+    val longitudeI: Int = 0,
+    val altitude: Int = 0,
+    val speed: Int = 0,
+    val course: Int = 0,
+    val battery: Int = 0,
+    val geoSrc: Int = 0,
+    val altSrc: Int = 0,
     val uid: String = "",
     val deviceCallsign: String = "",
     val staleSeconds: Int = 0,
@@ -33,8 +73,23 @@ public data class TakPacketV2Data(
     val remarks: String = "",
     val payload: Payload = Payload.None,
 ) {
+    /**
+     * Discriminated payload variant carried by a [TakPacketV2Data].
+     *
+     * The parser selects the most specific variant that matches the incoming
+     * CoT event. Priority (highest to lowest): [Chat] > [Aircraft] > [Route] >
+     * [RangeAndBearing] > [DrawnShape] > [Marker] > [CasevacReport] >
+     * [EmergencyAlert] > [TaskRequest] > [Pli].
+     *
+     * [RawDetail] is never produced by the parser; it is used by
+     * [TakCompressor.compressBestOf] as a lossless fallback that carries
+     * the original `<detail>` bytes verbatim.
+     */
     public sealed interface Payload {
+        /** No payload data — used as a default sentinel. */
         public data object None : Payload
+
+        /** Position Location Information (PLI) — the most common CoT event type. */
         public data class Pli(val value: Boolean = true) : Payload
         /**
          * ATAK GeoChat message — both regular chat (b-t-f) and delivered /

@@ -1,0 +1,27 @@
+[versions]
+kotlin = "2.1.20"
+wire = "5.2.0"
+vanniktech-publish = "0.34.0"
+dokka = "1.9.20"
+binary-compat = "0.17.0"
+xmlutil = "0.90.3"
+kotlinx-datetime = "0.6.2"
+zstd-jni = "1.5.7-7"
+junit-jupiter = "5.12.2"
+junit-platform = "1.12.2"
+
+[libraries]
+wire-runtime = { module = "com.squareup.wire:wire-runtime", version.ref = "wire" }
+xmlutil-core = { module = "io.github.pdvrieze.xmlutil:core", version.ref = "xmlutil" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+wire = { id = "com.squareup.wire", version.ref = "wire" }
+vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-publish" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+binary-compat = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binary-compat" }

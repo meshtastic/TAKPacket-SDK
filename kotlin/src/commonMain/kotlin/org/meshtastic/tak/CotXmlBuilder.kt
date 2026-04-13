@@ -100,7 +100,13 @@ public class CotXmlBuilder {
             val r = (argb ushr 16) and 0xFF
             val g = (argb ushr 8) and 0xFF
             val b = argb and 0xFF
-            return "%02x%02x%02x%02x".format(a, b, g, r)
+            return hex2(a) + hex2(b) + hex2(g) + hex2(r)
+        }
+
+        /** Format a byte value as a zero-padded two-character lowercase hex string. */
+        private fun hex2(v: Int): String {
+            val s = v.toString(16)
+            return if (s.length < 2) "0$s" else s
         }
 
         /** Escape XML special characters in attribute values and text content. */

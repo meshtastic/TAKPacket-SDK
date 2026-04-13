@@ -1,7 +1,9 @@
 plugins {
-    kotlin("multiplatform") version "2.1.20"
-    id("com.squareup.wire") version "5.2.0"
-    id("com.vanniktech.maven.publish") version "0.34.0"
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.wire)
+    alias(libs.plugins.vanniktech.publish)
+    alias(libs.plugins.dokka)
+    alias(libs.plugins.binary.compat)
 }
 
 group = "org.meshtastic"
@@ -44,7 +46,7 @@ kotlin {
     jvm()
 
     // iOS targets with zstd C interop for dictionary compression
-    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+    listOf(iosArm64(), iosSimulatorArm64(), iosX64()).forEach { target ->
         target.compilations.getByName("main") {
             cinterops {
                 val zstd by creating {
@@ -64,9 +66,9 @@ kotlin {
             kotlin.srcDir("src/commonMain/generated")
 
             dependencies {
-                implementation("com.squareup.wire:wire-runtime:5.2.0")
-                implementation("io.github.pdvrieze.xmlutil:core:0.90.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
+                implementation(libs.wire.runtime)
+                implementation(libs.xmlutil.core)
+                implementation(libs.kotlinx.datetime)
             }
         }
 
@@ -75,20 +77,27 @@ kotlin {
         }
 
         jvmMain.dependencies {
-            implementation("com.github.luben:zstd-jni:1.5.7-7")
+            implementation(libs.zstd.jni)
         }
 
         jvmTest.dependencies {
             implementation(kotlin("test-junit5"))
-            implementation("org.junit.jupiter:junit-jupiter:5.12.2")
-            implementation("org.junit.jupiter:junit-jupiter-params:5.12.2")
-            runtimeOnly("org.junit.platform:junit-platform-launcher:1.12.2")
+            implementation(libs.junit.jupiter)
+            implementation(libs.junit.jupiter.params)
+            runtimeOnly(libs.junit.platform.launcher)
         }
     }
 }
 
 tasks.named<Test>("jvmTest") {
     useJUnitPlatform()
+}
+
+// Binary compatibility validator: dump API with `./gradlew apiDump`,
+// check for breaking changes with `./gradlew apiCheck`.
+apiValidation {
+    // Wire-generated proto classes are not part of our public API surface
+    ignoredPackages.add("org.meshtastic.proto")
 }
 
 mavenPublishing {

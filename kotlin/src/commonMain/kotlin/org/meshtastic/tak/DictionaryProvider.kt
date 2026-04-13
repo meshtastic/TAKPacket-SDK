@@ -1,9 +1,18 @@
 package org.meshtastic.tak
 
 /**
- * Loads and provides zstd compression dictionaries.
+ * Manages zstd compression dictionaries for TAKPacketV2 wire payloads.
  *
- * Dictionary bytes are loaded via the platform-specific [DictionaryLoader].
+ * The SDK ships two pre-trained dictionaries:
+ * - **non-aircraft** (dict ID 0): tuned for PLI, chat, shapes, markers,
+ *   routes, CASEVAC, emergency, and task events.
+ * - **aircraft** (dict ID 1): tuned for ADS-B / aircraft track events.
+ *
+ * Dictionary bytes are loaded lazily via the platform-specific
+ * [DictionaryLoader] and cached for the lifetime of the process.
+ *
+ * The special dict ID `0xFF` signals an uncompressed raw protobuf payload
+ * (used by TAK_TRACKER firmware that lacks zstd support).
  */
 public object DictionaryProvider {
 

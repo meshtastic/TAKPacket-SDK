@@ -1,11 +1,18 @@
 package org.meshtastic.tak
 
 /**
- * Maps CoT type strings (e.g. "a-f-G-U-C") to integer enum values matching
- * the CotType enum in atak.proto, and back.
+ * Bidirectional mapping between CoT type/how strings and their compact
+ * integer enum values from `atak.proto`.
  *
- * When a CoT type string is not in the known mapping, COTTYPE_OTHER (0) is returned
- * and the caller should populate cot_type_str with the original string.
+ * The SDK encodes CoT types as small integers on the wire to save bandwidth.
+ * When a type string has a known mapping (e.g. `"a-f-G-U-C"` -> 1), only the
+ * integer rides on the wire. Unknown types fall through to [COTTYPE_OTHER] (0)
+ * and the full string is carried in the `cot_type_str` field instead.
+ *
+ * This object also provides [isAircraft] / [isAircraftString] helpers used by
+ * [DictionaryProvider] to select the aircraft-specific zstd dictionary.
+ *
+ * All functions are pure and thread-safe.
  */
 public object CotTypeMapper {
 

@@ -1,18 +1,23 @@
 package org.meshtastic.tak
 
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.File
 import kotlin.random.Random
 
 /**
  * Generates a large corpus of valid TAKPacketV2 protobuf samples for
- * zstd dictionary training. Run with:
+ * zstd dictionary training. This test is disabled by default to prevent
+ * accidental CI runs — enable it manually when retraining dictionaries.
+ *
+ * Run with:
  *   ./gradlew test --tests "org.meshtastic.tak.DictionaryTrainingTest.generate training corpus"
  *
  * Then train dictionaries:
  *   zstd --train training_corpus/ -o dict_non_aircraft.zstd --maxdict=16384
  *   zstd --train training_corpus/aircraft_ -o dict_aircraft.zstd --maxdict=4096
  */
+@Disabled("Manual-only: run explicitly when retraining zstd dictionaries")
 class DictionaryTrainingTest {
 
     private val parser = CotXmlParser()

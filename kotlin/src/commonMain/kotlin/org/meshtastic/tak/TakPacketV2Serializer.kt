@@ -19,11 +19,26 @@ import org.meshtastic.proto.TaskRequest
 import org.meshtastic.proto.Team
 
 /**
- * Serializes/deserializes [TakPacketV2Data] to/from protobuf wire format
- * using Wire KMP generated classes.
+ * Converts between [TakPacketV2Data] and protobuf wire format using
+ * Wire KMP generated classes.
+ *
+ * This object is the only place in the SDK that touches Wire-generated types
+ * (`org.meshtastic.proto.*`). Wire types are **not** exposed through the
+ * public API — `wire-runtime` is an `implementation` dependency, not `api`.
+ *
+ * ## Thread safety
+ *
+ * Both [serialize] and [deserialize] are stateless and safe to call from any
+ * thread or coroutine context.
  */
 public object TakPacketV2Serializer {
 
+    /**
+     * Serialize a [TakPacketV2Data] to protobuf wire bytes.
+     *
+     * @param data the SDK data class to serialize
+     * @return the encoded protobuf bytes (uncompressed)
+     */
     public fun serialize(data: TakPacketV2Data): ByteArray {
         var pliPayload: Boolean? = null
         var chatPayload: GeoChat? = null
@@ -225,6 +240,15 @@ public object TakPacketV2Serializer {
         return proto.encode()
     }
 
+    /**
+     * Deserialize protobuf wire bytes back into a [TakPacketV2Data].
+     *
+     * @param bytes the encoded protobuf bytes (as produced by [serialize])
+     * @return the deserialized SDK data class
+     * @throws com.squareup.wire.ProtoAdapter.EnumConstantNotFoundException
+     *         if an unknown enum value is encountered (shouldn't happen in
+     *         practice since Wire falls back to default values)
+     */
     public fun deserialize(bytes: ByteArray): TakPacketV2Data {
         val proto = TAKPacketV2.ADAPTER.decode(bytes)
 

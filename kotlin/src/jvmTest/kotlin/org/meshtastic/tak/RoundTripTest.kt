@@ -6,9 +6,9 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
 /**
- * JVM-only round-trip tests that require zstd compression (zstd-jni).
- * Individual parsing tests and uncompressed round-trip have moved to commonTest
- * (CotXmlParserTest, TakPacketV2SerializerTest) and run on all KMP targets.
+ * JVM-only round-trip tests that require zstd compression (zstd-jni) or
+ * file-based fixtures from `testdata/`. Cross-platform parse-only tests
+ * live in `commonTest/CotXmlParserTest` with inlined fixtures.
  */
 class RoundTripTest {
 
@@ -17,6 +17,10 @@ class RoundTripTest {
     private val compressor = TakCompressor()
 
     private fun loadFixture(name: String): String = TestFixtures.loadFixture(name)
+
+    // ════════════════════════════════════════════════════════════════════
+    //  Parameterized full round-trip (parse → compress → decompress)
+    // ════════════════════════════════════════════════════════════════════
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("org.meshtastic.tak.TestFixtures#allFixtureFilenames")
@@ -144,18 +148,9 @@ class RoundTripTest {
             "Rebuilt XML should contain callsign for $fixture")
     }
 
-    @Test
-    fun `PLI basic parses correctly`() {
-        val xml = loadFixture("pli_basic.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals("testnode", packet.uid)
-        assertEquals(CotTypeMapper.COTTYPE_A_F_G_U_C, packet.cotTypeId)
-        assertEquals(CotTypeMapper.COTHOW_M_G, packet.how)
-        assertEquals("testnode", packet.callsign)
-        assertEquals((37.7749 * 1e7).toInt(), packet.latitudeI)
-        assertEquals((-122.4194 * 1e7).toInt(), packet.longitudeI)
-    }
+    // ════════════════════════════════════════════════════════════════════
+    //  Regression tests that need file-based fixtures + compression
+    // ════════════════════════════════════════════════════════════════════
 
     @Test
     fun `rectangle with space-after-comma link points preserves longitudes`() {
@@ -188,10 +183,8 @@ class RoundTripTest {
     @Test
     fun `PLI stationary clamps negative speed and course to zero`() {
         // Regression for an iOS crash where ATAK's <track speed="-1.0"
-        // course="-1.0"/> sentinel for stationary / unknown targets tripped a
-        // Double -> UInt32 conversion trap in the Swift parser. The proto
-        // field is uint32 on all platforms, so the fix is to clamp negatives
-        // to 0 rather than wrap them into huge unsigned values.
+        // course="-1.0"/> sentinel for stationary/unknown targets tripped a
+        // Double -> UInt32 conversion trap. Clamp negatives to 0.
         val xml = loadFixture("pli_stationary.xml")
         val packet = parser.parse(xml)
 
@@ -201,68 +194,9 @@ class RoundTripTest {
         assertTrue(packet.payload is TakPacketV2Data.Payload.Pli)
     }
 
-    @Test
-    fun `PLI full parses all fields`() {
-        val xml = loadFixture("pli_full.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_A_F_G_U_C, packet.cotTypeId)
-        assertNotEquals("", packet.callsign)
-        assertNotEquals("", packet.takVersion)
-        assertNotEquals("", packet.takPlatform)
-        assertTrue(packet.battery > 0, "Battery should be > 0")
-        assertTrue(packet.payload is TakPacketV2Data.Payload.Pli)
-    }
-
-    @Test
-    fun `GeoChat parses message and recipients`() {
-        val xml = loadFixture("geochat_simple.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_B_T_F, packet.cotTypeId)
-        assertTrue(packet.payload is TakPacketV2Data.Payload.Chat)
-        val chat = packet.payload as TakPacketV2Data.Payload.Chat
-        assertTrue(chat.message.isNotEmpty(), "Chat message should not be empty")
-    }
-
-    @Test
-    fun `Aircraft ADS-B parses aircraft fields`() {
-        val xml = loadFixture("aircraft_adsb.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_A_N_A_C_F, packet.cotTypeId)
-        assertTrue(packet.payload is TakPacketV2Data.Payload.Aircraft)
-        val aircraft = packet.payload as TakPacketV2Data.Payload.Aircraft
-        assertTrue(aircraft.icao.isNotEmpty(), "ICAO should not be empty")
-    }
-
-    @Test
-    fun `Delete event parses correctly`() {
-        val xml = loadFixture("delete_event.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_T_X_D_D, packet.cotTypeId)
-        assertEquals(CotTypeMapper.COTHOW_H_G_I_G_O, packet.how)
-    }
-
-    @Test
-    fun `CASEVAC parses correctly`() {
-        val xml = loadFixture("casevac.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_B_R_F_H_C, packet.cotTypeId)
-        assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
-        assertEquals("CASEVAC-1", packet.callsign)
-    }
-
-    @Test
-    fun `Alert TIC parses correctly`() {
-        val xml = loadFixture("alert_tic.xml")
-        val packet = parser.parse(xml)
-
-        assertEquals(CotTypeMapper.COTTYPE_B_A_O_OPN, packet.cotTypeId)
-        assertEquals("ALPHA-6", packet.callsign)
-    }
+    // ════════════════════════════════════════════════════════════════════
+    //  Shape, marker, route, and specialized payload tests (file-based)
+    // ════════════════════════════════════════════════════════════════════
 
     @Test
     fun `drawing_circle extracts to DrawnShape Circle variant with StrokeAndFill`() {
