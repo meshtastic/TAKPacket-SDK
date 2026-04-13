@@ -290,6 +290,18 @@ class CotXmlParser {
                 else -> MARKER_KIND_UNSPECIFIED
             }
         }
+
+        // Pre-compiled regex patterns for aircraft remarks parsing
+        private val ICAO_REGEX = Regex("""ICAO:\s*([A-Fa-f0-9]{6})""")
+        private val REG_REGEX = Regex("""REG:\s*(\S+)""")
+        private val FLIGHT_REGEX = Regex("""Flight:\s*(\S+)""")
+        private val TYPE_REGEX = Regex("""Type:\s*(\S+)""")
+        private val SQUAWK_REGEX = Regex("""Squawk:\s*(\d+)""")
+        private val CATEGORY_REGEX = Regex("""Category:\s*(\S+)""")
+        private val RAW_DETAIL_REGEX = Regex(
+            """<detail\b[^>]*>(.*?)</detail\s*>""",
+            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
+        )
     }
 
     /**
@@ -328,7 +340,6 @@ class CotXmlParser {
         var takOs = ""
         var geoSrc = ""
         var altSrc = ""
-        var chatMessage = ""
         var chatTo: String? = null
         var chatToCallsign: String? = null
         var icao = ""
@@ -343,7 +354,6 @@ class CotXmlParser {
         var hasAircraftData = false
         var hasChatData = false
         var isDeleteEvent = false
-        var linkUid = ""
         var remarksText = ""
         var inDetail = false
 
@@ -480,10 +490,9 @@ class CotXmlParser {
                             "status" -> {
                                 val bat = reader.getAttributeValue(null, "battery")?.toIntOrNull()
                                 if (bat != null && bat > 0) battery = bat
-                                val readinessAttr = reader.getAttributeValue(null, "readiness")
-                                if (readinessAttr != null) {
-                                    markerReadiness = readinessAttr.equals("true", ignoreCase = true)
-                                    hasMarkerData = true
+                                if (reader.getAttributeValue(null, "readiness")
+                                        ?.equals("true", ignoreCase = true) == true) {
+                                    markerReadiness = true
                                 }
                             }
                             "track" -> {
@@ -679,12 +688,6 @@ class CotXmlParser {
                                 val linkCallsign = reader.getAttributeValue(null, "callsign") ?: ""
                                 val parentCallsignAttr = reader.getAttributeValue(null, "parent_callsign") ?: ""
 
-                                // Preserve the original "first link uid wins" behavior
-                                // used by the chat path for linking back to senders.
-                                if (linkUidAttr != null && linkUid.isEmpty()) {
-                                    linkUid = linkUidAttr
-                                }
-
                                 // Ignore style links nested inside <shape> (type="b-x-KmlStyle").
                                 // Their `uid` ends in ".Style" and they carry styling, not
                                 // geometry or relationships we care about.
@@ -823,16 +826,16 @@ class CotXmlParser {
 
         // Parse ICAO/aircraft data from remarks (always try, remarks may supplement _aircot_ or _radio)
         if (remarksText.isNotEmpty() && icao.isEmpty()) {
-            val icaoMatch = Regex("""ICAO:\s*([A-Fa-f0-9]{6})""").find(remarksText)
+            val icaoMatch = ICAO_REGEX.find(remarksText)
             if (icaoMatch != null) {
                 hasAircraftData = true
                 icao = icaoMatch.groupValues[1]
-                if (registration.isEmpty()) registration = Regex("""REG:\s*(\S+)""").find(remarksText)?.groupValues?.get(1) ?: ""
-                if (flight.isEmpty()) flight = Regex("""Flight:\s*(\S+)""").find(remarksText)?.groupValues?.get(1) ?: ""
-                if (aircraftType.isEmpty()) aircraftType = Regex("""Type:\s*(\S+)""").find(remarksText)?.groupValues?.get(1) ?: ""
-                val squawkMatch = Regex("""Squawk:\s*(\d+)""").find(remarksText)
+                if (registration.isEmpty()) registration = REG_REGEX.find(remarksText)?.groupValues?.get(1) ?: ""
+                if (flight.isEmpty()) flight = FLIGHT_REGEX.find(remarksText)?.groupValues?.get(1) ?: ""
+                if (aircraftType.isEmpty()) aircraftType = TYPE_REGEX.find(remarksText)?.groupValues?.get(1) ?: ""
+                val squawkMatch = SQUAWK_REGEX.find(remarksText)
                 if (squawk == 0) squawk = squawkMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
-                val catMatch = Regex("""Category:\s*(\S+)""").find(remarksText)
+                val catMatch = CATEGORY_REGEX.find(remarksText)
                 if (catMatch != null && category.isEmpty()) category = catMatch.groupValues[1]
             }
         }
@@ -1027,10 +1030,7 @@ class CotXmlParser {
      * extraction is required to keep the round trip loss-free.
      */
     fun extractRawDetailBytes(cotXml: String): ByteArray {
-        val match = Regex(
-            """<detail\b[^>]*>(.*?)</detail\s*>""",
-            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
-        ).find(cotXml)
+        val match = RAW_DETAIL_REGEX.find(cotXml)
         val inner = match?.groupValues?.get(1) ?: return ByteArray(0)
         return inner.encodeToByteArray()
     }
