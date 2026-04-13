@@ -3,6 +3,7 @@ package org.meshtastic.tak
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.File
+import kotlin.test.assertTrue
 
 class MalformedInputTest {
 
@@ -50,7 +51,7 @@ class MalformedInputTest {
     @Test
     fun `ignores reserved bits in flags byte`() {
         val packet = compressor.decompress(loadMalformed("reserved_bits_set.bin"))
-        assert(packet.uid.isNotEmpty()) { "Should decompress despite reserved bits" }
+        assertTrue(packet.uid.isNotEmpty(), "Should decompress despite reserved bits")
     }
 
     // Security attack tests

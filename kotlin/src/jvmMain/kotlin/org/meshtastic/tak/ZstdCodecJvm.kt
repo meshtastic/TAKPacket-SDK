@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Compressor and decompressor caches are thread-safe ([ConcurrentHashMap])
  * so the singleton can be used safely from multiple threads.
  */
-public actual object ZstdCodec {
+internal actual object ZstdCodec {
     private val compressors = ConcurrentHashMap<Pair<Int, Int>, ZstdDictCompress>()
     private val decompressors = ConcurrentHashMap<Int, ZstdDictDecompress>()
 
@@ -25,11 +25,11 @@ public actual object ZstdCodec {
             ZstdDictDecompress(DictionaryProvider.getDictionary(dictId))
         }
 
-    public actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray {
+    actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray {
         return Zstd.compress(data, ensureCompressor(dictId, level))
     }
 
-    public actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray {
+    actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray {
         return Zstd.decompress(data, ensureDecompressor(dictId), maxSize)
     }
 
@@ -38,7 +38,7 @@ public actual object ZstdCodec {
      * Provided to satisfy the `expect` declaration so common code can call
      * `ZstdCodec.release()` unconditionally.
      */
-    public actual fun release() {
+    actual fun release() {
         // zstd-jni handles cleanup via finalizers; nothing to do here
     }
 }

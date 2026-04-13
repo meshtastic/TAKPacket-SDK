@@ -36,7 +36,7 @@ import zstd.ZSTD_isError
  * The consuming iOS app must link against libzstd (e.g. via CocoaPods, SPM, or vendored xcframework).
  */
 @OptIn(ExperimentalForeignApi::class)
-public actual object ZstdCodec {
+internal actual object ZstdCodec {
     private val lock = NSLock()
     private var cCtx: CPointer<ZSTD_CCtx>? = null
     private var dCtx: CPointer<ZSTD_DCtx>? = null
@@ -81,7 +81,7 @@ public actual object ZstdCodec {
             }
         }
 
-    public actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray = withLock {
+    actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray = withLock {
         val ctx = getOrCreateCCtx()
         val cDict = getOrCreateCDict(dictId, level)
         val maxSize = ZSTD_compressBound(data.size.toULong())
@@ -108,7 +108,7 @@ public actual object ZstdCodec {
         destBuffer.copyOf(compressedSize.toInt())
     }
 
-    public actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray = withLock {
+    actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray = withLock {
         val ctx = getOrCreateDCtx()
         val dDict = getOrCreateDDict(dictId)
         val destBuffer = ByteArray(maxSize)
@@ -139,7 +139,7 @@ public actual object ZstdCodec {
      * Call this when the codec is no longer needed to avoid memory leaks
      * in long-running apps or tests.
      */
-    public actual fun release() = withLock {
+    actual fun release() = withLock {
         cCtx?.let { ZSTD_freeCCtx(it) }
         cCtx = null
         dCtx?.let { ZSTD_freeDCtx(it) }

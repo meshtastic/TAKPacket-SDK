@@ -7,7 +7,7 @@ package org.meshtastic.tak
  * the dictionaries are embedded as Base64-encoded constants.
  */
 internal object EmbeddedDictionaries {
-    const val AIRCRAFT_BASE64: String =
+    internal const val AIRCRAFT_BASE64: String =
         "N6Qw7J3NuSA2EBBUtwH/U5LZK5hu0nQl6CHvEuOwcsHBWACYgQzN4xQlJLtMN4/fmSjJTHZTghAsCMohv70CczEYDB6FRqLxlM1n" +
         "2wZEYMKFkYYJNh0EBAQEBAQEBAKBQCAQCAQCgUAgEAgHAoFAIBAIhGpFCCEiIvKUErGQLBAWxKJQKIqiKAqkQKSilFJKKaWqqgcB" +
         "AAAABAAAAAgAAAA4RDRFgAE8ggIdCgZCODhENEUSBk44MDM0NhoHU1dBNTg0MTICQTMIAxACGgdBQUw4NTA5NfSCweM9toiAFEDk" +
@@ -64,7 +64,7 @@ internal object EmbeddedDictionaries {
         "QUFMNDI4NzWHcIoVPasmbTJA8I8ESPDEAVCdbHILaWNhby01MUZFRTKAATyCAh0KBjUxRkVFMhIGTjUyMjU3GgdBQUw0Mjg3MgJB" +
         "MwgDEAIaB0RBTDQzOTI1JPsj4T0CiraxQOD+AUjEd1DZgQFyC2ljYW8tRDZDMQ=="
 
-    const val NON_AIRCRAFT_BASE64: String =
+    internal const val NON_AIRCRAFT_BASE64: String =
         "N6Qw7Mifg39KEDDTJm0PWGd6j+BfQJKsmZRkwz7ZXtAlndlHXJDhL9LmExvlZPcm6+QHoIpkoOaob+Tb3d3d3buDHdgBhwOCBht8" +
         "FN9uv/327QeDBQAAAAAAoMCYiE47AATgAJMEpRGOD4gMi6LiWUAMBACeAQAAgBgOwiiMQ0QBAoyjkgAAAHTM5CBhAIBgAELHMAAA" +
         "CAoXkSjOQMYEAAAAAQAAAAQAAAAIAAAAYmQtMzc5Ny0xNTIzLTkzNjA3ZTQwYmVjZIABgKMFqgKiAggDEAIaAkNQIB4qNAoICLSt" +

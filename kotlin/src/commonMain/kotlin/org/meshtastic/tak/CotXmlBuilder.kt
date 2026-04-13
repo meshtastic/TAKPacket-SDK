@@ -1,6 +1,7 @@
 package org.meshtastic.tak
 
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -101,6 +102,14 @@ public class CotXmlBuilder {
             val b = argb and 0xFF
             return "%02x%02x%02x%02x".format(a, b, g, r)
         }
+
+        /** Escape XML special characters in attribute values and text content. */
+        private fun esc(s: String): String = s
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
     }
 
     /**
@@ -114,10 +123,13 @@ public class CotXmlBuilder {
 
     /**
      * Build a CoT XML event string from a [TakPacketV2Data].
+     *
+     * @param now The timestamp used for `time`, `start`, and `stale` attributes.
+     *            Defaults to the current wall-clock time. Pass an explicit
+     *            [Instant] for deterministic/reproducible output in tests.
      */
-    public fun build(packet: TakPacketV2Data): String {
+    public fun build(packet: TakPacketV2Data, now: Instant = Clock.System.now()): String {
         val sb = StringBuilder()
-        val now = Clock.System.now()
         val timeStr = now.toString()
         val staleSeconds = packet.staleSeconds.toLong().coerceAtLeast(45)
         val stale = now + staleSeconds.seconds
@@ -575,11 +587,4 @@ public class CotXmlBuilder {
 
         return sb.toString()
     }
-
-    private fun esc(s: String): String = s
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-        .replace("'", "&apos;")
 }

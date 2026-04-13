@@ -1,12 +1,11 @@
 plugins {
     kotlin("multiplatform") version "2.1.20"
-    kotlin("plugin.serialization") version "2.1.20"
     id("com.squareup.wire") version "5.2.0"
     id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
 group = "org.meshtastic"
-version = "0.1.0"
+version = file("../VERSION").readText().trim()
 
 repositories {
     mavenCentral()
@@ -65,10 +64,8 @@ kotlin {
             kotlin.srcDir("src/commonMain/generated")
 
             dependencies {
-                api("com.squareup.wire:wire-runtime:5.2.0")
+                implementation("com.squareup.wire:wire-runtime:5.2.0")
                 implementation("io.github.pdvrieze.xmlutil:core:0.90.3")
-                implementation("io.github.pdvrieze.xmlutil:serialization:0.90.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
             }
         }

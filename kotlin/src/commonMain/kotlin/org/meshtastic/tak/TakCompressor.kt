@@ -128,6 +128,7 @@ public class TakCompressor(
             phone = "",
             geoSrc = 0,
             altSrc = 0,
+            remarks = "",
             payload = TakPacketV2Data.Payload.RawDetail(rawDetailBytes),
         )
         val rawWire = compress(rawPacket)
@@ -196,5 +197,9 @@ public class TakCompressor(
                 wirePayload.contentEquals(other.wirePayload)
 
         override fun hashCode(): Int = wirePayload.contentHashCode()
+
+        override fun toString(): String =
+            "CompressionResult(protobufSize=$protobufSize, compressedSize=$compressedSize, " +
+                "dictId=$dictId, dictName=$dictName, wirePayload=${wirePayload.size} bytes)"
     }
 }
