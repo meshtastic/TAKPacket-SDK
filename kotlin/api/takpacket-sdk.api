@@ -7,6 +7,139 @@ public final class org/meshtastic/tak/AtakPalette {
 }
 
 public final class org/meshtastic/tak/CotTypeMapper {
+	public static final field COTHOW_H_E I
+	public static final field COTHOW_H_G_I_G_O I
+	public static final field COTHOW_M_F I
+	public static final field COTHOW_M_G I
+	public static final field COTHOW_M_P I
+	public static final field COTHOW_M_R I
+	public static final field COTHOW_M_S I
+	public static final field COTHOW_UNSPECIFIED I
+	public static final field COTTYPE_A_F_A I
+	public static final field COTTYPE_A_F_A_C I
+	public static final field COTTYPE_A_F_A_C_F I
+	public static final field COTTYPE_A_F_A_C_H I
+	public static final field COTTYPE_A_F_A_C_L I
+	public static final field COTTYPE_A_F_A_M I
+	public static final field COTTYPE_A_F_A_M_F I
+	public static final field COTTYPE_A_F_A_M_F_C_H I
+	public static final field COTTYPE_A_F_A_M_F_F I
+	public static final field COTTYPE_A_F_A_M_F_L I
+	public static final field COTTYPE_A_F_A_M_F_P I
+	public static final field COTTYPE_A_F_A_M_F_U_L I
+	public static final field COTTYPE_A_F_A_M_H I
+	public static final field COTTYPE_A_F_A_M_H_A I
+	public static final field COTTYPE_A_F_A_M_H_C I
+	public static final field COTTYPE_A_F_A_M_H_Q I
+	public static final field COTTYPE_A_F_A_M_H_U_M I
+	public static final field COTTYPE_A_F_F_B I
+	public static final field COTTYPE_A_F_G I
+	public static final field COTTYPE_A_F_G_E I
+	public static final field COTTYPE_A_F_G_E_S I
+	public static final field COTTYPE_A_F_G_E_S_E I
+	public static final field COTTYPE_A_F_G_E_V I
+	public static final field COTTYPE_A_F_G_E_V_A I
+	public static final field COTTYPE_A_F_G_E_V_A_T I
+	public static final field COTTYPE_A_F_G_E_V_C I
+	public static final field COTTYPE_A_F_G_E_V_C_PS I
+	public static final field COTTYPE_A_F_G_E_V_C_U I
+	public static final field COTTYPE_A_F_G_E_X_M I
+	public static final field COTTYPE_A_F_G_I I
+	public static final field COTTYPE_A_F_G_U I
+	public static final field COTTYPE_A_F_G_U_C I
+	public static final field COTTYPE_A_F_G_U_C_E_C_W I
+	public static final field COTTYPE_A_F_G_U_C_F I
+	public static final field COTTYPE_A_F_G_U_C_F_T_A I
+	public static final field COTTYPE_A_F_G_U_C_I I
+	public static final field COTTYPE_A_F_G_U_C_I_D I
+	public static final field COTTYPE_A_F_G_U_C_I_L I
+	public static final field COTTYPE_A_F_G_U_C_I_Z I
+	public static final field COTTYPE_A_F_G_U_C_R_O I
+	public static final field COTTYPE_A_F_G_U_C_R_V I
+	public static final field COTTYPE_A_F_G_U_C_R_X I
+	public static final field COTTYPE_A_F_G_U_C_V_S I
+	public static final field COTTYPE_A_F_G_U_H I
+	public static final field COTTYPE_A_F_G_U_S_M_C I
+	public static final field COTTYPE_A_F_G_U_U_M_S_E I
+	public static final field COTTYPE_A_F_S I
+	public static final field COTTYPE_A_F_S_N_N_R I
+	public static final field COTTYPE_A_H_A I
+	public static final field COTTYPE_A_H_A_M_F_F I
+	public static final field COTTYPE_A_H_A_M_H_A I
+	public static final field COTTYPE_A_H_G I
+	public static final field COTTYPE_A_H_G_E_V I
+	public static final field COTTYPE_A_H_G_E_V_A_T I
+	public static final field COTTYPE_A_H_G_E_X_M I
+	public static final field COTTYPE_A_H_G_I I
+	public static final field COTTYPE_A_H_G_U_C_F I
+	public static final field COTTYPE_A_H_G_U_C_I I
+	public static final field COTTYPE_A_H_G_U_C_I_D I
+	public static final field COTTYPE_A_H_S I
+	public static final field COTTYPE_A_N_A I
+	public static final field COTTYPE_A_N_A_C I
+	public static final field COTTYPE_A_N_A_C_F I
+	public static final field COTTYPE_A_N_A_C_H I
+	public static final field COTTYPE_A_N_A_M_F_F I
+	public static final field COTTYPE_A_N_A_M_F_Q I
+	public static final field COTTYPE_A_N_G I
+	public static final field COTTYPE_A_N_G_E_V I
+	public static final field COTTYPE_A_N_G_E_V_A_T I
+	public static final field COTTYPE_A_N_G_E_X_M I
+	public static final field COTTYPE_A_N_G_I I
+	public static final field COTTYPE_A_N_G_U_C_F I
+	public static final field COTTYPE_A_N_G_U_C_I I
+	public static final field COTTYPE_A_N_G_U_C_I_D I
+	public static final field COTTYPE_A_N_S I
+	public static final field COTTYPE_A_U_A I
+	public static final field COTTYPE_A_U_A_C I
+	public static final field COTTYPE_A_U_A_C_F I
+	public static final field COTTYPE_A_U_G I
+	public static final field COTTYPE_A_U_G_E_V I
+	public static final field COTTYPE_A_U_G_E_V_A_T I
+	public static final field COTTYPE_A_U_G_E_X_M I
+	public static final field COTTYPE_A_U_G_I I
+	public static final field COTTYPE_A_U_G_U_C_F I
+	public static final field COTTYPE_A_U_G_U_C_I I
+	public static final field COTTYPE_A_U_G_U_C_I_D I
+	public static final field COTTYPE_A_U_S I
+	public static final field COTTYPE_B_A_G I
+	public static final field COTTYPE_B_A_O_C I
+	public static final field COTTYPE_B_A_O_CAN I
+	public static final field COTTYPE_B_A_O_OPN I
+	public static final field COTTYPE_B_A_O_PAN I
+	public static final field COTTYPE_B_A_O_TBL I
+	public static final field COTTYPE_B_F_T_A I
+	public static final field COTTYPE_B_F_T_R I
+	public static final field COTTYPE_B_I_V I
+	public static final field COTTYPE_B_I_X_I I
+	public static final field COTTYPE_B_M_P_C I
+	public static final field COTTYPE_B_M_P_C_CP I
+	public static final field COTTYPE_B_M_P_C_IP I
+	public static final field COTTYPE_B_M_P_S_M I
+	public static final field COTTYPE_B_M_P_S_P_I I
+	public static final field COTTYPE_B_M_P_S_P_LOC I
+	public static final field COTTYPE_B_M_P_S_P_OP I
+	public static final field COTTYPE_B_M_P_W I
+	public static final field COTTYPE_B_M_P_W_GOTO I
+	public static final field COTTYPE_B_M_R I
+	public static final field COTTYPE_B_R_F_H_C I
+	public static final field COTTYPE_B_T_F I
+	public static final field COTTYPE_B_T_F_D I
+	public static final field COTTYPE_B_T_F_R I
+	public static final field COTTYPE_OTHER I
+	public static final field COTTYPE_T_S I
+	public static final field COTTYPE_T_X_D_D I
+	public static final field COTTYPE_U_D_C_C I
+	public static final field COTTYPE_U_D_C_E I
+	public static final field COTTYPE_U_D_F I
+	public static final field COTTYPE_U_D_F_M I
+	public static final field COTTYPE_U_D_P I
+	public static final field COTTYPE_U_D_R I
+	public static final field COTTYPE_U_D_V I
+	public static final field COTTYPE_U_D_V_M I
+	public static final field COTTYPE_U_RB_A I
+	public static final field COTTYPE_U_R_B_BULLSEYE I
+	public static final field COTTYPE_U_R_B_C_C I
 	public static final field INSTANCE Lorg/meshtastic/tak/CotTypeMapper;
 	public final fun howToEnum (Ljava/lang/String;)I
 	public final fun howToString (I)Ljava/lang/String;
@@ -23,9 +156,19 @@ public final class org/meshtastic/tak/CotXmlBuilder {
 }
 
 public final class org/meshtastic/tak/CotXmlParser {
+	public static final field Companion Lorg/meshtastic/tak/CotXmlParser$Companion;
+	public static final field GEOSRC_GPS I
+	public static final field GEOSRC_NETWORK I
+	public static final field GEOSRC_UNSPECIFIED I
+	public static final field GEOSRC_USER I
+	public static final field MAX_ROUTE_LINKS I
+	public static final field MAX_VERTICES I
 	public fun <init> ()V
 	public final fun extractRawDetailBytes (Ljava/lang/String;)[B
 	public final fun parse (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data;
+}
+
+public final class org/meshtastic/tak/CotXmlParser$Companion {
 }
 
 public final class org/meshtastic/tak/TakCompressor {

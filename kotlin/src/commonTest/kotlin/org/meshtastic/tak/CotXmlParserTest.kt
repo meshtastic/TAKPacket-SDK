@@ -198,6 +198,72 @@ class CotXmlParserTest {
         assertEquals("cover by fire", task.note)
     }
 
+    @Test
+    fun emergency911ParsesEmergencyAlertPayload() {
+        val packet = parser.parse(InlinedFixtures.EMERGENCY_911)
+
+        assertEquals(CotTypeMapper.COTTYPE_B_A_O_TBL, packet.cotTypeId)
+        assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
+        assertEquals("TESTNODE-04-Alert", packet.callsign)
+        assertEquals("emergency-01", packet.uid)
+        assertEquals(179995000, packet.latitudeI, "latitude")
+        assertEquals(150, packet.altitude, "altitude")
+        assertEquals(300, packet.staleSeconds, "stale should be 5 minutes")
+        assertTrue(packet.payload is TakPacketV2Data.Payload.EmergencyAlert,
+            "Expected EmergencyAlert payload but got ${packet.payload::class.simpleName}")
+        val alert = packet.payload as TakPacketV2Data.Payload.EmergencyAlert
+        assertEquals(1, alert.type, "type should be 1 (911 Alert)")
+        assertEquals("ANDROID-0000000000000004", alert.authoringUid)
+        assertEquals("", alert.cancelReferenceUid)
+    }
+
+    @Test
+    fun rangingLineParsesRangeAndBearingPayload() {
+        val packet = parser.parse(InlinedFixtures.RANGING_LINE)
+
+        assertEquals(CotTypeMapper.COTTYPE_U_RB_A, packet.cotTypeId)
+        assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
+        assertEquals("RB Line 1", packet.callsign)
+        assertEquals(86400, packet.staleSeconds, "stale should be 24 hours")
+        assertTrue(packet.payload is TakPacketV2Data.Payload.RangeAndBearing,
+            "Expected RangeAndBearing payload but got ${packet.payload::class.simpleName}")
+        val rab = packet.payload as TakPacketV2Data.Payload.RangeAndBearing
+        assertEquals(99880000, rab.anchorLatI, "anchor lat")
+        assertEquals(949950000, rab.anchorLonI, "anchor lon")
+        assertEquals("anchor-1", rab.anchorUid)
+        assertEquals(125050, rab.rangeCm, "range in cm")
+        assertEquals(13500, rab.bearingCdeg, "bearing in centidegrees")
+    }
+
+    @Test
+    fun casevacMedlineParsesStructuredCasevacPayload() {
+        val packet = parser.parse(InlinedFixtures.CASEVAC_MEDLINE)
+
+        assertEquals(CotTypeMapper.COTTYPE_B_R_F_H_C, packet.cotTypeId)
+        assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
+        assertEquals("Casevac-1", packet.callsign)
+        assertEquals("medevac-01", packet.uid)
+        assertEquals(600, packet.staleSeconds, "stale should be 10 minutes")
+        assertTrue(packet.payload is TakPacketV2Data.Payload.CasevacReport,
+            "Expected CasevacReport payload but got ${packet.payload::class.simpleName}")
+        val report = packet.payload as TakPacketV2Data.Payload.CasevacReport
+        assertEquals(1, report.precedence, "Urgent = 1")
+        assertEquals(6, report.equipmentFlags, "hoist(0x02) + extraction(0x04) = 6")
+        assertEquals(2, report.litterPatients)
+        assertEquals(1, report.ambulatoryPatients)
+        assertEquals(1, report.security, "N / No Enemy = 1")
+        assertEquals(3, report.hlzMarking, "Smoke = 3")
+        assertEquals("Green smoke", report.zoneMarker)
+        assertEquals(2, report.usMilitary)
+        assertEquals(0, report.usCivilian)
+        assertEquals(1, report.nonUsMilitary)
+        assertEquals(0, report.nonUsCivilian)
+        assertEquals(0, report.epw)
+        assertEquals(0, report.child)
+        assertEquals(5, report.terrainFlags, "slope(0x01) + loose(0x04) = 5")
+        assertEquals("38.90", report.frequency)
+    }
+
     // --- Cross-cutting tests across all fixtures ---
 
     @Test

@@ -174,6 +174,49 @@ object InlinedFixtures {
         </event>
     """.trimIndent()
 
+    val EMERGENCY_911 = """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <event version="2.0" uid="emergency-01" type="b-a-o-tbl" time="2026-03-15T20:30:00Z" start="2026-03-15T20:30:00Z" stale="2026-03-15T20:35:00Z" how="h-e">
+          <point lat="17.99950" lon="140.00050" hae="150" ce="15" le="15"/>
+          <detail>
+            <contact callsign="TESTNODE-04-Alert"/>
+            <link uid="ANDROID-0000000000000004" relation="p-p" type="a-f-G-U-C"/>
+            <emergency type="911 Alert"/>
+            <remarks/>
+          </detail>
+        </event>
+    """.trimIndent()
+
+    val RANGING_LINE = """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <event version="2.0" uid="58df2fcd-e33e-414f-a718-b18b50cd3137" type="u-rb-a" time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z" stale="2026-03-16T14:22:10Z" how="h-e">
+          <point lat="9.98800" lon="94.99500" hae="9999999.0" ce="9999999.0" le="9999999.0"/>
+          <detail>
+            <link uid="anchor-1" relation="p-p" type="b-m-p-w" point="9.98800,94.99500"/>
+            <range value="1250.5"/>
+            <bearing value="135.0"/>
+            <contact callsign="RB Line 1"/>
+            <remarks/>
+            <archive/>
+            <labels_on value="false"/>
+            <precisionlocation altsrc="???"/>
+          </detail>
+        </event>
+    """.trimIndent()
+
+    val CASEVAC_MEDLINE = """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <event version="2.0" uid="medevac-01" type="b-r-f-h-c" time="2026-03-15T20:00:00Z" start="2026-03-15T20:00:00Z" stale="2026-03-15T20:10:00Z" how="h-e">
+          <point lat="17.99800" lon="140.00150" hae="100" ce="10" le="10"/>
+          <detail>
+            <contact callsign="Casevac-1"/>
+            <_medevac_ precedence="Urgent" hoist="true" extraction_equipment="true" ventilator="false" blood="false" litter="2" ambulatory="1" security="N" hlz_marking="Smoke" zone_prot_marker="Green smoke" us_military="2" us_civilian="0" non_us_military="1" non_us_civilian="0" epw="0" child="0" terrain_slope="true" terrain_rough="false" terrain_loose="true" terrain_trees="false" terrain_wires="false" terrain_other="false" freq="38.90"/>
+            <remarks/>
+            <archive/>
+          </detail>
+        </event>
+    """.trimIndent()
+
     /** All fixtures indexed by name, matching the file names in testdata/cot_xml/. */
     val ALL = mapOf(
         "pli_basic" to PLI_BASIC,
@@ -189,5 +232,8 @@ object InlinedFixtures {
         "marker_spot" to MARKER_SPOT,
         "route_3wp" to ROUTE_3WP,
         "task_engage" to TASK_ENGAGE,
+        "emergency_911" to EMERGENCY_911,
+        "ranging_line" to RANGING_LINE,
+        "casevac_medline" to CASEVAC_MEDLINE,
     )
 }

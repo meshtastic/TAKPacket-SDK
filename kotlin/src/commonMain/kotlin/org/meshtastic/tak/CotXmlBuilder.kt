@@ -8,6 +8,8 @@ import kotlin.time.Duration.Companion.seconds
  * Builds a CoT XML event string from a [TakPacketV2Data].
  * Reconstructs a standards-compliant CoT XML event that can be consumed by ATAK
  * and other CoT-compatible systems.
+ *
+ * This class holds no mutable state and is safe for concurrent use from multiple threads.
  */
 public class CotXmlBuilder {
 
@@ -134,6 +136,7 @@ public class CotXmlBuilder {
      *            Defaults to the current wall-clock time. Pass an explicit
      *            [Instant] for deterministic/reproducible output in tests.
      */
+    @Throws(IllegalStateException::class)
     public fun build(packet: TakPacketV2Data, now: Instant = Clock.System.now()): String {
         val sb = StringBuilder()
         val timeStr = now.toString()

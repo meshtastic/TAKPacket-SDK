@@ -20,7 +20,7 @@ public class TakCompressor(
      * Compress a [TakPacketV2Data] into a wire payload:
      * `[flags byte][zstd-compressed protobuf]`
      */
-    @Throws(RuntimeException::class)
+    @Throws(IllegalStateException::class)
     public fun compress(packet: TakPacketV2Data): ByteArray {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val dictId = DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
@@ -39,7 +39,7 @@ public class TakCompressor(
      * Decompress a wire payload back to a [TakPacketV2Data].
      * Handles both compressed (dict-based) and uncompressed (0xFF) payloads.
      */
-    @Throws(RuntimeException::class, IllegalArgumentException::class)
+    @Throws(IllegalStateException::class, IllegalArgumentException::class)
     public fun decompress(wirePayload: ByteArray): TakPacketV2Data {
         require(wirePayload.size >= 2) { "Wire payload too short: ${wirePayload.size} bytes" }
 
@@ -101,7 +101,7 @@ public class TakCompressor(
      * @return Whichever wire payload is smaller.  Ties go to the typed
      *         packet since it preserves strong typing on the receiver side.
      */
-    @Throws(RuntimeException::class)
+    @Throws(IllegalStateException::class)
     public fun compressBestOf(packet: TakPacketV2Data, rawDetailBytes: ByteArray): ByteArray {
         val typedWire = compress(packet)
         if (rawDetailBytes.isEmpty()) return typedWire
@@ -150,7 +150,7 @@ public class TakCompressor(
      * @return The wire payload, or null if the packet is too large even
      *         without remarks.
      */
-    @Throws(RuntimeException::class)
+    @Throws(IllegalStateException::class)
     public fun compressWithRemarksFallback(
         packet: TakPacketV2Data,
         maxWireBytes: Int,
@@ -167,7 +167,7 @@ public class TakCompressor(
     /**
      * Compress and return both the wire payload and intermediate sizes for reporting.
      */
-    @Throws(RuntimeException::class)
+    @Throws(IllegalStateException::class)
     public fun compressWithStats(packet: TakPacketV2Data): CompressionResult {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val wirePayload = compress(packet)
@@ -199,7 +199,13 @@ public class TakCompressor(
                 compressedSize == other.compressedSize && dictId == other.dictId &&
                 wirePayload.contentEquals(other.wirePayload)
 
-        override fun hashCode(): Int = wirePayload.contentHashCode()
+        override fun hashCode(): Int {
+            var result = protobufSize
+            result = 31 * result + compressedSize
+            result = 31 * result + dictId
+            result = 31 * result + wirePayload.contentHashCode()
+            return result
+        }
 
         override fun toString(): String =
             "CompressionResult(protobufSize=$protobufSize, compressedSize=$compressedSize, " +

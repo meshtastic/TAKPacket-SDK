@@ -18,29 +18,35 @@ import kotlin.math.roundToInt
  *
  * The [parse] method rejects XML with `<!DOCTYPE>` or `<!ENTITY>` declarations
  * to prevent XXE and entity-expansion attacks.
+ *
+ * This class holds no mutable state and is safe for concurrent use from multiple threads.
  */
 public class CotXmlParser {
 
-    internal companion object {
+    public companion object {
         // ── GeoPointSource enum values ──────────────────────────────────────
-        internal const val GEOSRC_UNSPECIFIED = 0
-        internal const val GEOSRC_GPS = 1
-        internal const val GEOSRC_USER = 2
-        internal const val GEOSRC_NETWORK = 3
+        /** GeoPointSource: unspecified / unknown. */
+        public const val GEOSRC_UNSPECIFIED: Int = 0
+        /** GeoPointSource: GPS fix. */
+        public const val GEOSRC_GPS: Int = 1
+        /** GeoPointSource: user-entered / manual. */
+        public const val GEOSRC_USER: Int = 2
+        /** GeoPointSource: network-derived position. */
+        public const val GEOSRC_NETWORK: Int = 3
 
         /**
          * Maximum number of vertices kept in a [TakPacketV2Data.Payload.DrawnShape].
          * Matches `*DrawnShape.vertices max_count:32` in atak.options. Longer
          * vertex lists are silently truncated and `truncated = true` is set.
          */
-        internal const val MAX_VERTICES = 32
+        public const val MAX_VERTICES: Int = 32
 
         /**
          * Maximum number of links kept in a [TakPacketV2Data.Payload.Route].
          * Matches `*Route.links max_count:16` in atak.options. Longer routes
          * are truncated and `truncated = true` is set.
          */
-        internal const val MAX_ROUTE_LINKS = 16
+        public const val MAX_ROUTE_LINKS: Int = 16
 
         // ── DrawnShape.Kind enum values ─────────────────────────────────────
         internal const val SHAPE_KIND_UNSPECIFIED = 0
@@ -503,6 +509,7 @@ public class CotXmlParser {
      * @param cotXml the raw CoT XML string
      * @return the inner bytes of the `<detail>` element, or empty if absent
      */
+    @Throws(IllegalArgumentException::class)
     public fun extractRawDetailBytes(cotXml: String): ByteArray {
         val match = RAW_DETAIL_REGEX.find(cotXml)
         val inner = match?.groupValues?.get(1) ?: return ByteArray(0)

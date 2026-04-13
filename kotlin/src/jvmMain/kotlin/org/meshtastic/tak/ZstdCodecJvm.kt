@@ -34,11 +34,15 @@ internal actual object ZstdCodec {
     }
 
     /**
-     * No-op on JVM — zstd-jni manages native resource lifecycle internally.
-     * Provided to satisfy the `expect` declaration so common code can call
-     * `ZstdCodec.release()` unconditionally.
+     * Release all cached zstd-jni compressor and decompressor instances,
+     * freeing the underlying native memory. The codec remains usable after
+     * this call — new instances are lazily created on the next compress or
+     * decompress operation.
      */
     actual fun release() {
-        // zstd-jni handles cleanup via finalizers; nothing to do here
+        compressors.values.forEach { it.close() }
+        compressors.clear()
+        decompressors.values.forEach { it.close() }
+        decompressors.clear()
     }
 }

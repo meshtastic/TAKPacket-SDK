@@ -106,6 +106,13 @@ public data class TakPacketV2Data(
             /** Receipt kind: 0 = none (regular chat), 1 = delivered, 2 = read. */
             val receiptType: Int = 0,
         ) : Payload
+        /**
+         * ADS-B aircraft track (aircot feed).
+         *
+         * Represents an aircraft position report received via ADS-B and
+         * forwarded into the TAK ecosystem. Maps to the `AirCot` protobuf
+         * message at payload_variant tag 33.
+         */
         public data class Aircraft(
             val icao: String = "",
             val registration: String = "",
@@ -133,6 +140,9 @@ public data class TakPacketV2Data(
          * Compact vertex used by polyline / polygon / rectangle shapes. Stored
          * at the SDK level as `Int` pairs to match the 1e7-scaled coordinate
          * convention used by TakPacketV2Data.latitudeI / longitudeI.
+         *
+         * @property latI Latitude in degrees * 1e7 (e.g. 377749000 = 37.7749°N).
+         * @property lonI Longitude in degrees * 1e7.
          */
         public data class Vertex(val latI: Int, val lonI: Int)
 
@@ -154,8 +164,11 @@ public data class TakPacketV2Data(
              *   3 = StrokeAndFill
              */
             val style: Int = 0,
+            /** Major axis/radius in centimeters (circle radius, rectangle half-width). */
             val majorCm: Int = 0,
+            /** Minor axis/radius in centimeters (0 for non-ellipse shapes). */
             val minorCm: Int = 0,
+            /** Rotation angle in degrees (0..360); defaults to 360 (= no rotation). */
             val angleDeg: Int = 360,
             /** Team enum value, or AtakPalette.UNSPECIFIED if not in palette. */
             val strokeColor: Int = 0,

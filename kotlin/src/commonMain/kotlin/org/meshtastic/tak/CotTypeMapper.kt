@@ -17,92 +17,92 @@ package org.meshtastic.tak
 public object CotTypeMapper {
 
     // CotType enum values from atak.proto
-    internal const val COTTYPE_OTHER = 0
-    internal const val COTTYPE_A_F_G_U_C = 1
-    internal const val COTTYPE_A_F_G_U_C_I = 2
-    internal const val COTTYPE_A_N_A_C_F = 3
-    internal const val COTTYPE_A_N_A_C_H = 4
-    internal const val COTTYPE_A_N_A_C = 5
-    internal const val COTTYPE_A_F_A_M_H = 6
-    internal const val COTTYPE_A_F_A_M = 7
-    internal const val COTTYPE_A_F_A_M_F_F = 8
-    internal const val COTTYPE_A_F_A_M_H_A = 9
-    internal const val COTTYPE_A_F_A_M_H_U_M = 10
-    internal const val COTTYPE_A_H_A_M_F_F = 11
-    internal const val COTTYPE_A_H_A_M_H_A = 12
-    internal const val COTTYPE_A_U_A_C = 13
-    internal const val COTTYPE_T_X_D_D = 14
-    internal const val COTTYPE_A_F_G_E_S_E = 15
-    internal const val COTTYPE_A_F_G_E_V_C = 16
-    internal const val COTTYPE_A_F_S = 17
-    internal const val COTTYPE_A_F_A_M_F = 18
-    internal const val COTTYPE_A_F_A_M_F_C_H = 19
-    internal const val COTTYPE_A_F_A_M_F_U_L = 20
-    internal const val COTTYPE_A_F_A_M_F_L = 21
-    internal const val COTTYPE_A_F_A_M_F_P = 22
-    internal const val COTTYPE_A_F_A_C_H = 23
-    internal const val COTTYPE_A_N_A_M_F_Q = 24
-    internal const val COTTYPE_B_T_F = 25
-    internal const val COTTYPE_B_R_F_H_C = 26
-    internal const val COTTYPE_B_A_O_PAN = 27
-    internal const val COTTYPE_B_A_O_OPN = 28
-    internal const val COTTYPE_B_A_O_CAN = 29
-    internal const val COTTYPE_B_A_O_TBL = 30
-    internal const val COTTYPE_B_A_G = 31
-    internal const val COTTYPE_A_F_G = 32
-    internal const val COTTYPE_A_F_G_U = 33
-    internal const val COTTYPE_A_H_G = 34
-    internal const val COTTYPE_A_U_G = 35
-    internal const val COTTYPE_A_N_G = 36
-    internal const val COTTYPE_B_M_R = 37
-    internal const val COTTYPE_B_M_P_W = 38
-    internal const val COTTYPE_B_M_P_S_P_I = 39
-    internal const val COTTYPE_U_D_F = 40
-    internal const val COTTYPE_U_D_R = 41
-    internal const val COTTYPE_U_D_C_C = 42
-    internal const val COTTYPE_U_RB_A = 43
-    internal const val COTTYPE_A_H_A = 44
-    internal const val COTTYPE_A_U_A = 45
-    internal const val COTTYPE_A_F_A_M_H_Q = 46
-    internal const val COTTYPE_A_F_A_C_F = 47
-    internal const val COTTYPE_A_F_A_C = 48
-    internal const val COTTYPE_A_F_A_C_L = 49
-    internal const val COTTYPE_A_F_A = 50
-    internal const val COTTYPE_A_F_A_M_H_C = 51
-    internal const val COTTYPE_A_N_A_M_F_F = 52
-    internal const val COTTYPE_A_U_A_C_F = 53
-    internal const val COTTYPE_A_F_G_U_C_F_T_A = 54
-    internal const val COTTYPE_A_F_G_U_C_V_S = 55
-    internal const val COTTYPE_A_F_G_U_C_R_X = 56
-    internal const val COTTYPE_A_F_G_U_C_I_Z = 57
-    internal const val COTTYPE_A_F_G_U_C_E_C_W = 58
-    internal const val COTTYPE_A_F_G_U_C_I_L = 59
-    internal const val COTTYPE_A_F_G_U_C_R_O = 60
-    internal const val COTTYPE_A_F_G_U_C_R_V = 61
-    internal const val COTTYPE_A_F_G_U_H = 62
-    internal const val COTTYPE_A_F_G_U_U_M_S_E = 63
-    internal const val COTTYPE_A_F_G_U_S_M_C = 64
-    internal const val COTTYPE_A_F_G_E_S = 65
-    internal const val COTTYPE_A_F_G_E = 66
-    internal const val COTTYPE_A_F_G_E_V_C_U = 67
-    internal const val COTTYPE_A_F_G_E_V_C_PS = 68
-    internal const val COTTYPE_A_U_G_E_V = 69
-    internal const val COTTYPE_A_F_S_N_N_R = 70
-    internal const val COTTYPE_A_F_F_B = 71
-    internal const val COTTYPE_B_M_P_S_P_LOC = 72
-    internal const val COTTYPE_B_I_V = 73
-    internal const val COTTYPE_B_F_T_R = 74
-    internal const val COTTYPE_B_F_T_A = 75
+    public const val COTTYPE_OTHER: Int = 0
+    public const val COTTYPE_A_F_G_U_C: Int = 1
+    public const val COTTYPE_A_F_G_U_C_I: Int = 2
+    public const val COTTYPE_A_N_A_C_F: Int = 3
+    public const val COTTYPE_A_N_A_C_H: Int = 4
+    public const val COTTYPE_A_N_A_C: Int = 5
+    public const val COTTYPE_A_F_A_M_H: Int = 6
+    public const val COTTYPE_A_F_A_M: Int = 7
+    public const val COTTYPE_A_F_A_M_F_F: Int = 8
+    public const val COTTYPE_A_F_A_M_H_A: Int = 9
+    public const val COTTYPE_A_F_A_M_H_U_M: Int = 10
+    public const val COTTYPE_A_H_A_M_F_F: Int = 11
+    public const val COTTYPE_A_H_A_M_H_A: Int = 12
+    public const val COTTYPE_A_U_A_C: Int = 13
+    public const val COTTYPE_T_X_D_D: Int = 14
+    public const val COTTYPE_A_F_G_E_S_E: Int = 15
+    public const val COTTYPE_A_F_G_E_V_C: Int = 16
+    public const val COTTYPE_A_F_S: Int = 17
+    public const val COTTYPE_A_F_A_M_F: Int = 18
+    public const val COTTYPE_A_F_A_M_F_C_H: Int = 19
+    public const val COTTYPE_A_F_A_M_F_U_L: Int = 20
+    public const val COTTYPE_A_F_A_M_F_L: Int = 21
+    public const val COTTYPE_A_F_A_M_F_P: Int = 22
+    public const val COTTYPE_A_F_A_C_H: Int = 23
+    public const val COTTYPE_A_N_A_M_F_Q: Int = 24
+    public const val COTTYPE_B_T_F: Int = 25
+    public const val COTTYPE_B_R_F_H_C: Int = 26
+    public const val COTTYPE_B_A_O_PAN: Int = 27
+    public const val COTTYPE_B_A_O_OPN: Int = 28
+    public const val COTTYPE_B_A_O_CAN: Int = 29
+    public const val COTTYPE_B_A_O_TBL: Int = 30
+    public const val COTTYPE_B_A_G: Int = 31
+    public const val COTTYPE_A_F_G: Int = 32
+    public const val COTTYPE_A_F_G_U: Int = 33
+    public const val COTTYPE_A_H_G: Int = 34
+    public const val COTTYPE_A_U_G: Int = 35
+    public const val COTTYPE_A_N_G: Int = 36
+    public const val COTTYPE_B_M_R: Int = 37
+    public const val COTTYPE_B_M_P_W: Int = 38
+    public const val COTTYPE_B_M_P_S_P_I: Int = 39
+    public const val COTTYPE_U_D_F: Int = 40
+    public const val COTTYPE_U_D_R: Int = 41
+    public const val COTTYPE_U_D_C_C: Int = 42
+    public const val COTTYPE_U_RB_A: Int = 43
+    public const val COTTYPE_A_H_A: Int = 44
+    public const val COTTYPE_A_U_A: Int = 45
+    public const val COTTYPE_A_F_A_M_H_Q: Int = 46
+    public const val COTTYPE_A_F_A_C_F: Int = 47
+    public const val COTTYPE_A_F_A_C: Int = 48
+    public const val COTTYPE_A_F_A_C_L: Int = 49
+    public const val COTTYPE_A_F_A: Int = 50
+    public const val COTTYPE_A_F_A_M_H_C: Int = 51
+    public const val COTTYPE_A_N_A_M_F_F: Int = 52
+    public const val COTTYPE_A_U_A_C_F: Int = 53
+    public const val COTTYPE_A_F_G_U_C_F_T_A: Int = 54
+    public const val COTTYPE_A_F_G_U_C_V_S: Int = 55
+    public const val COTTYPE_A_F_G_U_C_R_X: Int = 56
+    public const val COTTYPE_A_F_G_U_C_I_Z: Int = 57
+    public const val COTTYPE_A_F_G_U_C_E_C_W: Int = 58
+    public const val COTTYPE_A_F_G_U_C_I_L: Int = 59
+    public const val COTTYPE_A_F_G_U_C_R_O: Int = 60
+    public const val COTTYPE_A_F_G_U_C_R_V: Int = 61
+    public const val COTTYPE_A_F_G_U_H: Int = 62
+    public const val COTTYPE_A_F_G_U_U_M_S_E: Int = 63
+    public const val COTTYPE_A_F_G_U_S_M_C: Int = 64
+    public const val COTTYPE_A_F_G_E_S: Int = 65
+    public const val COTTYPE_A_F_G_E: Int = 66
+    public const val COTTYPE_A_F_G_E_V_C_U: Int = 67
+    public const val COTTYPE_A_F_G_E_V_C_PS: Int = 68
+    public const val COTTYPE_A_U_G_E_V: Int = 69
+    public const val COTTYPE_A_F_S_N_N_R: Int = 70
+    public const val COTTYPE_A_F_F_B: Int = 71
+    public const val COTTYPE_B_M_P_S_P_LOC: Int = 72
+    public const val COTTYPE_B_I_V: Int = 73
+    public const val COTTYPE_B_F_T_R: Int = 74
+    public const val COTTYPE_B_F_T_A: Int = 75
 
     // --- Typed geometry CoT types (v2 protocol extension) ---
     // These 6 entries accompany the new DrawnShape/Marker/RangeAndBearing
     // payload variants added to TAKPacketV2 at tags 34-37. See atak.proto.
-    internal const val COTTYPE_U_D_F_M = 76         // Freehand telestration
-    internal const val COTTYPE_U_D_P = 77           // Closed polygon
-    internal const val COTTYPE_B_M_P_S_M = 78       // Spot map marker
-    internal const val COTTYPE_B_M_P_C = 79         // Checkpoint
-    internal const val COTTYPE_U_R_B_C_C = 80       // Ranging circle
-    internal const val COTTYPE_U_R_B_BULLSEYE = 81  // Bullseye with range rings
+    public const val COTTYPE_U_D_F_M: Int = 76         // Freehand telestration
+    public const val COTTYPE_U_D_P: Int = 77           // Closed polygon
+    public const val COTTYPE_B_M_P_S_M: Int = 78       // Spot map marker
+    public const val COTTYPE_B_M_P_C: Int = 79         // Checkpoint
+    public const val COTTYPE_U_R_B_C_C: Int = 80       // Ranging circle
+    public const val COTTYPE_U_R_B_BULLSEYE: Int = 81  // Bullseye with range rings
 
     // --- Expanded coverage (values 82-124) --------------------------------
     // Covers ATAK-CIV quick-drop pallet types, mission-specific points,
@@ -111,75 +111,75 @@ public object CotTypeMapper {
     // TaskRequest at tags 38/39/40 and GeoChat receipt extension on tag 31).
 
     // PLI self-reporting (1)
-    internal const val COTTYPE_A_F_G_E_V_A = 82     // Friendly armored vehicle self-PLI
+    public const val COTTYPE_A_F_G_E_V_A: Int = 82     // Friendly armored vehicle self-PLI
     // 2525 quick-drop: basic affiliation gaps (1)
-    internal const val COTTYPE_A_N_A = 83           // Neutral aircraft
+    public const val COTTYPE_A_N_A: Int = 83           // Neutral aircraft
     // 2525 artillery (4)
-    internal const val COTTYPE_A_U_G_U_C_F = 84
-    internal const val COTTYPE_A_N_G_U_C_F = 85
-    internal const val COTTYPE_A_H_G_U_C_F = 86
-    internal const val COTTYPE_A_F_G_U_C_F = 87
+    public const val COTTYPE_A_U_G_U_C_F: Int = 84
+    public const val COTTYPE_A_N_G_U_C_F: Int = 85
+    public const val COTTYPE_A_H_G_U_C_F: Int = 86
+    public const val COTTYPE_A_F_G_U_C_F: Int = 87
     // 2525 building (4)
-    internal const val COTTYPE_A_U_G_I = 88
-    internal const val COTTYPE_A_N_G_I = 89
-    internal const val COTTYPE_A_H_G_I = 90
-    internal const val COTTYPE_A_F_G_I = 91
+    public const val COTTYPE_A_U_G_I: Int = 88
+    public const val COTTYPE_A_N_G_I: Int = 89
+    public const val COTTYPE_A_H_G_I: Int = 90
+    public const val COTTYPE_A_F_G_I: Int = 91
     // 2525 mine (4)
-    internal const val COTTYPE_A_U_G_E_X_M = 92
-    internal const val COTTYPE_A_N_G_E_X_M = 93
-    internal const val COTTYPE_A_H_G_E_X_M = 94
-    internal const val COTTYPE_A_F_G_E_X_M = 95
+    public const val COTTYPE_A_U_G_E_X_M: Int = 92
+    public const val COTTYPE_A_N_G_E_X_M: Int = 93
+    public const val COTTYPE_A_H_G_E_X_M: Int = 94
+    public const val COTTYPE_A_F_G_E_X_M: Int = 95
     // 2525 ship (3; a-f-S already at 17)
-    internal const val COTTYPE_A_U_S = 96
-    internal const val COTTYPE_A_N_S = 97
-    internal const val COTTYPE_A_H_S = 98
+    public const val COTTYPE_A_U_S: Int = 96
+    public const val COTTYPE_A_N_S: Int = 97
+    public const val COTTYPE_A_H_S: Int = 98
     // 2525 sniper (4) — lowercase `d` suffix distinguishes from troops
-    internal const val COTTYPE_A_U_G_U_C_I_D = 99
-    internal const val COTTYPE_A_N_G_U_C_I_D = 100
-    internal const val COTTYPE_A_H_G_U_C_I_D = 101
-    internal const val COTTYPE_A_F_G_U_C_I_D = 102
+    public const val COTTYPE_A_U_G_U_C_I_D: Int = 99
+    public const val COTTYPE_A_N_G_U_C_I_D: Int = 100
+    public const val COTTYPE_A_H_G_U_C_I_D: Int = 101
+    public const val COTTYPE_A_F_G_U_C_I_D: Int = 102
     // 2525 tank (4)
-    internal const val COTTYPE_A_U_G_E_V_A_T = 103
-    internal const val COTTYPE_A_N_G_E_V_A_T = 104
-    internal const val COTTYPE_A_H_G_E_V_A_T = 105
-    internal const val COTTYPE_A_F_G_E_V_A_T = 106
+    public const val COTTYPE_A_U_G_E_V_A_T: Int = 103
+    public const val COTTYPE_A_N_G_E_V_A_T: Int = 104
+    public const val COTTYPE_A_H_G_E_V_A_T: Int = 105
+    public const val COTTYPE_A_F_G_E_V_A_T: Int = 106
     // 2525 troops (3; a-f-G-U-C-I already at 2)
-    internal const val COTTYPE_A_U_G_U_C_I = 107
-    internal const val COTTYPE_A_N_G_U_C_I = 108
-    internal const val COTTYPE_A_H_G_U_C_I = 109
+    public const val COTTYPE_A_U_G_U_C_I: Int = 107
+    public const val COTTYPE_A_N_G_U_C_I: Int = 108
+    public const val COTTYPE_A_H_G_U_C_I: Int = 109
     // 2525 generic vehicle (3; a-u-G-E-V already at 69)
-    internal const val COTTYPE_A_N_G_E_V = 110
-    internal const val COTTYPE_A_H_G_E_V = 111
-    internal const val COTTYPE_A_F_G_E_V = 112
+    public const val COTTYPE_A_N_G_E_V: Int = 110
+    public const val COTTYPE_A_H_G_E_V: Int = 111
+    public const val COTTYPE_A_F_G_E_V: Int = 112
     // Mission-specific points (4)
-    internal const val COTTYPE_B_M_P_W_GOTO = 113   // Go To / bloodhound
-    internal const val COTTYPE_B_M_P_C_IP = 114     // Initial point
-    internal const val COTTYPE_B_M_P_C_CP = 115     // Contact point
-    internal const val COTTYPE_B_M_P_S_P_OP = 116   // Observation post
+    public const val COTTYPE_B_M_P_W_GOTO: Int = 113   // Go To / bloodhound
+    public const val COTTYPE_B_M_P_C_IP: Int = 114     // Initial point
+    public const val COTTYPE_B_M_P_C_CP: Int = 115     // Contact point
+    public const val COTTYPE_B_M_P_S_P_OP: Int = 116   // Observation post
     // Vehicle drawings (2)
-    internal const val COTTYPE_U_D_V = 117          // 2D vehicle outline
-    internal const val COTTYPE_U_D_V_M = 118        // 3D vehicle model
+    public const val COTTYPE_U_D_V: Int = 117          // 2D vehicle outline
+    public const val COTTYPE_U_D_V_M: Int = 118        // 3D vehicle model
     // Drawing shapes (1)
-    internal const val COTTYPE_U_D_C_E = 119        // Ellipse
+    public const val COTTYPE_U_D_C_E: Int = 119        // Ellipse
     // Image / media marker (1)
-    internal const val COTTYPE_B_I_X_I = 120        // Quick Pic image marker
+    public const val COTTYPE_B_I_X_I: Int = 120        // Quick Pic image marker
     // GeoChat receipts (2) — note COTTYPE_B_F_T_R at 74 is a DIFFERENT type
-    internal const val COTTYPE_B_T_F_D = 121        // Chat delivered receipt
-    internal const val COTTYPE_B_T_F_R = 122        // Chat read receipt
+    public const val COTTYPE_B_T_F_D: Int = 121        // Chat delivered receipt
+    public const val COTTYPE_B_T_F_R: Int = 122        // Chat read receipt
     // Custom emergency (1)
-    internal const val COTTYPE_B_A_O_C = 123        // Custom emergency beacon
+    public const val COTTYPE_B_A_O_C: Int = 123        // Custom emergency beacon
     // Tasking (1)
-    internal const val COTTYPE_T_S = 124            // Task / engage request
+    public const val COTTYPE_T_S: Int = 124            // Task / engage request
 
     // CotHow enum values from atak.proto
-    internal const val COTHOW_UNSPECIFIED = 0
-    internal const val COTHOW_H_E = 1
-    internal const val COTHOW_M_G = 2
-    internal const val COTHOW_H_G_I_G_O = 3
-    internal const val COTHOW_M_R = 4
-    internal const val COTHOW_M_F = 5
-    internal const val COTHOW_M_P = 6
-    internal const val COTHOW_M_S = 7
+    public const val COTHOW_UNSPECIFIED: Int = 0
+    public const val COTHOW_H_E: Int = 1
+    public const val COTHOW_M_G: Int = 2
+    public const val COTHOW_H_G_I_G_O: Int = 3
+    public const val COTHOW_M_R: Int = 4
+    public const val COTHOW_M_F: Int = 5
+    public const val COTHOW_M_P: Int = 6
+    public const val COTHOW_M_S: Int = 7
 
     private val stringToType = mapOf(
         "a-f-G-U-C" to COTTYPE_A_F_G_U_C,
