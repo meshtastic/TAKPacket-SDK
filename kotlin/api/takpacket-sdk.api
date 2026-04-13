@@ -172,6 +172,19 @@ public final class org/meshtastic/tak/CotXmlParser {
 public final class org/meshtastic/tak/CotXmlParser$Companion {
 }
 
+public abstract interface class org/meshtastic/tak/Logger {
+	public abstract fun log (Ljava/lang/String;)V
+}
+
+public final class org/meshtastic/tak/LoggerKt {
+	public static final fun trace (Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class org/meshtastic/tak/NoOpLogger : org/meshtastic/tak/Logger {
+	public static final field INSTANCE Lorg/meshtastic/tak/NoOpLogger;
+	public fun log (Ljava/lang/String;)V
+}
+
 public final class org/meshtastic/tak/TakCompressor {
 	public static final field Companion Lorg/meshtastic/tak/TakCompressor$Companion;
 	public static final field MAX_DECOMPRESSED_SIZE I
@@ -204,6 +217,12 @@ public final class org/meshtastic/tak/TakCompressor$CompressionResult {
 	public final fun getWirePayload ()[B
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketSdk {
+	public static final field INSTANCE Lorg/meshtastic/tak/TakPacketSdk;
+	public final fun getLogger ()Lorg/meshtastic/tak/Logger;
+	public final fun setLogger (Lorg/meshtastic/tak/Logger;)V
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data {

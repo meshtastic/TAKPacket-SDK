@@ -468,6 +468,8 @@ public class CotXmlParser {
      */
     @Throws(IllegalArgumentException::class)
     public fun parse(cotXml: String): TakPacketV2Data {
+        trace { "CotXmlParser.parse: input ${cotXml.length} chars" }
+
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE
         require(
             !cotXml.contains("<!DOCTYPE", ignoreCase = true) &&
@@ -491,7 +493,9 @@ public class CotXmlParser {
         }
 
         enrichAircraftFromRemarks(s)
-        return buildResult(s)
+        val result = buildResult(s)
+        trace { "CotXmlParser.parse: resolved payload ${result.payload::class.simpleName}" }
+        return result
     }
 
     /**

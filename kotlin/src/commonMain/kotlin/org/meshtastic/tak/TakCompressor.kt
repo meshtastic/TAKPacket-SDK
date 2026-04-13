@@ -1,5 +1,7 @@
 package org.meshtastic.tak
 
+import kotlin.math.roundToInt
+
 /**
  * Compresses TAKPacketV2 protobuf bytes using zstd with pre-trained dictionaries,
  * and decompresses received wire payloads back to protobuf bytes.
@@ -42,6 +44,13 @@ public class TakCompressor @kotlin.jvm.JvmOverloads constructor(
         val wirePayload = ByteArray(1 + compressed.size)
         wirePayload[0] = flagsByte
         compressed.copyInto(wirePayload, destinationOffset = 1)
+        trace {
+            val ratio = protobufBytes.size.toDouble() / wirePayload.size
+            val ratioStr = ((ratio * 10).roundToInt() / 10.0).toString()
+            "TakCompressor.compress: protobuf=${protobufBytes.size}B, " +
+                "dict=$dictId, compressed=${wirePayload.size}B, " +
+                "ratio=${ratioStr}x"
+        }
         return wirePayload
     }
 
@@ -74,6 +83,11 @@ public class TakCompressor @kotlin.jvm.JvmOverloads constructor(
 
         require(protobufBytes.size <= MAX_DECOMPRESSED_SIZE) {
             "Payload size ${protobufBytes.size} exceeds limit $MAX_DECOMPRESSED_SIZE"
+        }
+
+        trace {
+            "TakCompressor.decompress: wire=${wirePayload.size}B, " +
+                "dict=${flagsByte and 0x3F}, decompressed=${protobufBytes.size}B"
         }
 
         try {
@@ -144,6 +158,11 @@ public class TakCompressor @kotlin.jvm.JvmOverloads constructor(
         )
         val rawWire = compress(rawPacket)
 
+        val winner = if (typedWire.size <= rawWire.size) "typed" else "raw_detail"
+        trace {
+            "TakCompressor.compressBestOf: typed=${typedWire.size}B, " +
+                "raw=${rawWire.size}B, winner=$winner"
+        }
         return if (typedWire.size <= rawWire.size) typedWire else rawWire
     }
 

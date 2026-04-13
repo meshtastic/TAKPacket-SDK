@@ -138,7 +138,9 @@ public class CotXmlBuilder {
      */
     @kotlin.jvm.JvmOverloads
     @Throws(IllegalStateException::class)
-    public fun build(packet: TakPacketV2Data, now: Instant = Clock.System.now()): String = buildString {
+    public fun build(packet: TakPacketV2Data, now: Instant = Clock.System.now()): String {
+        trace { "CotXmlBuilder.build: uid=${packet.uid}, callsign=${packet.callsign}" }
+        val xml = buildString {
         val timeStr = now.toString()
         val staleSeconds = packet.staleSeconds.toLong().coerceAtLeast(45)
         val stale = now + staleSeconds.seconds
@@ -595,5 +597,8 @@ public class CotXmlBuilder {
 
         append("  </detail>\n")
         append("</event>")
+        }
+        trace { "CotXmlBuilder.build: output ${xml.length} chars" }
+        return xml
     }
 }

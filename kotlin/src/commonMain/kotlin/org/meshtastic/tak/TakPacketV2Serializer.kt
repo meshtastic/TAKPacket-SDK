@@ -239,7 +239,12 @@ public object TakPacketV2Serializer {
             task = taskPayload,
         )
 
-        return proto.encode()
+        val encoded = proto.encode()
+        trace {
+            "TakPacketV2Serializer.serialize: payload=${data.payload::class.simpleName}, " +
+                "output=${encoded.size}B"
+        }
+        return encoded
     }
 
     /**
@@ -254,6 +259,7 @@ public object TakPacketV2Serializer {
     @kotlin.jvm.JvmStatic
     @Throws(IllegalStateException::class)
     public fun deserialize(bytes: ByteArray): TakPacketV2Data {
+        trace { "TakPacketV2Serializer.deserialize: input=${bytes.size}B" }
         val proto = TAKPacketV2.ADAPTER.decode(bytes)
 
         val payload = when {
@@ -396,6 +402,8 @@ public object TakPacketV2Serializer {
             proto.pli != null -> TakPacketV2Data.Payload.Pli(proto.pli)
             else -> TakPacketV2Data.Payload.None
         }
+
+        trace { "TakPacketV2Serializer.deserialize: resolved payload ${payload::class.simpleName}" }
 
         return TakPacketV2Data(
             cotTypeId = proto.cot_type_id.value,
