@@ -88,8 +88,17 @@ export function buildCotXml(packet: Record<string, unknown>): string {
 
   const cotType = typeToString(packet.cotTypeId as number) ?? (packet.cotTypeStr as string) ?? "";
   const how = howToString(packet.how as number) ?? "m-g";
-  const lat = ((packet.latitudeI as number) ?? 0) / 1e7;
-  const lon = ((packet.longitudeI as number) ?? 0) / 1e7;
+  let lat = ((packet.latitudeI as number) ?? 0) / 1e7;
+  let lon = ((packet.longitudeI as number) ?? 0) / 1e7;
+  const routePayload = packet.route as Record<string, unknown> | undefined;
+  if (routePayload && ((packet.latitudeI as number) ?? 0) === 0 && ((packet.longitudeI as number) ?? 0) === 0) {
+    const routeLinks = (routePayload.links as Array<Record<string, unknown>>) ?? [];
+    if (routeLinks.length > 0) {
+      const firstPoint = (routeLinks[0].point as Record<string, number>) ?? {};
+      lat = (firstPoint.latDeltaI ?? 0) / 1e7;
+      lon = (firstPoint.lonDeltaI ?? 0) / 1e7;
+    }
+  }
   const alt = (packet.altitude as number) ?? 0;
 
   const lines: string[] = [
@@ -100,7 +109,8 @@ export function buildCotXml(packet: Record<string, unknown>): string {
   ];
 
   const callsign = packet.callsign as string ?? "";
-  if (callsign) {
+  const isRoute = packet.route != null;
+  if (callsign && !isRoute) {
     const ep = String(packet.endpoint ?? "") || "0.0.0.0:4242:tcp";
     let tag = `    <contact callsign="${esc(callsign)}" endpoint="${esc(ep)}"`;
     if (packet.phone) tag += ` phone="${esc(String(packet.phone))}"`;
@@ -226,7 +236,7 @@ export function buildCotXml(packet: Record<string, unknown>): string {
   } else if (rab) {
     emitRab(lines, rab, eventLatI, eventLonI);
   } else if (route) {
-    emitRoute(lines, route, eventLatI, eventLonI, String(packet.uid ?? ""), String(packet.remarks ?? ""));
+    emitRoute(lines, route, eventLatI, eventLonI, String(packet.uid ?? ""), String(packet.remarks ?? ""), callsign);
   } else if (casevac) {
     emitCasevac(lines, casevac);
   } else if (emergency) {
@@ -384,7 +394,7 @@ function emitRab(lines: string[], rab: Record<string, unknown>, eventLatI: numbe
   if (strokeWeightX10 > 0) lines.push(`    <strokeWeight value="${strokeWeightX10 / 10}"/>`);
 }
 
-function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: number, eventLonI: number, eventUid: string = "", remarks: string = ""): void {
+function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: number, eventLonI: number, eventUid: string = "", remarks: string = "", callsign: string = ""): void {
   // Emit <link> elements BEFORE <link_attr> (ATAK expects waypoints first)
   const links = (route.links as Array<Record<string, unknown>>) ?? [];
   for (let idx = 0; idx < links.length; idx++) {
@@ -399,8 +409,8 @@ function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: n
     const uid = rawUid || `${eventUid}-${idx}`;
     linkParts.push(`uid="${esc(uid)}"`);
     linkParts.push(`type="${linkType}"`);
-    const callsign = (link.callsign as string) ?? "";
-    if (callsign) linkParts.push(`callsign="${esc(callsign)}"`);
+    const linkCallsign = (link.callsign as string) ?? "";
+    if (linkCallsign) linkParts.push(`callsign="${esc(linkCallsign)}"`);
     // ATAK expects 3-component point: lat,lon,hae
     linkParts.push(`point="${llat},${llon},0" relation="c"`);
     lines.push(`    <link ${linkParts.join(" ")}/>`);
@@ -423,6 +433,15 @@ function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: n
   }
   // routeinfo with navcues child (after link_attr)
   lines.push("    <__routeinfo><__navcues/></__routeinfo>");
+  lines.push(`    <strokeColor value="-1"/>`);
+  const routeStrokeW = (route.strokeWeightX10 as number) ?? 0;
+  lines.push(`    <strokeWeight value="${routeStrokeW > 0 ? routeStrokeW / 10 : 3}"/>`);
+  lines.push(`    <strokeStyle value="solid"/>`);
+  if (callsign) {
+    lines.push(`    <contact callsign="${esc(callsign)}"/>`);
+  }
+  lines.push(`    <labels_on value="false"/>`);
+  lines.push(`    <color value="-1"/>`);
 }
 
 function emitCasevac(lines: string[], casevac: Record<string, unknown>): void {

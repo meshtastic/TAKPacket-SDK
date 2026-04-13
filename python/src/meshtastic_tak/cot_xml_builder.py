@@ -72,6 +72,11 @@ class CotXmlBuilder:
         how = CotTypeMapper.how_to_string(packet.how) or "m-g"
         lat = packet.latitude_i / 1e7
         lon = packet.longitude_i / 1e7
+        if (packet.WhichOneof("payload_variant") == "route"
+                and packet.latitude_i == 0 and packet.longitude_i == 0
+                and len(packet.route.links) > 0):
+            lat = packet.route.links[0].point.lat_delta_i / 1e7
+            lon = packet.route.links[0].point.lon_delta_i / 1e7
 
         lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
@@ -81,7 +86,8 @@ class CotXmlBuilder:
             '  <detail>',
         ]
 
-        if packet.callsign:
+        is_route = packet.WhichOneof("payload_variant") == "route"
+        if packet.callsign and not is_route:
             ep = packet.endpoint or "0.0.0.0:4242:tcp"
             parts = [f'callsign="{escape(packet.callsign)}"', f'endpoint="{escape(ep)}"']
             if packet.phone: parts.append(f'phone="{escape(packet.phone)}"')
@@ -189,7 +195,7 @@ class CotXmlBuilder:
         elif which == "rab":
             self._emit_rab(lines, packet.rab, packet.latitude_i, packet.longitude_i)
         elif which == "route":
-            self._emit_route(lines, packet.route, packet.latitude_i, packet.longitude_i, packet.uid, packet.remarks)
+            self._emit_route(lines, packet.route, packet.latitude_i, packet.longitude_i, packet.uid, packet.remarks, packet.callsign)
         elif which == "casevac":
             self._emit_casevac(lines, packet.casevac)
         elif which == "emergency":
@@ -337,7 +343,7 @@ class CotXmlBuilder:
             w = rab.stroke_weight_x10 / 10.0
             lines.append(f'    <strokeWeight value="{w}"/>')
 
-    def _emit_route(self, lines: list, route, event_lat_i: int, event_lon_i: int, event_uid: str = "", remarks: str = "") -> None:
+    def _emit_route(self, lines: list, route, event_lat_i: int, event_lon_i: int, event_uid: str = "", remarks: str = "", callsign: str = "") -> None:
         # Emit <link> elements BEFORE <link_attr> (ATAK expects waypoints first)
         for idx, link in enumerate(route.links):
             llat = (event_lat_i + link.point.lat_delta_i) / 1e7
@@ -375,6 +381,14 @@ class CotXmlBuilder:
             lines.append('    <remarks/>')
         # routeinfo with navcues child (after link_attr)
         lines.append('    <__routeinfo><__navcues/></__routeinfo>')
+        lines.append('    <strokeColor value="-1"/>')
+        sw = route.stroke_weight_x10 / 10.0 if route.stroke_weight_x10 > 0 else 3
+        lines.append(f'    <strokeWeight value="{sw}"/>')
+        lines.append('    <strokeStyle value="solid"/>')
+        if callsign:
+            lines.append(f'    <contact callsign="{escape(callsign)}"/>')
+        lines.append('    <labels_on value="false"/>')
+        lines.append('    <color value="-1"/>')
 
     # --- CasevacReport / EmergencyAlert / TaskRequest reverse lookups ----
 

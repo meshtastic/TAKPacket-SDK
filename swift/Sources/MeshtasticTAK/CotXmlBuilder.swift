@@ -47,8 +47,18 @@ public class CotXmlBuilder {
         let cotType = CotTypeMapper.typeToString(packet.cotTypeID) ?? packet.cotTypeStr
         let how = CotTypeMapper.howToString(packet.how) ?? "m-g"
 
-        let lat = Double(packet.latitudeI) / 1e7
-        let lon = Double(packet.longitudeI) / 1e7
+        var lat = Double(packet.latitudeI) / 1e7
+        var lon = Double(packet.longitudeI) / 1e7
+
+        // Routes from ATAK use 0,0 as the event anchor. Use the first
+        // waypoint's coordinates so the receiving TAK client can locate
+        // the route on the map.
+        if case .route(let route) = packet.payloadVariant,
+           packet.latitudeI == 0 && packet.longitudeI == 0,
+           let first = route.links.first {
+            lat = Double(packet.latitudeI + first.point.latDeltaI) / 1e7
+            lon = Double(packet.longitudeI + first.point.lonDeltaI) / 1e7
+        }
 
         var s = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         s += "<event version=\"2.0\" uid=\"\(esc(packet.uid))\" type=\"\(esc(cotType))\" how=\"\(esc(how))\" "
@@ -56,7 +66,11 @@ public class CotXmlBuilder {
         s += "  <point lat=\"\(lat)\" lon=\"\(lon)\" hae=\"\(packet.altitude)\" ce=\"9999999\" le=\"9999999\"/>\n"
         s += "  <detail>\n"
 
-        if !packet.callsign.isEmpty {
+        // Contact — skip for routes (ATAK/iTAK expect <contact> after __routeinfo, no endpoint)
+        let isRoute: Bool
+        if case .route = packet.payloadVariant { isRoute = true } else { isRoute = false }
+
+        if !packet.callsign.isEmpty && !isRoute {
             let ep = packet.endpoint.isEmpty ? "0.0.0.0:4242:tcp" : packet.endpoint
             s += "    <contact callsign=\"\(esc(packet.callsign))\" endpoint=\"\(esc(ep))\""
             if !packet.phone.isEmpty { s += " phone=\"\(esc(packet.phone))\"" }
@@ -165,6 +179,10 @@ public class CotXmlBuilder {
             s += emitRab(rab, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
         case .route(let route):
             s += emitRoute(route, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI, eventUid: packet.uid, remarks: packet.remarks)
+            // Contact AFTER __routeinfo, with NO endpoint (matches Kotlin reference)
+            if !packet.callsign.isEmpty {
+                s += "    <contact callsign=\"\(esc(packet.callsign))\"/>\n"
+            }
         case .casevac(let c):
             s += emitCasevac(c)
         case .emergency(let e):
@@ -186,9 +204,15 @@ public class CotXmlBuilder {
 
         // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text
         if !packet.remarks.isEmpty {
-            let isChat = packet.hasChat
-            let isAircraft = packet.hasAircraft
-            let isRoute = packet.hasRoute
+            let isChat: Bool
+            let isAircraft: Bool
+            let isRoute: Bool
+            switch packet.payloadVariant {
+            case .chat: isChat = true; isAircraft = false; isRoute = false
+            case .aircraft: isChat = false; isAircraft = true; isRoute = false
+            case .route: isChat = false; isAircraft = false; isRoute = true
+            default: isChat = false; isAircraft = false; isRoute = false
+            }
             if !isChat && !isAircraft && !isRoute {
                 s += "    <remarks>\(esc(packet.remarks))</remarks>\n"
             }

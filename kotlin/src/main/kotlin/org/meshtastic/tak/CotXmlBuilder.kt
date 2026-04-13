@@ -128,9 +128,18 @@ class CotXmlBuilder {
         val cotType = packet.cotTypeString()
         val how = packet.howString().ifEmpty { "m-g" }
 
-        val lat = packet.latitudeI / 1e7
-        val lon = packet.longitudeI / 1e7
+        var lat = packet.latitudeI / 1e7
+        var lon = packet.longitudeI / 1e7
         val hae = packet.altitude
+
+        // Routes from ATAK use 0,0 as the event anchor. Use the first
+        // waypoint's coordinates so the receiving TAK client can locate
+        // the route on the map.
+        val routePayload = packet.payload as? TakPacketV2Data.Payload.Route
+        if (routePayload != null && packet.latitudeI == 0 && packet.longitudeI == 0 && routePayload.links.isNotEmpty()) {
+            lat = routePayload.links.first().latI / 1e7
+            lon = routePayload.links.first().lonI / 1e7
+        }
 
         sb.append("""<?xml version="1.0" encoding="UTF-8"?>""")
         sb.append("\n")

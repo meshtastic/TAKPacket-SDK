@@ -129,6 +129,13 @@ public class CotXmlBuilder
         var how = CotTypeMapper.HowToString((int)pkt.How) ?? "m-g";
         var lat = pkt.LatitudeI / 1e7;
         var lon = pkt.LongitudeI / 1e7;
+        if (pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route
+            && pkt.LatitudeI == 0 && pkt.LongitudeI == 0
+            && pkt.Route.Links.Count > 0)
+        {
+            lat = (pkt.Route.Links[0].Point?.LatDeltaI ?? 0) / 1e7;
+            lon = (pkt.Route.Links[0].Point?.LonDeltaI ?? 0) / 1e7;
+        }
 
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
@@ -136,7 +143,8 @@ public class CotXmlBuilder
         sb.AppendLine($"  <point lat=\"{lat}\" lon=\"{lon}\" hae=\"{pkt.Altitude}\" ce=\"9999999\" le=\"9999999\"/>");
         sb.AppendLine("  <detail>");
 
-        if (!string.IsNullOrEmpty(pkt.Callsign))
+        var isRoute = pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route;
+        if (!string.IsNullOrEmpty(pkt.Callsign) && !isRoute)
         {
             var ep = string.IsNullOrEmpty(pkt.Endpoint) ? "0.0.0.0:4242:tcp" : pkt.Endpoint;
             var tag = $"    <contact callsign=\"{Esc(pkt.Callsign)}\" endpoint=\"{Esc(ep)}\"";
@@ -252,7 +260,7 @@ public class CotXmlBuilder
                 EmitRab(sb, pkt.Rab, pkt.LatitudeI, pkt.LongitudeI);
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Route:
-                EmitRoute(sb, pkt.Route, pkt.LatitudeI, pkt.LongitudeI, pkt.Uid, pkt.Remarks);
+                EmitRoute(sb, pkt.Route, pkt.LatitudeI, pkt.LongitudeI, pkt.Uid, pkt.Remarks, pkt.Callsign);
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Casevac:
                 EmitCasevac(sb, pkt.Casevac);
@@ -414,7 +422,7 @@ public class CotXmlBuilder
             sb.AppendLine($"    <strokeWeight value=\"{F(rab.StrokeWeightX10 / 10.0)}\"/>");
     }
 
-    private void EmitRoute(StringBuilder sb, Route route, int eventLatI, int eventLonI, string eventUid = "", string remarks = "")
+    private void EmitRoute(StringBuilder sb, Route route, int eventLatI, int eventLonI, string eventUid = "", string remarks = "", string callsign = "")
     {
         // Emit <link> elements BEFORE <link_attr> (ATAK expects waypoints first)
         for (var idx = 0; idx < route.Links.Count; idx++)
@@ -452,6 +460,14 @@ public class CotXmlBuilder
             sb.AppendLine("    <remarks/>");
         // routeinfo with navcues child (after link_attr)
         sb.AppendLine("    <__routeinfo><__navcues/></__routeinfo>");
+        sb.AppendLine("    <strokeColor value=\"-1\"/>");
+        var strokeW = route.StrokeWeightX10 > 0 ? F(route.StrokeWeightX10 / 10.0) : "3";
+        sb.AppendLine($"    <strokeWeight value=\"{strokeW}\"/>");
+        sb.AppendLine("    <strokeStyle value=\"solid\"/>");
+        if (!string.IsNullOrEmpty(callsign))
+            sb.AppendLine($"    <contact callsign=\"{Esc(callsign)}\"/>");
+        sb.AppendLine("    <labels_on value=\"false\"/>");
+        sb.AppendLine("    <color value=\"-1\"/>");
     }
 
     private void EmitCasevac(StringBuilder sb, CasevacReport c)
