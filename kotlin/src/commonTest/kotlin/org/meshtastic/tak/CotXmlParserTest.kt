@@ -173,8 +173,10 @@ class CotXmlParserTest {
     }
 
     @Test
-    fun endpointParsed() {
+    fun endpointNormalized() {
+        // Default TAK endpoints (*:-1:stcp, 0.0.0.0:4242:tcp) are
+        // normalized to empty string to save wire bytes.
         val packet = parser.parse(InlinedFixtures.PLI_BASIC)
-        assertEquals("*:-1:stcp", packet.endpoint)
+        assertEquals("", packet.endpoint)
     }
 }

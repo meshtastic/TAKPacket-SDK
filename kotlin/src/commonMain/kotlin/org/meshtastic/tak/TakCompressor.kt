@@ -134,6 +134,32 @@ class TakCompressor(
     }
 
     /**
+     * Compress a packet, stripping remarks if the result exceeds [maxWireBytes].
+     *
+     * First attempts compression with remarks intact. If the wire payload
+     * fits within [maxWireBytes], returns it as-is. Otherwise, clears the
+     * remarks field and re-compresses. Returns null if even the stripped
+     * packet exceeds the limit (caller should drop the packet).
+     *
+     * @param packet The packet with remarks populated.
+     * @param maxWireBytes Maximum allowed wire payload size (e.g. 225).
+     * @return The wire payload, or null if the packet is too large even
+     *         without remarks.
+     */
+    fun compressWithRemarksFallback(
+        packet: TakPacketV2Data,
+        maxWireBytes: Int,
+    ): ByteArray? {
+        val full = compress(packet)
+        if (full.size <= maxWireBytes) return full
+
+        // Strip remarks and retry
+        if (packet.remarks.isEmpty()) return null
+        val stripped = compress(packet.copy(remarks = ""))
+        return if (stripped.size <= maxWireBytes) stripped else null
+    }
+
+    /**
      * Compress and return both the wire payload and intermediate sizes for reporting.
      */
     fun compressWithStats(packet: TakPacketV2Data): CompressionResult {

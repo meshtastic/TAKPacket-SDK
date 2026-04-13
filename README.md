@@ -133,6 +133,14 @@ Covers ten tactical graphic kinds. The shape's anchor point lives on `TAKPacketV
 
 `StyleMode` discriminates `StrokeOnly` vs `FillOnly` vs `StrokeAndFill`, preserving the distinction between *"this polyline has no fill"* and *"this shape has a transparent black fill"*.
 
+**KML Style Links:** Circle and ellipse shapes include a `<link type="b-x-KmlStyle">` element inside `<shape>` for iTAK compatibility. ATAK encodes colors in KML's **ABGR hex format** (not ARGB). The builder converts `stroke_argb`/`fill_argb` proto fields (ARGB int32) to ABGR hex strings automatically:
+
+| Proto field (ARGB) | KML hex (ABGR) | Example |
+|---|---|---|
+| `0xFFFF0000` (opaque red) | `ff0000ff` | `<color>ff0000ff</color>` |
+| `0x9F00FF00` (semi-transparent green) | `9f00ff00` | `<color>9f00ff00</color>` |
+| `0x00000000` (transparent) | not emitted | PolyStyle omitted |
+
 **Kotlin — parse a drawing_circle and read its structured fields:**
 ```kotlin
 val parser = CotXmlParser()
@@ -438,6 +446,413 @@ var wire = compressor.CompressBestOf(packet, rawDetail);
 ```
 
 On the 31 bundled fixtures `compressBestOf()` picks the typed variant 100% of the time — the delta-encoded geometry wins on every known type. The fallback path is an insurance policy for unmapped types and oversize shapes, not a hot path.
+
+## Real-World Compression Examples
+
+End-to-end walkthroughs showing actual CoT XML from ATAK/iTAK being compressed for LoRa mesh transmission. Each example shows the raw XML, what gets stripped before compression, the resulting proto structure, and the final compressed wire payload. The LoRa MTU limit is **225 bytes**.
+
+> **Two-phase optimization:** The examples below show two reduction stages. First, the app strips non-essential XML *elements* (`<takv>`, `<voice>`, `<precisionLocation>`, etc.) before the SDK sees the XML. Second, the SDK parser eliminates further redundancy at parse time: `version="2.0"` is not stored (hardcoded on rebuild), `time` and `start` are discarded (rebuilt from receiver clock), `stale` becomes a compact `staleSeconds` varint (delta from time), and `ce`/`le` sentinels are dropped (hardcoded `9999999` on rebuild). The "After stripping" blocks below show the XML after phase 1 only — the event-envelope attributes visible there are **NOT on the wire**.
+
+### PLI — Position Report (`a-f-G-U-C`)
+
+**Raw CoT XML from TAK client** (754 bytes)
+```xml
+<event version="2.0" uid="ANDROID-0000000000000002" type="a-f-G-U-C" how="h-e"
+       time="2026-03-15T15:30:00Z" start="2026-03-15T15:30:00Z" stale="2026-03-15T15:30:45Z">
+  <point lat="12.00000" lon="91.00000" hae="-29.667" ce="32.2" le="9999999"/>
+  <detail>
+    <takv os="34" version="4.12.0.1 (00000000)[playstore].0000000000-CIV"
+          device="Simulator" platform="ATAK-CIV"/>
+    <contact endpoint="*:-1:stcp" phone="+15550000001" callsign="TESTNODE-01"/>
+    <uid Droid="TESTNODE-01"/>
+    <precisionlocation altsrc="GPS" geopointsrc="GPS"/>
+    <__group role="Team Member" name="Cyan"/>
+    <status battery="88"/>
+    <track course="142.75" speed="1.2"/>
+    <_flow-tags_ TAK-Server-00000000="2026-03-15T15:30:00Z"/>
+  </detail>
+</event>
+```
+
+**After stripping** (~400 bytes) — `<takv>`, `<precisionlocation>`, `<_flow-tags_>` removed
+```xml
+<event version="2.0" uid="ANDROID-0000000000000002" type="a-f-G-U-C" how="h-e"
+       time="2026-03-15T15:30:00Z" start="2026-03-15T15:30:00Z" stale="2026-03-15T15:30:45Z">
+  <point lat="12.00000" lon="91.00000" hae="-29.667" ce="32.2" le="9999999"/>
+  <detail>
+    <contact endpoint="*:-1:stcp" phone="+15550000001" callsign="TESTNODE-01"/>
+    <uid Droid="TESTNODE-01"/>
+    <__group role="Team Member" name="Cyan"/>
+    <status battery="88"/>
+    <track course="142.75" speed="1.2"/>
+  </detail>
+</event>
+```
+
+**TAKPacketV2 proto fields**
+```
+cot_type_id: 1 (a-f-G-U-C)    how: 1 (h-e)
+callsign: "TESTNODE-01"        device_callsign: "TESTNODE-01"
+latitude_i: 120000000          longitude_i: 910000000
+altitude: -30                  speed: 120 (cm/s)      course: 14275 (deg×100)
+battery: 88                    team: 5 (Cyan)          role: 1 (TeamMember)
+geo_src: 1 (GPS)               alt_src: 1 (GPS)
+endpoint: "" (normalized)       phone: "+15550000001"
+pli: true
+```
+
+| Stage | Size | Reduction |
+|-------|------|-----------|
+| Raw XML | 754 B | — |
+| Stripped | ~400 B | -47% |
+| Compressed | **151 B** | **80% total** |
+
+---
+
+### GeoChat — Broadcast Message (`b-t-f`)
+
+**Raw CoT XML from iTAK** (1031 bytes)
+```xml
+<event version="2.0" uid="GeoChat.23131970-4D02-4092-A30A-8A49EBD04AA0.All Chat Rooms.08C6FA28"
+       type="b-t-f" how="h-g-i-g-o" time="2026-04-10T13:41:23Z" ...>
+  <point lat="34.80545694681502" lon="-92.4817947769074" hae="9999999.0" .../>
+  <detail>
+    <__chat parent="RootContactGroup" groupOwner="false" messageId="08C6FA28"
+            chatroom="All Chat Rooms" id="All Chat Rooms" senderCallsign="iPad">
+      <chatgrp uid0="23131970-4D02-4092-A30A-8A49EBD04AA0" uid1="All Chat Rooms"/>
+    </__chat>
+    <link uid="23131970-4D02-4092-A30A-8A49EBD04AA0" type="a-f-G-E-V-C" relation="p-p"/>
+    <remarks source="BAO.F.ATAK.23131970-..." to="All Chat Rooms" time="...">Test</remarks>
+    <__serverdestination destinations="*:4242:tcp:23131970-..."/>
+    <_flow-tags_ TAK-Server-dd4055d1="2026-04-10T13:41:23Z"/>
+  </detail>
+</event>
+```
+
+**TAKPacketV2 proto fields** — `chat.to` omitted for broadcast (saves 16 bytes)
+```
+cot_type_id: 25 (b-t-f)       how: 3 (h-g-i-g-o)
+callsign: "iPad"               uid: "GeoChat.23131970-...All Chat Rooms.08C6FA28"
+chat {
+  message: "Test"
+  to_callsign: "iPad"          # to: null (broadcast = 0 bytes)
+}
+```
+
+| Stage | Size | Reduction |
+|-------|------|-----------|
+| Raw XML | 1,031 B | — |
+| Stripped | ~700 B | -32% |
+| Compressed | **80 B** | **92% total** |
+
+---
+
+### Rectangle — Drawn Shape (`u-d-r`)
+
+**Raw CoT XML from ATAK** (945 bytes)
+```xml
+<event version="2.0" uid="ace0fc3f-9587-406c-be66-a52f02cdbedf" type="u-d-r"
+       time="2026-04-11T01:09:56.557Z" stale="2026-04-12T01:09:56.557Z" how="h-e">
+  <point lat="34.8044064" lon="-92.436114" hae="67.004" .../>
+  <detail>
+    <link point="34.80564553084199,-92.43683293800487"/>
+    <link point="34.80422710311164,-92.43446184473841"/>
+    <link point="34.80316693332748,-92.43539543971937"/>
+    <link point="34.80458597608953,-92.43776596177908"/>
+    <__shapeExtras cpvis="false" editable="true"/>
+    <remarks/>
+    <creator uid="ANDROID-2fb24d79bf83a660" callsign="ETHEL" .../>
+    <strokeColor value="-16777089"/>
+    <strokeWeight value="3.0"/>
+    <strokeStyle value="solid"/>
+    <fillColor value="-1778384769"/>
+    <contact callsign="Rectangle 2"/>
+    <tog enabled="0"/>
+    <precisionlocation altsrc="SRTM1" geopointsrc="USER"/>
+    <labels_on value="false"/>
+    <archive/>
+  </detail>
+</event>
+```
+
+**After stripping** (~500 bytes) — `<__shapeExtras>`, `<creator>`, `<tog>`, `<archive>`, `<remarks/>`, `<strokeStyle>`, `<precisionlocation>` removed
+```xml
+<event version="2.0" uid="ace0fc3f-..." type="u-d-r" ...>
+  <point lat="34.8044064" lon="-92.436114" hae="67.004" .../>
+  <detail>
+    <link point="34.80564553084199,-92.43683293800487"/>
+    <link point="34.80422710311164,-92.43446184473841"/>
+    <link point="34.80316693332748,-92.43539543971937"/>
+    <link point="34.80458597608953,-92.43776596177908"/>
+    <strokeColor value="-16777089"/>
+    <strokeWeight value="3.0"/>
+    <fillColor value="-1778384769"/>
+    <contact callsign="Rectangle 2"/>
+    <labels_on value="false"/>
+  </detail>
+</event>
+```
+
+**TAKPacketV2 proto fields** — vertices delta-encoded from anchor point
+```
+cot_type_id: 40 (u-d-f/u-d-r)  how: 1 (h-e)
+callsign: "Rectangle 2"
+latitude_i: 348044064          longitude_i: -924361140
+shape {
+  kind: 2 (Rectangle)          style: 3 (StrokeAndFill)
+  stroke_argb: 0xFF0000FF      fill_argb: 0x960000FF
+  stroke_weight_x10: 30        labels_on: false
+  vertices: [                  # delta-encoded from anchor
+    { lat_delta_i: +1245, lon_delta_i: -7219 }
+    { lat_delta_i: -1835, lon_delta_i: +1655 }
+    { lat_delta_i: -2737, lon_delta_i: +719  }
+    { lat_delta_i: -1527, lon_delta_i: -1559 }
+  ]
+}
+```
+
+| Stage | Size | Reduction |
+|-------|------|-----------|
+| Raw XML | 945 B | — |
+| Stripped | ~500 B | -47% |
+| Compressed | **101 B** | **87% total** |
+
+---
+
+### Circle — Drawn Shape (`u-d-c-c`)
+
+**Raw CoT XML from ATAK** (851 bytes)
+```xml
+<event version="2.0" uid="67EBAF59-A216-4B0C-BD24-9AE5EE4D65E6" type="u-d-c-c" ...>
+  <point lat="34.7720486" lon="-92.4584657" hae="9999999.0" .../>
+  <detail>
+    <shape>
+      <ellipse major="393.14" minor="393.14" angle="360"/>
+      <link uid="67EBAF59-...Style" type="b-x-KmlStyle" relation="p-c">
+        <Style><LineStyle><color>ffff4245</color><width>3.0</width></LineStyle>
+        <PolyStyle><color>00000000</color></PolyStyle></Style>
+      </link>
+    </shape>
+    <__shapeExtras cpvis="true" editable="true"/>
+    <strokeColor value="-48571"/>
+    <strokeWeight value="3.0"/>
+    <fillColor value="0"/>
+    <contact callsign="Shape 324"/>
+    <labels_on value="false"/>
+    <archive/>
+    <uid Droid="Shape 324"/>
+  </detail>
+</event>
+```
+
+**TAKPacketV2 proto fields** — circle stored as major/minor radii in centimeters
+```
+cot_type_id: 42 (u-d-c-c)     how: 1 (h-e)
+callsign: "Shape 324"
+latitude_i: 347720486          longitude_i: -924584657
+shape {
+  kind: 1 (Circle)             style: 1 (StrokeOnly)
+  major_cm: 39314              minor_cm: 39314         angle_deg: 360
+  stroke_argb: 0xFFFF4245      fill_argb: 0x00000000
+  stroke_weight_x10: 30        labels_on: false
+}
+```
+
+| Stage | Size | Reduction |
+|-------|------|-----------|
+| Raw XML | 851 B | — |
+| Stripped | ~450 B | -47% |
+| Compressed | **90 B** | **90% total** |
+
+---
+
+### Route — 3 Waypoints (`b-m-r`)
+
+**Raw CoT XML from iTAK** (890 bytes)
+```xml
+<event version="2.0" uid="139A3009-681E-4B1A-8F23-DBB49A2C338D" type="b-m-r" ...>
+  <point lat="34.74829435592147" lon="-92.43520215509216" hae="0.0" .../>
+  <detail>
+    <contact callsign="Route - 04/11 06:48:00"/>
+    <precisionLocation geopointsrc="???" altsrc="???"/>
+    <link uid="D71306C3-..." callsign="SP" type="b-m-p-w"
+          point="34.74829435592147,-92.43520215509216"/>
+    <link uid="06BDF9C8-..." callsign="" type="b-m-p-c"
+          point="34.74650551240878,-92.43195557866541"/>
+    <link uid="A5449578-..." callsign="VDO" type="b-m-p-w"
+          point="34.748578593226505,-92.4354345620684"/>
+    <link_attr color="-65281" method="Walking" prefix="CP" direction="Infil"
+               routetype="Primary" order="Ascending Check Points"/>
+    <marti/>
+  </detail>
+</event>
+```
+
+**After stripping** (~380 bytes) — `<precisionLocation>`, `<marti/>`, `???` attrs, `routetype`, `order`, `color`, empty `callsign`, and waypoint `uid` attrs removed
+```xml
+<event version="2.0" uid="139A3009-..." type="b-m-r" ...>
+  <point lat="34.74829435592147" lon="-92.43520215509216" hae="0.0" .../>
+  <detail>
+    <contact callsign="Route - 04/11 06:48:00"/>
+    <link callsign="SP" type="b-m-p-w"
+          point="34.74829435592147,-92.43520215509216"/>
+    <link type="b-m-p-c"
+          point="34.74650551240878,-92.43195557866541"/>
+    <link callsign="VDO" type="b-m-p-w"
+          point="34.748578593226505,-92.4354345620684"/>
+    <link_attr method="Walking" prefix="CP" direction="Infil"/>
+  </detail>
+</event>
+```
+
+**TAKPacketV2 proto fields** — waypoints delta-encoded, UIDs omitted (receiver derives)
+```
+cot_type_id: 10 (b-m-r)       how: 1 (h-e)
+callsign: "Route - 04/11 06:48:00"
+latitude_i: 347482943          longitude_i: -924352021
+route {
+  method: 1 (Walking)          direction: 1 (Infil)     prefix: "CP"
+  stroke_weight_x10: 30
+  links: [
+    { lat_i: 347482943, lon_i: -924352021, callsign: "SP",  link_type: 0 }
+    { lat_i: 347465055, lon_i: -924319555,                   link_type: 1 }
+    { lat_i: 347485785, lon_i: -924354345, callsign: "VDO", link_type: 0 }
+  ]
+}
+```
+
+| Stage | Size | Reduction |
+|-------|------|-----------|
+| Raw XML | 890 B | — |
+| Stripped | ~380 B | -57% |
+| Compressed | **~80 B** | **91% total** |
+
+> **Note:** Routes are the tightest fit under the 225B LoRa MTU. The stripper removes waypoint `uid` attributes (~40 bytes each in proto wire format), `routetype`, `order`, `color`, and empty `callsign` attributes. Without UID stripping, a 5-waypoint route compresses to ~271 bytes (over the 225B limit); with it, even routes with 5-6 waypoints fit comfortably. The builder generates deterministic UIDs (`{eventUid}-{index}`) on reconstruction so ATAK can create internal waypoint markers.
+
+**Route reconstruction details:** The `CotXmlBuilder` emits route elements in the order ATAK expects:
+1. `<link>` waypoints first — each with `uid`, `type`, `callsign`, 3-component `point="lat,lon,hae"`, and `relation="c"`
+2. `<link_attr>` with `method`, `direction`, `prefix`, `stroke`
+3. `<__routeinfo><__navcues/></__routeinfo>` (non-self-closing, with navcues child)
+
+The stale time for routes (and all static CoT types) is extended to a minimum of 15 minutes before mesh transmission to survive multi-hop LoRa delivery. iTAK uses a 2-minute stale for routes which expires before mesh delivery completes.
+
+---
+
+### Marker — Spot Map (`b-m-p-s-m`)
+
+**Raw CoT XML from ATAK** (721 bytes)
+```xml
+<event version="2.0" uid="9405e320-9356-41c4-8449-f46990aa17f8" type="b-m-p-s-m"
+       time="2026-03-15T14:22:10Z" stale="2026-03-16T14:22:10Z" how="h-g-i-g-o">
+  <point lat="10.00606" lon="95.00362" hae="9999999.0" .../>
+  <detail>
+    <status readiness="true"/>
+    <archive/>
+    <link uid="ANDROID-0000000000000001" type="a-f-G-U-C"
+          parent_callsign="SIM-01" relation="p-p"/>
+    <contact callsign="R 1"/>
+    <remarks/>
+    <color argb="-65536"/>
+    <precisionlocation altsrc="???"/>
+    <usericon iconsetpath="COT_MAPPING_SPOTMAP/b-m-p-s-m/-65536"/>
+  </detail>
+</event>
+```
+
+**After stripping** (~400 bytes) — `<archive>`, `<remarks/>`, `<precisionlocation>`, `???` removed
+```xml
+<event version="2.0" uid="9405e320-..." type="b-m-p-s-m" ...>
+  <point lat="10.00606" lon="95.00362" hae="9999999.0" .../>
+  <detail>
+    <status readiness="true"/>
+    <link uid="ANDROID-0000000000000001" type="a-f-G-U-C"
+          parent_callsign="SIM-01" relation="p-p"/>
+    <contact callsign="R 1"/>
+    <color argb="-65536"/>
+    <usericon iconsetpath="COT_MAPPING_SPOTMAP/b-m-p-s-m/-65536"/>
+  </detail>
+</event>
+```
+
+**TAKPacketV2 proto fields** — kind derived from CoT type, color as palette enum
+```
+cot_type_id: 8 (b-m-p-s-m)    how: 3 (h-g-i-g-o)
+callsign: "R 1"
+latitude_i: 100060600          longitude_i: 950036200
+marker {
+  kind: 1 (Spot)               readiness: true
+  color: 4 (Red)               color_argb: 0xFFFF0000
+  parent_uid: "ANDROID-0000000000000001"
+  parent_type: "a-f-G-U-C"
+  parent_callsign: "SIM-01"
+  iconset: "COT_MAPPING_SPOTMAP/b-m-p-s-m/-65536"
+}
+```
+
+| Stage | Size | Reduction |
+|-------|------|-----------|
+| Raw XML | 721 B | — |
+| Stripped | ~400 B | -44% |
+| Compressed | **81 B** | **89% total** |
+
+---
+
+### Compression Summary
+
+| Payload Type | Raw XML | Compressed | Ratio | Fits LoRa? |
+|-------------|---------|------------|-------|------------|
+| PLI (position) | 754 B | 151 B | 5.0x | ✅ |
+| GeoChat (text) | 1,031 B | 80 B | 12.9x | ✅ |
+| Rectangle (4 vertices) | 945 B | 101 B | 9.4x | ✅ |
+| Circle (ellipse) | 851 B | 90 B | 9.5x | ✅ |
+| Route (3 waypoints) | 890 B | ~80 B | 11.1x | ✅ |
+| Marker (spot) | 721 B | 81 B | 8.9x | ✅ |
+
+Median compression ratio across all fixture types: **~9x** (400-2300 bytes XML → 56-211 bytes wire).
+
+### Wire Optimizations
+
+The SDK applies several optimizations to minimize wire payload size:
+
+| Optimization | Savings | Description |
+|-------------|---------|-------------|
+| **Endpoint normalization** | ~20 B/msg | Default endpoints (`0.0.0.0:4242:tcp`, `*:-1:stcp`) normalized to empty; builder restores the default on reconstruction |
+| **Broadcast sentinel** | ~16 B/chat | `chat.to = "All Chat Rooms"` normalized to null (proto field omitted) |
+| **Element stripping** | ~100-200 B/msg | Non-essential XML elements (`<takv>`, `<voice>`, `<precisionLocation>`, `<__geofence>`, `<marti>`, `<__shapeExtras>`, `<creator>`, `<tog>`, `<archive>`, `<strokeStyle>`, empty `<remarks>`) stripped before SDK parsing |
+| **Attribute stripping** | ~30-80 B/msg | Display-only attributes stripped: `routetype`, `order`, `color` (from `<link_attr>`), `access`, empty `callsign`/`phone`, and all `"???"` placeholder values |
+| **Route waypoint UID stripping** | ~40 B/waypoint | UUID `uid` attributes stripped from route `<link>` elements before compression. Builder generates deterministic UIDs (`{eventUid}-{index}`) on reconstruction. Saves ~120 bytes proto for a 3-waypoint route |
+| **Stale time extension** | 0 B (metadata) | Static CoT types (routes `b-m-r`, shapes `u-d-*`, markers `b-m-p-*`) get a minimum 15-minute stale TTL before mesh transmission. Prevents iTAK's 2-min stale from expiring during multi-hop LoRa delivery |
+| **Delta vertex encoding** | ~50% vs abs | Shape/route vertices stored as deltas from the event anchor point |
+| **zstd dictionary v3** | ~5-8x | Dictionaries trained on 700 real-world protobuf samples covering all payload types |
+
+**Stripped elements and attributes are not needed for rendering** — the SDK extracts all structurally meaningful data (coordinates, waypoints, colors, stroke weight, method, direction, prefix) into typed proto fields. The stripped metadata is display-only, UI-state, or redundant with proto fields.
+
+### Route Delivery via Data Package (ATAK)
+
+ATAK silently ignores `b-m-r` route CoT events received over TCP streaming connections. Routes are only accepted from KML/GPX file import, TAK Server mission sync, or data packages auto-imported from `/sdcard/atak/tools/datapackage/`. iTAK does not have this limitation.
+
+The Meshtastic Android app works around this by converting mesh-received routes into KML data packages:
+
+1. Route arrives from mesh as a compressed TAKPacketV2
+2. SDK decompresses and reconstructs the route XML with waypoint coordinates
+3. `RouteDataPackageGenerator` extracts waypoints and generates a KML `<LineString>`
+4. KML is packaged in a MissionPackageManifest v2 zip with `manifest.xml`
+5. Zip is written to `/sdcard/atak/tools/datapackage/{routeUid}.zip`
+6. ATAK auto-imports the data package and renders the route in Route Manager
+
+```
+Route over LoRa mesh (135 bytes)
+    ↓ TakCompressor.decompress()
+Route CoT XML (waypoints, method, direction)
+    ↓ RouteDataPackageGenerator.generateDataPackage()
+{routeUid}.zip
+├── {routeUid}.kml      ← KML LineString with lon,lat,hae coordinates
+└── manifest.xml         ← MissionPackageManifest v2
+    ↓ AtakFileWriter.writeToImportDir()
+/sdcard/atak/tools/datapackage/{routeUid}.zip
+    ↓ ATAK auto-import
+Route rendered in ATAK Route Manager
+```
 
 ## Supported Platforms
 

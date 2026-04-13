@@ -303,7 +303,8 @@ public class CotXmlParser
             {
                 var parts = pointAttr.Split(',');
                 if (parts.Length < 2) return;
-                if (!double.TryParse(parts[0], out var plat) || !double.TryParse(parts[1], out var plon)) return;
+                // Trim whitespace — iTAK uses "lat, lon" with a space after comma
+                if (!double.TryParse(parts[0].Trim(), out var plat) || !double.TryParse(parts[1].Trim(), out var plon)) return;
                 var plati = (int)(plat * 1e7);
                 var ploni = (int)(plon * 1e7);
 
@@ -394,7 +395,10 @@ public class CotXmlParser
             {
                 case "contact":
                     pkt.Callsign = el.Attribute("callsign")?.Value ?? "";
-                    if (el.Attribute("endpoint") is { } ep) pkt.Endpoint = ep.Value;
+                    // Normalize default TAK endpoints to empty — saves ~20 wire bytes
+                    if (el.Attribute("endpoint") is { } epAttr &&
+                        epAttr.Value != "0.0.0.0:4242:tcp" && epAttr.Value != "*:-1:stcp")
+                        pkt.Endpoint = epAttr.Value;
                     if (el.Attribute("phone") is { } ph) pkt.Phone = ph.Value;
                     break;
                 case "__group":
@@ -446,7 +450,10 @@ public class CotXmlParser
                 case "__chat":
                     hasChat = true;
                     chatToCs = el.Attribute("senderCallsign")?.Value;
-                    chatTo = el.Attribute("id")?.Value;
+                    // "All Chat Rooms" is the broadcast sentinel — omit from proto
+                    // so the field costs 0 bytes on the wire instead of 16.
+                    var chatId = el.Attribute("id")?.Value;
+                    chatTo = chatId == "All Chat Rooms" ? null : chatId;
                     break;
                 case "remarks":
                     remarksText = el.Value.Trim();
@@ -805,6 +812,11 @@ public class CotXmlParser
             };
         }
         else pkt.Pli = true;
+
+        // For non-chat types, propagate remarksText as the top-level remarks field.
+        // Chat uses GeoChat.Message for the text; remarks stays empty.
+        if (!hasChat && !string.IsNullOrEmpty(remarksText))
+            pkt.Remarks = remarksText;
 
         return pkt;
     }

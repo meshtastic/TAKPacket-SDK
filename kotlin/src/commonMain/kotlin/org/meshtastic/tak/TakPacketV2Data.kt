@@ -30,6 +30,7 @@ data class TakPacketV2Data(
     val takOs: String = "",
     val endpoint: String = "",
     val phone: String = "",
+    val remarks: String = "",
     val payload: Payload = Payload.None,
 ) {
     sealed class Payload {

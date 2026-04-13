@@ -47,8 +47,18 @@ public class CotXmlBuilder {
         let cotType = CotTypeMapper.typeToString(packet.cotTypeID) ?? packet.cotTypeStr
         let how = CotTypeMapper.howToString(packet.how) ?? "m-g"
 
-        let lat = Double(packet.latitudeI) / 1e7
-        let lon = Double(packet.longitudeI) / 1e7
+        var lat = Double(packet.latitudeI) / 1e7
+        var lon = Double(packet.longitudeI) / 1e7
+
+        // Routes from ATAK use 0,0 as the event anchor. Use the first
+        // waypoint's coordinates so the receiving TAK client can locate
+        // the route on the map.
+        if case .route(let route) = packet.payloadVariant,
+           packet.latitudeI == 0 && packet.longitudeI == 0,
+           let first = route.links.first {
+            lat = Double(packet.latitudeI + first.point.latDeltaI) / 1e7
+            lon = Double(packet.longitudeI + first.point.lonDeltaI) / 1e7
+        }
 
         var s = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         s += "<event version=\"2.0\" uid=\"\(esc(packet.uid))\" type=\"\(esc(cotType))\" how=\"\(esc(how))\" "
@@ -56,9 +66,13 @@ public class CotXmlBuilder {
         s += "  <point lat=\"\(lat)\" lon=\"\(lon)\" hae=\"\(packet.altitude)\" ce=\"9999999\" le=\"9999999\"/>\n"
         s += "  <detail>\n"
 
-        if !packet.callsign.isEmpty {
-            s += "    <contact callsign=\"\(esc(packet.callsign))\""
-            if !packet.endpoint.isEmpty { s += " endpoint=\"\(esc(packet.endpoint))\"" }
+        // Contact — skip for routes (ATAK/iTAK expect <contact> after __routeinfo, no endpoint)
+        let isRoute: Bool
+        if case .route = packet.payloadVariant { isRoute = true } else { isRoute = false }
+
+        if !packet.callsign.isEmpty && !isRoute {
+            let ep = packet.endpoint.isEmpty ? "0.0.0.0:4242:tcp" : packet.endpoint
+            s += "    <contact callsign=\"\(esc(packet.callsign))\" endpoint=\"\(esc(ep))\""
             if !packet.phone.isEmpty { s += " phone=\"\(esc(packet.phone))\"" }
             s += "/>\n"
         }
@@ -158,13 +172,17 @@ public class CotXmlBuilder {
                 s += "/>\n"
             }
         case .shape(let shape):
-            s += emitShape(shape, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
+            s += emitShape(shape, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI, uid: packet.uid)
         case .marker(let marker):
             s += emitMarker(marker)
         case .rab(let rab):
             s += emitRab(rab, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
         case .route(let route):
-            s += emitRoute(route, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI)
+            s += emitRoute(route, eventLatI: packet.latitudeI, eventLonI: packet.longitudeI, eventUid: packet.uid, remarks: packet.remarks)
+            // Contact AFTER __routeinfo, with NO endpoint (matches Kotlin reference)
+            if !packet.callsign.isEmpty {
+                s += "    <contact callsign=\"\(esc(packet.callsign))\"/>\n"
+            }
         case .casevac(let c):
             s += emitCasevac(c)
         case .emergency(let e):
@@ -184,6 +202,22 @@ public class CotXmlBuilder {
             break
         }
 
+        // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text
+        if !packet.remarks.isEmpty {
+            let isChat: Bool
+            let isAircraft: Bool
+            let isRoute: Bool
+            switch packet.payloadVariant {
+            case .chat: isChat = true; isAircraft = false; isRoute = false
+            case .aircraft: isChat = false; isAircraft = true; isRoute = false
+            case .route: isChat = false; isAircraft = false; isRoute = true
+            default: isChat = false; isAircraft = false; isRoute = false
+            }
+            if !isChat && !isAircraft && !isRoute {
+                s += "    <remarks>\(esc(packet.remarks))</remarks>\n"
+            }
+        }
+
         s += "  </detail>\n"
         s += "</event>"
         return s
@@ -191,7 +225,7 @@ public class CotXmlBuilder {
 
     // MARK: - Typed geometry emitters
 
-    private func emitShape(_ shape: DrawnShape, eventLatI: Int32, eventLonI: Int32) -> String {
+    private func emitShape(_ shape: DrawnShape, eventLatI: Int32, eventLonI: Int32, uid: String) -> String {
         var s = ""
         // ATAK XML writes colors as signed Int32 decimal (e.g. -65536 for red).
         // The proto-generated `_argb` fields are UInt32; bit-cast on emit.
@@ -209,12 +243,20 @@ public class CotXmlBuilder {
         // emit vertices as <link point> siblings that the parser treats as
         // the shape's vertex list.
         let kind = shape.kind
-        if kind == .circle || kind == .rangingCircle || kind == .bullseye {
+        if kind == .circle || kind == .rangingCircle || kind == .bullseye || kind == .ellipse {
             if shape.majorCm > 0 || shape.minorCm > 0 {
                 let majorM = Double(shape.majorCm) / 100.0
                 let minorM = Double(shape.minorCm) / 100.0
+                let strokeW = Double(shape.strokeWeightX10) / 10.0
                 s += "    <shape>\n"
                 s += "      <ellipse major=\"\(majorM)\" minor=\"\(minorM)\" angle=\"\(shape.angleDeg)\"/>\n"
+                // KML style link — iTAK requires this to render circles/ellipses.
+                s += "      <link uid=\"\(esc(uid)).Style\" type=\"b-x-KmlStyle\" relation=\"p-c\">"
+                s += "<Style><LineStyle><color>\(Self.argbToAbgrHex(strokeVal))</color><width>\(strokeW)</width></LineStyle>"
+                if fillVal != 0 {
+                    s += "<PolyStyle><color>\(Self.argbToAbgrHex(fillVal))</color></PolyStyle>"
+                }
+                s += "</Style></link>\n"
                 s += "    </shape>\n"
             }
         } else {
@@ -318,8 +360,24 @@ public class CotXmlBuilder {
         return s
     }
 
-    private func emitRoute(_ route: Route, eventLatI: Int32, eventLonI: Int32) -> String {
-        var s = "    <__routeinfo/>\n"
+    private func emitRoute(_ route: Route, eventLatI: Int32, eventLonI: Int32, eventUid: String, remarks: String = "") -> String {
+        var s = ""
+        // Emit <link> elements BEFORE <link_attr> and <__routeinfo> —
+        // ATAK's parser expects waypoints first, then route metadata.
+        for (idx, link) in route.links.enumerated() {
+            let llat = Double(eventLatI + link.point.latDeltaI) / 1e7
+            let llon = Double(eventLonI + link.point.lonDeltaI) / 1e7
+            s += "    <link"
+            // ATAK requires uid on waypoint links for internal marker
+            // creation. Generate a deterministic one when not present.
+            let uid = link.uid.isEmpty ? "\(eventUid)-\(idx)" : link.uid
+            s += " uid=\"\(esc(uid))\""
+            let linkType = link.linkType == 1 ? "b-m-p-c" : "b-m-p-w"
+            s += " type=\"\(linkType)\""
+            if !link.callsign.isEmpty { s += " callsign=\"\(esc(link.callsign))\"" }
+            // ATAK expects 3-component point: lat,lon,hae
+            s += " point=\"\(llat),\(llon),0\" relation=\"c\"/>\n"
+        }
         s += "    <link_attr"
         if let m = Self.routeMethodIntToName[route.method] { s += " method=\"\(m)\"" }
         if let d = Self.routeDirectionIntToName[route.direction] { s += " direction=\"\(d)\"" }
@@ -329,16 +387,12 @@ public class CotXmlBuilder {
             s += " stroke=\"\(sw)\""
         }
         s += "/>\n"
-        for link in route.links {
-            let llat = Double(eventLatI + link.point.latDeltaI) / 1e7
-            let llon = Double(eventLonI + link.point.lonDeltaI) / 1e7
-            s += "    <link"
-            if !link.uid.isEmpty { s += " uid=\"\(esc(link.uid))\"" }
-            let linkType = link.linkType == 1 ? "b-m-p-c" : "b-m-p-w"
-            s += " type=\"\(linkType)\""
-            if !link.callsign.isEmpty { s += " callsign=\"\(esc(link.callsign))\"" }
-            s += " point=\"\(llat),\(llon)\"/>\n"
+        if !remarks.isEmpty {
+            s += "    <remarks>\(esc(remarks))</remarks>\n"
+        } else {
+            s += "    <remarks/>\n"
         }
+        s += "    <__routeinfo><__navcues/></__routeinfo>\n"
         return s
     }
 
@@ -432,6 +486,15 @@ public class CotXmlBuilder {
             s += "    <link uid=\"\(esc(t.targetUid))\" relation=\"p-p\" type=\"a-f-G\"/>\n"
         }
         return s
+    }
+
+    /// Convert ARGB int to ABGR hex string (KML color format).
+    private static func argbToAbgrHex(_ argb: Int32) -> String {
+        let a = (argb >> 24) & 0xFF
+        let r = (argb >> 16) & 0xFF
+        let g = (argb >> 8) & 0xFF
+        let b = argb & 0xFF
+        return String(format: "%02x%02x%02x%02x", a, b, g, r)
     }
 
     private func esc(_ s: String) -> String {

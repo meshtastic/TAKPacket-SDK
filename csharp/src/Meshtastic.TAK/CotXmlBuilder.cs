@@ -101,6 +101,16 @@ public class CotXmlBuilder
 
     private static string Esc(string s) => System.Security.SecurityElement.Escape(s) ?? s;
 
+    /// <summary>Convert ARGB int to ABGR hex string (KML color format).</summary>
+    private static string ArgbToAbgrHex(int argb)
+    {
+        var a = (argb >> 24) & 0xFF;
+        var r = (argb >> 16) & 0xFF;
+        var g = (argb >> 8) & 0xFF;
+        var b = argb & 0xFF;
+        return $"{a:x2}{b:x2}{g:x2}{r:x2}";
+    }
+
     /// <summary>
     /// Render a double using invariant culture so locales with comma
     /// decimal separators (e.g. de-DE) don't break CoT XML parsing.
@@ -119,6 +129,13 @@ public class CotXmlBuilder
         var how = CotTypeMapper.HowToString((int)pkt.How) ?? "m-g";
         var lat = pkt.LatitudeI / 1e7;
         var lon = pkt.LongitudeI / 1e7;
+        if (pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route
+            && pkt.LatitudeI == 0 && pkt.LongitudeI == 0
+            && pkt.Route.Links.Count > 0)
+        {
+            lat = (pkt.Route.Links[0].Point?.LatDeltaI ?? 0) / 1e7;
+            lon = (pkt.Route.Links[0].Point?.LonDeltaI ?? 0) / 1e7;
+        }
 
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
@@ -126,10 +143,11 @@ public class CotXmlBuilder
         sb.AppendLine($"  <point lat=\"{lat}\" lon=\"{lon}\" hae=\"{pkt.Altitude}\" ce=\"9999999\" le=\"9999999\"/>");
         sb.AppendLine("  <detail>");
 
-        if (!string.IsNullOrEmpty(pkt.Callsign))
+        var isRoute = pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route;
+        if (!string.IsNullOrEmpty(pkt.Callsign) && !isRoute)
         {
-            var tag = $"    <contact callsign=\"{Esc(pkt.Callsign)}\"";
-            if (!string.IsNullOrEmpty(pkt.Endpoint)) tag += $" endpoint=\"{Esc(pkt.Endpoint)}\"";
+            var ep = string.IsNullOrEmpty(pkt.Endpoint) ? "0.0.0.0:4242:tcp" : pkt.Endpoint;
+            var tag = $"    <contact callsign=\"{Esc(pkt.Callsign)}\" endpoint=\"{Esc(ep)}\"";
             if (!string.IsNullOrEmpty(pkt.Phone)) tag += $" phone=\"{Esc(pkt.Phone)}\"";
             sb.AppendLine(tag + "/>");
         }
@@ -233,7 +251,7 @@ public class CotXmlBuilder
                 break;
             }
             case TAKPacketV2.PayloadVariantOneofCase.Shape:
-                EmitShape(sb, pkt.Shape, pkt.LatitudeI, pkt.LongitudeI);
+                EmitShape(sb, pkt.Shape, pkt.LatitudeI, pkt.LongitudeI, pkt.Uid);
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Marker:
                 EmitMarker(sb, pkt.Marker);
@@ -242,7 +260,7 @@ public class CotXmlBuilder
                 EmitRab(sb, pkt.Rab, pkt.LatitudeI, pkt.LongitudeI);
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Route:
-                EmitRoute(sb, pkt.Route, pkt.LatitudeI, pkt.LongitudeI);
+                EmitRoute(sb, pkt.Route, pkt.LatitudeI, pkt.LongitudeI, pkt.Uid, pkt.Remarks, pkt.Callsign);
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Casevac:
                 EmitCasevac(sb, pkt.Casevac);
@@ -267,6 +285,17 @@ public class CotXmlBuilder
                 break;
         }
 
+        // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
+        // Chat uses GeoChat.Message; Aircraft synthesizes from ICAO fields; Route handles
+        // remarks in its own block above. All other types emit here.
+        if (!string.IsNullOrEmpty(pkt.Remarks)
+            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Chat
+            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Aircraft
+            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Route)
+        {
+            sb.AppendLine($"    <remarks>{Esc(pkt.Remarks)}</remarks>");
+        }
+
         sb.AppendLine("  </detail>");
         sb.Append("</event>");
         return sb.ToString();
@@ -274,7 +303,7 @@ public class CotXmlBuilder
 
     // --- Typed geometry emitters ----------------------------------------
 
-    private void EmitShape(StringBuilder sb, DrawnShape shape, int eventLatI, int eventLonI)
+    private void EmitShape(StringBuilder sb, DrawnShape shape, int eventLatI, int eventLonI, string uid = "")
     {
         var strokeArgb = AtakPalette.ResolveColor(shape.StrokeColor, shape.StrokeArgb);
         var fillArgb = AtakPalette.ResolveColor(shape.FillColor, shape.FillArgb);
@@ -299,8 +328,14 @@ public class CotXmlBuilder
             {
                 var majorM = shape.MajorCm / 100.0;
                 var minorM = shape.MinorCm / 100.0;
+                var strokeW = shape.StrokeWeightX10 / 10.0;
                 sb.AppendLine("    <shape>");
                 sb.AppendLine($"      <ellipse major=\"{F(majorM)}\" minor=\"{F(minorM)}\" angle=\"{shape.AngleDeg}\"/>");
+                // KML style link — iTAK requires this to render circles/ellipses
+                sb.Append($"      <link uid=\"{Esc(uid)}.Style\" type=\"b-x-KmlStyle\" relation=\"p-c\">");
+                sb.Append($"<Style><LineStyle><color>{ArgbToAbgrHex(strokeVal)}</color><width>{F(strokeW)}</width></LineStyle>");
+                if (fillVal != 0) sb.Append($"<PolyStyle><color>{ArgbToAbgrHex(fillVal)}</color></PolyStyle>");
+                sb.AppendLine("</Style></link>");
                 sb.AppendLine("    </shape>");
             }
         }
@@ -387,9 +422,25 @@ public class CotXmlBuilder
             sb.AppendLine($"    <strokeWeight value=\"{F(rab.StrokeWeightX10 / 10.0)}\"/>");
     }
 
-    private void EmitRoute(StringBuilder sb, Route route, int eventLatI, int eventLonI)
+    private void EmitRoute(StringBuilder sb, Route route, int eventLatI, int eventLonI, string eventUid = "", string remarks = "", string callsign = "")
     {
-        sb.AppendLine("    <__routeinfo/>");
+        // Emit <link> elements BEFORE <link_attr> (ATAK expects waypoints first)
+        for (var idx = 0; idx < route.Links.Count; idx++)
+        {
+            var link = route.Links[idx];
+            var llat = (eventLatI + (link.Point?.LatDeltaI ?? 0)) / 1e7;
+            var llon = (eventLonI + (link.Point?.LonDeltaI ?? 0)) / 1e7;
+            var linkType = link.LinkType == 1 ? "b-m-p-c" : "b-m-p-w";
+            // Generate deterministic uid when not present
+            var uid = string.IsNullOrEmpty(link.Uid) ? $"{eventUid}-{idx}" : link.Uid;
+            var linkParts = new List<string>();
+            linkParts.Add($"uid=\"{Esc(uid)}\"");
+            linkParts.Add($"type=\"{linkType}\"");
+            if (!string.IsNullOrEmpty(link.Callsign)) linkParts.Add($"callsign=\"{Esc(link.Callsign)}\"");
+            // ATAK expects 3-component point: lat,lon,hae
+            linkParts.Add($"point=\"{F(llat)},{F(llon)},0\" relation=\"c\"");
+            sb.AppendLine($"    <link {string.Join(" ", linkParts)}/>");
+        }
         var parts = new List<string>();
         if (RouteMethodNames.TryGetValue(route.Method, out var method))
             parts.Add($"method=\"{method}\"");
@@ -402,19 +453,21 @@ public class CotXmlBuilder
         sb.AppendLine(parts.Count > 0
             ? $"    <link_attr {string.Join(" ", parts)}/>"
             : "    <link_attr/>");
-
-        foreach (var link in route.Links)
-        {
-            var llat = (eventLatI + (link.Point?.LatDeltaI ?? 0)) / 1e7;
-            var llon = (eventLonI + (link.Point?.LonDeltaI ?? 0)) / 1e7;
-            var linkType = link.LinkType == 1 ? "b-m-p-c" : "b-m-p-w";
-            var linkParts = new List<string>();
-            if (!string.IsNullOrEmpty(link.Uid)) linkParts.Add($"uid=\"{Esc(link.Uid)}\"");
-            linkParts.Add($"type=\"{linkType}\"");
-            if (!string.IsNullOrEmpty(link.Callsign)) linkParts.Add($"callsign=\"{Esc(link.Callsign)}\"");
-            linkParts.Add($"point=\"{F(llat)},{F(llon)}\"");
-            sb.AppendLine($"    <link {string.Join(" ", linkParts)}/>");
-        }
+        // Conditional remarks element (route block handles its own remarks)
+        if (!string.IsNullOrEmpty(remarks))
+            sb.AppendLine($"    <remarks>{Esc(remarks)}</remarks>");
+        else
+            sb.AppendLine("    <remarks/>");
+        // routeinfo with navcues child (after link_attr)
+        sb.AppendLine("    <__routeinfo><__navcues/></__routeinfo>");
+        sb.AppendLine("    <strokeColor value=\"-1\"/>");
+        var strokeW = route.StrokeWeightX10 > 0 ? F(route.StrokeWeightX10 / 10.0) : "3";
+        sb.AppendLine($"    <strokeWeight value=\"{strokeW}\"/>");
+        sb.AppendLine("    <strokeStyle value=\"solid\"/>");
+        if (!string.IsNullOrEmpty(callsign))
+            sb.AppendLine($"    <contact callsign=\"{Esc(callsign)}\"/>");
+        sb.AppendLine("    <labels_on value=\"false\"/>");
+        sb.AppendLine("    <color value=\"-1\"/>");
     }
 
     private void EmitCasevac(StringBuilder sb, CasevacReport c)

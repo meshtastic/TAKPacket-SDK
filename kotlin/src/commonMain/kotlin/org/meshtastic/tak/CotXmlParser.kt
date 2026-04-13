@@ -467,7 +467,10 @@ class CotXmlParser {
                             }
                             "contact" -> {
                                 callsign = reader.getAttributeValue(null, "callsign") ?: ""
-                                endpoint = reader.getAttributeValue(null, "endpoint") ?: endpoint
+                                // Normalize default TAK endpoints to empty — saves ~20 bytes
+                                // on the wire. The builder emits "0.0.0.0:4242:tcp" when empty.
+                                val ep = reader.getAttributeValue(null, "endpoint") ?: ""
+                                endpoint = if (ep == "0.0.0.0:4242:tcp" || ep == "*:-1:stcp") "" else ep
                                 phone = reader.getAttributeValue(null, "phone") ?: phone
                             }
                             "__group" -> {
@@ -520,7 +523,10 @@ class CotXmlParser {
                             "__chat" -> {
                                 hasChatData = true
                                 chatToCallsign = reader.getAttributeValue(null, "senderCallsign")
-                                chatTo = reader.getAttributeValue(null, "id")
+                                val chatId = reader.getAttributeValue(null, "id")
+                                // "All Chat Rooms" is the broadcast sentinel — omit from proto
+                                // so the field costs 0 bytes on the wire instead of 16.
+                                chatTo = if (chatId == "All Chat Rooms") null else chatId
                             }
                             // --- Drawn shape elements --------------------------
                             "shape" -> {
@@ -688,8 +694,9 @@ class CotXmlParser {
                                 if (!isStyleLink && pointAttr != null) {
                                     val parts = pointAttr.split(",")
                                     if (parts.size >= 2) {
-                                        val plat = parts[0].toDoubleOrNull() ?: 0.0
-                                        val plon = parts[1].toDoubleOrNull() ?: 0.0
+                                        // Trim whitespace — iTAK uses "lat, lon" with a space after comma
+                                        val plat = parts[0].trim().toDoubleOrNull() ?: 0.0
+                                        val plon = parts[1].trim().toDoubleOrNull() ?: 0.0
                                         val plati = (plat * 1e7).roundToInt()
                                         val ploni = (plon * 1e7).roundToInt()
 
@@ -991,6 +998,7 @@ class CotXmlParser {
             takOs = takOs,
             endpoint = endpoint,
             phone = phone,
+            remarks = if (hasChatData) "" else remarksText,
             payload = payload,
         )
     }

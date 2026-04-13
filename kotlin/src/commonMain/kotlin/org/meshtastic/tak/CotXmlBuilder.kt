@@ -77,6 +77,9 @@ class CotXmlBuilder {
         private const val RECEIPT_TYPE_DELIVERED = 1
         private const val RECEIPT_TYPE_READ = 2
 
+        /** Default endpoint emitted when the proto field is empty (normalized at parse time). */
+        private const val DEFAULT_ENDPOINT = "0.0.0.0:4242:tcp"
+
         // --- DrawnShape StyleMode values (mirror atak.proto) -------------
         private const val STYLE_UNSPECIFIED = 0
         private const val STYLE_STROKE_ONLY = 1
@@ -88,6 +91,15 @@ class CotXmlBuilder {
             2 -> "USER"
             3 -> "NETWORK"
             else -> "???"
+        }
+
+        /** Convert an ARGB int to ABGR hex string (KML color format). */
+        private fun argbToAbgrHex(argb: Int): String {
+            val a = (argb ushr 24) and 0xFF
+            val r = (argb ushr 16) and 0xFF
+            val g = (argb ushr 8) and 0xFF
+            val b = argb and 0xFF
+            return "%02x%02x%02x%02x".format(a, b, g, r)
         }
     }
 
@@ -114,9 +126,18 @@ class CotXmlBuilder {
         val cotType = packet.cotTypeString()
         val how = packet.howString().ifEmpty { "m-g" }
 
-        val lat = packet.latitudeI / 1e7
-        val lon = packet.longitudeI / 1e7
+        var lat = packet.latitudeI / 1e7
+        var lon = packet.longitudeI / 1e7
         val hae = packet.altitude
+
+        // Routes from ATAK use 0,0 as the event anchor. Use the first
+        // waypoint's coordinates so the receiving TAK client can locate
+        // the route on the map.
+        val routePayload = packet.payload as? TakPacketV2Data.Payload.Route
+        if (routePayload != null && packet.latitudeI == 0 && packet.longitudeI == 0 && routePayload.links.isNotEmpty()) {
+            lat = routePayload.links.first().latI / 1e7
+            lon = routePayload.links.first().lonI / 1e7
+        }
 
         sb.append("""<?xml version="1.0" encoding="UTF-8"?>""")
         sb.append("\n")
@@ -127,10 +148,11 @@ class CotXmlBuilder {
         sb.append("\n")
         sb.append("  <detail>\n")
 
-        // Contact
-        if (packet.callsign.isNotEmpty()) {
-            sb.append("""    <contact callsign="${esc(packet.callsign)}"""")
-            if (packet.endpoint.isNotEmpty()) sb.append(""" endpoint="${esc(packet.endpoint)}"""")
+        // Contact — skip for routes (ATAK expects <contact> after __routeinfo, no endpoint)
+        val isRoute = packet.payload is TakPacketV2Data.Payload.Route
+        if (packet.callsign.isNotEmpty() && !isRoute) {
+            val ep = packet.endpoint.ifEmpty { DEFAULT_ENDPOINT }
+            sb.append("""    <contact callsign="${esc(packet.callsign)}" endpoint="$ep"""")
             if (packet.phone.isNotEmpty()) sb.append(""" phone="${esc(packet.phone)}"""")
             sb.append("/>\n")
         }
@@ -269,9 +291,18 @@ class CotXmlBuilder {
                     if (payload.majorCm > 0 || payload.minorCm > 0) {
                         val majorM = payload.majorCm / 100.0
                         val minorM = payload.minorCm / 100.0
+                        val strokeW = payload.strokeWeightX10 / 10.0
                         sb.append("    <shape>\n")
                         sb.append("""      <ellipse major="$majorM" minor="$minorM" angle="${payload.angleDeg}"/>""")
                         sb.append("\n")
+                        // KML style link — iTAK requires this to render circles/ellipses.
+                        // ATAK uses ABGR hex encoding for KML colors, not ARGB.
+                        sb.append("""      <link uid="${esc(packet.uid)}.Style" type="b-x-KmlStyle" relation="p-c">""")
+                        sb.append("""<Style><LineStyle><color>${argbToAbgrHex(strokeVal)}</color><width>$strokeW</width></LineStyle>""")
+                        if (fillVal != 0) {
+                            sb.append("""<PolyStyle><color>${argbToAbgrHex(fillVal)}</color></PolyStyle>""")
+                        }
+                        sb.append("</Style></link>\n")
                         sb.append("    </shape>\n")
                     }
                 } else {
@@ -390,7 +421,25 @@ class CotXmlBuilder {
                 }
             }
             is TakPacketV2Data.Payload.Route -> {
-                sb.append("    <__routeinfo/>\n")
+                // Emit <link> elements BEFORE <link_attr> and <__routeinfo> —
+                // ATAK's parser expects waypoints first, then route metadata.
+                for ((idx, link) in payload.links.withIndex()) {
+                    val llat = link.latI / 1e7
+                    val llon = link.lonI / 1e7
+                    sb.append("    <link")
+                    // ATAK requires uid on waypoint links for internal marker
+                    // creation. Generate a deterministic one when not present.
+                    val uid = link.uid.ifEmpty { "${packet.uid}-$idx" }
+                    sb.append(""" uid="${esc(uid)}"""")
+                    val linkType = if (link.linkType == 1) "b-m-p-c" else "b-m-p-w"
+                    sb.append(""" type="$linkType"""")
+                    if (link.callsign.isNotEmpty()) {
+                        sb.append(""" callsign="${esc(link.callsign)}"""")
+                    }
+                    // ATAK expects 3-component point: lat,lon,hae
+                    sb.append(""" point="$llat,$llon,0" relation="c"/>""")
+                    sb.append("\n")
+                }
                 sb.append("    <link_attr")
                 routeMethodIntToName[payload.method]?.let { sb.append(""" method="$it"""") }
                 routeDirectionIntToName[payload.direction]?.let { sb.append(""" direction="$it"""") }
@@ -402,21 +451,20 @@ class CotXmlBuilder {
                     sb.append(""" stroke="$sw"""")
                 }
                 sb.append("/>\n")
-                for (link in payload.links) {
-                    val llat = link.latI / 1e7
-                    val llon = link.lonI / 1e7
-                    sb.append("    <link")
-                    if (link.uid.isNotEmpty()) {
-                        sb.append(""" uid="${esc(link.uid)}"""")
-                    }
-                    val linkType = if (link.linkType == 1) "b-m-p-c" else "b-m-p-w"
-                    sb.append(""" type="$linkType"""")
-                    if (link.callsign.isNotEmpty()) {
-                        sb.append(""" callsign="${esc(link.callsign)}"""")
-                    }
-                    sb.append(""" point="$llat,$llon"/>""")
-                    sb.append("\n")
+                // ATAK requires these elements after link_attr for route rendering
+                if (packet.remarks.isNotEmpty()) {
+                    sb.append("    <remarks>${esc(packet.remarks)}</remarks>\n")
+                } else {
+                    sb.append("    <remarks/>\n")
                 }
+                sb.append("    <__routeinfo><__navcues/></__routeinfo>\n")
+                sb.append("    <strokeColor value=\"-1\"/>\n")
+                sb.append("    <strokeWeight value=\"${if (payload.strokeWeightX10 > 0) payload.strokeWeightX10 / 10.0 else 3.0}\"/>\n")
+                sb.append("    <strokeStyle value=\"solid\"/>\n")
+                // ATAK expects <contact> AFTER __routeinfo, with NO endpoint
+                sb.append("    <contact callsign=\"${esc(packet.callsign)}\"/>\n")
+                sb.append("    <labels_on value=\"false\"/>\n")
+                sb.append("    <color value=\"-1\"/>\n")
             }
             is TakPacketV2Data.Payload.CasevacReport -> {
                 sb.append("    <_medevac_")
@@ -508,6 +556,18 @@ class CotXmlBuilder {
                 }
             }
             else -> { /* PLI, None, RawDetail — no extra detail elements */ }
+        }
+
+        // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
+        // Chat uses GeoChat.message; Aircraft synthesizes from ICAO fields; Route handles
+        // remarks in its own block above. All other types (shapes, markers, RAB, casevac,
+        // emergency, task) emit here.
+        if (packet.remarks.isNotEmpty()
+            && packet.payload !is TakPacketV2Data.Payload.Chat
+            && packet.payload !is TakPacketV2Data.Payload.Aircraft
+            && packet.payload !is TakPacketV2Data.Payload.Route
+        ) {
+            sb.append("    <remarks>${esc(packet.remarks)}</remarks>\n")
         }
 
         sb.append("  </detail>\n")

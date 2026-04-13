@@ -208,6 +208,7 @@ object TakPacketV2Serializer {
             tak_os = data.takOs,
             endpoint = data.endpoint,
             phone = data.phone,
+            remarks = data.remarks,
             pli = pliPayload,
             chat = chatPayload,
             aircraft = aircraftPayload,
@@ -386,6 +387,7 @@ object TakPacketV2Serializer {
             takOs = proto.tak_os,
             endpoint = proto.endpoint,
             phone = proto.phone,
+            remarks = proto.remarks,
             payload = payload,
         )
     }

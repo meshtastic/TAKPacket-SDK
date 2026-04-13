@@ -31,6 +31,16 @@ _BEARING_REF_INT_TO_NAME = {1: "M", 2: "T", 3: "G"}
 _SHAPE_KIND_CIRCLE = 1
 _SHAPE_KIND_RANGING_CIRCLE = 6
 _SHAPE_KIND_BULLSEYE = 7
+_SHAPE_KIND_ELLIPSE = 8
+
+
+def _argb_to_abgr_hex(argb: int) -> str:
+    """Convert ARGB int to ABGR hex string (KML color format)."""
+    a = (argb >> 24) & 0xFF
+    r = (argb >> 16) & 0xFF
+    g = (argb >> 8) & 0xFF
+    b = argb & 0xFF
+    return f"{a:02x}{b:02x}{g:02x}{r:02x}"
 
 # DrawnShape.StyleMode
 _STYLE_UNSPECIFIED = 0
@@ -62,6 +72,11 @@ class CotXmlBuilder:
         how = CotTypeMapper.how_to_string(packet.how) or "m-g"
         lat = packet.latitude_i / 1e7
         lon = packet.longitude_i / 1e7
+        if (packet.WhichOneof("payload_variant") == "route"
+                and packet.latitude_i == 0 and packet.longitude_i == 0
+                and len(packet.route.links) > 0):
+            lat = packet.route.links[0].point.lat_delta_i / 1e7
+            lon = packet.route.links[0].point.lon_delta_i / 1e7
 
         lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
@@ -71,9 +86,10 @@ class CotXmlBuilder:
             '  <detail>',
         ]
 
-        if packet.callsign:
-            parts = [f'callsign="{escape(packet.callsign)}"']
-            if packet.endpoint: parts.append(f'endpoint="{escape(packet.endpoint)}"')
+        is_route = packet.WhichOneof("payload_variant") == "route"
+        if packet.callsign and not is_route:
+            ep = packet.endpoint or "0.0.0.0:4242:tcp"
+            parts = [f'callsign="{escape(packet.callsign)}"', f'endpoint="{escape(ep)}"']
             if packet.phone: parts.append(f'phone="{escape(packet.phone)}"')
             lines.append(f'    <contact {" ".join(parts)}/>')
 
@@ -173,13 +189,13 @@ class CotXmlBuilder:
                     gps_attr = ' gps="true"' if ac.gps else ''
                     lines.append(f'    <_radio rssi="{rssi_val}"{gps_attr}/>')
         elif which == "shape":
-            self._emit_shape(lines, packet.shape, packet.latitude_i, packet.longitude_i)
+            self._emit_shape(lines, packet.shape, packet.latitude_i, packet.longitude_i, packet.uid)
         elif which == "marker":
             self._emit_marker(lines, packet.marker)
         elif which == "rab":
             self._emit_rab(lines, packet.rab, packet.latitude_i, packet.longitude_i)
         elif which == "route":
-            self._emit_route(lines, packet.route, packet.latitude_i, packet.longitude_i)
+            self._emit_route(lines, packet.route, packet.latitude_i, packet.longitude_i, packet.uid, packet.remarks, packet.callsign)
         elif which == "casevac":
             self._emit_casevac(lines, packet.casevac)
         elif which == "emergency":
@@ -195,6 +211,12 @@ class CotXmlBuilder:
                 text = packet.raw_detail.decode("utf-8", errors="replace")
                 lines.append(text)
 
+        # Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
+        # Chat uses GeoChat.message; Aircraft synthesizes from ICAO fields; Route handles
+        # remarks in its own block above. All other types emit here.
+        if packet.remarks and which not in ("chat", "aircraft", "route"):
+            lines.append(f'    <remarks>{escape(packet.remarks)}</remarks>')
+
         lines.append('  </detail>')
         lines.append('</event>')
 
@@ -202,7 +224,7 @@ class CotXmlBuilder:
 
     # --- Typed geometry emitters ----------------------------------------
 
-    def _emit_shape(self, lines: list, shape, event_lat_i: int, event_lon_i: int) -> None:
+    def _emit_shape(self, lines: list, shape, event_lat_i: int, event_lon_i: int, uid: str = "") -> None:
         stroke_argb = atak_palette.resolve_color(shape.stroke_color, shape.stroke_argb)
         fill_argb = atak_palette.resolve_color(shape.fill_color, shape.fill_argb)
         stroke_val = _argb_to_signed(stroke_argb)
@@ -220,12 +242,21 @@ class CotXmlBuilder:
         )
 
         kind = shape.kind
-        if kind in (_SHAPE_KIND_CIRCLE, _SHAPE_KIND_RANGING_CIRCLE, _SHAPE_KIND_BULLSEYE):
+        if kind in (_SHAPE_KIND_CIRCLE, _SHAPE_KIND_RANGING_CIRCLE, _SHAPE_KIND_BULLSEYE, _SHAPE_KIND_ELLIPSE):
             if shape.major_cm > 0 or shape.minor_cm > 0:
                 major_m = shape.major_cm / 100.0
                 minor_m = shape.minor_cm / 100.0
+                stroke_w = shape.stroke_weight_x10 / 10.0
                 lines.append("    <shape>")
                 lines.append(f'      <ellipse major="{major_m}" minor="{minor_m}" angle="{shape.angle_deg}"/>')
+                # KML style link — iTAK requires this to render circles/ellipses
+                stroke_abgr = _argb_to_abgr_hex(stroke_val)
+                kml = f'      <link uid="{escape(uid)}.Style" type="b-x-KmlStyle" relation="p-c">'
+                kml += f'<Style><LineStyle><color>{stroke_abgr}</color><width>{stroke_w}</width></LineStyle>'
+                if fill_val != 0:
+                    kml += f'<PolyStyle><color>{_argb_to_abgr_hex(fill_val)}</color></PolyStyle>'
+                kml += '</Style></link>'
+                lines.append(kml)
                 lines.append("    </shape>")
         else:
             # Rectangle, polygon, freeform, telestration: vertices as <link point>
@@ -312,8 +343,21 @@ class CotXmlBuilder:
             w = rab.stroke_weight_x10 / 10.0
             lines.append(f'    <strokeWeight value="{w}"/>')
 
-    def _emit_route(self, lines: list, route, event_lat_i: int, event_lon_i: int) -> None:
-        lines.append('    <__routeinfo/>')
+    def _emit_route(self, lines: list, route, event_lat_i: int, event_lon_i: int, event_uid: str = "", remarks: str = "", callsign: str = "") -> None:
+        # Emit <link> elements BEFORE <link_attr> (ATAK expects waypoints first)
+        for idx, link in enumerate(route.links):
+            llat = (event_lat_i + link.point.lat_delta_i) / 1e7
+            llon = (event_lon_i + link.point.lon_delta_i) / 1e7
+            link_type = "b-m-p-c" if link.link_type == 1 else "b-m-p-w"
+            # Generate deterministic uid when not present
+            uid = link.uid if link.uid else f"{event_uid}-{idx}"
+            parts = [f'uid="{escape(uid)}"']
+            parts.append(f'type="{link_type}"')
+            if link.callsign:
+                parts.append(f'callsign="{escape(link.callsign)}"')
+            # ATAK expects 3-component point: lat,lon,hae
+            parts.append(f'point="{llat},{llon},0" relation="c"')
+            lines.append(f'    <link {" ".join(parts)}/>')
         parts = []
         method_name = _ROUTE_METHOD_INT_TO_NAME.get(route.method)
         if method_name:
@@ -330,18 +374,21 @@ class CotXmlBuilder:
             lines.append(f'    <link_attr {" ".join(parts)}/>')
         else:
             lines.append('    <link_attr/>')
-        for link in route.links:
-            llat = (event_lat_i + link.point.lat_delta_i) / 1e7
-            llon = (event_lon_i + link.point.lon_delta_i) / 1e7
-            link_type = "b-m-p-c" if link.link_type == 1 else "b-m-p-w"
-            parts = []
-            if link.uid:
-                parts.append(f'uid="{escape(link.uid)}"')
-            parts.append(f'type="{link_type}"')
-            if link.callsign:
-                parts.append(f'callsign="{escape(link.callsign)}"')
-            parts.append(f'point="{llat},{llon}"')
-            lines.append(f'    <link {" ".join(parts)}/>')
+        # Conditional remarks element (route block handles its own remarks)
+        if remarks:
+            lines.append(f'    <remarks>{escape(remarks)}</remarks>')
+        else:
+            lines.append('    <remarks/>')
+        # routeinfo with navcues child (after link_attr)
+        lines.append('    <__routeinfo><__navcues/></__routeinfo>')
+        lines.append('    <strokeColor value="-1"/>')
+        sw = route.stroke_weight_x10 / 10.0 if route.stroke_weight_x10 > 0 else 3
+        lines.append(f'    <strokeWeight value="{sw}"/>')
+        lines.append('    <strokeStyle value="solid"/>')
+        if callsign:
+            lines.append(f'    <contact callsign="{escape(callsign)}"/>')
+        lines.append('    <labels_on value="false"/>')
+        lines.append('    <color value="-1"/>')
 
     # --- CasevacReport / EmergencyAlert / TaskRequest reverse lookups ----
 

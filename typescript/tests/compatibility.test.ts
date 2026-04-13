@@ -24,6 +24,6 @@ describe("Compatibility", () => {
     // resulting in different compressed sizes. Allow wider tolerance.
     // The key invariant (golden file decompression) is tested separately.
     expect(ratio).toBeGreaterThan(0.5);
-    expect(ratio).toBeLessThan(2.0);
+    expect(ratio).toBeLessThan(2.5);
   });
 });

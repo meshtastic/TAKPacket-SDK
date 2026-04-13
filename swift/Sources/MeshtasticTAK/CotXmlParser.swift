@@ -399,6 +399,11 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             packet.pli = true
         }
 
+        // Populate top-level remarks for non-chat types
+        if !hasChatData && !remarksText.isEmpty {
+            packet.remarks = remarksText
+        }
+
         return packet
     }
 
@@ -524,7 +529,10 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
         case "contact":
             packet.callsign = attributes["callsign"] ?? ""
-            if let ep = attributes["endpoint"] { packet.endpoint = ep }
+            // Normalize default TAK endpoints to empty — saves ~20 wire bytes
+            if let ep = attributes["endpoint"], ep != "0.0.0.0:4242:tcp" && ep != "*:-1:stcp" {
+                packet.endpoint = ep
+            }
             if let ph = attributes["phone"] { packet.phone = ph }
 
         case "__group":
@@ -583,7 +591,10 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         case "__chat":
             hasChatData = true
             chatToCallsign = attributes["senderCallsign"]
-            chatTo = attributes["id"]
+            let chatId = attributes["id"]
+            // "All Chat Rooms" is the broadcast sentinel — omit from proto
+            // so the field costs 0 bytes on the wire instead of 16.
+            chatTo = (chatId == "All Chat Rooms") ? nil : chatId
 
         case "link":
             handleLink(attributes: attributes)
@@ -763,8 +774,9 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         if let pt = pointAttr {
             let parts = pt.split(separator: ",")
             guard parts.count >= 2 else { return }
-            let plat = Double(parts[0]) ?? 0
-            let plon = Double(parts[1]) ?? 0
+            // Trim whitespace — iTAK uses "lat, lon" with a space after comma
+            let plat = Double(parts[0].trimmingCharacters(in: .whitespaces)) ?? 0
+            let plon = Double(parts[1].trimmingCharacters(in: .whitespaces)) ?? 0
             let plati = Int32(plat * 1e7)
             let ploni = Int32(plon * 1e7)
 

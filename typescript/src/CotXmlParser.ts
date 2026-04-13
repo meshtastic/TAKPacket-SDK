@@ -244,7 +244,10 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
   if (chatElem["@_senderCallsign"] !== undefined || chatElem["@_id"] !== undefined) {
     hasChat = true;
     chatToCs = chatElem["@_senderCallsign"];
-    chatTo = chatElem["@_id"];
+    // "All Chat Rooms" is the broadcast sentinel — omit from proto
+    // so the field costs 0 bytes on the wire instead of 16.
+    const chatId = chatElem["@_id"];
+    chatTo = chatId === "All Chat Rooms" ? undefined : chatId;
   }
 
   // Parse ICAO from remarks
@@ -300,7 +303,8 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
     takDevice: takv["@_device"] ?? "",
     takPlatform: takv["@_platform"] ?? "",
     takOs: takv["@_os"] ?? "",
-    endpoint: contact["@_endpoint"] ?? "",
+    // Normalize default TAK endpoints to empty — saves ~20 wire bytes
+    endpoint: (() => { const ep = contact["@_endpoint"] ?? ""; return (ep === "0.0.0.0:4242:tcp" || ep === "*:-1:stcp") ? "" : ep; })(),
     phone: contact["@_phone"] ?? "",
   };
 
@@ -728,6 +732,12 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
     });
   } else {
     pkt.pli = true;
+  }
+
+  // For non-chat types, propagate remarksText as the top-level remarks field.
+  // Chat uses GeoChat.message for the text; remarks stays empty.
+  if (!hasChat && remarksText) {
+    pkt.remarks = remarksText;
   }
 
   return stripZeros(pkt);

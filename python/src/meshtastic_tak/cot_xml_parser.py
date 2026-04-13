@@ -312,8 +312,9 @@ class CotXmlParser:
                 if len(parts) < 2:
                     return
                 try:
-                    plat = float(parts[0])
-                    plon = float(parts[1])
+                    # Strip whitespace — iTAK uses "lat, lon" with space after comma
+                    plat = float(parts[0].strip())
+                    plon = float(parts[1].strip())
                 except ValueError:
                     return
                 plati = int(plat * 1e7)
@@ -382,8 +383,10 @@ class CotXmlParser:
             tag = elem.tag
             if tag == "contact":
                 pkt.callsign = elem.get("callsign", "")
-                ep = elem.get("endpoint")
-                if ep: pkt.endpoint = ep
+                # Normalize default TAK endpoints to empty — saves ~20 wire bytes
+                ep = elem.get("endpoint", "")
+                if ep and ep != "0.0.0.0:4242:tcp" and ep != "*:-1:stcp":
+                    pkt.endpoint = ep
                 ph = elem.get("phone")
                 if ph: pkt.phone = ph
             elif tag == "__group":
@@ -436,7 +439,10 @@ class CotXmlParser:
             elif tag == "__chat":
                 has_chat = True
                 chat_to_cs = elem.get("senderCallsign")
-                chat_to = elem.get("id")
+                # "All Chat Rooms" is the broadcast sentinel — omit from proto
+                # so the field costs 0 bytes on the wire instead of 16.
+                chat_id = elem.get("id")
+                chat_to = None if chat_id == "All Chat Rooms" else chat_id
             elif tag == "remarks":
                 remarks_text = (elem.text or "").strip()
             elif tag == "link":
@@ -739,6 +745,11 @@ class CotXmlParser:
             t.note = task_note
         else:
             pkt.pli = True
+
+        # For non-chat types, propagate remarks_text as the top-level remarks field.
+        # Chat uses GeoChat.message for the text; remarks stays empty.
+        if not has_chat and remarks_text:
+            pkt.remarks = remarks_text
 
         return pkt
 

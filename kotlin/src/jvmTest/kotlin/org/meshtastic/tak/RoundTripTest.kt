@@ -158,6 +158,34 @@ class RoundTripTest {
     }
 
     @Test
+    fun `rectangle with space-after-comma link points preserves longitudes`() {
+        // Regression: iTAK emits <link point="34.804, -92.468"/> with a space
+        // after the comma. Kotlin's toDoubleOrNull() returns null for " -92.468"
+        // (leading space), zeroing all longitudes and rendering flat shapes.
+        val xml = loadFixture("drawing_rectangle_itak.xml")
+        val packet = parser.parse(xml)
+        assertTrue(packet.payload is TakPacketV2Data.Payload.DrawnShape,
+            "Should be DrawnShape, got ${packet.payload}")
+        val shape = packet.payload as TakPacketV2Data.Payload.DrawnShape
+        assertEquals(4, shape.vertices.size, "Rectangle must have 4 vertices")
+        // All longitudes must be non-zero (around 95.001-95.003)
+        shape.vertices.forEachIndexed { i, v ->
+            assertTrue(v.lonI != 0, "Vertex $i longitude must not be 0 (was ${v.lonI})")
+            assertTrue(v.lonI > 950000000, "Vertex $i longitude should be ~95.00x (was ${v.lonI / 1e7})")
+        }
+
+        // Verify full round-trip preserves the coordinates
+        val compressor = TakCompressor()
+        val wire = compressor.compress(packet)
+        val dec = compressor.decompress(wire)
+        val decShape = dec.payload as TakPacketV2Data.Payload.DrawnShape
+        assertEquals(4, decShape.vertices.size)
+        decShape.vertices.forEachIndexed { i, v ->
+            assertTrue(v.lonI != 0, "Decompressed vertex $i longitude must not be 0")
+        }
+    }
+
+    @Test
     fun `PLI stationary clamps negative speed and course to zero`() {
         // Regression for an iOS crash where ATAK's <track speed="-1.0"
         // course="-1.0"/> sentinel for stationary / unknown targets tripped a

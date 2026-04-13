@@ -145,6 +145,36 @@ class TakCompressor:
         raw_wire = self.compress(raw_packet)
         return raw_wire if len(raw_wire) < len(typed_wire) else typed_wire
 
+    def compress_with_remarks_fallback(
+        self,
+        packet: atak_pb2.TAKPacketV2,
+        max_wire_bytes: int,
+    ) -> bytes | None:
+        """Compress a packet, stripping remarks if the result exceeds *max_wire_bytes*.
+
+        First attempts compression with remarks intact.  If the wire payload
+        fits within *max_wire_bytes*, returns it as-is.  Otherwise, clears the
+        remarks field and re-compresses.  Returns ``None`` if even the stripped
+        packet exceeds the limit (caller should drop the packet).
+
+        :param packet:         The packet with remarks populated.
+        :param max_wire_bytes: Maximum allowed wire payload size (e.g. 225).
+        :returns: The wire payload, or ``None`` if the packet is too large
+                  even without remarks.
+        """
+        full = self.compress(packet)
+        if len(full) <= max_wire_bytes:
+            return full
+
+        # Strip remarks and retry
+        if not packet.remarks:
+            return None
+        stripped = atak_pb2.TAKPacketV2()
+        stripped.CopyFrom(packet)
+        stripped.remarks = ""
+        stripped_wire = self.compress(stripped)
+        return stripped_wire if len(stripped_wire) <= max_wire_bytes else None
+
     def compress_with_stats(self, packet: atak_pb2.TAKPacketV2) -> CompressionResult:
         """Compress and return stats for reporting."""
         protobuf_bytes = packet.SerializeToString()
