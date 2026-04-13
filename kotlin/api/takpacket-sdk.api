@@ -28,10 +28,6 @@ public final class org/meshtastic/tak/CotXmlParser {
 	public final fun parse (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data;
 }
 
-public final class org/meshtastic/tak/DictionaryProvider {
-	public static final field INSTANCE Lorg/meshtastic/tak/DictionaryProvider;
-}
-
 public final class org/meshtastic/tak/TakCompressor {
 	public static final field Companion Lorg/meshtastic/tak/TakCompressor$Companion;
 	public static final field MAX_DECOMPRESSED_SIZE I

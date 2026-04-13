@@ -97,6 +97,83 @@ object InlinedFixtures {
         </event>
     """.trimIndent()
 
+    val DRAWING_CIRCLE = """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <event version="2.0" uid="6d09b6f6-720a-4eef-a197-183012512316" type="u-d-c-c" time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z" stale="2026-03-16T14:22:10Z" how="h-e">
+          <point lat="9.98738" lon="94.98700" hae="9999999.0" ce="9999999.0" le="9999999.0"/>
+          <detail>
+            <shape>
+              <ellipse major="226.98" minor="226.98" angle="360"/>
+              <link uid="6d09b6f6-720a-4eef-a197-183012512316.Style" type="b-x-KmlStyle" relation="p-c">
+                <Style>
+                  <LineStyle>
+                    <color>ffffffff</color>
+                    <width>4.0</width>
+                  </LineStyle>
+                </Style>
+              </link>
+            </shape>
+            <strokeColor value="-1"/>
+            <strokeWeight value="4.0"/>
+            <fillColor value="-1761607681"/>
+            <contact callsign="Drawing Circle 1"/>
+            <remarks/>
+            <archive/>
+            <labels_on value="true"/>
+            <precisionlocation altsrc="???"/>
+          </detail>
+        </event>
+    """.trimIndent()
+
+    val MARKER_SPOT = """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <event version="2.0" uid="9405e320-9356-41c4-8449-f46990aa17f8" type="b-m-p-s-m" time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z" stale="2026-03-16T14:22:10Z" how="h-g-i-g-o">
+          <point lat="10.00606" lon="95.00362" hae="9999999.0" ce="9999999.0" le="9999999.0"/>
+          <detail>
+            <status readiness="true"/>
+            <archive/>
+            <link uid="ANDROID-0000000000000001" production_time="2026-03-15T14:21:09Z" type="a-f-G-U-C" parent_callsign="SIM-01" relation="p-p"/>
+            <contact callsign="R 1"/>
+            <remarks/>
+            <color argb="-65536"/>
+            <precisionlocation altsrc="???"/>
+            <usericon iconsetpath="COT_MAPPING_SPOTMAP/b-m-p-s-m/-65536"/>
+          </detail>
+        </event>
+    """.trimIndent()
+
+    val ROUTE_3WP = """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <event version="2.0" uid="a3f58c21-91e4-4b76-8d5f-6291704835ab" type="b-m-r" time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z" stale="2026-03-16T14:22:10Z" how="h-e">
+          <point lat="9.99200" lon="95.00600" hae="9999999.0" ce="9999999.0" le="9999999.0"/>
+          <detail>
+            <__routeinfo/>
+            <link_attr method="Driving" direction="Infil" prefix="CP" stroke="3"/>
+            <link uid="wp-a1b2c3d4-0001" type="b-m-p-w" callsign="CP1" point="9.99200,95.00600"/>
+            <link uid="wp-a1b2c3d4-0002" type="b-m-p-w" callsign="CP2" point="9.99320,95.00750"/>
+            <link uid="wp-a1b2c3d4-0003" type="b-m-p-w" callsign="CP3" point="9.99450,95.00880"/>
+            <contact callsign="Route Alpha"/>
+            <remarks/>
+            <archive/>
+            <labels_on value="false"/>
+            <precisionlocation altsrc="???"/>
+          </detail>
+        </event>
+    """.trimIndent()
+
+    val TASK_ENGAGE = """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <event version="2.0" uid="task-01" type="t-s" time="2026-03-15T21:00:00Z" start="2026-03-15T21:00:00Z" stale="2026-03-15T22:00:00Z" how="h-e">
+          <point lat="17.99700" lon="140.00300" hae="80" ce="9999999" le="9999999"/>
+          <detail>
+            <contact callsign="Task-Alpha"/>
+            <task type="engage" priority="High" status="Pending" assignee="ANDROID-0000000000000005" note="cover by fire"/>
+            <link uid="target-01" relation="p-p" type="a-f-G"/>
+            <remarks/>
+          </detail>
+        </event>
+    """.trimIndent()
+
     /** All fixtures indexed by name, matching the file names in testdata/cot_xml/. */
     val ALL = mapOf(
         "pli_basic" to PLI_BASIC,
@@ -108,5 +185,9 @@ object InlinedFixtures {
         "delete_event" to DELETE_EVENT,
         "casevac" to CASEVAC,
         "alert_tic" to ALERT_TIC,
+        "drawing_circle" to DRAWING_CIRCLE,
+        "marker_spot" to MARKER_SPOT,
+        "route_3wp" to ROUTE_3WP,
+        "task_engage" to TASK_ENGAGE,
     )
 }

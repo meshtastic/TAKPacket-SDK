@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -151,5 +152,52 @@ class SmartCompressTest {
 
         assertEquals(typedWire.size, smartWire.size)
         assertTrue(typedWire.contentEquals(smartWire))
+    }
+
+    @Test
+    fun `compressWithRemarksFallback returns null when packet exceeds limit even without remarks`() {
+        // Build a packet with a large enough payload that even without remarks
+        // it exceeds a very small wire-byte limit.
+        val xml = TestFixtures.loadFixture("pli_full.xml")
+        val packet = parser.parse(xml)
+
+        // Compress with a limit of 1 byte — impossible to satisfy
+        val result = compressor.compressWithRemarksFallback(packet, maxWireBytes = 1)
+        assertNull(result, "Should return null when packet cannot fit within 1 byte")
+    }
+
+    @Test
+    fun `compressWithRemarksFallback returns full payload when it fits`() {
+        val xml = TestFixtures.loadFixture("pli_basic.xml")
+        val packet = parser.parse(xml)
+        val full = compressor.compress(packet)
+
+        // Use a generous limit
+        val result = compressor.compressWithRemarksFallback(packet, maxWireBytes = 1000)
+        assertNotNull(result, "Should return non-null when payload fits")
+        assertTrue(full.contentEquals(result!!), "Should return the full payload unchanged")
+    }
+
+    @Test
+    fun `compressWithRemarksFallback strips remarks to fit`() {
+        val xml = TestFixtures.loadFixture("aircraft_adsb.xml")
+        val packet = parser.parse(xml)
+        assertTrue(packet.remarks.isNotEmpty(), "Aircraft ADSB fixture should have remarks")
+
+        val full = compressor.compress(packet)
+        val stripped = compressor.compress(packet.copy(remarks = ""))
+
+        // Stripping remarks should produce a smaller payload
+        assertTrue(stripped.size < full.size,
+            "Stripped payload (${stripped.size}) must be smaller than full (${full.size})")
+
+        // Set limit between stripped and full sizes
+        val limit = (stripped.size + full.size) / 2
+        assertTrue(limit >= stripped.size, "Limit must be >= stripped size for test to make sense")
+        assertTrue(limit < full.size, "Limit must be < full size for test to make sense")
+
+        val result = compressor.compressWithRemarksFallback(packet, maxWireBytes = limit)
+        assertNotNull(result, "Should succeed after stripping remarks")
+        assertTrue(result!!.size <= limit, "Result must fit within the limit")
     }
 }

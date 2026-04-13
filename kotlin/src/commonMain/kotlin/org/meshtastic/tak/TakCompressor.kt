@@ -101,6 +101,7 @@ public class TakCompressor(
      * @return Whichever wire payload is smaller.  Ties go to the typed
      *         packet since it preserves strong typing on the receiver side.
      */
+    @Throws(RuntimeException::class)
     public fun compressBestOf(packet: TakPacketV2Data, rawDetailBytes: ByteArray): ByteArray {
         val typedWire = compress(packet)
         if (rawDetailBytes.isEmpty()) return typedWire
@@ -149,6 +150,7 @@ public class TakCompressor(
      * @return The wire payload, or null if the packet is too large even
      *         without remarks.
      */
+    @Throws(RuntimeException::class)
     public fun compressWithRemarksFallback(
         packet: TakPacketV2Data,
         maxWireBytes: Int,
@@ -165,6 +167,7 @@ public class TakCompressor(
     /**
      * Compress and return both the wire payload and intermediate sizes for reporting.
      */
+    @Throws(RuntimeException::class)
     public fun compressWithStats(packet: TakPacketV2Data): CompressionResult {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val wirePayload = compress(packet)

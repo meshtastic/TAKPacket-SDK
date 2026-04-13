@@ -130,6 +130,74 @@ class CotXmlParserTest {
         assertEquals("ALPHA-6", packet.callsign)
     }
 
+    // --- Shape / Marker / Route / Task payload tests ---
+
+    @Test
+    fun drawingCircleParsesShapePayload() {
+        val packet = parser.parse(InlinedFixtures.DRAWING_CIRCLE)
+
+        assertEquals(CotTypeMapper.COTTYPE_U_D_C_C, packet.cotTypeId)
+        assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
+        assertEquals("Drawing Circle 1", packet.callsign)
+        assertEquals("6d09b6f6-720a-4eef-a197-183012512316", packet.uid)
+        assertTrue(packet.payload is TakPacketV2Data.Payload.DrawnShape,
+            "Expected DrawnShape payload but got ${packet.payload::class.simpleName}")
+        val shape = packet.payload as TakPacketV2Data.Payload.DrawnShape
+        // Ellipse 226.98m → cm
+        assertEquals(22698, shape.majorCm, "major axis cm")
+        assertEquals(22698, shape.minorCm, "minor axis cm")
+        assertTrue(shape.labelsOn, "labels_on should be true")
+    }
+
+    @Test
+    fun markerSpotParsesMarkerPayload() {
+        val packet = parser.parse(InlinedFixtures.MARKER_SPOT)
+
+        assertEquals(CotTypeMapper.COTTYPE_B_M_P_S_M, packet.cotTypeId)
+        assertEquals(CotTypeMapper.COTHOW_H_G_I_G_O, packet.how)
+        assertEquals("R 1", packet.callsign)
+        assertTrue(packet.payload is TakPacketV2Data.Payload.Marker,
+            "Expected Marker payload but got ${packet.payload::class.simpleName}")
+        val marker = packet.payload as TakPacketV2Data.Payload.Marker
+        assertTrue(marker.readiness, "Spot marker readiness should be true")
+        assertEquals(-65536, marker.colorArgb, "color argb should be -65536 (red)")
+        assertEquals("COT_MAPPING_SPOTMAP/b-m-p-s-m/-65536", marker.iconset)
+        assertEquals("ANDROID-0000000000000001", marker.parentUid)
+        assertEquals("SIM-01", marker.parentCallsign)
+    }
+
+    @Test
+    fun route3wpParsesRoutePayload() {
+        val packet = parser.parse(InlinedFixtures.ROUTE_3WP)
+
+        assertEquals(CotTypeMapper.COTTYPE_B_M_R, packet.cotTypeId)
+        assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
+        assertEquals("Route Alpha", packet.callsign)
+        assertTrue(packet.payload is TakPacketV2Data.Payload.Route,
+            "Expected Route payload but got ${packet.payload::class.simpleName}")
+        val route = packet.payload as TakPacketV2Data.Payload.Route
+        assertEquals(3, route.links.size, "Route should have 3 waypoints")
+        assertEquals("CP", route.prefix)
+        assertEquals("CP1", route.links[0].callsign)
+        assertEquals("CP2", route.links[1].callsign)
+        assertEquals("CP3", route.links[2].callsign)
+    }
+
+    @Test
+    fun taskEngageParsesTaskPayload() {
+        val packet = parser.parse(InlinedFixtures.TASK_ENGAGE)
+
+        assertEquals(CotTypeMapper.COTTYPE_T_S, packet.cotTypeId)
+        assertEquals(CotTypeMapper.COTHOW_H_E, packet.how)
+        assertEquals("Task-Alpha", packet.callsign)
+        assertTrue(packet.payload is TakPacketV2Data.Payload.TaskRequest,
+            "Expected TaskRequest payload but got ${packet.payload::class.simpleName}")
+        val task = packet.payload as TakPacketV2Data.Payload.TaskRequest
+        assertEquals("engage", task.taskType)
+        assertEquals("ANDROID-0000000000000005", task.assigneeUid)
+        assertEquals("cover by fire", task.note)
+    }
+
     // --- Cross-cutting tests across all fixtures ---
 
     @Test

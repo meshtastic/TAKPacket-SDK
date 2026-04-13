@@ -14,7 +14,7 @@ package org.meshtastic.tak
  * The special dict ID `0xFF` signals an uncompressed raw protobuf payload
  * (used by TAK_TRACKER firmware that lacks zstd support).
  */
-public object DictionaryProvider {
+internal object DictionaryProvider {
 
     internal const val DICT_ID_NON_AIRCRAFT = 0
     internal const val DICT_ID_AIRCRAFT = 1
