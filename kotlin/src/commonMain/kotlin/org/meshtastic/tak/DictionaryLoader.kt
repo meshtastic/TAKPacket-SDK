@@ -6,6 +6,6 @@ package org.meshtastic.tak
  * JVM: loads from classpath resources.
  * iOS: loads embedded Base64-encoded dictionaries.
  */
-expect object DictionaryLoader {
+internal expect object DictionaryLoader {
     fun loadDictionary(name: String): ByteArray
 }

@@ -11,29 +11,34 @@ import java.util.concurrent.ConcurrentHashMap
  * Compressor and decompressor caches are thread-safe ([ConcurrentHashMap])
  * so the singleton can be used safely from multiple threads.
  */
-actual object ZstdCodec {
+public actual object ZstdCodec {
     private val compressors = ConcurrentHashMap<Pair<Int, Int>, ZstdDictCompress>()
     private val decompressors = ConcurrentHashMap<Int, ZstdDictDecompress>()
 
     private fun ensureCompressor(dictId: Int, level: Int): ZstdDictCompress =
         compressors.computeIfAbsent(dictId to level) {
-            val dictBytes = DictionaryProvider.getDictionary(dictId)
-                ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
-            ZstdDictCompress(dictBytes, level)
+            ZstdDictCompress(DictionaryProvider.getDictionary(dictId), level)
         }
 
     private fun ensureDecompressor(dictId: Int): ZstdDictDecompress =
         decompressors.computeIfAbsent(dictId) {
-            val dictBytes = DictionaryProvider.getDictionary(dictId)
-                ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
-            ZstdDictDecompress(dictBytes)
+            ZstdDictDecompress(DictionaryProvider.getDictionary(dictId))
         }
 
-    actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray {
+    public actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray {
         return Zstd.compress(data, ensureCompressor(dictId, level))
     }
 
-    actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray {
+    public actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray {
         return Zstd.decompress(data, ensureDecompressor(dictId), maxSize)
+    }
+
+    /**
+     * No-op on JVM — zstd-jni manages native resource lifecycle internally.
+     * Provided to satisfy the `expect` declaration so common code can call
+     * `ZstdCodec.release()` unconditionally.
+     */
+    public actual fun release() {
+        // zstd-jni handles cleanup via finalizers; nothing to do here
     }
 }

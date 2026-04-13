@@ -34,6 +34,9 @@ tasks.matching { it.name.startsWith("generate") && it.name.contains("Proto", ign
 kotlin {
     jvmToolchain(17)
 
+    // Published library: enforce explicit visibility on all declarations
+    explicitApi()
+
     // Suppress expect/actual beta warnings
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")

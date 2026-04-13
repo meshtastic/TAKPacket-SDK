@@ -36,14 +36,14 @@ import zstd.ZSTD_isError
  * The consuming iOS app must link against libzstd (e.g. via CocoaPods, SPM, or vendored xcframework).
  */
 @OptIn(ExperimentalForeignApi::class)
-actual object ZstdCodec {
+public actual object ZstdCodec {
     private val lock = NSLock()
     private var cCtx: CPointer<ZSTD_CCtx>? = null
     private var dCtx: CPointer<ZSTD_DCtx>? = null
     private val cDicts = mutableMapOf<Pair<Int, Int>, CPointer<ZSTD_CDict>>()
     private val dDicts = mutableMapOf<Int, CPointer<ZSTD_DDict>>()
 
-    private fun <T> synchronized(block: () -> T): T {
+    private fun <T> withLock(block: () -> T): T {
         lock.lock()
         try {
             return block()
@@ -61,7 +61,6 @@ actual object ZstdCodec {
     private fun getOrCreateCDict(dictId: Int, level: Int): CPointer<ZSTD_CDict> =
         cDicts.getOrPut(dictId to level) {
             val dictBytes = DictionaryProvider.getDictionary(dictId)
-                ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
             dictBytes.usePinned { pinned ->
                 ZSTD_createCDict(
                     pinned.addressOf(0),
@@ -74,7 +73,6 @@ actual object ZstdCodec {
     private fun getOrCreateDDict(dictId: Int): CPointer<ZSTD_DDict> =
         dDicts.getOrPut(dictId) {
             val dictBytes = DictionaryProvider.getDictionary(dictId)
-                ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
             dictBytes.usePinned { pinned ->
                 ZSTD_createDDict(
                     pinned.addressOf(0),
@@ -83,7 +81,7 @@ actual object ZstdCodec {
             }
         }
 
-    actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray = synchronized {
+    public actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray = withLock {
         val ctx = getOrCreateCCtx()
         val cDict = getOrCreateCDict(dictId, level)
         val maxSize = ZSTD_compressBound(data.size.toULong())
@@ -110,7 +108,7 @@ actual object ZstdCodec {
         destBuffer.copyOf(compressedSize.toInt())
     }
 
-    actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray = synchronized {
+    public actual fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray = withLock {
         val ctx = getOrCreateDCtx()
         val dDict = getOrCreateDDict(dictId)
         val destBuffer = ByteArray(maxSize)
@@ -141,7 +139,7 @@ actual object ZstdCodec {
      * Call this when the codec is no longer needed to avoid memory leaks
      * in long-running apps or tests.
      */
-    fun release() = synchronized {
+    public actual fun release() = withLock {
         cCtx?.let { ZSTD_freeCCtx(it) }
         cCtx = null
         dCtx?.let { ZSTD_freeDCtx(it) }

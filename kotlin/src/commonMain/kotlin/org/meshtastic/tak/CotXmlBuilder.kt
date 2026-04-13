@@ -8,9 +8,9 @@ import kotlin.time.Duration.Companion.seconds
  * Reconstructs a standards-compliant CoT XML event that can be consumed by ATAK
  * and other CoT-compatible systems.
  */
-class CotXmlBuilder {
+public class CotXmlBuilder {
 
-    companion object {
+    private companion object {
         private val teamEnumToName = mapOf(
             1 to "White", 2 to "Yellow", 3 to "Orange", 4 to "Magenta",
             5 to "Red", 6 to "Maroon", 7 to "Purple", 8 to "Dark Blue",
@@ -115,7 +115,7 @@ class CotXmlBuilder {
     /**
      * Build a CoT XML event string from a [TakPacketV2Data].
      */
-    fun build(packet: TakPacketV2Data): String {
+    public fun build(packet: TakPacketV2Data): String {
         val sb = StringBuilder()
         val now = Clock.System.now()
         val timeStr = now.toString()

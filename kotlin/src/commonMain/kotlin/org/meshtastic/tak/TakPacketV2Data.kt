@@ -6,7 +6,7 @@ package org.meshtastic.tak
  * protobuf library. Each platform serializes/deserializes this to protobuf
  * wire format using its native protobuf library.
  */
-data class TakPacketV2Data(
+public data class TakPacketV2Data(
     val cotTypeId: Int = CotTypeMapper.COTTYPE_OTHER,
     val cotTypeStr: String? = null,
     val how: Int = CotTypeMapper.COTHOW_UNSPECIFIED,
@@ -33,16 +33,16 @@ data class TakPacketV2Data(
     val remarks: String = "",
     val payload: Payload = Payload.None,
 ) {
-    sealed class Payload {
-        object None : Payload()
-        data class Pli(val value: Boolean = true) : Payload()
+    public sealed interface Payload {
+        public data object None : Payload
+        public data class Pli(val value: Boolean = true) : Payload
         /**
          * ATAK GeoChat message — both regular chat (b-t-f) and delivered /
          * read receipts (b-t-f-d / b-t-f-r). Receipts leave [message] empty
          * and set [receiptForUid] + [receiptType] to link back to the
          * outbound message's event UID.
          */
-        data class Chat(
+        public data class Chat(
             val message: String = "",
             val to: String? = null,
             val toCallsign: String? = null,
@@ -50,8 +50,8 @@ data class TakPacketV2Data(
             val receiptForUid: String = "",
             /** Receipt kind: 0 = none (regular chat), 1 = delivered, 2 = read. */
             val receiptType: Int = 0,
-        ) : Payload()
-        data class Aircraft(
+        ) : Payload
+        public data class Aircraft(
             val icao: String = "",
             val registration: String = "",
             val flight: String = "",
@@ -61,8 +61,8 @@ data class TakPacketV2Data(
             val rssiX10: Int = 0,
             val gps: Boolean = false,
             val cotHostId: String = "",
-        ) : Payload()
-        data class RawDetail(val bytes: ByteArray) : Payload() {
+        ) : Payload
+        public data class RawDetail(val bytes: ByteArray) : Payload {
             override fun equals(other: Any?): Boolean =
                 other is RawDetail && bytes.contentEquals(other.bytes)
             override fun hashCode(): Int = bytes.contentHashCode()
@@ -79,7 +79,7 @@ data class TakPacketV2Data(
          * at the SDK level as `Int` pairs to match the 1e7-scaled coordinate
          * convention used by TakPacketV2Data.latitudeI / longitudeI.
          */
-        data class Vertex(val latI: Int, val lonI: Int)
+        public data class Vertex(val latI: Int, val lonI: Int)
 
         /**
          * User-drawn tactical graphic: circle, rectangle, polygon, polyline,
@@ -88,7 +88,7 @@ data class TakPacketV2Data(
          * Maps to the `DrawnShape` protobuf message at payload_variant tag 34.
          * See atak.proto for the full field-by-field documentation.
          */
-        data class DrawnShape(
+        public data class DrawnShape(
             /** One of the Kind_* constants (1..7); see atak.proto. */
             val kind: Int = 0,
             /**
@@ -121,13 +121,13 @@ data class TakPacketV2Data(
             /** bit0 rangeRingVisible, bit1 hasRangeRings, bit2 edgeToCenter, bit3 mils. */
             val bullseyeFlags: Int = 0,
             val bullseyeUidRef: String = "",
-        ) : Payload()
+        ) : Payload
 
         /**
          * Fixed marker: spot, waypoint, checkpoint, 2525 symbol, or custom icon.
          * Maps to the `Marker` protobuf message at payload_variant tag 35.
          */
-        data class Marker(
+        public data class Marker(
             /** One of Marker.Kind values in atak.proto (1..7). */
             val kind: Int = 0,
             val color: Int = 0,
@@ -137,14 +137,14 @@ data class TakPacketV2Data(
             val parentType: String = "",
             val parentCallsign: String = "",
             val iconset: String = "",
-        ) : Payload()
+        ) : Payload
 
         /**
          * Range and bearing measurement line. Maps to `RangeAndBearing` proto
          * at payload_variant tag 36. Anchor endpoint is absolute lat/lon, not
          * a delta from the event point.
          */
-        data class RangeAndBearing(
+        public data class RangeAndBearing(
             val anchorLatI: Int = 0,
             val anchorLonI: Int = 0,
             val anchorUid: String = "",
@@ -155,7 +155,7 @@ data class TakPacketV2Data(
             val strokeColor: Int = 0,
             val strokeArgb: Int = 0,
             val strokeWeightX10: Int = 0,
-        ) : Payload()
+        ) : Payload
 
         /**
          * Named route consisting of ordered waypoints and control points.
@@ -164,7 +164,7 @@ data class TakPacketV2Data(
          * Link count is capped at MAX_ROUTE_LINKS (16) by the parser; longer
          * routes are truncated with [truncated] set true.
          */
-        data class Route(
+        public data class Route(
             /** Travel method: 0 unspec, 1 Driving, 2 Walking, 3 Flying, 4 Swimming, 5 Watercraft. */
             val method: Int = 0,
             /** Direction: 0 unspec, 1 Infil, 2 Exfil. */
@@ -173,9 +173,9 @@ data class TakPacketV2Data(
             val strokeWeightX10: Int = 0,
             val links: List<Link> = emptyList(),
             val truncated: Boolean = false,
-        ) : Payload() {
+        ) : Payload {
             /** Route waypoint or control point. */
-            data class Link(
+            public data class Link(
                 val latI: Int = 0,
                 val lonI: Int = 0,
                 val uid: String = "",
@@ -199,7 +199,7 @@ data class TakPacketV2Data(
          * lines they don't have. `precedence`, `hlzMarking`, `security`
          * are enum int values matching `CasevacReport.*` in atak.proto.
          */
-        data class CasevacReport(
+        public data class CasevacReport(
             /** One of Precedence_* constants (1..5). */
             val precedence: Int = 0,
             /**
@@ -231,7 +231,7 @@ data class TakPacketV2Data(
             val terrainFlags: Int = 0,
             /** Line 2 radio frequency / callsign metadata. */
             val frequency: String = "",
-        ) : Payload()
+        ) : Payload
 
         /**
          * Emergency alert / 911 beacon. Covers CoT types b-a-o-tbl (911),
@@ -241,14 +241,14 @@ data class TakPacketV2Data(
          * Maps to the `EmergencyAlert` protobuf message at payload_variant
          * tag 39.
          */
-        data class EmergencyAlert(
+        public data class EmergencyAlert(
             /** One of Type_* constants (1..6): 911, RingTheBell, InContact, GeoFenceBreached, Custom, Cancel. */
             val type: Int = 0,
             /** UID of the unit raising the alert. */
             val authoringUid: String = "",
             /** For Type_Cancel: UID of the alert being cancelled. Empty otherwise. */
             val cancelReferenceUid: String = "",
-        ) : Payload()
+        ) : Payload
 
         /**
          * Task / engage request (CoT type `t-s`).
@@ -256,7 +256,7 @@ data class TakPacketV2Data(
          * Maps to the `TaskRequest` protobuf message at payload_variant
          * tag 40. The requester UID is implicit from TAKPacketV2.uid.
          */
-        data class TaskRequest(
+        public data class TaskRequest(
             /** Short task category tag (e.g. "engage", "observe", "recon"). */
             val taskType: String = "",
             /** UID of the map item being tasked. */
@@ -268,14 +268,14 @@ data class TakPacketV2Data(
             /** One of Status_* constants (1..5). */
             val status: Int = 0,
             val note: String = "",
-        ) : Payload()
+        ) : Payload
     }
 
     /** Convenience: get the CoT type as a string, resolving enum or fallback. */
-    fun cotTypeString(): String =
+    public fun cotTypeString(): String =
         CotTypeMapper.typeToString(cotTypeId) ?: cotTypeStr ?: ""
 
     /** Convenience: get the how as a string. */
-    fun howString(): String =
+    public fun howString(): String =
         CotTypeMapper.howToString(how) ?: ""
 }

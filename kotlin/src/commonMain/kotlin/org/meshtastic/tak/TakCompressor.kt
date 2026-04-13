@@ -8,19 +8,20 @@ package org.meshtastic.tak
  * Flags byte bits 0-5 = dictionary ID, bits 6-7 = reserved.
  * Special value 0xFF = uncompressed raw protobuf.
  */
-class TakCompressor(
+public class TakCompressor(
     private val compressionLevel: Int = 19,
 ) {
-    companion object {
+    public companion object {
         /** Maximum allowed decompressed payload size (bytes). Prevents decompression bombs. */
-        const val MAX_DECOMPRESSED_SIZE = 4096
+        public const val MAX_DECOMPRESSED_SIZE: Int = 4096
     }
 
     /**
      * Compress a [TakPacketV2Data] into a wire payload:
      * `[flags byte][zstd-compressed protobuf]`
      */
-    fun compress(packet: TakPacketV2Data): ByteArray {
+    @Throws(RuntimeException::class)
+    public fun compress(packet: TakPacketV2Data): ByteArray {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val dictId = DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
 
@@ -38,7 +39,8 @@ class TakCompressor(
      * Decompress a wire payload back to a [TakPacketV2Data].
      * Handles both compressed (dict-based) and uncompressed (0xFF) payloads.
      */
-    fun decompress(wirePayload: ByteArray): TakPacketV2Data {
+    @Throws(RuntimeException::class, IllegalArgumentException::class)
+    public fun decompress(wirePayload: ByteArray): TakPacketV2Data {
         require(wirePayload.size >= 2) { "Wire payload too short: ${wirePayload.size} bytes" }
 
         val flagsByte = wirePayload[0].toInt() and 0xFF
@@ -99,7 +101,7 @@ class TakCompressor(
      * @return Whichever wire payload is smaller.  Ties go to the typed
      *         packet since it preserves strong typing on the receiver side.
      */
-    fun compressBestOf(packet: TakPacketV2Data, rawDetailBytes: ByteArray): ByteArray {
+    public fun compressBestOf(packet: TakPacketV2Data, rawDetailBytes: ByteArray): ByteArray {
         val typedWire = compress(packet)
         if (rawDetailBytes.isEmpty()) return typedWire
 
@@ -146,7 +148,7 @@ class TakCompressor(
      * @return The wire payload, or null if the packet is too large even
      *         without remarks.
      */
-    fun compressWithRemarksFallback(
+    public fun compressWithRemarksFallback(
         packet: TakPacketV2Data,
         maxWireBytes: Int,
     ): ByteArray? {
@@ -162,7 +164,7 @@ class TakCompressor(
     /**
      * Compress and return both the wire payload and intermediate sizes for reporting.
      */
-    fun compressWithStats(packet: TakPacketV2Data): CompressionResult {
+    public fun compressWithStats(packet: TakPacketV2Data): CompressionResult {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val wirePayload = compress(packet)
         val dictId = DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
@@ -175,13 +177,13 @@ class TakCompressor(
         )
     }
 
-    data class CompressionResult(
+    public data class CompressionResult(
         val protobufSize: Int,
         val compressedSize: Int,
         val dictId: Int,
         val wirePayload: ByteArray,
     ) {
-        val dictName: String
+        public val dictName: String
             get() = when (dictId) {
                 DictionaryProvider.DICT_ID_NON_AIRCRAFT -> "non-aircraft"
                 DictionaryProvider.DICT_ID_AIRCRAFT -> "aircraft"

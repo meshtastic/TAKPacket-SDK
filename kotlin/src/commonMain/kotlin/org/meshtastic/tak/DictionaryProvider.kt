@@ -5,34 +5,35 @@ package org.meshtastic.tak
  *
  * Dictionary bytes are loaded via the platform-specific [DictionaryLoader].
  */
-object DictionaryProvider {
+public object DictionaryProvider {
 
-    const val DICT_ID_NON_AIRCRAFT = 0
-    const val DICT_ID_AIRCRAFT = 1
-    const val DICT_ID_UNCOMPRESSED = 0xFF
+    internal const val DICT_ID_NON_AIRCRAFT = 0
+    internal const val DICT_ID_AIRCRAFT = 1
+    internal const val DICT_ID_UNCOMPRESSED = 0xFF
 
-    val nonAircraftDict: ByteArray by lazy {
+    internal val nonAircraftDict: ByteArray by lazy {
         DictionaryLoader.loadDictionary("dict_non_aircraft.zstd")
     }
 
-    val aircraftDict: ByteArray by lazy {
+    internal val aircraftDict: ByteArray by lazy {
         DictionaryLoader.loadDictionary("dict_aircraft.zstd")
     }
 
     /**
      * Get the dictionary bytes for a given dictionary ID.
-     * Returns null for [DICT_ID_UNCOMPRESSED] or unknown IDs.
+     *
+     * @throws IllegalArgumentException for unknown dictionary IDs
      */
-    fun getDictionary(dictId: Int): ByteArray? = when (dictId) {
+    internal fun getDictionary(dictId: Int): ByteArray = when (dictId) {
         DICT_ID_NON_AIRCRAFT -> nonAircraftDict
         DICT_ID_AIRCRAFT -> aircraftDict
-        else -> null
+        else -> throw IllegalArgumentException("Unknown dictionary ID: $dictId")
     }
 
     /**
      * Select the appropriate dictionary ID for a given CoT type.
      */
-    fun selectDictId(cotTypeId: Int, cotTypeStr: String?): Int {
+    internal fun selectDictId(cotTypeId: Int, cotTypeStr: String?): Int {
         // Check enum-based classification first
         if (cotTypeId != CotTypeMapper.COTTYPE_OTHER) {
             return if (CotTypeMapper.isAircraft(cotTypeId)) DICT_ID_AIRCRAFT else DICT_ID_NON_AIRCRAFT

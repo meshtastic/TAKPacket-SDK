@@ -22,9 +22,9 @@ import org.meshtastic.proto.Team
  * Serializes/deserializes [TakPacketV2Data] to/from protobuf wire format
  * using Wire KMP generated classes.
  */
-object TakPacketV2Serializer {
+public object TakPacketV2Serializer {
 
-    fun serialize(data: TakPacketV2Data): ByteArray {
+    public fun serialize(data: TakPacketV2Data): ByteArray {
         var pliPayload: Boolean? = null
         var chatPayload: GeoChat? = null
         var aircraftPayload: AircraftTrack? = null
@@ -225,30 +225,36 @@ object TakPacketV2Serializer {
         return proto.encode()
     }
 
-    fun deserialize(bytes: ByteArray): TakPacketV2Data {
+    public fun deserialize(bytes: ByteArray): TakPacketV2Data {
         val proto = TAKPacketV2.ADAPTER.decode(bytes)
 
         val payload = when {
-            proto.chat != null -> TakPacketV2Data.Payload.Chat(
-                message = proto.chat!!.message,
-                to = proto.chat!!.to?.ifEmpty { null },
-                toCallsign = proto.chat!!.to_callsign?.ifEmpty { null },
-                receiptForUid = proto.chat!!.receipt_for_uid,
-                receiptType = proto.chat!!.receipt_type.value,
-            )
-            proto.aircraft != null -> TakPacketV2Data.Payload.Aircraft(
-                icao = proto.aircraft!!.icao,
-                registration = proto.aircraft!!.registration,
-                flight = proto.aircraft!!.flight,
-                aircraftType = proto.aircraft!!.aircraft_type,
-                squawk = proto.aircraft!!.squawk,
-                category = proto.aircraft!!.category,
-                rssiX10 = proto.aircraft!!.rssi_x10,
-                gps = proto.aircraft!!.gps,
-                cotHostId = proto.aircraft!!.cot_host_id,
-            )
+            proto.chat != null -> {
+                val chat = proto.chat
+                TakPacketV2Data.Payload.Chat(
+                    message = chat.message,
+                    to = chat.to?.ifEmpty { null },
+                    toCallsign = chat.to_callsign?.ifEmpty { null },
+                    receiptForUid = chat.receipt_for_uid,
+                    receiptType = chat.receipt_type.value,
+                )
+            }
+            proto.aircraft != null -> {
+                val aircraft = proto.aircraft
+                TakPacketV2Data.Payload.Aircraft(
+                    icao = aircraft.icao,
+                    registration = aircraft.registration,
+                    flight = aircraft.flight,
+                    aircraftType = aircraft.aircraft_type,
+                    squawk = aircraft.squawk,
+                    category = aircraft.category,
+                    rssiX10 = aircraft.rssi_x10,
+                    gps = aircraft.gps,
+                    cotHostId = aircraft.cot_host_id,
+                )
+            }
             proto.route != null -> {
-                val route = proto.route!!
+                val route = proto.route
                 TakPacketV2Data.Payload.Route(
                     method = route.method.value,
                     direction = route.direction.value,
@@ -267,7 +273,7 @@ object TakPacketV2Serializer {
                 )
             }
             proto.rab != null -> {
-                val rab = proto.rab!!
+                val rab = proto.rab
                 TakPacketV2Data.Payload.RangeAndBearing(
                     anchorLatI = proto.latitude_i + (rab.anchor?.lat_delta_i ?: 0),
                     anchorLonI = proto.longitude_i + (rab.anchor?.lon_delta_i ?: 0),
@@ -280,7 +286,7 @@ object TakPacketV2Serializer {
                 )
             }
             proto.shape != null -> {
-                val shape = proto.shape!!
+                val shape = proto.shape
                 TakPacketV2Data.Payload.DrawnShape(
                     kind = shape.kind.value,
                     style = shape.style.value,
@@ -307,7 +313,7 @@ object TakPacketV2Serializer {
                 )
             }
             proto.marker != null -> {
-                val marker = proto.marker!!
+                val marker = proto.marker
                 TakPacketV2Data.Payload.Marker(
                     kind = marker.kind.value,
                     color = marker.color.value,
@@ -320,7 +326,7 @@ object TakPacketV2Serializer {
                 )
             }
             proto.casevac != null -> {
-                val casevac = proto.casevac!!
+                val casevac = proto.casevac
                 TakPacketV2Data.Payload.CasevacReport(
                     precedence = casevac.precedence.value,
                     equipmentFlags = casevac.equipment_flags,
@@ -340,7 +346,7 @@ object TakPacketV2Serializer {
                 )
             }
             proto.emergency != null -> {
-                val emergency = proto.emergency!!
+                val emergency = proto.emergency
                 TakPacketV2Data.Payload.EmergencyAlert(
                     type = emergency.type.value,
                     authoringUid = emergency.authoring_uid,
@@ -348,7 +354,7 @@ object TakPacketV2Serializer {
                 )
             }
             proto.task != null -> {
-                val task = proto.task!!
+                val task = proto.task
                 TakPacketV2Data.Payload.TaskRequest(
                     taskType = task.task_type,
                     targetUid = task.target_uid,
@@ -358,8 +364,8 @@ object TakPacketV2Serializer {
                     note = task.note,
                 )
             }
-            proto.raw_detail != null -> TakPacketV2Data.Payload.RawDetail(proto.raw_detail!!.toByteArray())
-            proto.pli != null -> TakPacketV2Data.Payload.Pli(proto.pli!!)
+            proto.raw_detail != null -> TakPacketV2Data.Payload.RawDetail(proto.raw_detail.toByteArray())
+            proto.pli != null -> TakPacketV2Data.Payload.Pli(proto.pli)
             else -> TakPacketV2Data.Payload.None
         }
 

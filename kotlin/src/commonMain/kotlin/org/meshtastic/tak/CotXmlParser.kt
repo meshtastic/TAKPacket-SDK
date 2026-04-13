@@ -14,118 +14,118 @@ import kotlin.math.roundToInt
  * detail sub-elements (contact, group, status, track, takv, precisionlocation,
  * remarks, aircot, radio, link, chat, shape, bullseye, route, marker).
  */
-class CotXmlParser {
+public class CotXmlParser {
 
-    companion object {
+    internal companion object {
         // GeoPointSource enum values
-        const val GEOSRC_UNSPECIFIED = 0
-        const val GEOSRC_GPS = 1
-        const val GEOSRC_USER = 2
-        const val GEOSRC_NETWORK = 3
+        internal const val GEOSRC_UNSPECIFIED = 0
+        internal const val GEOSRC_GPS = 1
+        internal const val GEOSRC_USER = 2
+        internal const val GEOSRC_NETWORK = 3
 
         /**
          * Maximum number of vertices kept in a [TakPacketV2Data.Payload.DrawnShape].
          * Matches `*DrawnShape.vertices max_count:32` in atak.options. Longer
          * vertex lists are silently truncated and `truncated = true` is set.
          */
-        const val MAX_VERTICES = 32
+        internal const val MAX_VERTICES = 32
 
         /**
          * Maximum number of links kept in a [TakPacketV2Data.Payload.Route].
          * Matches `*Route.links max_count:16` in atak.options. Longer routes
          * are truncated and `truncated = true` is set.
          */
-        const val MAX_ROUTE_LINKS = 16
+        internal const val MAX_ROUTE_LINKS = 16
 
         /**
          * DrawnShape.Kind enum values (mirrors the proto-generated
          * `DrawnShape.Kind_*` constants). Used when deriving shape kind from
          * the CoT type string at parse time.
          */
-        const val SHAPE_KIND_UNSPECIFIED = 0
-        const val SHAPE_KIND_CIRCLE = 1
-        const val SHAPE_KIND_RECTANGLE = 2
-        const val SHAPE_KIND_FREEFORM = 3
-        const val SHAPE_KIND_TELESTRATION = 4
-        const val SHAPE_KIND_POLYGON = 5
-        const val SHAPE_KIND_RANGING_CIRCLE = 6
-        const val SHAPE_KIND_BULLSEYE = 7
-        const val SHAPE_KIND_ELLIPSE = 8
-        const val SHAPE_KIND_VEHICLE_2D = 9
-        const val SHAPE_KIND_VEHICLE_3D = 10
+        internal const val SHAPE_KIND_UNSPECIFIED = 0
+        internal const val SHAPE_KIND_CIRCLE = 1
+        internal const val SHAPE_KIND_RECTANGLE = 2
+        internal const val SHAPE_KIND_FREEFORM = 3
+        internal const val SHAPE_KIND_TELESTRATION = 4
+        internal const val SHAPE_KIND_POLYGON = 5
+        internal const val SHAPE_KIND_RANGING_CIRCLE = 6
+        internal const val SHAPE_KIND_BULLSEYE = 7
+        internal const val SHAPE_KIND_ELLIPSE = 8
+        internal const val SHAPE_KIND_VEHICLE_2D = 9
+        internal const val SHAPE_KIND_VEHICLE_3D = 10
 
         /** DrawnShape.StyleMode values (mirrors proto `StyleMode_*`). */
-        const val STYLE_UNSPECIFIED = 0
-        const val STYLE_STROKE_ONLY = 1
-        const val STYLE_FILL_ONLY = 2
-        const val STYLE_STROKE_AND_FILL = 3
+        internal const val STYLE_UNSPECIFIED = 0
+        internal const val STYLE_STROKE_ONLY = 1
+        internal const val STYLE_FILL_ONLY = 2
+        internal const val STYLE_STROKE_AND_FILL = 3
 
         /** Marker.Kind values (mirrors proto `Marker.Kind_*`). */
-        const val MARKER_KIND_UNSPECIFIED = 0
-        const val MARKER_KIND_SPOT = 1
-        const val MARKER_KIND_WAYPOINT = 2
-        const val MARKER_KIND_CHECKPOINT = 3
-        const val MARKER_KIND_SELF_POSITION = 4
-        const val MARKER_KIND_SYMBOL_2525 = 5
-        const val MARKER_KIND_SPOT_MAP = 6
-        const val MARKER_KIND_CUSTOM_ICON = 7
-        const val MARKER_KIND_GO_TO_POINT = 8
-        const val MARKER_KIND_INITIAL_POINT = 9
-        const val MARKER_KIND_CONTACT_POINT = 10
-        const val MARKER_KIND_OBSERVATION_POST = 11
-        const val MARKER_KIND_IMAGE_MARKER = 12
+        internal const val MARKER_KIND_UNSPECIFIED = 0
+        internal const val MARKER_KIND_SPOT = 1
+        internal const val MARKER_KIND_WAYPOINT = 2
+        internal const val MARKER_KIND_CHECKPOINT = 3
+        internal const val MARKER_KIND_SELF_POSITION = 4
+        internal const val MARKER_KIND_SYMBOL_2525 = 5
+        internal const val MARKER_KIND_SPOT_MAP = 6
+        internal const val MARKER_KIND_CUSTOM_ICON = 7
+        internal const val MARKER_KIND_GO_TO_POINT = 8
+        internal const val MARKER_KIND_INITIAL_POINT = 9
+        internal const val MARKER_KIND_CONTACT_POINT = 10
+        internal const val MARKER_KIND_OBSERVATION_POST = 11
+        internal const val MARKER_KIND_IMAGE_MARKER = 12
 
         /** CasevacReport.Precedence enum values. */
-        const val PRECEDENCE_UNSPECIFIED = 0
-        const val PRECEDENCE_URGENT = 1
-        const val PRECEDENCE_URGENT_SURGICAL = 2
-        const val PRECEDENCE_PRIORITY = 3
-        const val PRECEDENCE_ROUTINE = 4
-        const val PRECEDENCE_CONVENIENCE = 5
+        internal const val PRECEDENCE_UNSPECIFIED = 0
+        internal const val PRECEDENCE_URGENT = 1
+        internal const val PRECEDENCE_URGENT_SURGICAL = 2
+        internal const val PRECEDENCE_PRIORITY = 3
+        internal const val PRECEDENCE_ROUTINE = 4
+        internal const val PRECEDENCE_CONVENIENCE = 5
 
         /** CasevacReport.HlzMarking enum values. */
-        const val HLZ_MARKING_UNSPECIFIED = 0
-        const val HLZ_MARKING_PANELS = 1
-        const val HLZ_MARKING_PYRO_SIGNAL = 2
-        const val HLZ_MARKING_SMOKE = 3
-        const val HLZ_MARKING_NONE = 4
-        const val HLZ_MARKING_OTHER = 5
+        internal const val HLZ_MARKING_UNSPECIFIED = 0
+        internal const val HLZ_MARKING_PANELS = 1
+        internal const val HLZ_MARKING_PYRO_SIGNAL = 2
+        internal const val HLZ_MARKING_SMOKE = 3
+        internal const val HLZ_MARKING_NONE = 4
+        internal const val HLZ_MARKING_OTHER = 5
 
         /** CasevacReport.Security enum values. */
-        const val SECURITY_UNSPECIFIED = 0
-        const val SECURITY_NO_ENEMY = 1
-        const val SECURITY_POSSIBLE_ENEMY = 2
-        const val SECURITY_ENEMY_IN_AREA = 3
-        const val SECURITY_ENEMY_IN_ARMED_CONTACT = 4
+        internal const val SECURITY_UNSPECIFIED = 0
+        internal const val SECURITY_NO_ENEMY = 1
+        internal const val SECURITY_POSSIBLE_ENEMY = 2
+        internal const val SECURITY_ENEMY_IN_AREA = 3
+        internal const val SECURITY_ENEMY_IN_ARMED_CONTACT = 4
 
         /** EmergencyAlert.Type enum values. */
-        const val EMERGENCY_TYPE_UNSPECIFIED = 0
-        const val EMERGENCY_TYPE_ALERT_911 = 1
-        const val EMERGENCY_TYPE_RING_THE_BELL = 2
-        const val EMERGENCY_TYPE_IN_CONTACT = 3
-        const val EMERGENCY_TYPE_GEO_FENCE_BREACHED = 4
-        const val EMERGENCY_TYPE_CUSTOM = 5
-        const val EMERGENCY_TYPE_CANCEL = 6
+        internal const val EMERGENCY_TYPE_UNSPECIFIED = 0
+        internal const val EMERGENCY_TYPE_ALERT_911 = 1
+        internal const val EMERGENCY_TYPE_RING_THE_BELL = 2
+        internal const val EMERGENCY_TYPE_IN_CONTACT = 3
+        internal const val EMERGENCY_TYPE_GEO_FENCE_BREACHED = 4
+        internal const val EMERGENCY_TYPE_CUSTOM = 5
+        internal const val EMERGENCY_TYPE_CANCEL = 6
 
         /** TaskRequest.Priority enum values. */
-        const val TASK_PRIORITY_UNSPECIFIED = 0
-        const val TASK_PRIORITY_LOW = 1
-        const val TASK_PRIORITY_NORMAL = 2
-        const val TASK_PRIORITY_HIGH = 3
-        const val TASK_PRIORITY_CRITICAL = 4
+        internal const val TASK_PRIORITY_UNSPECIFIED = 0
+        internal const val TASK_PRIORITY_LOW = 1
+        internal const val TASK_PRIORITY_NORMAL = 2
+        internal const val TASK_PRIORITY_HIGH = 3
+        internal const val TASK_PRIORITY_CRITICAL = 4
 
         /** TaskRequest.Status enum values. */
-        const val TASK_STATUS_UNSPECIFIED = 0
-        const val TASK_STATUS_PENDING = 1
-        const val TASK_STATUS_ACKNOWLEDGED = 2
-        const val TASK_STATUS_IN_PROGRESS = 3
-        const val TASK_STATUS_COMPLETED = 4
-        const val TASK_STATUS_CANCELLED = 5
+        internal const val TASK_STATUS_UNSPECIFIED = 0
+        internal const val TASK_STATUS_PENDING = 1
+        internal const val TASK_STATUS_ACKNOWLEDGED = 2
+        internal const val TASK_STATUS_IN_PROGRESS = 3
+        internal const val TASK_STATUS_COMPLETED = 4
+        internal const val TASK_STATUS_CANCELLED = 5
 
         /** GeoChat.ReceiptType enum values. */
-        const val RECEIPT_TYPE_NONE = 0
-        const val RECEIPT_TYPE_DELIVERED = 1
-        const val RECEIPT_TYPE_READ = 2
+        internal const val RECEIPT_TYPE_NONE = 0
+        internal const val RECEIPT_TYPE_DELIVERED = 1
+        internal const val RECEIPT_TYPE_READ = 2
 
         /** Route.Method values (mirrors proto). */
         private val routeMethodMap = mapOf(
@@ -309,7 +309,8 @@ class CotXmlParser {
      *
      * @throws IllegalArgumentException if the XML contains prohibited DOCTYPE or ENTITY declarations
      */
-    fun parse(cotXml: String): TakPacketV2Data {
+    @Throws(IllegalArgumentException::class)
+    public fun parse(cotXml: String): TakPacketV2Data {
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
         if (cotXml.contains("<!DOCTYPE", ignoreCase = true) || cotXml.contains("<!ENTITY", ignoreCase = true)) {
             throw IllegalArgumentException("XML contains prohibited DOCTYPE or ENTITY declaration")
@@ -1029,7 +1030,7 @@ class CotXmlParser {
      * by wrapping these bytes in `<detail>...</detail>`, so a byte-for-byte
      * extraction is required to keep the round trip loss-free.
      */
-    fun extractRawDetailBytes(cotXml: String): ByteArray {
+    public fun extractRawDetailBytes(cotXml: String): ByteArray {
         val match = RAW_DETAIL_REGEX.find(cotXml)
         val inner = match?.groupValues?.get(1) ?: return ByteArray(0)
         return inner.encodeToByteArray()
