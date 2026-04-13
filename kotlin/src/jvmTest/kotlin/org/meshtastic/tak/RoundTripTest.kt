@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import kotlin.test.assertIs
 
 /**
  * JVM-only round-trip tests that require zstd compression (zstd-jni) or
@@ -161,9 +162,8 @@ class RoundTripTest {
         // (leading space), zeroing all longitudes and rendering flat shapes.
         val xml = loadFixture("drawing_rectangle_itak.xml")
         val packet = parser.parse(xml)
-        assertTrue(packet.payload is TakPacketV2Data.Payload.DrawnShape,
-            "Should be DrawnShape, got ${packet.payload}")
-        val shape = packet.payload as TakPacketV2Data.Payload.DrawnShape
+        assertIs<TakPacketV2Data.Payload.DrawnShape>(packet.payload)
+        val shape = packet.payload
         assertEquals(4, shape.vertices.size, "Rectangle must have 4 vertices")
         // All longitudes must be non-zero (around 95.001-95.003)
         shape.vertices.forEachIndexed { i, v ->
@@ -193,7 +193,7 @@ class RoundTripTest {
         assertEquals(0, packet.speed, "Negative speed must clamp to 0")
         assertEquals(0, packet.course, "Negative course must clamp to 0")
         assertEquals("iPadTAKAware", packet.callsign)
-        assertTrue(packet.payload is TakPacketV2Data.Payload.Pli)
+        assertIs<TakPacketV2Data.Payload.Pli>(packet.payload)
     }
 
     // ════════════════════════════════════════════════════════════════════

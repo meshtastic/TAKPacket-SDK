@@ -45,6 +45,11 @@ package org.meshtastic.tak
  * @property phone       Phone number from `<contact phone="…"/>`, if present.
  * @property remarks     Free-text remarks from `<remarks>` (empty for chat payloads).
  * @property payload     Typed payload variant — see [Payload] sealed interface.
+ *
+ * @see CotXmlParser
+ * @see TakCompressor
+ * @see CotXmlBuilder
+ * @see TakPacketV2Serializer
  */
 public data class TakPacketV2Data(
     val cotTypeId: Int = CotTypeMapper.COTTYPE_OTHER,

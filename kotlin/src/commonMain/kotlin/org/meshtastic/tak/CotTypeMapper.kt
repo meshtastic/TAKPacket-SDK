@@ -326,29 +326,35 @@ public object CotTypeMapper {
     private val howToStr = stringToHow.entries.associate { (k, v) -> v to k }
 
     /** Convert a CoT type string to its enum int value. Returns COTTYPE_OTHER if unknown. */
+    @kotlin.jvm.JvmStatic
     public fun typeToEnum(cotTypeString: String): Int =
         stringToType[cotTypeString] ?: COTTYPE_OTHER
 
     /** Convert a CotType enum int to its canonical string. Returns null for COTTYPE_OTHER. */
+    @kotlin.jvm.JvmStatic
     public fun typeToString(cotTypeId: Int): String? = typeToString[cotTypeId]
 
     /** Convert a CoT how string to its enum int value. */
+    @kotlin.jvm.JvmStatic
     public fun howToEnum(howString: String): Int =
         stringToHow[howString] ?: COTHOW_UNSPECIFIED
 
     /** Convert a CotHow enum int to its canonical string. */
+    @kotlin.jvm.JvmStatic
     public fun howToString(howId: Int): String? = howToStr[howId]
 
     /**
      * Returns true if the CoT type is in the Air domain (3rd atom = 'A').
      * Used to select the aircraft vs non-aircraft compression dictionary.
      */
+    @kotlin.jvm.JvmStatic
     public fun isAircraft(cotTypeId: Int): Boolean {
         val typeStr = typeToString(cotTypeId) ?: return false
         return isAircraftString(typeStr)
     }
 
     /** Returns true if the CoT type string is in the Air domain. */
+    @kotlin.jvm.JvmStatic
     public fun isAircraftString(cotTypeString: String): Boolean {
         val atoms = cotTypeString.split("-")
         return atoms.size >= 3 && atoms[2] == "A"

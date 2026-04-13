@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.test.assertIs
 
 /**
  * Exercises the opt-in "smart compress" path that compares the typed-variant
@@ -100,8 +101,7 @@ class SmartCompressTest {
 
         val packet = parser.parse(xml)
         // Parser falls back to Pli for unknown type — that's the lossy default.
-        assertTrue(packet.payload is TakPacketV2Data.Payload.Pli,
-            "unmapped type parses as Pli fallback")
+        assertIs<TakPacketV2Data.Payload.Pli>(packet.payload)
 
         val rawDetail = parser.extractRawDetailBytes(xml)
         assertTrue(rawDetail.isNotEmpty())

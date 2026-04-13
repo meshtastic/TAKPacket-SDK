@@ -36,7 +36,7 @@ internal object DictionaryProvider {
     internal fun getDictionary(dictId: Int): ByteArray = when (dictId) {
         DICT_ID_NON_AIRCRAFT -> nonAircraftDict
         DICT_ID_AIRCRAFT -> aircraftDict
-        else -> throw IllegalArgumentException("Unknown dictionary ID: $dictId")
+        else -> error("Unknown dictionary ID: $dictId")
     }
 
     /**

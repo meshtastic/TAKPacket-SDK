@@ -1,9 +1,9 @@
 public final class org/meshtastic/tak/AtakPalette {
 	public static final field INSTANCE Lorg/meshtastic/tak/AtakPalette;
 	public static final field UNSPECIFIED I
-	public final fun argbToTeam (I)I
-	public final fun isPaletteTeam (I)Z
-	public final fun teamToArgb (I)Ljava/lang/Integer;
+	public static final fun argbToTeam (I)I
+	public static final fun isPaletteTeam (I)Z
+	public static final fun teamToArgb (I)Ljava/lang/Integer;
 }
 
 public final class org/meshtastic/tak/CotTypeMapper {
@@ -141,16 +141,17 @@ public final class org/meshtastic/tak/CotTypeMapper {
 	public static final field COTTYPE_U_R_B_BULLSEYE I
 	public static final field COTTYPE_U_R_B_C_C I
 	public static final field INSTANCE Lorg/meshtastic/tak/CotTypeMapper;
-	public final fun howToEnum (Ljava/lang/String;)I
-	public final fun howToString (I)Ljava/lang/String;
-	public final fun isAircraft (I)Z
-	public final fun isAircraftString (Ljava/lang/String;)Z
-	public final fun typeToEnum (Ljava/lang/String;)I
-	public final fun typeToString (I)Ljava/lang/String;
+	public static final fun howToEnum (Ljava/lang/String;)I
+	public static final fun howToString (I)Ljava/lang/String;
+	public static final fun isAircraft (I)Z
+	public static final fun isAircraftString (Ljava/lang/String;)Z
+	public static final fun typeToEnum (Ljava/lang/String;)I
+	public static final fun typeToString (I)Ljava/lang/String;
 }
 
 public final class org/meshtastic/tak/CotXmlBuilder {
 	public fun <init> ()V
+	public final fun build (Lorg/meshtastic/tak/TakPacketV2Data;)Ljava/lang/String;
 	public final fun build (Lorg/meshtastic/tak/TakPacketV2Data;Lkotlin/time/Instant;)Ljava/lang/String;
 	public static synthetic fun build$default (Lorg/meshtastic/tak/CotXmlBuilder;Lorg/meshtastic/tak/TakPacketV2Data;Lkotlin/time/Instant;ILjava/lang/Object;)Ljava/lang/String;
 }
@@ -591,7 +592,7 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$Vertex {
 
 public final class org/meshtastic/tak/TakPacketV2Serializer {
 	public static final field INSTANCE Lorg/meshtastic/tak/TakPacketV2Serializer;
-	public final fun deserialize ([B)Lorg/meshtastic/tak/TakPacketV2Data;
-	public final fun serialize (Lorg/meshtastic/tak/TakPacketV2Data;)[B
+	public static final fun deserialize ([B)Lorg/meshtastic/tak/TakPacketV2Data;
+	public static final fun serialize (Lorg/meshtastic/tak/TakPacketV2Data;)[B
 }
 

@@ -12,6 +12,6 @@ internal actual object DictionaryLoader {
     actual fun loadDictionary(name: String): ByteArray = when (name) {
         "dict_aircraft.zstd" -> Base64.decode(EmbeddedDictionaries.AIRCRAFT_BASE64)
         "dict_non_aircraft.zstd" -> Base64.decode(EmbeddedDictionaries.NON_AIRCRAFT_BASE64)
-        else -> throw IllegalStateException("Unknown dictionary resource: $name")
+        else -> error("Unknown dictionary resource: $name")
     }
 }

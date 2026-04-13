@@ -136,9 +136,9 @@ public class CotXmlBuilder {
      *            Defaults to the current wall-clock time. Pass an explicit
      *            [Instant] for deterministic/reproducible output in tests.
      */
+    @kotlin.jvm.JvmOverloads
     @Throws(IllegalStateException::class)
-    public fun build(packet: TakPacketV2Data, now: Instant = Clock.System.now()): String {
-        val sb = StringBuilder()
+    public fun build(packet: TakPacketV2Data, now: Instant = Clock.System.now()): String = buildString {
         val timeStr = now.toString()
         val staleSeconds = packet.staleSeconds.toLong().coerceAtLeast(45)
         val stale = now + staleSeconds.seconds
@@ -160,68 +160,68 @@ public class CotXmlBuilder {
             lon = routePayload.links.first().lonI / 1e7
         }
 
-        sb.append("""<?xml version="1.0" encoding="UTF-8"?>""")
-        sb.append("\n")
-        sb.append("""<event version="2.0" uid="${esc(packet.uid)}" type="${esc(cotType)}" how="${esc(how)}" """)
-        sb.append("""time="$timeStr" start="$timeStr" stale="$staleStr">""")
-        sb.append("\n")
-        sb.append("""  <point lat="$lat" lon="$lon" hae="$hae" ce="9999999" le="9999999"/>""")
-        sb.append("\n")
-        sb.append("  <detail>\n")
+        append("""<?xml version="1.0" encoding="UTF-8"?>""")
+        append("\n")
+        append("""<event version="2.0" uid="${esc(packet.uid)}" type="${esc(cotType)}" how="${esc(how)}" """)
+        append("""time="$timeStr" start="$timeStr" stale="$staleStr">""")
+        append("\n")
+        append("""  <point lat="$lat" lon="$lon" hae="$hae" ce="9999999" le="9999999"/>""")
+        append("\n")
+        append("  <detail>\n")
 
         // Contact — skip for routes (ATAK expects <contact> after __routeinfo, no endpoint)
         val isRoute = packet.payload is TakPacketV2Data.Payload.Route
         if (packet.callsign.isNotEmpty() && !isRoute) {
             val ep = packet.endpoint.ifEmpty { DEFAULT_ENDPOINT }
-            sb.append("""    <contact callsign="${esc(packet.callsign)}" endpoint="$ep"""")
-            if (packet.phone.isNotEmpty()) sb.append(""" phone="${esc(packet.phone)}"""")
-            sb.append("/>\n")
+            append("""    <contact callsign="${esc(packet.callsign)}" endpoint="$ep"""")
+            if (packet.phone.isNotEmpty()) append(""" phone="${esc(packet.phone)}"""")
+            append("/>\n")
         }
 
         // Group
         val teamName = teamEnumToName[packet.team]
         val roleName = roleEnumToName[packet.role]
         if (teamName != null || roleName != null) {
-            sb.append("    <__group")
-            if (roleName != null) sb.append(""" role="$roleName"""")
-            if (teamName != null) sb.append(""" name="$teamName"""")
-            sb.append("/>\n")
+            append("    <__group")
+            if (roleName != null) append(""" role="$roleName"""")
+            if (teamName != null) append(""" name="$teamName"""")
+            append("/>\n")
         }
 
         // Status
         if (packet.battery > 0) {
-            sb.append("""    <status battery="${packet.battery}"/>""")
-            sb.append("\n")
+            append("""    <status battery="${packet.battery}"/>""")
+            append("\n")
         }
 
         // Track
         val speedMs = packet.speed / 100.0
         val courseDeg = packet.course / 100.0
         if (packet.speed > 0 || packet.course > 0) {
-            sb.append("""    <track speed="$speedMs" course="$courseDeg"/>""")
-            sb.append("\n")
+            append("""    <track speed="$speedMs" course="$courseDeg"/>""")
+            append("\n")
         }
 
         // TAK version info
         if (packet.takVersion.isNotEmpty() || packet.takPlatform.isNotEmpty()) {
-            sb.append("    <takv")
-            if (packet.takDevice.isNotEmpty()) sb.append(""" device="${esc(packet.takDevice)}"""")
-            if (packet.takPlatform.isNotEmpty()) sb.append(""" platform="${esc(packet.takPlatform)}"""")
-            if (packet.takOs.isNotEmpty()) sb.append(""" os="${esc(packet.takOs)}"""")
-            if (packet.takVersion.isNotEmpty()) sb.append(""" version="${esc(packet.takVersion)}"""")
-            sb.append("/>\n")
+            append("    <takv")
+            if (packet.takDevice.isNotEmpty()) append(""" device="${esc(packet.takDevice)}"""")
+            if (packet.takPlatform.isNotEmpty()) append(""" platform="${esc(packet.takPlatform)}"""")
+            if (packet.takOs.isNotEmpty()) append(""" os="${esc(packet.takOs)}"""")
+            if (packet.takVersion.isNotEmpty()) append(""" version="${esc(packet.takVersion)}"""")
+            append("/>\n")
         }
 
         // Precision location
         if (packet.geoSrc > 0 || packet.altSrc > 0) {
-            sb.append("""    <precisionlocation geopointsrc="${geoSrcToString(packet.geoSrc)}" altsrc="${geoSrcToString(packet.altSrc)}"/>""")
-            sb.append("\n")
+            append("""    <precisionlocation geopointsrc="${geoSrcToString(packet.geoSrc)}" altsrc="${geoSrcToString(packet.altSrc)}"/>""")
+            append("\n")
         }
 
         // UID/Droid
         if (packet.deviceCallsign.isNotEmpty()) {
-            sb.append("""    <uid Droid="${esc(packet.deviceCallsign)}"/>""")
-            sb.append("\n")
+            append("""    <uid Droid="${esc(packet.deviceCallsign)}"/>""")
+            append("\n")
         }
 
         // Payload-specific detail elements
@@ -231,8 +231,8 @@ public class CotXmlBuilder {
                     // Delivered / read receipt: emit a <link> pointing at the
                     // original message UID. The envelope cot_type_id already
                     // distinguishes delivered (b-t-f-d) vs read (b-t-f-r).
-                    sb.append("""    <link uid="${esc(payload.receiptForUid)}" relation="p-p" type="b-t-f"/>""")
-                    sb.append("\n")
+                    append("""    <link uid="${esc(payload.receiptForUid)}" relation="p-p" type="b-t-f"/>""")
+                    append("\n")
                 } else {
                     // Reconstruct the full __chat element that ATAK/iTAK
                     // needs for routing and display. The GeoChat event UID
@@ -244,53 +244,54 @@ public class CotXmlBuilder {
                         val msgId = gcParts[3]
                         val senderCs = payload.toCallsign?.ifEmpty { null }
                             ?: packet.callsign.ifEmpty { "UNKNOWN" }
-                        sb.append("    <__chat parent=\"RootContactGroup\" groupOwner=\"false\"")
-                        sb.append(""" messageId="${esc(msgId)}" chatroom="${esc(chatroom)}"""")
-                        sb.append(""" id="${esc(chatroom)}" senderCallsign="${esc(senderCs)}">""")
-                        sb.append("\n")
-                        sb.append("""      <chatgrp uid0="${esc(senderUid)}" uid1="${esc(chatroom)}" id="${esc(chatroom)}"/>""")
-                        sb.append("\n")
-                        sb.append("    </__chat>\n")
-                        sb.append("""    <link uid="${esc(senderUid)}" type="a-f-G-U-C" relation="p-p"/>""")
-                        sb.append("\n")
-                        sb.append("""    <__serverdestination destinations="0.0.0.0:4242:tcp:${esc(senderUid)}"/>""")
-                        sb.append("\n")
-                        sb.append("""    <remarks source="BAO.F.ATAK.${esc(senderUid)}" to="${esc(chatroom)}" time="$timeStr">${esc(payload.message)}</remarks>""")
-                        sb.append("\n")
+                        append("    <__chat parent=\"RootContactGroup\" groupOwner=\"false\"")
+                        append(""" messageId="${esc(msgId)}" chatroom="${esc(chatroom)}"""")
+                        append(""" id="${esc(chatroom)}" senderCallsign="${esc(senderCs)}">""")
+                        append("\n")
+                        append("""      <chatgrp uid0="${esc(senderUid)}" uid1="${esc(chatroom)}" id="${esc(chatroom)}"/>""")
+                        append("\n")
+                        append("    </__chat>\n")
+                        append("""    <link uid="${esc(senderUid)}" type="a-f-G-U-C" relation="p-p"/>""")
+                        append("\n")
+                        append("""    <__serverdestination destinations="0.0.0.0:4242:tcp:${esc(senderUid)}"/>""")
+                        append("\n")
+                        append("""    <remarks source="BAO.F.ATAK.${esc(senderUid)}" to="${esc(chatroom)}" time="$timeStr">${esc(payload.message)}</remarks>""")
+                        append("\n")
                     } else {
-                        sb.append("""    <remarks>${esc(payload.message)}</remarks>""")
-                        sb.append("\n")
+                        append("""    <remarks>${esc(payload.message)}</remarks>""")
+                        append("\n")
                     }
                 }
             }
             is TakPacketV2Data.Payload.Aircraft -> {
                 if (payload.icao.isNotEmpty()) {
-                    sb.append("    <_aircot_")
-                    sb.append(""" icao="${esc(payload.icao)}"""")
-                    if (payload.registration.isNotEmpty()) sb.append(""" reg="${esc(payload.registration)}"""")
-                    if (payload.flight.isNotEmpty()) sb.append(""" flight="${esc(payload.flight)}"""")
-                    if (payload.category.isNotEmpty()) sb.append(""" cat="${esc(payload.category)}"""")
-                    if (payload.cotHostId.isNotEmpty()) sb.append(""" cot_host_id="${esc(payload.cotHostId)}"""")
-                    sb.append("/>\n")
+                    append("    <_aircot_")
+                    append(""" icao="${esc(payload.icao)}"""")
+                    if (payload.registration.isNotEmpty()) append(""" reg="${esc(payload.registration)}"""")
+                    if (payload.flight.isNotEmpty()) append(""" flight="${esc(payload.flight)}"""")
+                    if (payload.category.isNotEmpty()) append(""" cat="${esc(payload.category)}"""")
+                    if (payload.cotHostId.isNotEmpty()) append(""" cot_host_id="${esc(payload.cotHostId)}"""")
+                    append("/>\n")
                 }
                 // Squawk (transponder code) — emitted as a remarks field since
                 // ATAK parses it from remarks text when no _aircot_ squawk attr.
                 if (payload.squawk > 0) {
-                    val rem = StringBuilder()
-                    if (payload.icao.isNotEmpty()) rem.append("ICAO: ${payload.icao}")
-                    if (payload.registration.isNotEmpty()) rem.append(" REG: ${payload.registration}")
-                    if (payload.aircraftType.isNotEmpty()) rem.append(" Type: ${payload.aircraftType}")
-                    rem.append(" Squawk: ${payload.squawk}")
-                    if (payload.flight.isNotEmpty()) rem.append(" Flight: ${payload.flight}")
-                    sb.append("""    <remarks>${esc(rem.toString().trim())}</remarks>""")
-                    sb.append("\n")
+                    val rem = buildString {
+                        if (payload.icao.isNotEmpty()) append("ICAO: ${payload.icao}")
+                        if (payload.registration.isNotEmpty()) append(" REG: ${payload.registration}")
+                        if (payload.aircraftType.isNotEmpty()) append(" Type: ${payload.aircraftType}")
+                        append(" Squawk: ${payload.squawk}")
+                        if (payload.flight.isNotEmpty()) append(" Flight: ${payload.flight}")
+                    }
+                    append("""    <remarks>${esc(rem.trim())}</remarks>""")
+                    append("\n")
                 }
                 // ADS-B receiver metadata
                 if (payload.rssiX10 != 0) {
                     val rssi = payload.rssiX10 / 10.0
-                    sb.append("""    <_radio rssi="$rssi"""")
-                    if (payload.gps) sb.append(""" gps="true"""")
-                    sb.append("/>\n")
+                    append("""    <_radio rssi="$rssi"""")
+                    if (payload.gps) append(""" gps="true"""")
+                    append("/>\n")
                 }
             }
             is TakPacketV2Data.Payload.DrawnShape -> {
@@ -313,121 +314,121 @@ public class CotXmlBuilder {
                         val majorM = payload.majorCm / 100.0
                         val minorM = payload.minorCm / 100.0
                         val strokeW = payload.strokeWeightX10 / 10.0
-                        sb.append("    <shape>\n")
-                        sb.append("""      <ellipse major="$majorM" minor="$minorM" angle="${payload.angleDeg}"/>""")
-                        sb.append("\n")
+                        append("    <shape>\n")
+                        append("""      <ellipse major="$majorM" minor="$minorM" angle="${payload.angleDeg}"/>""")
+                        append("\n")
                         // KML style link — iTAK requires this to render circles/ellipses.
                         // ATAK uses ABGR hex encoding for KML colors, not ARGB.
-                        sb.append("""      <link uid="${esc(packet.uid)}.Style" type="b-x-KmlStyle" relation="p-c">""")
-                        sb.append("""<Style><LineStyle><color>${argbToAbgrHex(strokeVal)}</color><width>$strokeW</width></LineStyle>""")
+                        append("""      <link uid="${esc(packet.uid)}.Style" type="b-x-KmlStyle" relation="p-c">""")
+                        append("""<Style><LineStyle><color>${argbToAbgrHex(strokeVal)}</color><width>$strokeW</width></LineStyle>""")
                         if (fillVal != 0) {
-                            sb.append("""<PolyStyle><color>${argbToAbgrHex(fillVal)}</color></PolyStyle>""")
+                            append("""<PolyStyle><color>${argbToAbgrHex(fillVal)}</color></PolyStyle>""")
                         }
-                        sb.append("</Style></link>\n")
-                        sb.append("    </shape>\n")
+                        append("</Style></link>\n")
+                        append("    </shape>\n")
                     }
                 } else {
                     for (v in payload.vertices) {
                         val vlat = v.latI / 1e7
                         val vlon = v.lonI / 1e7
-                        sb.append("""    <link point="$vlat,$vlon"/>""")
-                        sb.append("\n")
+                        append("""    <link point="$vlat,$vlon"/>""")
+                        append("\n")
                     }
                 }
 
                 // Bullseye-specific element — lives inside <detail>, not <shape>.
                 if (kind == SHAPE_KIND_BULLSEYE) {
-                    sb.append("    <bullseye")
+                    append("    <bullseye")
                     if (payload.bullseyeDistanceDm > 0) {
                         val distM = payload.bullseyeDistanceDm / 10.0
-                        sb.append(""" distance="$distM"""")
+                        append(""" distance="$distM"""")
                     }
                     bearingRefIntToName[payload.bullseyeBearingRef]?.let {
-                        sb.append(""" bearingRef="$it"""")
+                        append(""" bearingRef="$it"""")
                     }
-                    if (payload.bullseyeFlags and 0x01 != 0) sb.append(""" rangeRingVisible="true"""")
-                    if (payload.bullseyeFlags and 0x02 != 0) sb.append(""" hasRangeRings="true"""")
-                    if (payload.bullseyeFlags and 0x04 != 0) sb.append(""" edgeToCenter="true"""")
-                    if (payload.bullseyeFlags and 0x08 != 0) sb.append(""" mils="true"""")
+                    if (payload.bullseyeFlags and 0x01 != 0) append(""" rangeRingVisible="true"""")
+                    if (payload.bullseyeFlags and 0x02 != 0) append(""" hasRangeRings="true"""")
+                    if (payload.bullseyeFlags and 0x04 != 0) append(""" edgeToCenter="true"""")
+                    if (payload.bullseyeFlags and 0x08 != 0) append(""" mils="true"""")
                     if (payload.bullseyeUidRef.isNotEmpty()) {
-                        sb.append(""" bullseyeUID="${esc(payload.bullseyeUidRef)}"""")
+                        append(""" bullseyeUID="${esc(payload.bullseyeUidRef)}"""")
                     }
-                    sb.append("/>\n")
+                    append("/>\n")
                 }
 
                 if (emitStroke) {
-                    sb.append("""    <strokeColor value="$strokeVal"/>""")
-                    sb.append("\n")
+                    append("""    <strokeColor value="$strokeVal"/>""")
+                    append("\n")
                     if (payload.strokeWeightX10 > 0) {
                         val w = payload.strokeWeightX10 / 10.0
-                        sb.append("""    <strokeWeight value="$w"/>""")
-                        sb.append("\n")
+                        append("""    <strokeWeight value="$w"/>""")
+                        append("\n")
                     }
                 }
                 if (emitFill) {
-                    sb.append("""    <fillColor value="$fillVal"/>""")
-                    sb.append("\n")
+                    append("""    <fillColor value="$fillVal"/>""")
+                    append("\n")
                 }
-                sb.append("""    <labels_on value="${payload.labelsOn}"/>""")
-                sb.append("\n")
+                append("""    <labels_on value="${payload.labelsOn}"/>""")
+                append("\n")
             }
             is TakPacketV2Data.Payload.Marker -> {
                 if (payload.readiness) {
-                    sb.append("""    <status readiness="true"/>""")
-                    sb.append("\n")
+                    append("""    <status readiness="true"/>""")
+                    append("\n")
                 }
                 if (payload.parentUid.isNotEmpty()) {
-                    sb.append("    <link")
-                    sb.append(""" uid="${esc(payload.parentUid)}"""")
+                    append("    <link")
+                    append(""" uid="${esc(payload.parentUid)}"""")
                     if (payload.parentType.isNotEmpty()) {
-                        sb.append(""" type="${esc(payload.parentType)}"""")
+                        append(""" type="${esc(payload.parentType)}"""")
                     }
                     if (payload.parentCallsign.isNotEmpty()) {
-                        sb.append(""" parent_callsign="${esc(payload.parentCallsign)}"""")
+                        append(""" parent_callsign="${esc(payload.parentCallsign)}"""")
                     }
-                    sb.append(""" relation="p-p"/>""")
-                    sb.append("\n")
+                    append(""" relation="p-p"/>""")
+                    append("\n")
                 }
                 val colorVal = resolveColor(payload.color, payload.colorArgb)
                 if (colorVal != 0) {
-                    sb.append("""    <color argb="$colorVal"/>""")
-                    sb.append("\n")
+                    append("""    <color argb="$colorVal"/>""")
+                    append("\n")
                 }
                 if (payload.iconset.isNotEmpty()) {
-                    sb.append("""    <usericon iconsetpath="${esc(payload.iconset)}"/>""")
-                    sb.append("\n")
+                    append("""    <usericon iconsetpath="${esc(payload.iconset)}"/>""")
+                    append("\n")
                 }
             }
             is TakPacketV2Data.Payload.RangeAndBearing -> {
                 if (payload.anchorLatI != 0 || payload.anchorLonI != 0) {
                     val alat = payload.anchorLatI / 1e7
                     val alon = payload.anchorLonI / 1e7
-                    sb.append("    <link")
+                    append("    <link")
                     if (payload.anchorUid.isNotEmpty()) {
-                        sb.append(""" uid="${esc(payload.anchorUid)}"""")
+                        append(""" uid="${esc(payload.anchorUid)}"""")
                     }
-                    sb.append(""" relation="p-p" type="b-m-p-w" point="$alat,$alon"/>""")
-                    sb.append("\n")
+                    append(""" relation="p-p" type="b-m-p-w" point="$alat,$alon"/>""")
+                    append("\n")
                 }
                 if (payload.rangeCm > 0) {
                     val rangeM = payload.rangeCm / 100.0
-                    sb.append("""    <range value="$rangeM"/>""")
-                    sb.append("\n")
+                    append("""    <range value="$rangeM"/>""")
+                    append("\n")
                 }
                 if (payload.bearingCdeg > 0) {
                     val bearingDeg = payload.bearingCdeg / 100.0
-                    sb.append("""    <bearing value="$bearingDeg"/>""")
-                    sb.append("\n")
+                    append("""    <bearing value="$bearingDeg"/>""")
+                    append("\n")
                 }
                 val strokeVal = resolveColor(payload.strokeColor, payload.strokeArgb)
                 if (strokeVal != 0) {
-                    sb.append("""    <strokeColor value="$strokeVal"/>""")
-                    sb.append("\n")
+                    append("""    <strokeColor value="$strokeVal"/>""")
+                    append("\n")
                 }
                 if (payload.strokeWeightX10 > 0) {
                     val w = payload.strokeWeightX10 / 10.0
-                    sb.append("""    <strokeWeight value="$w"/>""")
-                    sb.append("\n")
+                    append("""    <strokeWeight value="$w"/>""")
+                    append("\n")
                 }
             }
             is TakPacketV2Data.Payload.RawDetail -> {
@@ -437,8 +438,8 @@ public class CotXmlBuilder {
                 // any normalization so the receiver's round trip preserves
                 // attribute order and whitespace identically to the source.
                 if (payload.bytes.isNotEmpty()) {
-                    sb.append(payload.bytes.decodeToString())
-                    if (!sb.endsWith("\n")) sb.append("\n")
+                    append(payload.bytes.decodeToString())
+                    if (!endsWith("\n")) append("\n")
                 }
             }
             is TakPacketV2Data.Payload.Route -> {
@@ -447,133 +448,133 @@ public class CotXmlBuilder {
                 for ((idx, link) in payload.links.withIndex()) {
                     val llat = link.latI / 1e7
                     val llon = link.lonI / 1e7
-                    sb.append("    <link")
+                    append("    <link")
                     // ATAK requires uid on waypoint links for internal marker
                     // creation. Generate a deterministic one when not present.
                     val uid = link.uid.ifEmpty { "${packet.uid}-$idx" }
-                    sb.append(""" uid="${esc(uid)}"""")
+                    append(""" uid="${esc(uid)}"""")
                     val linkType = if (link.linkType == 1) "b-m-p-c" else "b-m-p-w"
-                    sb.append(""" type="$linkType"""")
+                    append(""" type="$linkType"""")
                     if (link.callsign.isNotEmpty()) {
-                        sb.append(""" callsign="${esc(link.callsign)}"""")
+                        append(""" callsign="${esc(link.callsign)}"""")
                     }
                     // ATAK expects 3-component point: lat,lon,hae
-                    sb.append(""" point="$llat,$llon,0" relation="c"/>""")
-                    sb.append("\n")
+                    append(""" point="$llat,$llon,0" relation="c"/>""")
+                    append("\n")
                 }
-                sb.append("    <link_attr")
-                routeMethodIntToName[payload.method]?.let { sb.append(""" method="$it"""") }
-                routeDirectionIntToName[payload.direction]?.let { sb.append(""" direction="$it"""") }
+                append("    <link_attr")
+                routeMethodIntToName[payload.method]?.let { append(""" method="$it"""") }
+                routeDirectionIntToName[payload.direction]?.let { append(""" direction="$it"""") }
                 if (payload.prefix.isNotEmpty()) {
-                    sb.append(""" prefix="${esc(payload.prefix)}"""")
+                    append(""" prefix="${esc(payload.prefix)}"""")
                 }
                 if (payload.strokeWeightX10 > 0) {
                     val sw = payload.strokeWeightX10 / 10.0
-                    sb.append(""" stroke="$sw"""")
+                    append(""" stroke="$sw"""")
                 }
-                sb.append("/>\n")
+                append("/>\n")
                 // ATAK requires these elements after link_attr for route rendering
                 if (packet.remarks.isNotEmpty()) {
-                    sb.append("    <remarks>${esc(packet.remarks)}</remarks>\n")
+                    append("    <remarks>${esc(packet.remarks)}</remarks>\n")
                 } else {
-                    sb.append("    <remarks/>\n")
+                    append("    <remarks/>\n")
                 }
-                sb.append("    <__routeinfo><__navcues/></__routeinfo>\n")
-                sb.append("    <strokeColor value=\"-1\"/>\n")
-                sb.append("    <strokeWeight value=\"${if (payload.strokeWeightX10 > 0) payload.strokeWeightX10 / 10.0 else 3.0}\"/>\n")
-                sb.append("    <strokeStyle value=\"solid\"/>\n")
+                append("    <__routeinfo><__navcues/></__routeinfo>\n")
+                append("    <strokeColor value=\"-1\"/>\n")
+                append("    <strokeWeight value=\"${if (payload.strokeWeightX10 > 0) payload.strokeWeightX10 / 10.0 else 3.0}\"/>\n")
+                append("    <strokeStyle value=\"solid\"/>\n")
                 // ATAK expects <contact> AFTER __routeinfo, with NO endpoint
-                sb.append("    <contact callsign=\"${esc(packet.callsign)}\"/>\n")
-                sb.append("    <labels_on value=\"false\"/>\n")
-                sb.append("    <color value=\"-1\"/>\n")
+                append("    <contact callsign=\"${esc(packet.callsign)}\"/>\n")
+                append("    <labels_on value=\"false\"/>\n")
+                append("    <color value=\"-1\"/>\n")
             }
             is TakPacketV2Data.Payload.CasevacReport -> {
-                sb.append("    <_medevac_")
+                append("    <_medevac_")
                 precedenceIntToName[payload.precedence]?.let {
-                    sb.append(""" precedence="$it"""")
+                    append(""" precedence="$it"""")
                 }
                 // Equipment bitfield flags
-                if (payload.equipmentFlags and 0x01 != 0) sb.append(""" none="true"""")
-                if (payload.equipmentFlags and 0x02 != 0) sb.append(""" hoist="true"""")
-                if (payload.equipmentFlags and 0x04 != 0) sb.append(""" extraction_equipment="true"""")
-                if (payload.equipmentFlags and 0x08 != 0) sb.append(""" ventilator="true"""")
-                if (payload.equipmentFlags and 0x10 != 0) sb.append(""" blood="true"""")
-                if (payload.litterPatients > 0) sb.append(""" litter="${payload.litterPatients}"""")
-                if (payload.ambulatoryPatients > 0) sb.append(""" ambulatory="${payload.ambulatoryPatients}"""")
+                if (payload.equipmentFlags and 0x01 != 0) append(""" none="true"""")
+                if (payload.equipmentFlags and 0x02 != 0) append(""" hoist="true"""")
+                if (payload.equipmentFlags and 0x04 != 0) append(""" extraction_equipment="true"""")
+                if (payload.equipmentFlags and 0x08 != 0) append(""" ventilator="true"""")
+                if (payload.equipmentFlags and 0x10 != 0) append(""" blood="true"""")
+                if (payload.litterPatients > 0) append(""" litter="${payload.litterPatients}"""")
+                if (payload.ambulatoryPatients > 0) append(""" ambulatory="${payload.ambulatoryPatients}"""")
                 securityIntToName[payload.security]?.let {
-                    sb.append(""" security="$it"""")
+                    append(""" security="$it"""")
                 }
                 hlzMarkingIntToName[payload.hlzMarking]?.let {
-                    sb.append(""" hlz_marking="$it"""")
+                    append(""" hlz_marking="$it"""")
                 }
                 if (payload.zoneMarker.isNotEmpty()) {
-                    sb.append(""" zone_prot_marker="${esc(payload.zoneMarker)}"""")
+                    append(""" zone_prot_marker="${esc(payload.zoneMarker)}"""")
                 }
-                if (payload.usMilitary > 0) sb.append(""" us_military="${payload.usMilitary}"""")
-                if (payload.usCivilian > 0) sb.append(""" us_civilian="${payload.usCivilian}"""")
-                if (payload.nonUsMilitary > 0) sb.append(""" non_us_military="${payload.nonUsMilitary}"""")
-                if (payload.nonUsCivilian > 0) sb.append(""" non_us_civilian="${payload.nonUsCivilian}"""")
-                if (payload.epw > 0) sb.append(""" epw="${payload.epw}"""")
-                if (payload.child > 0) sb.append(""" child="${payload.child}"""")
+                if (payload.usMilitary > 0) append(""" us_military="${payload.usMilitary}"""")
+                if (payload.usCivilian > 0) append(""" us_civilian="${payload.usCivilian}"""")
+                if (payload.nonUsMilitary > 0) append(""" non_us_military="${payload.nonUsMilitary}"""")
+                if (payload.nonUsCivilian > 0) append(""" non_us_civilian="${payload.nonUsCivilian}"""")
+                if (payload.epw > 0) append(""" epw="${payload.epw}"""")
+                if (payload.child > 0) append(""" child="${payload.child}"""")
                 // Terrain bitfield flags
-                if (payload.terrainFlags and 0x01 != 0) sb.append(""" terrain_slope="true"""")
-                if (payload.terrainFlags and 0x02 != 0) sb.append(""" terrain_rough="true"""")
-                if (payload.terrainFlags and 0x04 != 0) sb.append(""" terrain_loose="true"""")
-                if (payload.terrainFlags and 0x08 != 0) sb.append(""" terrain_trees="true"""")
-                if (payload.terrainFlags and 0x10 != 0) sb.append(""" terrain_wires="true"""")
-                if (payload.terrainFlags and 0x20 != 0) sb.append(""" terrain_other="true"""")
+                if (payload.terrainFlags and 0x01 != 0) append(""" terrain_slope="true"""")
+                if (payload.terrainFlags and 0x02 != 0) append(""" terrain_rough="true"""")
+                if (payload.terrainFlags and 0x04 != 0) append(""" terrain_loose="true"""")
+                if (payload.terrainFlags and 0x08 != 0) append(""" terrain_trees="true"""")
+                if (payload.terrainFlags and 0x10 != 0) append(""" terrain_wires="true"""")
+                if (payload.terrainFlags and 0x20 != 0) append(""" terrain_other="true"""")
                 if (payload.frequency.isNotEmpty()) {
-                    sb.append(""" freq="${esc(payload.frequency)}"""")
+                    append(""" freq="${esc(payload.frequency)}"""")
                 }
-                sb.append("/>\n")
+                append("/>\n")
             }
             is TakPacketV2Data.Payload.EmergencyAlert -> {
                 // <emergency type="…"/> element carries the alert type; if
                 // the EmergencyAlert.type is Cancel (6) we emit cancel="true"
                 // to match ATAK's cancel encoding.
-                sb.append("    <emergency")
+                append("    <emergency")
                 if (payload.type == 6) {
-                    sb.append(""" cancel="true"""")
+                    append(""" cancel="true"""")
                 } else {
                     emergencyTypeIntToName[payload.type]?.let {
-                        sb.append(""" type="$it"""")
+                        append(""" type="$it"""")
                     }
                 }
-                sb.append("/>\n")
+                append("/>\n")
                 // Authoring link — <link uid="…" relation="p-p" type="a-f-G-U-C"/>
                 if (payload.authoringUid.isNotEmpty()) {
-                    sb.append("    <link")
-                    sb.append(""" uid="${esc(payload.authoringUid)}"""")
-                    sb.append(""" relation="p-p" type="a-f-G-U-C"/>""")
-                    sb.append("\n")
+                    append("    <link")
+                    append(""" uid="${esc(payload.authoringUid)}"""")
+                    append(""" relation="p-p" type="a-f-G-U-C"/>""")
+                    append("\n")
                 }
                 if (payload.cancelReferenceUid.isNotEmpty()) {
-                    sb.append("""    <link uid="${esc(payload.cancelReferenceUid)}" relation="p-p" type="b-a-o-tbl"/>""")
-                    sb.append("\n")
+                    append("""    <link uid="${esc(payload.cancelReferenceUid)}" relation="p-p" type="b-a-o-tbl"/>""")
+                    append("\n")
                 }
             }
             is TakPacketV2Data.Payload.TaskRequest -> {
-                sb.append("    <task")
+                append("    <task")
                 if (payload.taskType.isNotEmpty()) {
-                    sb.append(""" type="${esc(payload.taskType)}"""")
+                    append(""" type="${esc(payload.taskType)}"""")
                 }
                 taskPriorityIntToName[payload.priority]?.let {
-                    sb.append(""" priority="$it"""")
+                    append(""" priority="$it"""")
                 }
                 taskStatusIntToName[payload.status]?.let {
-                    sb.append(""" status="$it"""")
+                    append(""" status="$it"""")
                 }
                 if (payload.assigneeUid.isNotEmpty()) {
-                    sb.append(""" assignee="${esc(payload.assigneeUid)}"""")
+                    append(""" assignee="${esc(payload.assigneeUid)}"""")
                 }
                 if (payload.note.isNotEmpty()) {
-                    sb.append(""" note="${esc(payload.note)}"""")
+                    append(""" note="${esc(payload.note)}"""")
                 }
-                sb.append("/>\n")
+                append("/>\n")
                 // Target link
                 if (payload.targetUid.isNotEmpty()) {
-                    sb.append("""    <link uid="${esc(payload.targetUid)}" relation="p-p" type="a-f-G"/>""")
-                    sb.append("\n")
+                    append("""    <link uid="${esc(payload.targetUid)}" relation="p-p" type="a-f-G"/>""")
+                    append("\n")
                 }
             }
             is TakPacketV2Data.Payload.Pli,
@@ -589,12 +590,10 @@ public class CotXmlBuilder {
             && packet.payload !is TakPacketV2Data.Payload.Aircraft
             && packet.payload !is TakPacketV2Data.Payload.Route
         ) {
-            sb.append("    <remarks>${esc(packet.remarks)}</remarks>\n")
+            append("    <remarks>${esc(packet.remarks)}</remarks>\n")
         }
 
-        sb.append("  </detail>\n")
-        sb.append("</event>")
-
-        return sb.toString()
+        append("  </detail>\n")
+        append("</event>")
     }
 }

@@ -39,6 +39,7 @@ public object TakPacketV2Serializer {
      * @param data the SDK data class to serialize
      * @return the encoded protobuf bytes (uncompressed)
      */
+    @kotlin.jvm.JvmStatic
     @Throws(IllegalStateException::class)
     public fun serialize(data: TakPacketV2Data): ByteArray {
         var pliPayload: Boolean? = null
@@ -250,6 +251,7 @@ public object TakPacketV2Serializer {
      *         if an unknown enum value is encountered (shouldn't happen in
      *         practice since Wire falls back to default values)
      */
+    @kotlin.jvm.JvmStatic
     @Throws(IllegalStateException::class)
     public fun deserialize(bytes: ByteArray): TakPacketV2Data {
         val proto = TAKPacketV2.ADAPTER.decode(bytes)

@@ -5,8 +5,9 @@ package org.meshtastic.tak
  */
 internal actual object DictionaryLoader {
     actual fun loadDictionary(name: String): ByteArray {
-        val stream = DictionaryLoader::class.java.classLoader?.getResourceAsStream(name)
-            ?: throw IllegalStateException("Dictionary resource not found: $name")
+        val stream = checkNotNull(DictionaryLoader::class.java.classLoader?.getResourceAsStream(name)) {
+            "Dictionary resource not found: $name"
+        }
         return stream.use { it.readBytes() }
     }
 }

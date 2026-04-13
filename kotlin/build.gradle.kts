@@ -41,6 +41,8 @@ kotlin {
     // Suppress expect/actual beta warnings (still beta as of Kotlin 2.3.20)
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
+        allWarningsAsErrors.set(true)
+        progressiveMode.set(true)
     }
 
     jvm()
@@ -132,4 +134,10 @@ mavenPublishing {
             developerConnection = "scm:git:ssh://git@github.com/meshtastic/TAKPacket-SDK.git"
         }
     }
+}
+
+// Reproducible builds: strip timestamps and sort entries in all archives
+tasks.withType<AbstractArchiveTask>().configureEach {
+    isReproducibleFileOrder = true
+    isPreserveFileTimestamps = false
 }

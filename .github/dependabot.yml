@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: "gradle"
+    directory: "/kotlin"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "pip"
+    directory: "/python"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "npm"
+    directory: "/typescript"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+
+  - package-ecosystem: "nuget"
+    directory: "/csharp"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"

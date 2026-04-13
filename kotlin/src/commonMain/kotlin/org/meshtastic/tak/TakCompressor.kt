@@ -7,8 +7,18 @@ package org.meshtastic.tak
  * Wire format: `[1 byte flags][zstd-compressed protobuf bytes]`
  * Flags byte bits 0-5 = dictionary ID, bits 6-7 = reserved.
  * Special value 0xFF = uncompressed raw protobuf.
+ *
+ * ## Thread safety
+ *
+ * Instances are safe for concurrent use from multiple threads. The
+ * [compressionLevel] is immutable and all compression/decompression is
+ * delegated to the platform-specific `ZstdCodec` which manages its own
+ * thread safety (JVM via `synchronized`, iOS via `NSLock`).
+ *
+ * @see CotXmlParser
+ * @see TakPacketV2Serializer
  */
-public class TakCompressor(
+public class TakCompressor @kotlin.jvm.JvmOverloads constructor(
     private val compressionLevel: Int = 19,
 ) {
     public companion object {
@@ -62,8 +72,8 @@ public class TakCompressor(
             }
         }
 
-        if (protobufBytes.size > MAX_DECOMPRESSED_SIZE) {
-            throw IllegalArgumentException("Payload size ${protobufBytes.size} exceeds limit $MAX_DECOMPRESSED_SIZE")
+        require(protobufBytes.size <= MAX_DECOMPRESSED_SIZE) {
+            "Payload size ${protobufBytes.size} exceeds limit $MAX_DECOMPRESSED_SIZE"
         }
 
         try {
@@ -75,7 +85,7 @@ public class TakCompressor(
 
     /**
      * Compress a packet using whichever format yields the smaller wire payload:
-     * the fully-typed [TAKPacketV2] (default [compress] path), or a `raw_detail`
+     * the fully-typed [TakPacketV2Data] (default [compress] path), or a `raw_detail`
      * fallback carrying the original `<detail>` bytes.
      *
      * On every bundled fixture the typed path wins — delta-encoded geometry

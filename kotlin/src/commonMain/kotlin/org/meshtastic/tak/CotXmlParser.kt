@@ -469,11 +469,10 @@ public class CotXmlParser {
     @Throws(IllegalArgumentException::class)
     public fun parse(cotXml: String): TakPacketV2Data {
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE
-        if (cotXml.contains("<!DOCTYPE", ignoreCase = true) ||
-            cotXml.contains("<!ENTITY", ignoreCase = true)
-        ) {
-            throw IllegalArgumentException("XML contains prohibited DOCTYPE or ENTITY declaration")
-        }
+        require(
+            !cotXml.contains("<!DOCTYPE", ignoreCase = true) &&
+                !cotXml.contains("<!ENTITY", ignoreCase = true),
+        ) { "XML contains prohibited DOCTYPE or ENTITY declaration" }
 
         val s = ParseState()
         val reader = xmlStreaming.newReader(cotXml)

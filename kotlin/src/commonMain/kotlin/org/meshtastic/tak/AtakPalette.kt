@@ -94,6 +94,7 @@ public object AtakPalette {
      * field in the proto message with the original bits so round-trip is
      * preserved for custom colors.
      */
+    @kotlin.jvm.JvmStatic
     public fun argbToTeam(argb: Int): Int = ARGB_TO_TEAM[argb] ?: UNSPECIFIED
 
     /**
@@ -104,11 +105,13 @@ public object AtakPalette {
      * handle a `null` return by reading the `_argb` fallback field instead
      * of emitting a `<strokeColor>` element.
      */
+    @kotlin.jvm.JvmStatic
     public fun teamToArgb(team: Int): Int? = TEAM_TO_ARGB[team]
 
     /**
      * True if the given Team value refers to one of the 14 named palette
      * colors (i.e. not [UNSPECIFIED] and within the valid enum range).
      */
+    @kotlin.jvm.JvmStatic
     public fun isPaletteTeam(team: Int): Boolean = team in 1..14
 }
