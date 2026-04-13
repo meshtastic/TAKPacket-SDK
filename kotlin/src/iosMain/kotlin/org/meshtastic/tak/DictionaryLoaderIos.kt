@@ -1,7 +1,6 @@
 package org.meshtastic.tak
 
 import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * iOS implementation of [DictionaryLoader] using embedded Base64-encoded dictionaries.
@@ -9,7 +8,6 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * Since Kotlin/Native has no classpath resource loading like JVM,
  * the dictionary data is embedded directly in the binary.
  */
-@OptIn(ExperimentalEncodingApi::class)
 internal actual object DictionaryLoader {
     actual fun loadDictionary(name: String): ByteArray = when (name) {
         "dict_aircraft.zstd" -> Base64.decode(EmbeddedDictionaries.AIRCRAFT_BASE64)

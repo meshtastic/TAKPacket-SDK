@@ -138,7 +138,9 @@ class RoundTripTest {
                 assertEquals(p.status, d.status, "task status mismatch in $fixture")
                 assertEquals(p.note, d.note, "task note mismatch in $fixture")
             }
-            else -> { /* PLI, None, RawDetail have no extra fields to check */ }
+            is TakPacketV2Data.Payload.Pli,
+            is TakPacketV2Data.Payload.None,
+            is TakPacketV2Data.Payload.RawDetail -> { /* no extra fields to check */ }
         }
 
         // Build XML from decompressed data and verify it's valid XML

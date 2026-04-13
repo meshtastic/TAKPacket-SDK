@@ -576,7 +576,8 @@ public class CotXmlBuilder {
                     sb.append("\n")
                 }
             }
-            else -> { /* PLI, None, RawDetail — no extra detail elements */ }
+            is TakPacketV2Data.Payload.Pli,
+            is TakPacketV2Data.Payload.None -> { /* no extra detail elements */ }
         }
 
         // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
