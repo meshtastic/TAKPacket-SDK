@@ -38,7 +38,7 @@ kotlin {
     // Published library: enforce explicit visibility on all declarations
     explicitApi()
 
-    // Suppress expect/actual beta warnings
+    // Suppress expect/actual beta warnings (still beta as of Kotlin 2.3.20)
     compilerOptions {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }

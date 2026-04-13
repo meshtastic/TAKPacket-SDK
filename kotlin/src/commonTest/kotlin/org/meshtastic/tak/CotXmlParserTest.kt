@@ -69,7 +69,7 @@ class CotXmlParserTest {
         assertEquals(CotTypeMapper.COTTYPE_B_T_F, packet.cotTypeId)
         assertEquals(CotTypeMapper.COTHOW_H_G_I_G_O, packet.how)
         assertTrue(packet.payload is TakPacketV2Data.Payload.Chat)
-        val chat = packet.payload as TakPacketV2Data.Payload.Chat
+        val chat = packet.payload
         assertTrue(chat.message.isNotEmpty(), "Chat message should not be empty")
         assertEquals("Roger that, moving to rally point", chat.message)
     }
@@ -81,7 +81,7 @@ class CotXmlParserTest {
         assertEquals(CotTypeMapper.COTTYPE_A_N_A_C_F, packet.cotTypeId)
         assertEquals(CotTypeMapper.COTHOW_M_G, packet.how)
         assertTrue(packet.payload is TakPacketV2Data.Payload.Aircraft)
-        val aircraft = packet.payload as TakPacketV2Data.Payload.Aircraft
+        val aircraft = packet.payload
         assertEquals("F1E2D3", aircraft.icao)
         assertEquals("N338DN", aircraft.registration)
         assertEquals("DAL417", aircraft.flight)
@@ -95,7 +95,7 @@ class CotXmlParserTest {
 
         assertEquals(CotTypeMapper.COTTYPE_A_H_A_M_F_F, packet.cotTypeId)
         assertTrue(packet.payload is TakPacketV2Data.Payload.Aircraft)
-        val aircraft = packet.payload as TakPacketV2Data.Payload.Aircraft
+        val aircraft = packet.payload
         assertEquals("B7C8D9", aircraft.icao)
         assertEquals("N789ZZ", aircraft.registration)
         assertEquals("N789ZZ", aircraft.flight)
@@ -142,7 +142,7 @@ class CotXmlParserTest {
         assertEquals("6d09b6f6-720a-4eef-a197-183012512316", packet.uid)
         assertTrue(packet.payload is TakPacketV2Data.Payload.DrawnShape,
             "Expected DrawnShape payload but got ${packet.payload::class.simpleName}")
-        val shape = packet.payload as TakPacketV2Data.Payload.DrawnShape
+        val shape = packet.payload
         // Ellipse 226.98m → cm
         assertEquals(22698, shape.majorCm, "major axis cm")
         assertEquals(22698, shape.minorCm, "minor axis cm")
@@ -158,7 +158,7 @@ class CotXmlParserTest {
         assertEquals("R 1", packet.callsign)
         assertTrue(packet.payload is TakPacketV2Data.Payload.Marker,
             "Expected Marker payload but got ${packet.payload::class.simpleName}")
-        val marker = packet.payload as TakPacketV2Data.Payload.Marker
+        val marker = packet.payload
         assertTrue(marker.readiness, "Spot marker readiness should be true")
         assertEquals(-65536, marker.colorArgb, "color argb should be -65536 (red)")
         assertEquals("COT_MAPPING_SPOTMAP/b-m-p-s-m/-65536", marker.iconset)
@@ -175,7 +175,7 @@ class CotXmlParserTest {
         assertEquals("Route Alpha", packet.callsign)
         assertTrue(packet.payload is TakPacketV2Data.Payload.Route,
             "Expected Route payload but got ${packet.payload::class.simpleName}")
-        val route = packet.payload as TakPacketV2Data.Payload.Route
+        val route = packet.payload
         assertEquals(3, route.links.size, "Route should have 3 waypoints")
         assertEquals("CP", route.prefix)
         assertEquals("CP1", route.links[0].callsign)
@@ -192,7 +192,7 @@ class CotXmlParserTest {
         assertEquals("Task-Alpha", packet.callsign)
         assertTrue(packet.payload is TakPacketV2Data.Payload.TaskRequest,
             "Expected TaskRequest payload but got ${packet.payload::class.simpleName}")
-        val task = packet.payload as TakPacketV2Data.Payload.TaskRequest
+        val task = packet.payload
         assertEquals("engage", task.taskType)
         assertEquals("ANDROID-0000000000000005", task.assigneeUid)
         assertEquals("cover by fire", task.note)
@@ -211,7 +211,7 @@ class CotXmlParserTest {
         assertEquals(300, packet.staleSeconds, "stale should be 5 minutes")
         assertTrue(packet.payload is TakPacketV2Data.Payload.EmergencyAlert,
             "Expected EmergencyAlert payload but got ${packet.payload::class.simpleName}")
-        val alert = packet.payload as TakPacketV2Data.Payload.EmergencyAlert
+        val alert = packet.payload
         assertEquals(1, alert.type, "type should be 1 (911 Alert)")
         assertEquals("ANDROID-0000000000000004", alert.authoringUid)
         assertEquals("", alert.cancelReferenceUid)
@@ -227,7 +227,7 @@ class CotXmlParserTest {
         assertEquals(86400, packet.staleSeconds, "stale should be 24 hours")
         assertTrue(packet.payload is TakPacketV2Data.Payload.RangeAndBearing,
             "Expected RangeAndBearing payload but got ${packet.payload::class.simpleName}")
-        val rab = packet.payload as TakPacketV2Data.Payload.RangeAndBearing
+        val rab = packet.payload
         assertEquals(99880000, rab.anchorLatI, "anchor lat")
         assertEquals(949950000, rab.anchorLonI, "anchor lon")
         assertEquals("anchor-1", rab.anchorUid)
@@ -246,7 +246,7 @@ class CotXmlParserTest {
         assertEquals(600, packet.staleSeconds, "stale should be 10 minutes")
         assertTrue(packet.payload is TakPacketV2Data.Payload.CasevacReport,
             "Expected CasevacReport payload but got ${packet.payload::class.simpleName}")
-        val report = packet.payload as TakPacketV2Data.Payload.CasevacReport
+        val report = packet.payload
         assertEquals(1, report.precedence, "Urgent = 1")
         assertEquals(6, report.equipmentFlags, "hoist(0x02) + extraction(0x04) = 6")
         assertEquals(2, report.litterPatients)

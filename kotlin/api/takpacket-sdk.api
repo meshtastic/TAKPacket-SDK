@@ -151,8 +151,8 @@ public final class org/meshtastic/tak/CotTypeMapper {
 
 public final class org/meshtastic/tak/CotXmlBuilder {
 	public fun <init> ()V
-	public final fun build (Lorg/meshtastic/tak/TakPacketV2Data;Lkotlinx/datetime/Instant;)Ljava/lang/String;
-	public static synthetic fun build$default (Lorg/meshtastic/tak/CotXmlBuilder;Lorg/meshtastic/tak/TakPacketV2Data;Lkotlinx/datetime/Instant;ILjava/lang/Object;)Ljava/lang/String;
+	public final fun build (Lorg/meshtastic/tak/TakPacketV2Data;Lkotlin/time/Instant;)Ljava/lang/String;
+	public static synthetic fun build$default (Lorg/meshtastic/tak/CotXmlBuilder;Lorg/meshtastic/tak/TakPacketV2Data;Lkotlin/time/Instant;ILjava/lang/Object;)Ljava/lang/String;
 }
 
 public final class org/meshtastic/tak/CotXmlParser {

@@ -119,7 +119,7 @@ class SmartCompressTest {
         val decoded = compressor.decompress(smartWire)
         if (decoded.payload is TakPacketV2Data.Payload.RawDetail) {
             val roundTripped = String(
-                (decoded.payload as TakPacketV2Data.Payload.RawDetail).bytes,
+                decoded.payload.bytes,
                 Charsets.UTF_8,
             )
             assertTrue(roundTripped.contains("customTelemetry"),

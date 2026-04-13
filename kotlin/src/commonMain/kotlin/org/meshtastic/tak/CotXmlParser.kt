@@ -1,6 +1,6 @@
 package org.meshtastic.tak
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import nl.adaptivity.xmlutil.EventType
 import nl.adaptivity.xmlutil.XmlReader
 import nl.adaptivity.xmlutil.xmlStreaming
