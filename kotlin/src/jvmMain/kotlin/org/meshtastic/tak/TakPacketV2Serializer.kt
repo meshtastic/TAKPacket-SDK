@@ -9,7 +9,7 @@ import org.meshtastic.proto.CotHow
 import org.meshtastic.proto.CotType
 import org.meshtastic.proto.DrawnShape
 import org.meshtastic.proto.EmergencyAlert
-import org.meshtastic.proto.Environment
+import org.meshtastic.proto.TAKEnvironment
 import org.meshtastic.proto.GeoChat
 import org.meshtastic.proto.GeoPointSource
 import org.meshtastic.proto.Marker
@@ -259,11 +259,14 @@ object TakPacketV2Serializer {
             is TakPacketV2Data.Payload.None -> { /* all oneof fields stay null */ }
         }
 
-        // Payload-agnostic annotations — Environment and SensorFov ride
+        // Payload-agnostic annotations — TAKEnvironment and SensorFov ride
         // alongside whatever payload_variant the packet carries (or even on
         // an empty Payload.None). See their bridge helpers below for the
         // unit conventions.
-        val environmentField: Environment? = data.environment?.toWire()
+        //
+        // Wire type is `TAKEnvironment` (not `Environment`) to avoid
+        // colliding with SwiftUI's `@Environment` in iOS consumers.
+        val environmentField: TAKEnvironment? = data.environment?.toWire()
         val sensorFovField: SensorFov? = data.sensorFov?.toWire()
 
         // Enum .fromValue() returns null for out-of-range values — fall back
@@ -527,7 +530,7 @@ object TakPacketV2Serializer {
         )
     }
 
-    // -- Environment <-> wire bridge ------------------------------------------
+    // -- TAKEnvironment <-> wire bridge ---------------------------------------
     //
     // The SDK's EnvironmentData exposes natural units (°C, whole degrees, m/s)
     // with nullable fields to distinguish "not set" from "zero". The wire form
@@ -535,14 +538,19 @@ object TakPacketV2Serializer {
     // into cm/s (×100 uint32) to match TAKPacketV2.speed's unit convention.
     // Absent nullable scalars encode as the proto3 default (0) and decode back
     // to null via the sentinel checks in toData().
+    //
+    // The wire type is `TAKEnvironment` (prefix added to avoid colliding with
+    // SwiftUI's `@Environment` in iOS consumers); the SDK's data class is
+    // still named `EnvironmentData` to match the source `<environment>` CoT
+    // XML element name — only the proto/wire type name changed.
 
-    private fun TakPacketV2Data.EnvironmentData.toWire(): Environment = Environment(
+    private fun TakPacketV2Data.EnvironmentData.toWire(): TAKEnvironment = TAKEnvironment(
         temperature_c_x10 = temperatureCelsius?.let { (it * 10).roundToInt() } ?: 0,
         wind_direction_deg = windDirectionDeg ?: 0,
         wind_speed_cm_s = windSpeedMetersPerSec?.let { (it * 100).roundToInt() } ?: 0,
     )
 
-    private fun Environment.toData(): TakPacketV2Data.EnvironmentData {
+    private fun TAKEnvironment.toData(): TakPacketV2Data.EnvironmentData {
         // Wire scalars are always present (proto3 defaults to 0). Treat an
         // all-zeros field as "not set" on decode — a genuine 0° / 0 m/s wind
         // round-trips as null, which is acceptable for this annotation's
