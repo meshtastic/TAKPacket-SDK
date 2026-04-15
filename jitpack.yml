@@ -1,0 +1,32 @@
+# Build configuration for https://jitpack.io
+#
+# JitPack clones the repo with submodules, runs the `install` step below, and
+# serves the resulting Maven artifacts under the coordinate
+#     com.github.meshtastic:TAKPacket-SDK:<version>
+# where <version> is a git tag, commit SHA, or `master-SNAPSHOT`.
+#
+# Only the Kotlin / KMP module is published through JitPack. The Swift,
+# TypeScript, C#, and Python modules have their own distribution channels
+# (SwiftPM, npm, NuGet, PyPI) so JitPack doesn't need to touch them.
+#
+# The SDK is a kotlin("multiplatform") project with a jvm() target plus iOS
+# native targets. Gradle metadata lets consumers resolve the right variant
+# automatically — Android and desktop JVM pull the `-jvm` classifier,
+# Kotlin/Native consumers pull the `-iosarm64` / `-iossimulatorarm64` klibs.
+
+jdk:
+  - openjdk17
+
+before_install:
+  # Belt-and-suspenders: JitPack already clones with --recurse-submodules
+  # by default, but being explicit here protects against future default
+  # changes. Wire's `sourcePath` points at `../protobufs` relative to
+  # `kotlin/`, so the submodule MUST be initialized before build.
+  - git submodule update --init --recursive
+
+install:
+  # `publishToMavenLocal` emits every KMP variant (metadata + jvm + ios*)
+  # under ~/.m2/repository/, which is where JitPack picks them up. The
+  # `--no-daemon` flag keeps the CI container from hanging on to Gradle
+  # workers after the build completes.
+  - cd kotlin && ./gradlew publishToMavenLocal --no-daemon

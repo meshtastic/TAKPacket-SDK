@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<event version="2.0" uid="tele-01" type="u-d-f-m" time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z" stale="2026-03-16T14:22:10Z" how="h-e">
+  <point lat="9.99900" lon="95.00200" hae="9999999.0" ce="9999999.0" le="9999999.0"/>
+  <detail>
+    <link point="9.99900,95.00350"/>
+    <link point="9.99968,95.00343"/>
+    <link point="10.00021,95.00321"/>
+    <link point="10.00048,95.00288"/>
+    <link point="10.00043,95.00246"/>
+    <link point="10.00006,95.00200"/>
+    <link point="9.99946,95.00154"/>
+    <link point="9.99877,95.00112"/>
+    <link point="9.99812,95.00079"/>
+    <link point="9.99766,95.00057"/>
+    <link point="9.99750,95.00050"/>
+    <link point="9.99766,95.00057"/>
+    <link point="9.99812,95.00079"/>
+    <link point="9.99877,95.00112"/>
+    <link point="9.99946,95.00154"/>
+    <link point="10.00006,95.00200"/>
+    <link point="10.00043,95.00246"/>
+    <link point="10.00048,95.00288"/>
+    <link point="10.00021,95.00321"/>
+    <link point="9.99968,95.00343"/>
+    <link point="9.99900,95.00350"/>
+    <link point="9.99832,95.00343"/>
+    <link point="9.99779,95.00321"/>
+    <link point="9.99752,95.00288"/>
+    <link point="9.99757,95.00246"/>
+    <link point="9.99794,95.00200"/>
+    <link point="9.99854,95.00154"/>
+    <link point="9.99923,95.00112"/>
+    <link point="9.99988,95.00079"/>
+    <link point="10.00034,95.00057"/>
+    <link point="10.00050,95.00050"/>
+    <link point="10.00034,95.00057"/>
+    <link point="9.99988,95.00079"/>
+    <link point="9.99923,95.00112"/>
+    <link point="9.99854,95.00154"/>
+    <link point="9.99794,95.00200"/>
+    <link point="9.99757,95.00246"/>
+    <link point="9.99752,95.00288"/>
+    <link point="9.99779,95.00321"/>
+    <link point="9.99832,95.00343"/>
+    <strokeColor value="-65281"/>
+    <strokeWeight value="2.5"/>
+    <contact callsign="Telestration 1"/>
+    <remarks/>
+    <archive/>
+    <labels_on value="false"/>
+    <precisionlocation altsrc="???"/>
+  </detail>
+</event>

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RollForward>LatestMajor</RollForward>
+    <Version>0.1.0</Version>
+    <PackageId>Meshtastic.TAK</PackageId>
+    <Authors>Meshtastic</Authors>
+    <Description>CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic</Description>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/meshtastic/TAKPacket-SDK</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/meshtastic/TAKPacket-SDK</RepositoryUrl>
+    <PackageTags>tak;meshtastic;cot;protobuf;compression</PackageTags>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.34.1" />
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\Resources\dict_non_aircraft.zstd" Pack="true" PackagePath="content" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\Resources\dict_aircraft.zstd" Pack="true" PackagePath="content" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
