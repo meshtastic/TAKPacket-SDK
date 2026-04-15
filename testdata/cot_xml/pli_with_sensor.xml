@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="ANDROID-0000000000000007" type="a-f-G-U-C" how="m-g" time="2026-03-15T16:12:00Z" start="2026-03-15T16:12:00Z" stale="2026-03-15T16:12:45Z">
+  <point lat="34.05200" lon="-118.24370" hae="89.0" ce="9.9" le="9999999"/>
+  <detail><takv os="34" version="5.0.0.0" device="Pixel 8" platform="ATAK-CIV"/><contact endpoint="*:-1:stcp" callsign="OBSERVER-07"/><uid Droid="OBSERVER-07"/><precisionlocation altsrc="GPS" geopointsrc="GPS"/><__group role="ForwardObserver" name="Green"/><status battery="76"/><track speed="0.0" course="0.0"/><environment temperature="22.5" windDirection="270" windSpeed="12.0"/><sensor azimuth="45" range="2500" fov="45" vfov="30" elevation="-5" model="FLIR-Boson-640"/></detail>
+</event>

@@ -1,5 +1,6 @@
 package org.meshtastic.tak
 
+import kotlin.math.roundToInt
 import okio.ByteString.Companion.toByteString
 import org.meshtastic.proto.AircraftTrack
 import org.meshtastic.proto.CasevacReport
@@ -8,12 +9,14 @@ import org.meshtastic.proto.CotHow
 import org.meshtastic.proto.CotType
 import org.meshtastic.proto.DrawnShape
 import org.meshtastic.proto.EmergencyAlert
+import org.meshtastic.proto.Environment
 import org.meshtastic.proto.GeoChat
 import org.meshtastic.proto.GeoPointSource
 import org.meshtastic.proto.Marker
 import org.meshtastic.proto.MemberRole
 import org.meshtastic.proto.RangeAndBearing
 import org.meshtastic.proto.Route
+import org.meshtastic.proto.SensorFov
 import org.meshtastic.proto.TAKPacketV2
 import org.meshtastic.proto.TaskRequest
 import org.meshtastic.proto.Team
@@ -256,6 +259,13 @@ object TakPacketV2Serializer {
             is TakPacketV2Data.Payload.None -> { /* all oneof fields stay null */ }
         }
 
+        // Payload-agnostic annotations — Environment and SensorFov ride
+        // alongside whatever payload_variant the packet carries (or even on
+        // an empty Payload.None). See their bridge helpers below for the
+        // unit conventions.
+        val environmentField: Environment? = data.environment?.toWire()
+        val sensorFovField: SensorFov? = data.sensorFov?.toWire()
+
         // Enum .fromValue() returns null for out-of-range values — fall back
         // to the "unspecified" sentinel for each enum. See the class KDoc.
         val packet = TAKPacketV2(
@@ -285,6 +295,10 @@ object TakPacketV2Serializer {
             phone = data.phone,
             cot_type_str = data.cotTypeStr ?: "",
             remarks = data.remarks,
+            // Payload-agnostic annotations (optional proto3 fields; null when
+            // the source packet had no <environment> / <sensor> element).
+            environment = environmentField,
+            sensor_fov = sensorFovField,
             // Oneof payload_variant — exactly one non-null (or all null for None)
             pli = pliField,
             chat = chatField,
@@ -507,7 +521,78 @@ object TakPacketV2Serializer {
             endpoint = proto.endpoint,
             phone = proto.phone,
             remarks = proto.remarks,
+            environment = proto.environment?.toData(),
+            sensorFov = proto.sensor_fov?.toData(),
             payload = payload,
+        )
+    }
+
+    // -- Environment <-> wire bridge ------------------------------------------
+    //
+    // The SDK's EnvironmentData exposes natural units (°C, whole degrees, m/s)
+    // with nullable fields to distinguish "not set" from "zero". The wire form
+    // packs temperature into deci-degrees Celsius (×10 sint32) and wind speed
+    // into cm/s (×100 uint32) to match TAKPacketV2.speed's unit convention.
+    // Absent nullable scalars encode as the proto3 default (0) and decode back
+    // to null via the sentinel checks in toData().
+
+    private fun TakPacketV2Data.EnvironmentData.toWire(): Environment = Environment(
+        temperature_c_x10 = temperatureCelsius?.let { (it * 10).roundToInt() } ?: 0,
+        wind_direction_deg = windDirectionDeg ?: 0,
+        wind_speed_cm_s = windSpeedMetersPerSec?.let { (it * 100).roundToInt() } ?: 0,
+    )
+
+    private fun Environment.toData(): TakPacketV2Data.EnvironmentData {
+        // Wire scalars are always present (proto3 defaults to 0). Treat an
+        // all-zeros field as "not set" on decode — a genuine 0° / 0 m/s wind
+        // round-trips as null, which is acceptable for this annotation's
+        // semantics (the element is optional and a reading of exactly zero
+        // is indistinguishable from "absent" in CoT anyway).
+        //
+        // Temperature is the one exception: 0°C is a meaningful reading. The
+        // distinction between "0°C" and "not set" is preserved by the source
+        // XML carrying the attribute; once it's in the proto form we can't
+        // tell them apart cheaply without a synthetic oneof. We choose to
+        // preserve 0 as "freezing" here since cold-weather ops are the
+        // primary use case for temperature data.
+        return TakPacketV2Data.EnvironmentData(
+            temperatureCelsius = temperature_c_x10 / 10.0,
+            windDirectionDeg = if (wind_direction_deg == 0) null else wind_direction_deg,
+            windSpeedMetersPerSec = if (wind_speed_cm_s == 0) null else wind_speed_cm_s / 100.0,
+        )
+    }
+
+    // -- SensorFov <-> wire bridge --------------------------------------------
+
+    private fun TakPacketV2Data.SensorFovData.toWire(): SensorFov = SensorFov(
+        type = SensorFov.SensorType.fromValue(type.value)
+            ?: SensorFov.SensorType.SensorType_Unspecified,
+        azimuth_deg = azimuthDeg,
+        range_m = rangeMeters,
+        fov_horizontal_deg = fovHorizontalDeg,
+        fov_vertical_deg = fovVerticalDeg ?: 0,
+        elevation_deg = elevationDeg,
+        roll_deg = rollDeg ?: 0,
+        model = model ?: "",
+    )
+
+    private fun SensorFov.toData(): TakPacketV2Data.SensorFovData {
+        return TakPacketV2Data.SensorFovData(
+            type = TakPacketV2Data.SensorFovData.SensorType.fromValue(type.value),
+            azimuthDeg = azimuth_deg,
+            rangeMeters = range_m,
+            fovHorizontalDeg = fov_horizontal_deg,
+            // A 0 vertical FOV is meaningless (a degenerate cone), so treat
+            // it as "not set" and let the receiver fall back to horizontal.
+            fovVerticalDeg = if (fov_vertical_deg == 0) null else fov_vertical_deg,
+            elevationDeg = elevation_deg,
+            // Roll genuinely can be 0 (a level camera) — however the proto
+            // default collapses "not set" into 0 anyway, so we can't tell
+            // them apart post-encode. We preserve 0 as null to match the
+            // common ATAK-CIV default behavior where roll is typically
+            // absent rather than explicitly zero.
+            rollDeg = if (roll_deg == 0) null else roll_deg,
+            model = model.ifEmpty { null },
         )
     }
 }

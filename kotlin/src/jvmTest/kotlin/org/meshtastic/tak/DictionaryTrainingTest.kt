@@ -217,6 +217,61 @@ class DictionaryTrainingTest {
             count++
         }
 
+        // === Environment / SensorFov annotation samples (50) ===
+        //
+        // Env + SensorFov attach to any payload_variant and were added in the
+        // v2.x "takv2_geometry" proto revision. The dictionary produced at the
+        // time this code was written has ZERO env/sensor exposure — so the
+        // wire cost of those fields is currently ~all raw bytes + zstd's
+        // intra-frame LZ77 back-refs. This corpus block seeds the next retrain
+        // with enough variety (tag bytes at fields 25/26, common sensor models,
+        // typical temperature and wind varints) for the learned dict to pick
+        // up real substring patterns. Until retraining happens these samples
+        // affect NOTHING on the wire — they only materialize when someone
+        // actually re-runs `zstd --train` against the regenerated corpus.
+        //
+        // We emit the annotations on PLI envelopes (the most common real-world
+        // carrier) and mix in a handful of markers to expose the dict to the
+        // alternate tag context. Half the samples set both Environment and
+        // SensorFov; a quarter set Environment only; a quarter SensorFov only.
+        val sensorModels = listOf(
+            "FLIR-Boson-640", "FLIR-Boson-320", "SEEK-Reveal", "DJI-H20T",
+            "Canon-EOS-R5", "Teledyne-Micro", "L3-Harris-LRF", "PVS-14",
+            "PVS-31", "Vector23", "unknown", "",
+        )
+        repeat(50) { i ->
+            // Randomize which annotation(s) are set so the dict sees both
+            // fields independently and together.
+            val setEnv = i % 4 != 3                    // 3/4 of samples
+            val setSensor = i % 4 != 2                 // 3/4 of samples
+            val envEl = if (setEnv) {
+                val temp = "%.1f".format(rng.nextDouble(-20.0, 40.0))
+                val windDir = rng.nextInt(0, 360)
+                val windSpeed = "%.1f".format(rng.nextDouble(0.0, 25.0))
+                """<environment temperature="$temp" windDirection="$windDir" windSpeed="$windSpeed"/>"""
+            } else ""
+            val sensorEl = if (setSensor) {
+                val az = rng.nextInt(0, 360)
+                val range = rng.nextInt(50, 5000)
+                val fov = rng.nextInt(10, 120)
+                val vfov = rng.nextInt(10, 90)
+                val elev = rng.nextInt(-45, 46)
+                val model = sensorModels.random(rng)
+                val modelAttr = if (model.isNotEmpty()) """ model="$model"""" else ""
+                """<sensor azimuth="$az" range="$range" fov="$fov" vfov="$vfov" elevation="$elev"$modelAttr/>"""
+            } else ""
+            // Mostly PLI envelopes; every 7th sample uses a marker envelope
+            // so the dict also learns the env/sensor bytes following a marker
+            // tag rather than only after PLI.
+            val xml = if (i % 7 == 0) {
+                """<event version="2.0" uid="${randUid()}" type="b-m-p-s-m" how="h-g-i-g-o" time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z" stale="2026-03-16T14:22:10Z"><point lat="${randLat()}" lon="${randLon()}" hae="${randAlt()}" ce="9999999" le="9999999"/><detail><contact callsign="${randCallsign()}"/><color argb="${randArgb()}"/><usericon iconsetpath="COT_MAPPING_SPOTMAP/b-m-p-s-m/-65536"/>$envEl$sensorEl</detail></event>"""
+            } else {
+                """<event version="2.0" uid="ANDROID-${"%016x".format(rng.nextLong())}" type="a-f-G-U-C" how="${if (rng.nextBoolean()) "h-e" else "m-g"}" time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z" stale="2026-03-15T14:24:10Z"><point lat="${randLat()}" lon="${randLon()}" hae="${randAlt()}" ce="9999999" le="9999999"/><detail><contact callsign="${randCallsign()}" endpoint="0.0.0.0:4242:tcp"/><__group role="${randRole()}" name="${randTeam()}"/><status battery="${randBat()}"/><track speed="${randSpeed()}" course="${randCourse()}"/><uid Droid="${randCallsign()}"/>$envEl$sensorEl</detail></event>"""
+            }
+            writeSample("envsensor_$i", xml)
+            count++
+        }
+
         println("Generated $count training samples in ${outputDir.absolutePath}")
         println("Total size: ${outputDir.listFiles()?.sumOf { it.length() } ?: 0} bytes")
     }
