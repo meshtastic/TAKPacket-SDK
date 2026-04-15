@@ -1,5 +1,6 @@
 package org.meshtastic.tak
 
+import kotlin.math.roundToInt
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
@@ -152,14 +153,14 @@ class RoundTripTest {
         assertEquals(CotTypeMapper.COTTYPE_A_F_G_U_C, packet.cotTypeId)
         assertEquals(CotTypeMapper.COTHOW_M_G, packet.how)
         assertEquals("testnode", packet.callsign)
-        assertEquals((37.7749 * 1e7).toInt(), packet.latitudeI)
-        assertEquals((-122.4194 * 1e7).toInt(), packet.longitudeI)
+        assertEquals((33.1284 * 1e7).roundToInt(), packet.latitudeI)
+        assertEquals((-107.2528 * 1e7).roundToInt(), packet.longitudeI)
     }
 
     @Test
     fun `rectangle with space-after-comma link points preserves longitudes`() {
-        // Regression: iTAK emits <link point="34.804, -92.468"/> with a space
-        // after the comma. Kotlin's toDoubleOrNull() returns null for " -92.468"
+        // Regression: iTAK emits <link point="33.130, -107.249"/> with a space
+        // after the comma. Kotlin's toDoubleOrNull() returns null for " -107.249"
         // (leading space), zeroing all longitudes and rendering flat shapes.
         val xml = loadFixture("drawing_rectangle_itak.xml")
         val packet = parser.parse(xml)
@@ -167,10 +168,10 @@ class RoundTripTest {
             "Should be DrawnShape, got ${packet.payload}")
         val shape = packet.payload as TakPacketV2Data.Payload.DrawnShape
         assertEquals(4, shape.vertices.size, "Rectangle must have 4 vertices")
-        // All longitudes must be non-zero (around 95.001-95.003)
+        // All longitudes must be non-zero (around -107.248 to -107.250)
         shape.vertices.forEachIndexed { i, v ->
             assertTrue(v.lonI != 0, "Vertex $i longitude must not be 0 (was ${v.lonI})")
-            assertTrue(v.lonI > 950000000, "Vertex $i longitude should be ~95.00x (was ${v.lonI / 1e7})")
+            assertTrue(v.lonI < -1072000000, "Vertex $i longitude should be ~-107.2x (was ${v.lonI / 1e7})")
         }
 
         // Verify full round-trip preserves the coordinates
