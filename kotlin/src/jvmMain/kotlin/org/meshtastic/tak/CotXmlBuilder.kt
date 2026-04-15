@@ -211,6 +211,31 @@ class CotXmlBuilder {
             sb.append("\n")
         }
 
+        // Environment (weather annotation) — payload-agnostic; emits whenever
+        // any sub-field is set, mirroring the parser's promotion rule.
+        packet.environment?.let { env ->
+            sb.append("    <environment")
+            env.temperatureCelsius?.let { sb.append(""" temperature="$it"""") }
+            env.windDirectionDeg?.let { sb.append(""" windDirection="$it"""") }
+            env.windSpeedMetersPerSec?.let { sb.append(""" windSpeed="$it"""") }
+            sb.append("/>\n")
+        }
+
+        // SensorFov (camera / FLIR / laser cone) — geometry only; receiver
+        // restores visual styling from its own defaults. Always emit the 4
+        // required geometry attributes plus any optional ones that were set.
+        packet.sensorFov?.let { s ->
+            sb.append("    <sensor")
+            sb.append(""" azimuth="${s.azimuthDeg}"""")
+            sb.append(""" range="${s.rangeMeters}"""")
+            sb.append(""" fov="${s.fovHorizontalDeg}"""")
+            s.fovVerticalDeg?.let { sb.append(""" vfov="$it"""") }
+            sb.append(""" elevation="${s.elevationDeg}"""")
+            s.rollDeg?.let { sb.append(""" roll="$it"""") }
+            s.model?.let { sb.append(""" model="${esc(it)}"""") }
+            sb.append("/>\n")
+        }
+
         // Payload-specific detail elements
         when (val payload = packet.payload) {
             is TakPacketV2Data.Payload.Chat -> {

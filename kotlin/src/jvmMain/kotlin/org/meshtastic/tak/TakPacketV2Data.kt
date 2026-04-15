@@ -31,8 +31,82 @@ data class TakPacketV2Data(
     val endpoint: String = "",
     val phone: String = "",
     val remarks: String = "",
+    /**
+     * Observed weather annotation from `<environment>` CoT detail element.
+     * Attaches to any payload variant. `null` means the source XML had no
+     * `<environment>` element — preserved as proto3 `optional` on the wire.
+     */
+    val environment: EnvironmentData? = null,
+    /**
+     * Sensor field-of-view cone from `<sensor>` CoT detail element.
+     * Attaches to any payload variant. `null` means the source XML had no
+     * `<sensor>` element.
+     */
+    val sensorFov: SensorFovData? = null,
     val payload: Payload = Payload.None,
 ) {
+    /**
+     * Weather annotation from a CoT `<environment>` detail element.
+     *
+     * Every field is nullable so senders can emit a partial element (e.g.
+     * just `temperature=` when no wind data is available). On the wire the
+     * proto message is present whenever any sub-field is non-null; absent
+     * scalars encode as the proto3 default (0) and decode back to null via
+     * the serializer's unit-conversion path — see [TakPacketV2Serializer].
+     */
+    data class EnvironmentData(
+        /** Temperature in °C (one-decimal precision on the wire). `null` = not set. */
+        val temperatureCelsius: Double? = null,
+        /** Wind direction "from" in whole degrees, 0–359. `null` = not set. */
+        val windDirectionDeg: Int? = null,
+        /** Wind speed in m/s (two-decimal precision on the wire). `null` = not set. */
+        val windSpeedMetersPerSec: Double? = null,
+    )
+
+    /**
+     * Sensor field-of-view cone from a CoT `<sensor>` detail element.
+     *
+     * Mirrors the 8 geometry attributes that ATAK-CIV's `SensorDetailHandler`
+     * reads from the wire. Visual styling attributes (`fovAlpha`, RGB fill,
+     * stroke color/weight, etc.) are intentionally dropped — the receiving
+     * ATAK client restores them from its own defaults.
+     */
+    data class SensorFovData(
+        /** Coarse sensor category. See [SensorType]. */
+        val type: SensorType = SensorType.Unspecified,
+        /** Cone axis azimuth in whole degrees, 0–359, clockwise from true north. */
+        val azimuthDeg: Int = 270,
+        /** Maximum cone range in whole meters. ATAK-CIV default is 100. */
+        val rangeMeters: Int = 100,
+        /** Horizontal field of view in whole degrees. ATAK-CIV default is 45. */
+        val fovHorizontalDeg: Int = 45,
+        /** Vertical FOV in whole degrees. `null` = not set / use horizontal FOV. */
+        val fovVerticalDeg: Int? = null,
+        /** Elevation angle in whole degrees, -90..+90 (positive = up). */
+        val elevationDeg: Int = 0,
+        /** Roll angle in whole degrees, -180..+180. `null` = not set. */
+        val rollDeg: Int? = null,
+        /** Free-form device model identifier ("FLIR-Boson-640"). `null` = unknown. */
+        val model: String? = null,
+    ) {
+        /** Coarse sensor category inferred from `model` when the source XML doesn't label it. */
+        enum class SensorType(val value: Int) {
+            Unspecified(0),
+            Camera(1),
+            Thermal(2),
+            Laser(3),
+            Nvg(4),
+            Rf(5),
+            Other(6),
+            ;
+
+            companion object {
+                fun fromValue(value: Int): SensorType =
+                    entries.firstOrNull { it.value == value } ?: Unspecified
+            }
+        }
+    }
+
     sealed class Payload {
         object None : Payload()
         data class Pli(val value: Boolean = true) : Payload()

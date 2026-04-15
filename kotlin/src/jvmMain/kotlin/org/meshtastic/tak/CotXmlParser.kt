@@ -328,6 +328,31 @@ class CotXmlParser {
             "Cancelled" to TASK_STATUS_CANCELLED,
             "Canceled" to TASK_STATUS_CANCELLED,
         )
+
+        /**
+         * Heuristic mapping from a sensor's `model` attribute to a coarse
+         * [TakPacketV2Data.SensorFovData.SensorType] category. ATAK-CIV's
+         * `<sensor>` element doesn't carry an explicit type so we infer
+         * from substrings in the free-form model string. Keep the keyword
+         * list tight to avoid mis-classifying unrelated sensors.
+         */
+        internal fun inferSensorType(model: String?): TakPacketV2Data.SensorFovData.SensorType {
+            if (model.isNullOrEmpty()) return TakPacketV2Data.SensorFovData.SensorType.Unspecified
+            val m = model.lowercase()
+            return when {
+                "flir" in m || "thermal" in m || "boson" in m ->
+                    TakPacketV2Data.SensorFovData.SensorType.Thermal
+                "laser" in m || "lrf" in m ->
+                    TakPacketV2Data.SensorFovData.SensorType.Laser
+                "nvg" in m || "night" in m ->
+                    TakPacketV2Data.SensorFovData.SensorType.Nvg
+                "radar" in m || "rf-" in m ->
+                    TakPacketV2Data.SensorFovData.SensorType.Rf
+                "cam" in m || "eo-" in m || "optic" in m ->
+                    TakPacketV2Data.SensorFovData.SensorType.Camera
+                else -> TakPacketV2Data.SensorFovData.SensorType.Other
+            }
+        }
     }
 
     /**
@@ -495,6 +520,13 @@ class CotXmlParser {
         // --- GeoChat receipt accumulators (extend existing chat path) ---
         var chatReceiptForUid = ""
         var chatReceiptType = 0
+
+        // --- Environment / SensorFov annotation accumulators ----------------
+        // These attach to ANY payload variant (not payload-specific), so they
+        // live outside the big payload-priority if/else below and pass through
+        // to the final TakPacketV2Data construction as optional top-level fields.
+        var environmentData: TakPacketV2Data.EnvironmentData? = null
+        var sensorFovData: TakPacketV2Data.SensorFovData? = null
 
         var eventType = parser.eventType
         while (eventType != XmlPullParser.END_DOCUMENT) {
@@ -770,6 +802,52 @@ class CotXmlParser {
                             if (noteAttr.isNotEmpty()) taskNote = noteAttr
                             val assigneeAttr = parser.getAttributeValue(null, "assignee") ?: ""
                             if (assigneeAttr.isNotEmpty()) taskAssigneeUid = assigneeAttr
+                        }
+                        // --- Environment (weather annotation) --------------
+                        // ATAK-CIV writes: <environment temperature="22.5"
+                        //   windDirection="270" windSpeed="12.0"/>
+                        // All three attributes are optional; at least one
+                        // being present promotes the element onto the wire.
+                        "environment" -> {
+                            val temp = parser.getAttributeValue(null, "temperature")?.toDoubleOrNull()
+                            val windDir = parser.getAttributeValue(null, "windDirection")?.toIntOrNull()
+                            val windSpeed = parser.getAttributeValue(null, "windSpeed")?.toDoubleOrNull()
+                            if (temp != null || windDir != null || windSpeed != null) {
+                                environmentData = TakPacketV2Data.EnvironmentData(
+                                    temperatureCelsius = temp,
+                                    windDirectionDeg = windDir,
+                                    windSpeedMetersPerSec = windSpeed,
+                                )
+                            }
+                        }
+                        // --- SensorFov (camera/FLIR/laser cone) -------------
+                        // ATAK-CIV writes: <sensor azimuth="45" range="2500"
+                        //   fov="45" vfov="30" elevation="-5" roll="0"
+                        //   model="FLIR-Boson-640" fovAlpha="0.3" ... />
+                        // We only capture the geometry attributes; the RGBA
+                        // / stroke / display-flag attributes are dropped
+                        // (receiver-side render hints — see atak.proto).
+                        "sensor" -> {
+                            val model = parser.getAttributeValue(null, "model")
+                            sensorFovData = TakPacketV2Data.SensorFovData(
+                                type = inferSensorType(model),
+                                // ATAK-CIV defaults from SensorDetailHandler.java —
+                                // preserve them so senders that rely on defaults
+                                // still round-trip without emitting extra attrs.
+                                azimuthDeg = parser.getAttributeValue(null, "azimuth")
+                                    ?.toDoubleOrNull()?.roundToInt() ?: 270,
+                                rangeMeters = parser.getAttributeValue(null, "range")
+                                    ?.toDoubleOrNull()?.roundToInt() ?: 100,
+                                fovHorizontalDeg = parser.getAttributeValue(null, "fov")
+                                    ?.toDoubleOrNull()?.roundToInt() ?: 45,
+                                fovVerticalDeg = parser.getAttributeValue(null, "vfov")
+                                    ?.toDoubleOrNull()?.roundToInt(),
+                                elevationDeg = parser.getAttributeValue(null, "elevation")
+                                    ?.toDoubleOrNull()?.roundToInt() ?: 0,
+                                rollDeg = parser.getAttributeValue(null, "roll")
+                                    ?.toDoubleOrNull()?.roundToInt(),
+                                model = model,
+                            )
                         }
                         // --- Generic link: the most overloaded element in CoT
                         "link" -> {
@@ -1130,6 +1208,8 @@ class CotXmlParser {
             endpoint = endpoint,
             phone = phone,
             remarks = if (hasChatData) "" else remarksText,
+            environment = environmentData,
+            sensorFov = sensorFovData,
             payload = payload,
         )
     }

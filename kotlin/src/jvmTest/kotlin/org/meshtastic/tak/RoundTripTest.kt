@@ -214,6 +214,70 @@ class RoundTripTest {
     }
 
     @Test
+    fun `PLI with sensor parses environment and sensor annotations`() {
+        // <environment> + <sensor> are payload-agnostic annotations that attach
+        // to any TAKPacketV2, so pli_with_sensor.xml is a PLI envelope that
+        // carries both extensions in its <detail> block. Validates that the
+        // parser, serializer, and deserializer all honor the new proto fields.
+        val xml = loadFixture("pli_with_sensor.xml")
+        val packet = parser.parse(xml)
+
+        // Envelope still classifies as PLI — Environment/SensorFov don't
+        // perturb payload_variant dispatch.
+        assertTrue(packet.payload is TakPacketV2Data.Payload.Pli)
+
+        // Environment: 22.5°C, wind from 270° at 12.0 m/s
+        val env = packet.environment
+        assertNotNull(env, "environment should be populated")
+        assertEquals(22.5, env!!.temperatureCelsius)
+        assertEquals(270, env.windDirectionDeg)
+        assertEquals(12.0, env.windSpeedMetersPerSec)
+
+        // SensorFov: FLIR cone pointing NE, 2.5 km range, 45° horizontal,
+        // 30° vertical, tilted 5° down. Roll intentionally unset.
+        val s = packet.sensorFov
+        assertNotNull(s, "sensorFov should be populated")
+        assertEquals(TakPacketV2Data.SensorFovData.SensorType.Thermal, s!!.type)
+        assertEquals(45, s.azimuthDeg)
+        assertEquals(2500, s.rangeMeters)
+        assertEquals(45, s.fovHorizontalDeg)
+        assertEquals(30, s.fovVerticalDeg)
+        assertEquals(-5, s.elevationDeg)
+        assertNull(s.rollDeg, "roll was not set in the fixture")
+        assertEquals("FLIR-Boson-640", s.model)
+
+        // Full compress → decompress round-trip preserves every annotation
+        // field. Temperature survives as 22.5 (225 deci-deg ÷ 10), wind speed
+        // as 12.0 (1200 cm/s ÷ 100), angles as-is.
+        val wire = compressor.compress(packet)
+        val rt = compressor.decompress(wire)
+
+        assertNotNull(rt.environment)
+        assertEquals(22.5, rt.environment!!.temperatureCelsius)
+        assertEquals(270, rt.environment!!.windDirectionDeg)
+        assertEquals(12.0, rt.environment!!.windSpeedMetersPerSec)
+
+        assertNotNull(rt.sensorFov)
+        assertEquals(TakPacketV2Data.SensorFovData.SensorType.Thermal, rt.sensorFov!!.type)
+        assertEquals(45, rt.sensorFov!!.azimuthDeg)
+        assertEquals(2500, rt.sensorFov!!.rangeMeters)
+        assertEquals(45, rt.sensorFov!!.fovHorizontalDeg)
+        assertEquals(30, rt.sensorFov!!.fovVerticalDeg)
+        assertEquals(-5, rt.sensorFov!!.elevationDeg)
+        assertNull(rt.sensorFov!!.rollDeg)
+        assertEquals("FLIR-Boson-640", rt.sensorFov!!.model)
+
+        // The rebuilt CoT XML must carry both the <environment> and <sensor>
+        // elements; downstream TAK clients rely on them to render weather
+        // annotations and FOV cones on the map.
+        val rebuilt = builder.build(rt)
+        assertTrue(rebuilt.contains("<environment"), "rebuilt XML must re-emit <environment>")
+        assertTrue(rebuilt.contains("""temperature="22.5""""), "rebuilt XML must preserve temperature")
+        assertTrue(rebuilt.contains("<sensor"), "rebuilt XML must re-emit <sensor>")
+        assertTrue(rebuilt.contains("""model="FLIR-Boson-640""""), "rebuilt XML must preserve sensor model")
+    }
+
+    @Test
     fun `GeoChat parses message and recipients`() {
         val xml = loadFixture("geochat_simple.xml")
         val packet = parser.parse(xml)
