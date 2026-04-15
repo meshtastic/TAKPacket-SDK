@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meshtastic-tak"
+version = "0.1.0"
+description = "CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic"
+requires-python = ">=3.9"
+license = {text = "GPL-3.0-or-later"}
+dependencies = [
+    "protobuf>=5.29.0",
+    "zstandard>=0.23.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "build",
+]
+
+[project.urls]
+Homepage = "https://github.com/meshtastic/TAKPacket-SDK"
+Repository = "https://github.com/meshtastic/TAKPacket-SDK"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+meshtastic_tak = ["../../resources/*.zstd"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

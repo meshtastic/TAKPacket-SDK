@@ -1,0 +1,1076 @@
+import Foundation
+
+/// Parses a CoT XML event string into a TAKPacketV2 protobuf message.
+public class CotXmlParser: NSObject, XMLParserDelegate {
+
+    /// Vertex pool cap — matches `*DrawnShape.vertices max_count:32` in atak.options.
+    /// Longer vertex lists are truncated and `truncated = true` is set.
+    public static let maxVertices = 32
+
+    /// Route link pool cap — matches `*Route.links max_count:16` in atak.options.
+    public static let maxRouteLinks = 16
+
+    private static let teamNameToEnum: [String: Team] = [
+        "White": .white, "Yellow": .yellow, "Orange": .orange, "Magenta": .magenta,
+        "Red": .red, "Maroon": .maroon, "Purple": .purple, "Dark Blue": .darkBlue,
+        "Blue": .blue, "Cyan": .cyan, "Teal": .teal, "Green": .green,
+        "Dark Green": .darkGreen, "Brown": .brown,
+    ]
+
+    private static let roleNameToEnum: [String: MemberRole] = [
+        "Team Member": .teamMember, "Team Lead": .teamLead, "HQ": .hq,
+        "Sniper": .sniper, "Medic": .medic, "ForwardObserver": .forwardObserver,
+        "RTO": .rto, "K9": .k9,
+    ]
+
+    private static let routeMethodMap: [String: Route.Method] = [
+        "Driving": .driving, "Walking": .walking, "Flying": .flying,
+        "Swimming": .swimming, "Watercraft": .watercraft,
+    ]
+
+    private static let routeDirectionMap: [String: Route.Direction] = [
+        "Infil": .infil, "Exfil": .exfil,
+    ]
+
+    private static let bearingRefMap: [String: UInt32] = [
+        "M": 1, "T": 2, "G": 3,
+    ]
+
+    /// Scale a latitude degree value into protobuf's `sfixed32 latitude_i = lat * 1e7`
+    /// representation, clamping to the legal ±90° range first. Without the clamp,
+    /// malformed XML (`lat="500"`) would multiply to 5e9 and trap on the Int32
+    /// cast, producing a crash instead of a graceful degrade.
+    private static func scaleLatitudeI(_ lat: Double) -> Int32 {
+        let clamped = max(-90.0, min(90.0, lat))
+        return Int32((clamped * 1e7).rounded())
+    }
+
+    /// Scale a longitude degree value into `sfixed32 longitude_i`, clamped to ±180°.
+    private static func scaleLongitudeI(_ lon: Double) -> Int32 {
+        let clamped = max(-180.0, min(180.0, lon))
+        return Int32((clamped * 1e7).rounded())
+    }
+
+    // State during parsing
+    private var packet = TAKPacketV2()
+    private var cotTypeStr = ""
+    private var currentElement = ""
+    private var currentText = ""
+    private var hasAircraftData = false
+    private var hasChatData = false
+    private var remarksText = ""
+    private var icao = ""
+    private var registration = ""
+    private var flight = ""
+    private var aircraftType = ""
+    private var squawk: UInt32 = 0
+    private var category = ""
+    private var rssiX10: Int32 = 0
+    private var gps = false
+    private var cotHostId = ""
+    private var chatTo: String?
+    private var chatToCallsign: String?
+    private var timeStr = ""
+    private var staleStr = ""
+    private var inRemarks = false
+
+    // --- Drawn shape accumulators --------------------------------------
+    private var hasShapeData = false
+    private var inShape = false
+    private var shapeMajorCm: UInt32 = 0
+    private var shapeMinorCm: UInt32 = 0
+    private var shapeAngleDeg: UInt32 = 360
+    private var sawStrokeColor = false
+    private var sawFillColor = false
+    // ARGB stored as UInt32 to match the proto-generated `fixed32 _argb`
+    // field type. Parsed from ATAK's signed decimal via Int32 → UInt32
+    // bit-pattern conversion.
+    private var strokeColorArgb: UInt32 = 0
+    private var strokeWeightX10: UInt32 = 0
+    private var fillColorArgb: UInt32 = 0
+    private var labelsOn = false
+    /// Accumulated absolute vertex coordinates. Converted to delta-from-event
+    /// at the end of parse() before being attached to the DrawnShape proto.
+    private var verticesAbs: [(Int32, Int32)] = []
+    private var verticesTruncated = false
+
+    // --- Bullseye accumulators ------------------------------------------
+    private var bullseyeDistanceDm: UInt32 = 0
+    private var bullseyeBearingRef: UInt32 = 0
+    private var bullseyeFlags: UInt32 = 0
+    private var bullseyeUidRef = ""
+
+    // --- Marker accumulators --------------------------------------------
+    private var hasMarkerData = false
+    private var markerColorArgb: UInt32 = 0
+    private var markerReadiness = false
+    private var markerParentUid = ""
+    private var markerParentType = ""
+    private var markerParentCallsign = ""
+    private var markerIconset = ""
+
+    // --- Range and bearing accumulators ---------------------------------
+    private var hasRabData = false
+    private var rabAnchorLatI: Int32 = 0
+    private var rabAnchorLonI: Int32 = 0
+    private var rabAnchorUid = ""
+    private var rabRangeCm: UInt32 = 0
+    private var rabBearingCdeg: UInt32 = 0
+
+    // --- Route accumulators ---------------------------------------------
+    // Holds ABSOLUTE lat/lon during parsing — converted to deltas relative
+    // to the event anchor at the end of parse().
+    private struct RouteLinkAbs {
+        var latI: Int32
+        var lonI: Int32
+        var uid: String
+        var callsign: String
+        var linkType: UInt32
+    }
+    private var hasRouteData = false
+    private var routeLinksAbs: [RouteLinkAbs] = []
+    private var routeTruncated = false
+    private var routePrefix = ""
+    private var routeMethod: Route.Method = .unspecified
+    private var routeDirection: Route.Direction = .unspecified
+
+    // --- CasevacReport accumulators ------------------------------------
+    private var hasCasevacData = false
+    private var casevacPrecedence: CasevacReport.Precedence = .unspecified
+    private var casevacEquipmentFlags: UInt32 = 0
+    private var casevacLitterPatients: UInt32 = 0
+    private var casevacAmbulatoryPatients: UInt32 = 0
+    private var casevacSecurity: CasevacReport.Security = .unspecified
+    private var casevacHlzMarking: CasevacReport.HlzMarking = .unspecified
+    private var casevacZoneMarker = ""
+    private var casevacUsMilitary: UInt32 = 0
+    private var casevacUsCivilian: UInt32 = 0
+    private var casevacNonUsMilitary: UInt32 = 0
+    private var casevacNonUsCivilian: UInt32 = 0
+    private var casevacEpw: UInt32 = 0
+    private var casevacChild: UInt32 = 0
+    private var casevacTerrainFlags: UInt32 = 0
+    private var casevacFrequency = ""
+    // v2.x medline extensions
+    private var casevacTitle = ""
+    private var casevacMedlineRemarks = ""
+    private var casevacUrgentCount: UInt32 = 0
+    private var casevacUrgentSurgicalCount: UInt32 = 0
+    private var casevacPriorityCount: UInt32 = 0
+    private var casevacRoutineCount: UInt32 = 0
+    private var casevacConvenienceCount: UInt32 = 0
+    private var casevacEquipmentDetail = ""
+    private var casevacZoneProtectedCoord = ""
+    private var casevacTerrainSlopeDir = ""
+    private var casevacTerrainOtherDetail = ""
+    private var casevacMarkedBy = ""
+    private var casevacObstacles = ""
+    private var casevacWindsAreFrom = ""
+    private var casevacFriendlies = ""
+    private var casevacEnemy = ""
+    private var casevacHlzRemarks = ""
+    private var casevacZmist: [ZMistEntry] = []
+
+    // --- EmergencyAlert accumulators -----------------------------------
+    private var hasEmergencyData = false
+    private var emergencyTypeValue: EmergencyAlert.TypeEnum = .unspecified
+    private var emergencyAuthoringUid = ""
+    private var emergencyCancelReferenceUid = ""
+
+    // --- TaskRequest accumulators --------------------------------------
+    private var hasTaskData = false
+    private var taskTypeTag = ""
+    private var taskTargetUid = ""
+    private var taskAssigneeUid = ""
+    private var taskPriority: TaskRequest.Priority = .unspecified
+    private var taskStatus: TaskRequest.Status = .unspecified
+    private var taskNote = ""
+
+    // --- GeoChat receipt accumulators ----------------------------------
+    private var chatReceiptForUid = ""
+    private var chatReceiptTypeValue: GeoChat.ReceiptType = .none
+
+    public func parse(_ cotXml: String) -> TAKPacketV2 {
+        // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
+        let lower = cotXml.lowercased()
+        if lower.contains("<!doctype") || lower.contains("<!entity") {
+            return TAKPacketV2()  // Return empty packet for malicious input
+        }
+
+        // Reset state
+        packet = TAKPacketV2()
+        cotTypeStr = ""
+        hasAircraftData = false
+        hasChatData = false
+        remarksText = ""
+        icao = ""; registration = ""; flight = ""; aircraftType = ""
+        squawk = 0; category = ""; rssiX10 = 0; gps = false; cotHostId = ""
+        chatTo = nil; chatToCallsign = nil
+        timeStr = ""; staleStr = ""
+        inRemarks = false
+        // --- Reset typed geometry accumulators ---
+        hasShapeData = false
+        inShape = false
+        shapeMajorCm = 0; shapeMinorCm = 0; shapeAngleDeg = 360
+        sawStrokeColor = false; sawFillColor = false
+        strokeColorArgb = 0; strokeWeightX10 = 0; fillColorArgb = 0
+        labelsOn = false
+        verticesAbs = []; verticesTruncated = false
+        bullseyeDistanceDm = 0; bullseyeBearingRef = 0; bullseyeFlags = 0; bullseyeUidRef = ""
+        hasMarkerData = false
+        markerColorArgb = 0; markerReadiness = false
+        markerParentUid = ""; markerParentType = ""; markerParentCallsign = ""; markerIconset = ""
+        hasRabData = false
+        rabAnchorLatI = 0; rabAnchorLonI = 0; rabAnchorUid = ""
+        rabRangeCm = 0; rabBearingCdeg = 0
+        hasRouteData = false
+        routeLinksAbs = []; routeTruncated = false
+        routePrefix = ""
+        routeMethod = .unspecified; routeDirection = .unspecified
+        // --- Reset expanded variant accumulators ---
+        hasCasevacData = false
+        casevacPrecedence = .unspecified
+        casevacEquipmentFlags = 0
+        casevacLitterPatients = 0
+        casevacAmbulatoryPatients = 0
+        casevacSecurity = .unspecified
+        casevacHlzMarking = .unspecified
+        casevacZoneMarker = ""
+        casevacUsMilitary = 0
+        casevacUsCivilian = 0
+        casevacNonUsMilitary = 0
+        casevacNonUsCivilian = 0
+        casevacEpw = 0
+        casevacChild = 0
+        casevacTerrainFlags = 0
+        casevacFrequency = ""
+        casevacTitle = ""
+        casevacMedlineRemarks = ""
+        casevacUrgentCount = 0
+        casevacUrgentSurgicalCount = 0
+        casevacPriorityCount = 0
+        casevacRoutineCount = 0
+        casevacConvenienceCount = 0
+        casevacEquipmentDetail = ""
+        casevacZoneProtectedCoord = ""
+        casevacTerrainSlopeDir = ""
+        casevacTerrainOtherDetail = ""
+        casevacMarkedBy = ""
+        casevacObstacles = ""
+        casevacWindsAreFrom = ""
+        casevacFriendlies = ""
+        casevacEnemy = ""
+        casevacHlzRemarks = ""
+        casevacZmist = []
+        hasEmergencyData = false
+        emergencyTypeValue = .unspecified
+        emergencyAuthoringUid = ""
+        emergencyCancelReferenceUid = ""
+        hasTaskData = false
+        taskTypeTag = ""; taskTargetUid = ""; taskAssigneeUid = ""
+        taskPriority = .unspecified; taskStatus = .unspecified; taskNote = ""
+        chatReceiptForUid = ""
+        chatReceiptTypeValue = .none
+
+        guard let data = cotXml.data(using: .utf8) else { return packet }
+        let parser = XMLParser(data: data)
+        parser.delegate = self
+        parser.parse()
+
+        // Parse aircraft data from remarks if ICAO not yet found
+        if icao.isEmpty, !remarksText.isEmpty {
+            if let match = remarksText.range(of: #"ICAO:\s*([A-Fa-f0-9]{6})"#, options: .regularExpression) {
+                hasAircraftData = true
+                let fullMatch = String(remarksText[match])
+                icao = String(fullMatch.suffix(6))
+
+                if let regMatch = remarksText.range(of: #"REG:\s*(\S+)"#, options: .regularExpression) {
+                    registration = String(remarksText[regMatch]).replacingOccurrences(of: "REG: ", with: "").trimmingCharacters(in: .whitespaces)
+                }
+                if let fltMatch = remarksText.range(of: #"Flight:\s*(\S+)"#, options: .regularExpression) {
+                    flight = String(remarksText[fltMatch]).replacingOccurrences(of: "Flight: ", with: "").trimmingCharacters(in: .whitespaces)
+                }
+                if let typeMatch = remarksText.range(of: #"Type:\s*(\S+)"#, options: .regularExpression) {
+                    aircraftType = String(remarksText[typeMatch]).replacingOccurrences(of: "Type: ", with: "").trimmingCharacters(in: .whitespaces)
+                }
+                if let sqkMatch = remarksText.range(of: #"Squawk:\s*(\d+)"#, options: .regularExpression) {
+                    let sqkStr = String(remarksText[sqkMatch]).replacingOccurrences(of: "Squawk: ", with: "").trimmingCharacters(in: .whitespaces)
+                    squawk = UInt32(sqkStr) ?? 0
+                }
+                if category.isEmpty, let catMatch = remarksText.range(of: #"Category:\s*(\S+)"#, options: .regularExpression) {
+                    category = String(remarksText[catMatch]).replacingOccurrences(of: "Category: ", with: "").trimmingCharacters(in: .whitespaces)
+                }
+            }
+        }
+
+        // Compute stale seconds
+        packet.staleSeconds = computeStaleSeconds(timeStr, staleStr)
+
+        // Derive the stroke/fill/both discriminator from what we observed.
+        let shapeStyle: DrawnShape.StyleMode
+        if sawStrokeColor && sawFillColor {
+            shapeStyle = .strokeAndFill
+        } else if sawStrokeColor {
+            shapeStyle = .strokeOnly
+        } else if sawFillColor {
+            shapeStyle = .fillOnly
+        } else {
+            shapeStyle = .unspecified
+        }
+
+        // CoT-type-based payload fallback classification for events that
+        // don't carry explicit detail elements (e.g. a minimal emergency
+        // alert with only <contact> + <remarks>, or a casevac with only
+        // <contact> + <remarks> but no <_medevac_> element).
+        if !hasEmergencyData && cotTypeStr.hasPrefix("b-a-") {
+            hasEmergencyData = true
+            if emergencyTypeValue == .unspecified {
+                emergencyTypeValue = Self.emergencyTypeFromCotType(cotTypeStr)
+            }
+        }
+        if !hasCasevacData && cotTypeStr == "b-r-f-h-c" {
+            hasCasevacData = true
+        }
+
+        // Delete events (t-x-d-d) short-circuit everything — their <link>
+        // references what to delete, not a marker parent.
+        let isDeleteEvent = cotTypeStr == "t-x-d-d"
+
+        // Payload priority: delete > chat > aircraft > route > rab > shape >
+        // marker > casevac > emergency > task > pli.
+        if isDeleteEvent {
+            packet.pli = true
+        } else if hasChatData {
+            var chat = GeoChat()
+            chat.message = remarksText
+            if let to = chatTo { chat.to = to }
+            if let toCs = chatToCallsign { chat.toCallsign = toCs }
+            if !chatReceiptForUid.isEmpty {
+                chat.receiptForUid = chatReceiptForUid
+            }
+            if chatReceiptTypeValue != .none {
+                chat.receiptType = chatReceiptTypeValue
+            }
+            packet.chat = chat
+        } else if hasAircraftData {
+            var aircraft = AircraftTrack()
+            aircraft.icao = icao
+            aircraft.registration = registration
+            aircraft.flight = flight
+            aircraft.aircraftType = aircraftType
+            aircraft.squawk = squawk
+            aircraft.category = category
+            aircraft.rssiX10 = rssiX10
+            aircraft.gps = gps
+            aircraft.cotHostID = cotHostId
+            packet.aircraft = aircraft
+        } else if hasRouteData && !routeLinksAbs.isEmpty {
+            var route = Route()
+            route.method = routeMethod
+            route.direction = routeDirection
+            route.prefix = routePrefix
+            route.strokeWeightX10 = strokeWeightX10
+            route.links = routeLinksAbs.map { abs in
+                var link = Route.Link()
+                var gp = CotGeoPoint()
+                gp.latDeltaI = abs.latI - packet.latitudeI
+                gp.lonDeltaI = abs.lonI - packet.longitudeI
+                link.point = gp
+                link.uid = abs.uid
+                link.callsign = abs.callsign
+                link.linkType = abs.linkType
+                return link
+            }
+            route.truncated = routeTruncated
+            packet.route = route
+        } else if hasRabData {
+            var rab = RangeAndBearing()
+            var anchor = CotGeoPoint()
+            anchor.latDeltaI = rabAnchorLatI - packet.latitudeI
+            anchor.lonDeltaI = rabAnchorLonI - packet.longitudeI
+            rab.anchor = anchor
+            rab.anchorUid = rabAnchorUid
+            rab.rangeCm = rabRangeCm
+            rab.bearingCdeg = rabBearingCdeg
+            rab.strokeColor = AtakPalette.argbToTeam(strokeColorArgb)
+            rab.strokeArgb = strokeColorArgb
+            rab.strokeWeightX10 = strokeWeightX10
+            packet.rab = rab
+        } else if hasShapeData {
+            var shape = DrawnShape()
+            shape.kind = shapeKindFromCotType(cotTypeStr)
+            shape.style = shapeStyle
+            shape.majorCm = shapeMajorCm
+            shape.minorCm = shapeMinorCm
+            shape.angleDeg = shapeAngleDeg
+            shape.strokeColor = AtakPalette.argbToTeam(strokeColorArgb)
+            shape.strokeArgb = strokeColorArgb
+            shape.strokeWeightX10 = strokeWeightX10
+            shape.fillColor = AtakPalette.argbToTeam(fillColorArgb)
+            shape.fillArgb = fillColorArgb
+            shape.labelsOn = labelsOn
+            // Apply delta encoding relative to the event anchor.
+            shape.vertices = verticesAbs.map { (lat, lon) in
+                var gp = CotGeoPoint()
+                gp.latDeltaI = lat - packet.latitudeI
+                gp.lonDeltaI = lon - packet.longitudeI
+                return gp
+            }
+            shape.truncated = verticesTruncated
+            shape.bullseyeDistanceDm = bullseyeDistanceDm
+            shape.bullseyeBearingRef = bullseyeBearingRef
+            shape.bullseyeFlags = bullseyeFlags
+            shape.bullseyeUidRef = bullseyeUidRef
+            packet.shape = shape
+        } else if hasMarkerData {
+            var marker = Marker()
+            marker.kind = markerKindFromCotType(cotTypeStr, iconset: markerIconset)
+            marker.color = AtakPalette.argbToTeam(markerColorArgb)
+            marker.colorArgb = markerColorArgb
+            marker.readiness = markerReadiness
+            marker.parentUid = markerParentUid
+            marker.parentType = markerParentType
+            marker.parentCallsign = markerParentCallsign
+            marker.iconset = markerIconset
+            packet.marker = marker
+        } else if hasCasevacData {
+            var c = CasevacReport()
+            c.precedence = casevacPrecedence
+            c.equipmentFlags = casevacEquipmentFlags
+            c.litterPatients = casevacLitterPatients
+            c.ambulatoryPatients = casevacAmbulatoryPatients
+            c.security = casevacSecurity
+            c.hlzMarking = casevacHlzMarking
+            c.zoneMarker = casevacZoneMarker
+            c.usMilitary = casevacUsMilitary
+            c.usCivilian = casevacUsCivilian
+            c.nonUsMilitary = casevacNonUsMilitary
+            c.nonUsCivilian = casevacNonUsCivilian
+            c.epw = casevacEpw
+            c.child = casevacChild
+            c.terrainFlags = casevacTerrainFlags
+            c.frequency = casevacFrequency
+            // v2.x medline extensions
+            c.title = casevacTitle
+            c.medlineRemarks = casevacMedlineRemarks
+            c.urgentCount = casevacUrgentCount
+            c.urgentSurgicalCount = casevacUrgentSurgicalCount
+            c.priorityCount = casevacPriorityCount
+            c.routineCount = casevacRoutineCount
+            c.convenienceCount = casevacConvenienceCount
+            c.equipmentDetail = casevacEquipmentDetail
+            c.zoneProtectedCoord = casevacZoneProtectedCoord
+            c.terrainSlopeDir = casevacTerrainSlopeDir
+            c.terrainOtherDetail = casevacTerrainOtherDetail
+            c.markedBy = casevacMarkedBy
+            c.obstacles = casevacObstacles
+            c.windsAreFrom = casevacWindsAreFrom
+            c.friendlies = casevacFriendlies
+            c.enemy = casevacEnemy
+            c.hlzRemarks = casevacHlzRemarks
+            c.zmist = casevacZmist
+            packet.casevac = c
+        } else if hasEmergencyData {
+            var e = EmergencyAlert()
+            e.type = (emergencyTypeValue != .unspecified)
+                ? emergencyTypeValue
+                : Self.emergencyTypeFromCotType(cotTypeStr)
+            e.authoringUid = emergencyAuthoringUid
+            e.cancelReferenceUid = emergencyCancelReferenceUid
+            packet.emergency = e
+        } else if hasTaskData {
+            var t = TaskRequest()
+            t.taskType = taskTypeTag
+            t.targetUid = taskTargetUid
+            t.assigneeUid = taskAssigneeUid
+            t.priority = taskPriority
+            t.status = taskStatus
+            t.note = taskNote
+            packet.task = t
+        } else {
+            packet.pli = true
+        }
+
+        // Populate top-level remarks for non-chat types
+        if !hasChatData && !remarksText.isEmpty {
+            packet.remarks = remarksText
+        }
+
+        return packet
+    }
+
+    // MARK: - Typed geometry classifiers
+
+    private func shapeKindFromCotType(_ t: String) -> DrawnShape.Kind {
+        switch t {
+        case "u-d-c-c": return .circle
+        case "u-d-r": return .rectangle
+        case "u-d-f": return .freeform
+        case "u-d-f-m": return .telestration
+        case "u-d-p": return .polygon
+        case "u-r-b-c-c": return .rangingCircle
+        case "u-r-b-bullseye": return .bullseye
+        case "u-d-c-e": return .ellipse
+        case "u-d-v": return .vehicle2D
+        case "u-d-v-m": return .vehicle3D
+        default: return .unspecified
+        }
+    }
+
+    /// Derive a Marker.Kind from CoT type + iconset path. When the CoT
+    /// type alone is ambiguous (e.g. `a-u-G` could be 2525 or custom icon),
+    /// the iconset path disambiguates.
+    private func markerKindFromCotType(_ cotType: String, iconset: String) -> Marker.Kind {
+        switch cotType {
+        case "b-m-p-s-m": return .spot
+        case "b-m-p-w": return .waypoint
+        case "b-m-p-c": return .checkpoint
+        case "b-m-p-s-p-i", "b-m-p-s-p-loc": return .selfPosition
+        case "b-m-p-w-GOTO": return .goToPoint
+        case "b-m-p-c-ip": return .initialPoint
+        case "b-m-p-c-cp": return .contactPoint
+        case "b-m-p-s-p-op": return .observationPost
+        case "b-i-x-i": return .imageMarker
+        default:
+            if iconset.hasPrefix("COT_MAPPING_2525B") { return .symbol2525 }
+            if iconset.hasPrefix("COT_MAPPING_SPOTMAP") { return .spotMap }
+            if !iconset.isEmpty { return .customIcon }
+            return .unspecified
+        }
+    }
+
+    // MARK: - Expanded variant reverse lookups
+
+    private static let precedenceMap: [String: CasevacReport.Precedence] = [
+        "A": .urgent, "URGENT": .urgent, "Urgent": .urgent,
+        "B": .urgentSurgical, "URGENT SURGICAL": .urgentSurgical, "Urgent Surgical": .urgentSurgical,
+        "C": .priority, "PRIORITY": .priority, "Priority": .priority,
+        "D": .routine, "ROUTINE": .routine, "Routine": .routine,
+        "E": .convenience, "CONVENIENCE": .convenience, "Convenience": .convenience,
+    ]
+
+    private static let hlzMarkingMap: [String: CasevacReport.HlzMarking] = [
+        "Panels": .panels, "Pyro": .pyroSignal, "Pyrotechnic": .pyroSignal,
+        "Smoke": .smoke, "None": .none, "Other": .other,
+    ]
+
+    private static let securityMap: [String: CasevacReport.Security] = [
+        "N": .noEnemy, "No Enemy": .noEnemy,
+        "P": .possibleEnemy, "Possible Enemy": .possibleEnemy,
+        "E": .enemyInArea, "Enemy In Area": .enemyInArea,
+        "X": .enemyInArmedContact, "Enemy In Armed Contact": .enemyInArmedContact,
+    ]
+
+    /// Parse an enum-valued CASEVAC attribute that can appear in either string
+    /// form ("N", "Urgent", "Panels") OR numeric enum-index form ("1", "2", "3").
+    /// Newer ATAK / iTAK emits the numeric form; older clients and spec examples
+    /// use the string form. Both must round-trip.
+    private static func parsePrecedence(_ raw: String?) -> CasevacReport.Precedence {
+        guard let raw = raw, !raw.isEmpty else { return .unspecified }
+        if let mapped = precedenceMap[raw] { return mapped }
+        if let asInt = Int(raw), let fromRaw = CasevacReport.Precedence(rawValue: asInt) { return fromRaw }
+        return .unspecified
+    }
+
+    private static func parseSecurity(_ raw: String?) -> CasevacReport.Security {
+        guard let raw = raw, !raw.isEmpty else { return .unspecified }
+        if let mapped = securityMap[raw] { return mapped }
+        if let asInt = Int(raw), let fromRaw = CasevacReport.Security(rawValue: asInt) { return fromRaw }
+        return .unspecified
+    }
+
+    private static func parseHlzMarking(_ raw: String?) -> CasevacReport.HlzMarking {
+        guard let raw = raw, !raw.isEmpty else { return .unspecified }
+        if let mapped = hlzMarkingMap[raw] { return mapped }
+        if let asInt = Int(raw), let fromRaw = CasevacReport.HlzMarking(rawValue: asInt) { return fromRaw }
+        return .unspecified
+    }
+
+    private static let emergencyTypeMap: [String: EmergencyAlert.TypeEnum] = [
+        "911 Alert": .alert911, "911": .alert911,
+        "Ring The Bell": .ringTheBell, "Ring the Bell": .ringTheBell,
+        "In Contact": .inContact, "Troops In Contact": .inContact,
+        "Geo-fence Breached": .geoFenceBreached, "Geo Fence Breached": .geoFenceBreached,
+        "Custom": .custom, "Cancel": .cancel,
+    ]
+
+    private static func emergencyTypeFromCotType(_ cotType: String) -> EmergencyAlert.TypeEnum {
+        switch cotType {
+        case "b-a-o-tbl": return .alert911
+        case "b-a-o-pan": return .ringTheBell
+        case "b-a-o-opn": return .inContact
+        case "b-a-g": return .geoFenceBreached
+        case "b-a-o-c": return .custom
+        case "b-a-o-can": return .cancel
+        default: return .unspecified
+        }
+    }
+
+    private static let taskPriorityMap: [String: TaskRequest.Priority] = [
+        "Low": .low, "Normal": .normal, "Medium": .normal,
+        "High": .high, "Critical": .critical,
+    ]
+
+    private static let taskStatusMap: [String: TaskRequest.Status] = [
+        "Pending": .pending, "Acknowledged": .acknowledged,
+        "InProgress": .inProgress, "In Progress": .inProgress,
+        "Completed": .completed, "Done": .completed,
+        "Cancelled": .cancelled, "Canceled": .cancelled,
+    ]
+
+    // MARK: - XMLParserDelegate
+
+    public func parser(_ parser: XMLParser, didStartElement name: String,
+                       namespaceURI: String?, qualifiedName: String?,
+                       attributes: [String: String] = [:]) {
+        currentElement = name
+        currentText = ""
+
+        switch name {
+        case "event":
+            packet.uid = attributes["uid"] ?? ""
+            cotTypeStr = attributes["type"] ?? ""
+            packet.cotTypeID = CotTypeMapper.typeToEnum(cotTypeStr)
+            if packet.cotTypeID == .other { packet.cotTypeStr = cotTypeStr }
+            packet.how = CotTypeMapper.howToEnum(attributes["how"] ?? "")
+            timeStr = attributes["time"] ?? ""
+            staleStr = attributes["stale"] ?? ""
+
+        case "point":
+            let lat = Double(attributes["lat"] ?? "0") ?? 0
+            let lon = Double(attributes["lon"] ?? "0") ?? 0
+            let hae = Double(attributes["hae"] ?? "0") ?? 0
+            packet.latitudeI = Self.scaleLatitudeI(lat)
+            packet.longitudeI = Self.scaleLongitudeI(lon)
+            packet.altitude = Int32(hae)
+
+        case "contact":
+            packet.callsign = attributes["callsign"] ?? ""
+            // Normalize default TAK endpoints to empty — saves ~20 wire bytes
+            if let ep = attributes["endpoint"], ep != "0.0.0.0:4242:tcp" && ep != "*:-1:stcp" {
+                packet.endpoint = ep
+            }
+            if let ph = attributes["phone"] { packet.phone = ph }
+
+        case "__group":
+            if let teamName = attributes["name"] {
+                packet.team = Self.teamNameToEnum[teamName] ?? .unspecifedColor
+            }
+            if let roleName = attributes["role"] {
+                packet.role = Self.roleNameToEnum[roleName] ?? .unspecifed
+            }
+
+        case "status":
+            let bat = UInt32(attributes["battery"] ?? "0") ?? 0
+            if bat > 0 { packet.battery = bat }
+            if attributes["readiness"] == "true" { markerReadiness = true }
+
+        case "track":
+            // ATAK stationary targets emit speed="-1.0" / course="-1.0" as a
+            // sentinel for "unknown / not moving". The proto field is uint32
+            // (cm/s for speed, degrees×100 for course), so a naive
+            // UInt32(spd * 100) call on a negative Double traps with
+            // "value cannot be converted to UInt32". Clamp to 0 and round
+            // to preserve precision on legitimate positive values.
+            let spd = Double(attributes["speed"] ?? "0") ?? 0
+            let crs = Double(attributes["course"] ?? "0") ?? 0
+            packet.speed = UInt32(max(0, (spd * 100).rounded()))
+            packet.course = UInt32(max(0, (crs * 100).rounded()))
+
+        case "takv":
+            packet.takVersion = attributes["version"] ?? ""
+            packet.takDevice = attributes["device"] ?? ""
+            packet.takPlatform = attributes["platform"] ?? ""
+            packet.takOs = attributes["os"] ?? ""
+
+        case "precisionlocation":
+            packet.geoSrc = parseGeoSrc(attributes["geopointsrc"])
+            packet.altSrc = parseGeoSrc(attributes["altsrc"])
+
+        case "uid", "UID":
+            if let droid = attributes["Droid"] { packet.deviceCallsign = droid }
+
+        case "_radio":
+            if let rssiStr = attributes["rssi"], let rssi = Double(rssiStr) {
+                rssiX10 = Int32(rssi * 10)
+                hasAircraftData = true
+            }
+            gps = attributes["gps"] == "true"
+
+        case "_aircot_":
+            hasAircraftData = true
+            icao = attributes["icao"] ?? ""
+            registration = attributes["reg"] ?? ""
+            flight = attributes["flight"] ?? ""
+            category = attributes["cat"] ?? ""
+            cotHostId = attributes["cot_host_id"] ?? ""
+
+        case "__chat":
+            hasChatData = true
+            chatToCallsign = attributes["senderCallsign"]
+            let chatId = attributes["id"]
+            // "All Chat Rooms" is the broadcast sentinel — omit from proto
+            // so the field costs 0 bytes on the wire instead of 16.
+            chatTo = (chatId == "All Chat Rooms") ? nil : chatId
+
+        case "link":
+            handleLink(attributes: attributes)
+
+        case "remarks":
+            inRemarks = true
+
+        // --- Drawn shape elements --------------------------------------
+        case "shape":
+            hasShapeData = true
+            inShape = true
+
+        case "ellipse":
+            if inShape {
+                let majorM = Double(attributes["major"] ?? "0") ?? 0
+                let minorM = Double(attributes["minor"] ?? "0") ?? 0
+                shapeMajorCm = UInt32(max(0, majorM * 100))
+                shapeMinorCm = UInt32(max(0, minorM * 100))
+                if let a = attributes["angle"], let ai = UInt32(a) {
+                    shapeAngleDeg = ai
+                }
+                hasShapeData = true
+            }
+
+        case "strokeColor":
+            sawStrokeColor = true
+            if let v = Int32(attributes["value"] ?? "0") {
+                strokeColorArgb = UInt32(bitPattern: v)
+            }
+            hasShapeData = true
+
+        case "strokeWeight":
+            let w = Double(attributes["value"] ?? "0") ?? 0
+            strokeWeightX10 = UInt32(max(0, w * 10))
+            hasShapeData = true
+
+        case "fillColor":
+            sawFillColor = true
+            if let v = Int32(attributes["value"] ?? "0") {
+                fillColorArgb = UInt32(bitPattern: v)
+            }
+            hasShapeData = true
+
+        case "labels_on":
+            labelsOn = attributes["value"] == "true"
+
+        // --- Marker elements -------------------------------------------
+        case "color":
+            if let v = Int32(attributes["argb"] ?? "0") {
+                markerColorArgb = UInt32(bitPattern: v)
+            }
+            hasMarkerData = true
+
+        case "usericon":
+            markerIconset = attributes["iconsetpath"] ?? ""
+            if !markerIconset.isEmpty { hasMarkerData = true }
+
+        // --- Bullseye --------------------------------------------------
+        case "bullseye":
+            hasShapeData = true
+            let dist = Double(attributes["distance"] ?? "0") ?? 0
+            bullseyeDistanceDm = UInt32(max(0, dist * 10))
+            bullseyeBearingRef = Self.bearingRefMap[attributes["bearingRef"] ?? ""] ?? 0
+            var flags: UInt32 = 0
+            if attributes["rangeRingVisible"] == "true" { flags |= 0x01 }
+            if attributes["hasRangeRings"] == "true" { flags |= 0x02 }
+            if attributes["edgeToCenter"] == "true" { flags |= 0x04 }
+            if attributes["mils"] == "true" { flags |= 0x08 }
+            bullseyeFlags = flags
+            bullseyeUidRef = attributes["bullseyeUID"] ?? ""
+
+        // --- Range and bearing -----------------------------------------
+        case "range":
+            let v = Double(attributes["value"] ?? "0") ?? 0
+            rabRangeCm = UInt32(max(0, v * 100))
+            hasRabData = true
+
+        case "bearing":
+            let v = Double(attributes["value"] ?? "0") ?? 0
+            rabBearingCdeg = UInt32(max(0, v * 100))
+            hasRabData = true
+
+        // --- Route -----------------------------------------------------
+        case "__routeinfo":
+            hasRouteData = true
+
+        case "link_attr":
+            hasRouteData = true
+            routePrefix = attributes["prefix"] ?? ""
+            routeMethod = Self.routeMethodMap[attributes["method"] ?? ""] ?? .unspecified
+            routeDirection = Self.routeDirectionMap[attributes["direction"] ?? ""] ?? .unspecified
+            if let sw = attributes["stroke"], let swi = UInt32(sw), swi > 0 {
+                strokeWeightX10 = swi * 10
+            }
+
+        // --- CasevacReport --------------------------------------------
+        case "_medevac_":
+            hasCasevacData = true
+            casevacPrecedence = Self.parsePrecedence(attributes["precedence"])
+            var eq: UInt32 = 0
+            if attributes["none"] == "true" { eq |= 0x01 }
+            if attributes["hoist"] == "true" { eq |= 0x02 }
+            if attributes["extraction_equipment"] == "true" { eq |= 0x04 }
+            if attributes["ventilator"] == "true" { eq |= 0x08 }
+            if attributes["blood"] == "true" { eq |= 0x10 }
+            if attributes["equipment_other"] == "true" { eq |= 0x20 }
+            casevacEquipmentFlags = eq
+            casevacLitterPatients = UInt32(attributes["litter"] ?? "0") ?? 0
+            casevacAmbulatoryPatients = UInt32(attributes["ambulatory"] ?? "0") ?? 0
+            casevacSecurity = Self.parseSecurity(attributes["security"])
+            casevacHlzMarking = Self.parseHlzMarking(attributes["hlz_marking"])
+            casevacZoneMarker = attributes["zone_prot_marker"] ?? ""
+            casevacUsMilitary = UInt32(attributes["us_military"] ?? "0") ?? 0
+            casevacUsCivilian = UInt32(attributes["us_civilian"] ?? "0") ?? 0
+            // Both `non_us_military` (older) and `nonus_military` (newer) spellings exist.
+            casevacNonUsMilitary = UInt32(attributes["non_us_military"] ?? attributes["nonus_military"] ?? "0") ?? 0
+            casevacNonUsCivilian = UInt32(attributes["non_us_civilian"] ?? attributes["nonus_civilian"] ?? "0") ?? 0
+            casevacEpw = UInt32(attributes["epw"] ?? "0") ?? 0
+            casevacChild = UInt32(attributes["child"] ?? "0") ?? 0
+            var tf: UInt32 = 0
+            if attributes["terrain_slope"] == "true" { tf |= 0x01 }
+            if attributes["terrain_rough"] == "true" { tf |= 0x02 }
+            if attributes["terrain_loose"] == "true" { tf |= 0x04 }
+            if attributes["terrain_trees"] == "true" { tf |= 0x08 }
+            if attributes["terrain_wires"] == "true" { tf |= 0x10 }
+            if attributes["terrain_other"] == "true" { tf |= 0x20 }
+            casevacTerrainFlags = tf
+            casevacFrequency = attributes["freq"] ?? ""
+            // --- v2.x medline extensions ---------------------------------
+            casevacTitle = attributes["title"] ?? ""
+            casevacMedlineRemarks = attributes["medline_remarks"] ?? ""
+            casevacUrgentCount = UInt32(attributes["urgent"] ?? "0") ?? 0
+            casevacUrgentSurgicalCount = UInt32(attributes["urgent_surgical"] ?? "0") ?? 0
+            casevacPriorityCount = UInt32(attributes["priority"] ?? "0") ?? 0
+            casevacRoutineCount = UInt32(attributes["routine"] ?? "0") ?? 0
+            casevacConvenienceCount = UInt32(attributes["convenience"] ?? "0") ?? 0
+            casevacEquipmentDetail = attributes["equipment_detail"] ?? ""
+            casevacZoneProtectedCoord = attributes["zone_protected_coord"] ?? ""
+            casevacTerrainSlopeDir = attributes["terrain_slope_dir"] ?? ""
+            casevacTerrainOtherDetail = attributes["terrain_other_detail"] ?? ""
+            casevacMarkedBy = attributes["marked_by"] ?? ""
+            casevacObstacles = attributes["obstacles"] ?? ""
+            casevacWindsAreFrom = attributes["winds_are_from"] ?? ""
+            casevacFriendlies = attributes["friendlies"] ?? ""
+            casevacEnemy = attributes["enemy"] ?? ""
+            casevacHlzRemarks = attributes["hlz_remarks"] ?? ""
+
+        // <zMist> inside <zMistsMap> inside <_medevac_> — one entry per patient
+        case "zMist":
+            if hasCasevacData {
+                var entry = ZMistEntry()
+                entry.title = attributes["title"] ?? ""
+                entry.z = attributes["z"] ?? ""
+                entry.m = attributes["m"] ?? ""
+                entry.i = attributes["i"] ?? ""
+                entry.s = attributes["s"] ?? ""
+                entry.t = attributes["t"] ?? ""
+                casevacZmist.append(entry)
+            }
+
+        // --- EmergencyAlert -------------------------------------------
+        case "emergency":
+            hasEmergencyData = true
+            let typeAttr = attributes["type"] ?? ""
+            if let mapped = Self.emergencyTypeMap[typeAttr] {
+                emergencyTypeValue = mapped
+            } else {
+                emergencyTypeValue = Self.emergencyTypeFromCotType(cotTypeStr)
+            }
+            if attributes["cancel"] == "true" {
+                emergencyTypeValue = .cancel
+            }
+
+        // --- TaskRequest ----------------------------------------------
+        case "task", "_task_":
+            hasTaskData = true
+            taskTypeTag = attributes["type"] ?? ""
+            taskPriority = Self.taskPriorityMap[attributes["priority"] ?? ""] ?? .unspecified
+            taskStatus = Self.taskStatusMap[attributes["status"] ?? ""] ?? .unspecified
+            if let noteAttr = attributes["note"], !noteAttr.isEmpty {
+                taskNote = noteAttr
+            }
+            if let assigneeAttr = attributes["assignee"], !assigneeAttr.isEmpty {
+                taskAssigneeUid = assigneeAttr
+            }
+
+        default:
+            break
+        }
+    }
+
+    /// Handle a `<link>` element — the most overloaded tag in CoT XML.
+    /// Disambiguates by event cotType and attributes to route to the
+    /// appropriate accumulator (route waypoint, RAB anchor, shape vertex,
+    /// or marker parent link).
+    private func handleLink(attributes: [String: String]) {
+        let linkUidAttr = attributes["uid"]
+        let pointAttr = attributes["point"]
+        let linkType = attributes["type"] ?? ""
+        let relation = attributes["relation"] ?? ""
+        let linkCallsign = attributes["callsign"] ?? ""
+        let parentCallsign = attributes["parent_callsign"] ?? ""
+
+        // Ignore style links nested inside <shape> (type="b-x-KmlStyle").
+        // Their uid ends in ".Style" and they carry styling, not geometry.
+        let isStyleLink = linkType.hasPrefix("b-x-KmlStyle") ||
+            (linkUidAttr?.hasSuffix(".Style") ?? false)
+        if isStyleLink { return }
+
+        if let pt = pointAttr {
+            let parts = pt.split(separator: ",")
+            guard parts.count >= 2 else { return }
+            // Trim whitespace — iTAK uses "lat, lon" with a space after comma
+            let plat = Double(parts[0].trimmingCharacters(in: .whitespaces)) ?? 0
+            let plon = Double(parts[1].trimmingCharacters(in: .whitespaces)) ?? 0
+            let plati = Self.scaleLatitudeI(plat)
+            let ploni = Self.scaleLongitudeI(plon)
+
+            // u-rb-a is the ONLY type whose <link> is the range/bearing
+            // anchor. Check cotType first so a ranging-line link never
+            // escalates to a one-waypoint "route".
+            if cotTypeStr == "u-rb-a" {
+                if rabAnchorLatI == 0 && rabAnchorLonI == 0 {
+                    rabAnchorLatI = plati
+                    rabAnchorLonI = ploni
+                    if let u = linkUidAttr { rabAnchorUid = u }
+                }
+                hasRabData = true
+            } else if (linkType == "b-m-p-w" || linkType == "b-m-p-c") && cotTypeStr == "b-m-r" {
+                if routeLinksAbs.count < Self.maxRouteLinks {
+                    routeLinksAbs.append(RouteLinkAbs(
+                        latI: plati, lonI: ploni,
+                        uid: linkUidAttr ?? "",
+                        callsign: linkCallsign,
+                        linkType: linkType == "b-m-p-c" ? 1 : 0
+                    ))
+                } else {
+                    routeTruncated = true
+                }
+                hasRouteData = true
+            } else {
+                // Shape vertex
+                if verticesAbs.count < Self.maxVertices {
+                    verticesAbs.append((plati, ploni))
+                    hasShapeData = true
+                } else {
+                    verticesTruncated = true
+                }
+            }
+        } else if let u = linkUidAttr, relation == "p-p", !linkType.isEmpty {
+            // Chat receipt: the p-p link on a b-t-f-d / b-t-f-r event
+            // references the original message UID being acknowledged.
+            if cotTypeStr == "b-t-f-d" || cotTypeStr == "b-t-f-r" {
+                if chatReceiptForUid.isEmpty {
+                    chatReceiptForUid = u
+                }
+                chatReceiptTypeValue = (cotTypeStr == "b-t-f-d") ? .delivered : .read
+                hasChatData = true
+            } else if cotTypeStr == "t-s" {
+                if taskTargetUid.isEmpty {
+                    taskTargetUid = u
+                }
+                hasTaskData = true
+            } else if cotTypeStr.hasPrefix("b-a-") {
+                if linkType.hasPrefix("b-a-") {
+                    if emergencyCancelReferenceUid.isEmpty {
+                        emergencyCancelReferenceUid = u
+                    }
+                } else {
+                    if emergencyAuthoringUid.isEmpty {
+                        emergencyAuthoringUid = u
+                    }
+                }
+                hasEmergencyData = true
+            } else if cotTypeStr.hasPrefix("a-f-G-U-C") ||
+                      cotTypeStr == "t-x-d-d" ||
+                      cotTypeStr == "b-r-f-h-c" {
+                // Skip marker detection when:
+                // - cotType is a PLI (a-f-G-U-C / a-f-G-U-C-I) — the link is a self-ref, not a parent
+                // - cotType is a delete event (t-x-d-d) — the link references what to delete
+                // - cotType is casevac (b-r-f-h-c) — the link is the patient's parent ref, not a marker
+                // Don't set hasMarkerData — these types have their own classification.
+            } else {
+                // Marker parent link: no point attribute, p-p relation.
+                markerParentUid = u
+                markerParentType = linkType
+                if !parentCallsign.isEmpty {
+                    markerParentCallsign = parentCallsign
+                }
+                hasMarkerData = true
+            }
+        }
+    }
+
+    public func parser(_ parser: XMLParser, foundCharacters string: String) {
+        if inRemarks {
+            currentText += string
+        }
+    }
+
+    public func parser(_ parser: XMLParser, didEndElement name: String,
+                       namespaceURI: String?, qualifiedName: String?) {
+        if name == "remarks" {
+            remarksText = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
+            inRemarks = false
+        } else if name == "shape" {
+            inShape = false
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func parseGeoSrc(_ src: String?) -> GeoPointSource {
+        switch src {
+        case "GPS": return .gps
+        case "USER": return .user
+        case "NETWORK": return .network
+        default: return .unspecified
+        }
+    }
+
+    /// Extract the inner bytes of the `<detail>` element from a CoT XML
+    /// event, exactly as they appear in the source (no XML normalization,
+    /// no re-escaping).  Useful for callers that want to build a
+    /// `raw_detail` fallback packet alongside the typed packet.
+    ///
+    /// Returns an empty `Data` for events with a self-closing `<detail/>`
+    /// or no `<detail>` at all.  Receivers rehydrate the full event by
+    /// wrapping these bytes in `<detail>…</detail>`, so a byte-for-byte
+    /// extraction is required to keep the round trip loss-free.
+    public func extractRawDetailBytes(_ cotXml: String) -> Data {
+        // Regex with dotAll so .* matches across newlines; case-insensitive
+        // so <DETAIL> also works.  Uses NSRegularExpression since Swift's
+        // native regex literals aren't available on every deployment target.
+        let pattern = "<detail\\b[^>]*>(.*?)</detail\\s*>"
+        let options: NSRegularExpression.Options = [.dotMatchesLineSeparators, .caseInsensitive]
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else {
+            return Data()
+        }
+        let nsRange = NSRange(cotXml.startIndex..., in: cotXml)
+        guard let match = regex.firstMatch(in: cotXml, range: nsRange),
+              match.numberOfRanges >= 2,
+              let innerRange = Range(match.range(at: 1), in: cotXml) else {
+            return Data()
+        }
+        return Data(cotXml[innerRange].utf8)
+    }
+
+    private func computeStaleSeconds(_ timeStr: String, _ staleStr: String) -> UInt32 {
+        guard !timeStr.isEmpty, !staleStr.isEmpty else { return 0 }
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let fmtNoFrac = ISO8601DateFormatter()
+        fmtNoFrac.formatOptions = [.withInternetDateTime]
+
+        guard let time = fmt.date(from: timeStr) ?? fmtNoFrac.date(from: timeStr),
+              let stale = fmt.date(from: staleStr) ?? fmtNoFrac.date(from: staleStr) else { return 0 }
+
+        let diff = stale.timeIntervalSince(time)
+        return diff > 0 ? UInt32(diff) : 0
+    }
+}

@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  kotlin:
+    name: Kotlin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Test
+        working-directory: kotlin
+        # The Kotlin module is now a kotlin("multiplatform") project with a
+        # jvm() target. The top-level `test` task no longer exists — use
+        # `jvmTest` to run the JVM target's tests (equivalent to the old
+        # kotlin("jvm") `test` task). iOS targets are compile-only for now.
+        run: gradle jvmTest --quiet
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: kotlin-test-results
+          path: kotlin/build/reports/tests/
+
+  swift:
+    name: Swift
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - name: Test
+        working-directory: swift
+        run: swift test
+
+  python:
+    name: Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install pytest protobuf zstandard
+      - name: Test
+        working-directory: python
+        run: python -m pytest tests/ -v
+
+  typescript:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: Install deps
+        working-directory: typescript
+        run: rm -f package-lock.json && npm install
+      - name: Test
+        working-directory: typescript
+        run: npx vitest run
+
+  csharp:
+    name: C#
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
+      - name: Test
+        working-directory: csharp
+        run: dotnet test --verbosity normal
