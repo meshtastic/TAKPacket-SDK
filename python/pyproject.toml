@@ -27,7 +27,8 @@ Repository = "https://github.com/meshtastic/TAKPacket-SDK"
 where = ["src"]
 
 [tool.setuptools.package-data]
-meshtastic_tak = ["../../resources/*.zstd"]
+"meshtastic_tak.resources" = ["*.zstd"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]

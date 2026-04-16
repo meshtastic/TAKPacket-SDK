@@ -28,6 +28,12 @@ public class CotXmlBuilder {
         1: "M", 2: "T", 3: "G",
     ]
 
+    // Cached date formatter — ISO8601DateFormatter is expensive to allocate
+    private static let isoFmt: ISO8601DateFormatter = {
+        let fmt = ISO8601DateFormatter()
+        return fmt
+    }()
+
     private static func geoSrcStr(_ src: GeoPointSource) -> String {
         switch src {
         case .gps: return "GPS"
@@ -40,9 +46,9 @@ public class CotXmlBuilder {
     public init() {}
 
     public func build(_ packet: TAKPacketV2) -> String {
-        let now = ISO8601DateFormatter().string(from: Date())
+        let now = Self.isoFmt.string(from: Date())
         let staleSecs = max(Int(packet.staleSeconds), 45)
-        let stale = ISO8601DateFormatter().string(from: Date().addingTimeInterval(TimeInterval(staleSecs)))
+        let stale = Self.isoFmt.string(from: Date().addingTimeInterval(TimeInterval(staleSecs)))
 
         let cotType = CotTypeMapper.typeToString(packet.cotTypeID) ?? packet.cotTypeStr
         let how = CotTypeMapper.howToString(packet.how) ?? "m-g"

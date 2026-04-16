@@ -140,7 +140,7 @@ public class CotXmlBuilder
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         sb.AppendLine($"<event version=\"2.0\" uid=\"{Esc(pkt.Uid)}\" type=\"{Esc(cotType)}\" how=\"{Esc(how)}\" time=\"{timeStr}\" start=\"{timeStr}\" stale=\"{staleStr}\">");
-        sb.AppendLine($"  <point lat=\"{lat}\" lon=\"{lon}\" hae=\"{pkt.Altitude}\" ce=\"9999999\" le=\"9999999\"/>");
+        sb.AppendLine($"  <point lat=\"{F(lat)}\" lon=\"{F(lon)}\" hae=\"{pkt.Altitude}\" ce=\"9999999\" le=\"9999999\"/>");
         sb.AppendLine("  <detail>");
 
         var isRoute = pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route;
@@ -165,7 +165,7 @@ public class CotXmlBuilder
         if (pkt.Battery > 0) sb.AppendLine($"    <status battery=\"{pkt.Battery}\"/>");
 
         if (pkt.Speed > 0 || pkt.Course > 0)
-            sb.AppendLine($"    <track speed=\"{pkt.Speed / 100.0}\" course=\"{pkt.Course / 100.0}\"/>");
+            sb.AppendLine($"    <track speed=\"{F(pkt.Speed / 100.0)}\" course=\"{F(pkt.Course / 100.0)}\"/>");
 
         if (!string.IsNullOrEmpty(pkt.TakVersion) || !string.IsNullOrEmpty(pkt.TakPlatform))
         {
@@ -244,7 +244,7 @@ public class CotXmlBuilder
                 if (pkt.Aircraft.RssiX10 != 0)
                 {
                     var rssi = pkt.Aircraft.RssiX10 / 10.0;
-                    var radioTag = $"    <_radio rssi=\"{rssi}\"";
+                    var radioTag = $"    <_radio rssi=\"{F(rssi)}\"";
                     if (pkt.Aircraft.Gps) radioTag += " gps=\"true\"";
                     sb.AppendLine(radioTag + "/>");
                 }

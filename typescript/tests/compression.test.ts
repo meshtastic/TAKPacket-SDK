@@ -13,7 +13,7 @@ const SYNTHETIC_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <event version="2.0" uid="testnode" type="a-f-G-U-C" how="m-g"
        time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z"
        stale="2026-03-15T14:22:55Z">
-  <point lat="37.7749" lon="-122.4194" hae="100" ce="4.9" le="9999999"/>
+  <point lat="33.1284" lon="-107.2528" hae="100" ce="4.9" le="9999999"/>
   <detail>
     <contact callsign="TESTER"/>
     <uid Droid="testnode"/>

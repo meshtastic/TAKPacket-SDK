@@ -170,8 +170,8 @@ describe("RoundTrip", () => {
     expect(pkt.cotTypeId).toBe(1); // a-f-G-U-C
     expect(pkt.how).toBe(2); // m-g
     expect(pkt.callsign).toBe("testnode");
-    expect(pkt.latitudeI).toBe(Math.round(37.7749 * 1e7));
-    expect(pkt.longitudeI).toBe(Math.round(-122.4194 * 1e7));
+    expect(pkt.latitudeI).toBe(Math.round(33.1284 * 1e7));
+    expect(pkt.longitudeI).toBe(Math.round(-107.2528 * 1e7));
   });
 
   it("parses ADS-B aircraft ICAO", () => {

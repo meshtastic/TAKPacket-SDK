@@ -5,6 +5,12 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
@@ -12,7 +18,6 @@
   },
   "dependencies": {
     "fast-xml-parser": "^5.5.10",
-    "fzstd": "^0.1.1",
     "protobufjs": "^7.4.0",
     "zstd-napi": "^0.0.12"
   },

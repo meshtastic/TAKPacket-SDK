@@ -1,5 +1,7 @@
 """Parses CoT XML event strings into TAKPacketV2 protobuf messages."""
 
+from __future__ import annotations
+
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone

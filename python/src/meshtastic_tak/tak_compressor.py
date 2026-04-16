@@ -1,5 +1,7 @@
 """Compresses TAKPacketV2 protobuf bytes using zstd with pre-trained dictionaries."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 import zstandard
 from . import atak_pb2

@@ -23,7 +23,7 @@ struct RoundTripSuite {
     @Test("full round-trip preserves fields", arguments: TestFixtures.fixtureNames)
     func fullRoundTripPreservesFields(_ fixture: String) throws {
         let xml = try TestFixtures.loadFixture(fixture)
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         #expect(!packet.uid.isEmpty, "UID empty for \(fixture)")
 
         let wirePayload = try compressor.compress(packet)
@@ -84,18 +84,18 @@ final class RoundTripTests: XCTestCase {
 
     func testPliBasicParsesCorrectly() throws {
         let xml = try loadFixture("pli_basic")
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         XCTAssertEqual(packet.uid, "testnode")
         XCTAssertEqual(packet.cotTypeID, .aFGUC)
         XCTAssertEqual(packet.how, .mG)
         XCTAssertEqual(packet.callsign, "testnode")
-        XCTAssertEqual(packet.latitudeI, Int32(37.7749 * 1e7))
-        XCTAssertEqual(packet.longitudeI, Int32(-122.4194 * 1e7))
+        XCTAssertEqual(packet.latitudeI, Int32(round(33.1284 * 1e7)))
+        XCTAssertEqual(packet.longitudeI, Int32(round(-107.2528 * 1e7)))
     }
 
     func testAircraftAdsbParsesIcao() throws {
         let xml = try loadFixture("aircraft_adsb")
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         XCTAssertEqual(packet.cotTypeID, .aNACF)
         guard case .aircraft(let ac) = packet.payloadVariant else {
             XCTFail("Expected aircraft payload"); return
@@ -105,14 +105,14 @@ final class RoundTripTests: XCTestCase {
 
     func testDeleteEventParsesCorrectly() throws {
         let xml = try loadFixture("delete_event")
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         XCTAssertEqual(packet.cotTypeID, .tXDD)
         XCTAssertEqual(packet.how, .hGIGO)
     }
 
     func testGeochatParsesMessage() throws {
         let xml = try loadFixture("geochat_simple")
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         XCTAssertEqual(packet.cotTypeID, .bTF)
         guard case .chat(let chat) = packet.payloadVariant else {
             XCTFail("Expected chat payload"); return
@@ -122,21 +122,21 @@ final class RoundTripTests: XCTestCase {
 
     func testCasevacParsesCorrectly() throws {
         let xml = try loadFixture("casevac")
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         XCTAssertEqual(packet.cotTypeID, .bRFHC)
         XCTAssertEqual(packet.callsign, "CASEVAC-1")
     }
 
     func testAlertTicParsesCorrectly() throws {
         let xml = try loadFixture("alert_tic")
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         XCTAssertEqual(packet.cotTypeID, .bAOOpn)
         XCTAssertEqual(packet.callsign, "ALPHA-6")
     }
 
     func testPliFullParsesAllFields() throws {
         let xml = try loadFixture("pli_full")
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         XCTAssertEqual(packet.cotTypeID, .aFGUC)
         XCTAssertFalse(packet.callsign.isEmpty)
         XCTAssertFalse(packet.takVersion.isEmpty, "takVersion should not be empty")
@@ -154,7 +154,7 @@ final class RoundTripTests: XCTestCase {
         // field is uint32 on all platforms, so the fix is to clamp negatives
         // to 0 rather than wrap them into huge unsigned values.
         let xml = try loadFixture("pli_stationary")
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         XCTAssertEqual(packet.speed, 0, "Negative speed must clamp to 0")
         XCTAssertEqual(packet.course, 0, "Negative course must clamp to 0")
         XCTAssertEqual(packet.callsign, "iPadTAKAware")

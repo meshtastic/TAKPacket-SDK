@@ -1,8 +1,4 @@
 import os
-import sys
-
-# Add src to path so tests can import the package
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 TESTDATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "testdata")
 FIXTURES_DIR = os.path.join(TESTDATA_DIR, "cot_xml")

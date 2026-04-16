@@ -37,7 +37,7 @@ struct CompatibilitySuite {
     func compressedSizeSimilarToGolden(_ name: String) throws {
         guard let golden = TestFixtures.loadGolden(name) else { return }
         let xml = try TestFixtures.loadFixture(name)
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         let wirePayload = try compressor.compress(packet)
         let ratio = Double(wirePayload.count) / Double(golden.count)
         #expect(

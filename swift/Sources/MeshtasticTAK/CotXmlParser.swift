@@ -1,5 +1,12 @@
 import Foundation
 
+/// Errors thrown by `CotXmlParser.parse(_:)`.
+public enum CotXmlParserError: Error {
+    /// The XML contains a DOCTYPE or ENTITY declaration, which is prohibited
+    /// to prevent XXE and entity-expansion attacks.
+    case prohibitedXmlConstruct
+}
+
 /// Parses a CoT XML event string into a TAKPacketV2 protobuf message.
 public class CotXmlParser: NSObject, XMLParserDelegate {
 
@@ -9,6 +16,18 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
     /// Route link pool cap — matches `*Route.links max_count:16` in atak.options.
     public static let maxRouteLinks = 16
+
+    // Cached date formatters — ISO8601DateFormatter is expensive to allocate
+    private static let isoFmtFrac: ISO8601DateFormatter = {
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return fmt
+    }()
+    private static let isoFmtNoFrac: ISO8601DateFormatter = {
+        let fmt = ISO8601DateFormatter()
+        fmt.formatOptions = [.withInternetDateTime]
+        return fmt
+    }()
 
     private static let teamNameToEnum: [String: Team] = [
         "White": .white, "Yellow": .yellow, "Orange": .orange, "Magenta": .magenta,
@@ -190,11 +209,11 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var chatReceiptForUid = ""
     private var chatReceiptTypeValue: GeoChat.ReceiptType = .none
 
-    public func parse(_ cotXml: String) -> TAKPacketV2 {
+    public func parse(_ cotXml: String) throws -> TAKPacketV2 {
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
         let lower = cotXml.lowercased()
         if lower.contains("<!doctype") || lower.contains("<!entity") {
-            return TAKPacketV2()  // Return empty packet for malicious input
+            throw CotXmlParserError.prohibitedXmlConstruct
         }
 
         // Reset state
@@ -1062,13 +1081,9 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
     private func computeStaleSeconds(_ timeStr: String, _ staleStr: String) -> UInt32 {
         guard !timeStr.isEmpty, !staleStr.isEmpty else { return 0 }
-        let fmt = ISO8601DateFormatter()
-        fmt.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let fmtNoFrac = ISO8601DateFormatter()
-        fmtNoFrac.formatOptions = [.withInternetDateTime]
 
-        guard let time = fmt.date(from: timeStr) ?? fmtNoFrac.date(from: timeStr),
-              let stale = fmt.date(from: staleStr) ?? fmtNoFrac.date(from: staleStr) else { return 0 }
+        guard let time = Self.isoFmtFrac.date(from: timeStr) ?? Self.isoFmtNoFrac.date(from: timeStr),
+              let stale = Self.isoFmtFrac.date(from: staleStr) ?? Self.isoFmtNoFrac.date(from: staleStr) else { return 0 }
 
         let diff = stale.timeIntervalSince(time)
         return diff > 0 ? UInt32(diff) : 0

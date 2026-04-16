@@ -19,7 +19,7 @@ struct CompressionSuite {
     @Test("compressed payload fits under LoRa MTU", arguments: TestFixtures.fixtureNames)
     func fitsUnderMtu(_ fixture: String) throws {
         let xml = try TestFixtures.loadFixture(fixture)
-        let packet = parser.parse(xml)
+        let packet = try parser.parse(xml)
         let result = try compressor.compressWithStats(packet)
         // Swift Testing's #expect comment must be a string literal, not a
         // concatenated expression — use a single interpolated literal.
@@ -42,7 +42,7 @@ final class CompressionTests: XCTestCase {
         var totalCompressed = 0
         for fixture in TestFixtures.fixtureNames {
             let xml = try TestFixtures.loadFixture(fixture)
-            let packet = parser.parse(xml)
+            let packet = try parser.parse(xml)
             let result = try compressor.compressWithStats(packet)
             totalXml += xml.count
             totalCompressed += result.compressedSize

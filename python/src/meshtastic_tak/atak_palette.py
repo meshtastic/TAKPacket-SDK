@@ -17,6 +17,8 @@ Values are stored as Python ints in the 0..0xFFFFFFFF range to match the
 proto-generated `fixed32 _argb` field type (unsigned 32-bit).
 """
 
+from __future__ import annotations
+
 #: Sentinel "no palette match" value matching Team.Unspecifed_Color in atak.proto.
 UNSPECIFIED = 0
 

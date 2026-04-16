@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .cot_type_mapper import CotTypeMapper
 from .cot_xml_parser import CotXmlParser
 from .cot_xml_builder import CotXmlBuilder

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Meshtastic.Protobufs;
@@ -50,6 +51,19 @@ public class CotXmlParser
     {
         ["M"] = 1, ["T"] = 2, ["G"] = 3,
     };
+
+    // Pre-compiled Regex patterns for remarks-based ICAO/aircraft parsing
+    private static readonly Regex IcaoRegex = new(@"ICAO:\s*([A-Fa-f0-9]{6})", RegexOptions.Compiled);
+    private static readonly Regex RegRegex = new(@"REG:\s*(\S+)", RegexOptions.Compiled);
+    private static readonly Regex FlightRegex = new(@"Flight:\s*(\S+)", RegexOptions.Compiled);
+    private static readonly Regex AcTypeRegex = new(@"Type:\s*(\S+)", RegexOptions.Compiled);
+    private static readonly Regex SquawkRegex = new(@"Squawk:\s*(\d+)", RegexOptions.Compiled);
+    private static readonly Regex CategoryRegex = new(@"Category:\s*(\S+)", RegexOptions.Compiled);
+
+    // Pre-compiled Regex for ExtractRawDetailBytes
+    private static readonly Regex DetailRegex = new(
+        @"<detail\b[^>]*>(.*?)</detail\s*>",
+        RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     /// <summary>
     /// Scale a latitude degree value into protobuf's <c>sfixed32 latitude_i = lat * 1e7</c>
@@ -127,7 +141,7 @@ public class CotXmlParser
     {
         if (string.IsNullOrEmpty(raw)) return default;
         if (nameMap.TryGetValue(raw, out var mapped)) return mapped;
-        if (int.TryParse(raw, out var asInt) && Enum.IsDefined(typeof(TEnum), asInt))
+        if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var asInt) && Enum.IsDefined(typeof(TEnum), asInt))
             return (TEnum)Enum.ToObject(typeof(TEnum), asInt);
         return default;
     }
@@ -245,9 +259,9 @@ public class CotXmlParser
         var point = evt.Element("point");
         if (point != null)
         {
-            pkt.LatitudeI = ScaleLatitudeI(double.Parse(point.Attribute("lat")?.Value ?? "0"));
-            pkt.LongitudeI = ScaleLongitudeI(double.Parse(point.Attribute("lon")?.Value ?? "0"));
-            pkt.Altitude = (int)double.Parse(point.Attribute("hae")?.Value ?? "0");
+            pkt.LatitudeI = ScaleLatitudeI(double.Parse(point.Attribute("lat")?.Value ?? "0", CultureInfo.InvariantCulture));
+            pkt.LongitudeI = ScaleLongitudeI(double.Parse(point.Attribute("lon")?.Value ?? "0", CultureInfo.InvariantCulture));
+            pkt.Altitude = (int)double.Parse(point.Attribute("hae")?.Value ?? "0", CultureInfo.InvariantCulture);
         }
 
         var detail = evt.Element("detail");
@@ -352,7 +366,7 @@ public class CotXmlParser
                 var parts = pointAttr.Split(',');
                 if (parts.Length < 2) return;
                 // Trim whitespace — iTAK uses "lat, lon" with a space after comma
-                if (!double.TryParse(parts[0].Trim(), out var plat) || !double.TryParse(parts[1].Trim(), out var plon)) return;
+                if (!double.TryParse(parts[0].Trim(), NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var plat) || !double.TryParse(parts[1].Trim(), NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var plon)) return;
                 var plati = ScaleLatitudeI(plat);
                 var ploni = ScaleLongitudeI(plon);
 
@@ -464,7 +478,7 @@ public class CotXmlParser
                     if (el.Attribute("role")?.Value is { } rn && RoleMap.TryGetValue(rn, out var rv)) pkt.Role = rv;
                     break;
                 case "status":
-                    if (el.Attribute("battery")?.Value is { } bat && uint.TryParse(bat, out var b))
+                    if (el.Attribute("battery")?.Value is { } bat && uint.TryParse(bat, NumberStyles.Integer, CultureInfo.InvariantCulture, out var b))
                         pkt.Battery = b;
                     if (el.Attribute("readiness")?.Value == "true") markerReadiness = true;
                     break;
@@ -474,8 +488,8 @@ public class CotXmlParser
                     // unknown targets; casting a negative double to uint
                     // in C# is undefined behavior (typically wraps to a
                     // huge value). Clamp to 0 first.
-                    var spdCs = double.Parse(el.Attribute("speed")?.Value ?? "0") * 100;
-                    var crsCs = double.Parse(el.Attribute("course")?.Value ?? "0") * 100;
+                    var spdCs = double.Parse(el.Attribute("speed")?.Value ?? "0", CultureInfo.InvariantCulture) * 100;
+                    var crsCs = double.Parse(el.Attribute("course")?.Value ?? "0", CultureInfo.InvariantCulture) * 100;
                     pkt.Speed = (uint)Math.Max(0, Math.Round(spdCs));
                     pkt.Course = (uint)Math.Max(0, Math.Round(crsCs));
                     break;
@@ -494,7 +508,7 @@ public class CotXmlParser
                     break;
                 case "_radio":
                     if (el.Attribute("rssi")?.Value is { } rssi)
-                    { rssiX10 = (int)(double.Parse(rssi) * 10); hasAircraft = true; }
+                    { rssiX10 = (int)(double.Parse(rssi, CultureInfo.InvariantCulture) * 10); hasAircraft = true; }
                     gps = el.Attribute("gps")?.Value == "true";
                     break;
                 case "_aircot_":
@@ -524,28 +538,28 @@ public class CotXmlParser
                     var ellipse = el.Element("ellipse");
                     if (ellipse != null)
                     {
-                        var majorM = double.Parse(ellipse.Attribute("major")?.Value ?? "0");
-                        var minorM = double.Parse(ellipse.Attribute("minor")?.Value ?? "0");
+                        var majorM = double.Parse(ellipse.Attribute("major")?.Value ?? "0", CultureInfo.InvariantCulture);
+                        var minorM = double.Parse(ellipse.Attribute("minor")?.Value ?? "0", CultureInfo.InvariantCulture);
                         shapeMajorCm = (uint)Math.Max(0, majorM * 100);
                         shapeMinorCm = (uint)Math.Max(0, minorM * 100);
-                        if (uint.TryParse(ellipse.Attribute("angle")?.Value, out var ang))
+                        if (uint.TryParse(ellipse.Attribute("angle")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ang))
                             shapeAngleDeg = ang;
                     }
                     break;
                 case "strokeColor":
                     sawStrokeColor = true;
-                    if (int.TryParse(el.Attribute("value")?.Value, out var sv))
+                    if (int.TryParse(el.Attribute("value")?.Value, NumberStyles.Integer | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var sv))
                         strokeColorArgb = unchecked((uint)sv);
                     hasShapeData = true;
                     break;
                 case "strokeWeight":
-                    if (double.TryParse(el.Attribute("value")?.Value, out var sw))
+                    if (double.TryParse(el.Attribute("value")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var sw))
                         strokeWeightX10 = (uint)Math.Max(0, sw * 10);
                     hasShapeData = true;
                     break;
                 case "fillColor":
                     sawFillColor = true;
-                    if (int.TryParse(el.Attribute("value")?.Value, out var fv))
+                    if (int.TryParse(el.Attribute("value")?.Value, NumberStyles.Integer | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var fv))
                         fillColorArgb = unchecked((uint)fv);
                     hasShapeData = true;
                     break;
@@ -553,7 +567,7 @@ public class CotXmlParser
                     labelsOn = el.Attribute("value")?.Value == "true";
                     break;
                 case "color":
-                    if (int.TryParse(el.Attribute("argb")?.Value, out var cv))
+                    if (int.TryParse(el.Attribute("argb")?.Value, NumberStyles.Integer | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var cv))
                         markerColorArgb = unchecked((uint)cv);
                     hasMarkerData = true;
                     break;
@@ -563,7 +577,7 @@ public class CotXmlParser
                     break;
                 case "bullseye":
                     hasShapeData = true;
-                    if (double.TryParse(el.Attribute("distance")?.Value, out var dist))
+                    if (double.TryParse(el.Attribute("distance")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var dist))
                         bullseyeDistanceDm = (uint)Math.Max(0, dist * 10);
                     bullseyeBearingRef = BearingRefMap.GetValueOrDefault(
                         el.Attribute("bearingRef")?.Value ?? "", 0u);
@@ -576,12 +590,12 @@ public class CotXmlParser
                     bullseyeUidRef = el.Attribute("bullseyeUID")?.Value ?? "";
                     break;
                 case "range":
-                    if (double.TryParse(el.Attribute("value")?.Value, out var rangeVal))
+                    if (double.TryParse(el.Attribute("value")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var rangeVal))
                         rabRangeCm = (uint)Math.Max(0, rangeVal * 100);
                     hasRabData = true;
                     break;
                 case "bearing":
-                    if (double.TryParse(el.Attribute("value")?.Value, out var bearingVal))
+                    if (double.TryParse(el.Attribute("value")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var bearingVal))
                         rabBearingCdeg = (uint)Math.Max(0, bearingVal * 100);
                     hasRabData = true;
                     break;
@@ -596,7 +610,7 @@ public class CotXmlParser
                     routeDirection = RouteDirectionMap.GetValueOrDefault(
                         el.Attribute("direction")?.Value ?? "", Route.Types.Direction.Unspecified);
                     if (el.Attribute("stroke")?.Value is { } swAttr &&
-                        uint.TryParse(swAttr, out var swVal) && swVal > 0)
+                        uint.TryParse(swAttr, NumberStyles.Integer, CultureInfo.InvariantCulture, out var swVal) && swVal > 0)
                         strokeWeightX10 = swVal * 10;
                     break;
                 // --- CasevacReport (9-line MEDEVAC) -----------------------
@@ -615,25 +629,25 @@ public class CotXmlParser
                     if (el.Attribute("blood")?.Value == "true") eqFlags |= 0x10;
                     if (el.Attribute("equipment_other")?.Value == "true") eqFlags |= 0x20;
                     casevacEquipmentFlags = eqFlags;
-                    if (uint.TryParse(el.Attribute("litter")?.Value, out var lit))
+                    if (uint.TryParse(el.Attribute("litter")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lit))
                         casevacLitterPatients = lit;
-                    if (uint.TryParse(el.Attribute("ambulatory")?.Value, out var amb))
+                    if (uint.TryParse(el.Attribute("ambulatory")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var amb))
                         casevacAmbulatoryPatients = amb;
                     casevacSecurity = ParseCasevacEnum(el.Attribute("security")?.Value, SecurityMap);
                     casevacHlzMarking = ParseCasevacEnum(el.Attribute("hlz_marking")?.Value, HlzMarkingMap);
                     casevacZoneMarker = el.Attribute("zone_prot_marker")?.Value ?? "";
-                    if (uint.TryParse(el.Attribute("us_military")?.Value, out var usMil))
+                    if (uint.TryParse(el.Attribute("us_military")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var usMil))
                         casevacUsMilitary = usMil;
-                    if (uint.TryParse(el.Attribute("us_civilian")?.Value, out var usCiv))
+                    if (uint.TryParse(el.Attribute("us_civilian")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var usCiv))
                         casevacUsCivilian = usCiv;
                     // Both `non_us_military` (older) and `nonus_military` (newer) spellings exist.
-                    if (uint.TryParse(el.Attribute("non_us_military")?.Value ?? el.Attribute("nonus_military")?.Value, out var nonUsMil))
+                    if (uint.TryParse(el.Attribute("non_us_military")?.Value ?? el.Attribute("nonus_military")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var nonUsMil))
                         casevacNonUsMilitary = nonUsMil;
-                    if (uint.TryParse(el.Attribute("non_us_civilian")?.Value ?? el.Attribute("nonus_civilian")?.Value, out var nonUsCiv))
+                    if (uint.TryParse(el.Attribute("non_us_civilian")?.Value ?? el.Attribute("nonus_civilian")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var nonUsCiv))
                         casevacNonUsCivilian = nonUsCiv;
-                    if (uint.TryParse(el.Attribute("epw")?.Value, out var epw))
+                    if (uint.TryParse(el.Attribute("epw")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var epw))
                         casevacEpw = epw;
-                    if (uint.TryParse(el.Attribute("child")?.Value, out var child))
+                    if (uint.TryParse(el.Attribute("child")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var child))
                         casevacChild = child;
                     // Terrain bitfield flags
                     uint tfFlags = 0;
@@ -648,15 +662,15 @@ public class CotXmlParser
                     // --- v2.x medline extensions -----------------------------
                     casevacTitle = el.Attribute("title")?.Value ?? "";
                     casevacMedlineRemarks = el.Attribute("medline_remarks")?.Value ?? "";
-                    if (uint.TryParse(el.Attribute("urgent")?.Value, out var urgentCnt))
+                    if (uint.TryParse(el.Attribute("urgent")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var urgentCnt))
                         casevacUrgentCount = urgentCnt;
-                    if (uint.TryParse(el.Attribute("urgent_surgical")?.Value, out var urgentSurgicalCnt))
+                    if (uint.TryParse(el.Attribute("urgent_surgical")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var urgentSurgicalCnt))
                         casevacUrgentSurgicalCount = urgentSurgicalCnt;
-                    if (uint.TryParse(el.Attribute("priority")?.Value, out var priorityCnt))
+                    if (uint.TryParse(el.Attribute("priority")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var priorityCnt))
                         casevacPriorityCount = priorityCnt;
-                    if (uint.TryParse(el.Attribute("routine")?.Value, out var routineCnt))
+                    if (uint.TryParse(el.Attribute("routine")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var routineCnt))
                         casevacRoutineCount = routineCnt;
-                    if (uint.TryParse(el.Attribute("convenience")?.Value, out var convCnt))
+                    if (uint.TryParse(el.Attribute("convenience")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var convCnt))
                         casevacConvenienceCount = convCnt;
                     casevacEquipmentDetail = el.Attribute("equipment_detail")?.Value ?? "";
                     casevacZoneProtectedCoord = el.Attribute("zone_protected_coord")?.Value ?? "";
@@ -724,17 +738,17 @@ public class CotXmlParser
         // Parse ICAO from remarks
         if (string.IsNullOrEmpty(icao) && !string.IsNullOrEmpty(remarksText))
         {
-            var m = Regex.Match(remarksText, @"ICAO:\s*([A-Fa-f0-9]{6})");
+            var m = IcaoRegex.Match(remarksText);
             if (m.Success)
             {
                 hasAircraft = true; icao = m.Groups[1].Value;
-                reg = Regex.Match(remarksText, @"REG:\s*(\S+)").Groups[1].Value;
-                flight = Regex.Match(remarksText, @"Flight:\s*(\S+)").Groups[1].Value;
-                acType = Regex.Match(remarksText, @"Type:\s*(\S+)").Groups[1].Value;
-                var sq = Regex.Match(remarksText, @"Squawk:\s*(\d+)");
-                if (sq.Success) squawk = uint.Parse(sq.Groups[1].Value);
+                reg = RegRegex.Match(remarksText).Groups[1].Value;
+                flight = FlightRegex.Match(remarksText).Groups[1].Value;
+                acType = AcTypeRegex.Match(remarksText).Groups[1].Value;
+                var sq = SquawkRegex.Match(remarksText);
+                if (sq.Success) squawk = uint.Parse(sq.Groups[1].Value, CultureInfo.InvariantCulture);
                 if (string.IsNullOrEmpty(category))
-                    category = Regex.Match(remarksText, @"Category:\s*(\S+)").Groups[1].Value;
+                    category = CategoryRegex.Match(remarksText).Groups[1].Value;
             }
         }
 
@@ -974,10 +988,7 @@ public class CotXmlParser
     /// </remarks>
     public static byte[] ExtractRawDetailBytes(string cotXml)
     {
-        var match = Regex.Match(
-            cotXml,
-            @"<detail\b[^>]*>(.*?)</detail\s*>",
-            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        var match = DetailRegex.Match(cotXml);
         if (!match.Success) return Array.Empty<byte>();
         return System.Text.Encoding.UTF8.GetBytes(match.Groups[1].Value);
     }

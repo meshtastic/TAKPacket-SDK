@@ -1,5 +1,7 @@
 """Builds CoT XML event strings from TAKPacketV2 protobuf messages."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone, timedelta
 from xml.sax.saxutils import escape
 from . import atak_pb2

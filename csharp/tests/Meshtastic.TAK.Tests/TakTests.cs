@@ -163,7 +163,7 @@ public class TakTests
         Assert.Equal(Meshtastic.Protobufs.CotType.AFGUC, pkt.CotTypeId);
         Assert.Equal(Meshtastic.Protobufs.CotHow.MG, pkt.How);
         Assert.Equal("testnode", pkt.Callsign);
-        Assert.Equal((int)(37.7749 * 1e7), pkt.LatitudeI);
+        Assert.Equal((int)(33.1284 * 1e7), pkt.LatitudeI);
     }
 
     [Fact]

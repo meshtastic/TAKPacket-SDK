@@ -49,16 +49,17 @@ final class MalformedInputTests: XCTestCase {
     func testRejectsXmlWithDoctype() throws {
         let xml = try TestFixtures.loadMalformedXml("xml_doctype.xml")
         let parser = CotXmlParser()
-        let result = parser.parse(xml)
-        // Parser should return empty packet (rejected DOCTYPE)
-        XCTAssertTrue(result.uid.isEmpty, "DOCTYPE XML should produce empty/rejected result")
+        XCTAssertThrowsError(try parser.parse(xml)) { error in
+            XCTAssertTrue(error is CotXmlParserError, "Expected CotXmlParserError")
+        }
     }
 
     func testRejectsXmlWithEntityExpansion() throws {
         let xml = try TestFixtures.loadMalformedXml("xml_entity_expansion.xml")
         let parser = CotXmlParser()
-        let result = parser.parse(xml)
-        XCTAssertTrue(result.uid.isEmpty, "Entity expansion XML should produce empty/rejected result")
+        XCTAssertThrowsError(try parser.parse(xml)) { error in
+            XCTAssertTrue(error is CotXmlParserError, "Expected CotXmlParserError")
+        }
     }
 
     func testRejectsOversizedFields() {

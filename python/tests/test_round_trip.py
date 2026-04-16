@@ -58,8 +58,8 @@ def test_pli_basic_parses_correctly():
     assert pkt.cot_type_id == COTTYPE_A_F_G_U_C
     assert pkt.how == COTHOW_M_G
     assert pkt.callsign == "testnode"
-    assert pkt.latitude_i == int(37.7749 * 1e7)
-    assert pkt.longitude_i == int(-122.4194 * 1e7)
+    assert pkt.latitude_i == round(33.1284 * 1e7)
+    assert pkt.longitude_i == round(-107.2528 * 1e7)
 
 
 def test_aircraft_adsb_parses_icao():

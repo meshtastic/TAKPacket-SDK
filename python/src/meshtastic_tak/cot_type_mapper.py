@@ -17,6 +17,8 @@ Receivers that want to detect the downgrade should check
 ``cot_type_id == COTTYPE_OTHER and cot_type_str``.
 """
 
+from __future__ import annotations
+
 # CotType enum values from atak.proto
 COTTYPE_OTHER = 0
 COTTYPE_A_F_G_U_C = 1
@@ -241,7 +243,7 @@ class CotTypeMapper:
         return _STRING_TO_TYPE.get(cot_type_string, COTTYPE_OTHER)
 
     @staticmethod
-    def type_to_string(cot_type_id: int) -> "str | None":
+    def type_to_string(cot_type_id: int) -> str | None:
         return _TYPE_TO_STRING.get(cot_type_id)
 
     @staticmethod
@@ -249,7 +251,7 @@ class CotTypeMapper:
         return _STRING_TO_HOW.get(how_string, COTHOW_UNSPECIFIED)
 
     @staticmethod
-    def how_to_string(how_id: int) -> "str | None":
+    def how_to_string(how_id: int) -> str | None:
         return _HOW_TO_STRING.get(how_id)
 
     @staticmethod
