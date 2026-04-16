@@ -4,6 +4,7 @@ import {
   DICT_ID_NON_AIRCRAFT, DICT_ID_AIRCRAFT, DICT_ID_UNCOMPRESSED,
   nonAircraftDict, aircraftDict, getDictionary, selectDictId,
 } from "./DictionaryProvider.js";
+import type { TAKPacketV2 } from "./types.js";
 
 /** Maximum allowed decompressed payload size (bytes). Prevents decompression bombs. */
 const MAX_DECOMPRESSED_SIZE = 4096;
@@ -67,16 +68,16 @@ export class TakCompressor {
   }
 
   /** Compress a TAKPacketV2 object into wire payload: [flags][zstd compressed protobuf] */
-  async compress(packet: Record<string, unknown>): Promise<Buffer> {
+  async compress(packet: TAKPacketV2): Promise<Buffer> {
     this.init();
-    const TAKPacketV2 = await getTAKPacketV2Type();
-    const err = TAKPacketV2.verify(packet);
+    const TAKPacketV2Type = await getTAKPacketV2Type();
+    const err = TAKPacketV2Type.verify(packet);
     if (err) throw new Error(`Invalid TAKPacketV2: ${err}`);
-    const msg = TAKPacketV2.create(packet);
-    const protobufBytes = Buffer.from(TAKPacketV2.encode(msg).finish());
+    const msg = TAKPacketV2Type.create(packet);
+    const protobufBytes = Buffer.from(TAKPacketV2Type.encode(msg).finish());
 
-    const cotTypeId = (packet.cotTypeId as number) ?? 0;
-    const cotTypeStr = (packet.cotTypeStr as string) ?? undefined;
+    const cotTypeId = packet.cotTypeId ?? 0;
+    const cotTypeStr = packet.cotTypeStr ?? undefined;
     const dictId = selectDictId(cotTypeId, cotTypeStr);
 
     const compressor = this.compressors.get(dictId);
@@ -90,7 +91,7 @@ export class TakCompressor {
   }
 
   /** Decompress wire payload back to a TAKPacketV2 object. */
-  async decompress(wirePayload: Buffer): Promise<Record<string, unknown>> {
+  async decompress(wirePayload: Buffer): Promise<TAKPacketV2> {
     this.init();
     if (wirePayload.length < 2) throw new Error(`Payload too short: ${wirePayload.length}`);
 
@@ -116,9 +117,9 @@ export class TakCompressor {
     }
 
     try {
-      const TAKPacketV2 = await getTAKPacketV2Type();
-      const msg = TAKPacketV2.decode(protobufBytes);
-      return TAKPacketV2.toObject(msg) as Record<string, unknown>;
+      const TAKPacketV2Type = await getTAKPacketV2Type();
+      const msg = TAKPacketV2Type.decode(protobufBytes);
+      return TAKPacketV2Type.toObject(msg) as TAKPacketV2;
     } catch (e) {
       throw new Error(`Protobuf parsing failed: ${e}`);
     }
@@ -143,7 +144,7 @@ export class TakCompressor {
    *          without remarks.
    */
   async compressWithRemarksFallback(
-    packet: Record<string, unknown>,
+    packet: TAKPacketV2,
     maxWireBytes: number,
   ): Promise<Buffer | null> {
     const result = await this.compressWithRemarksFallbackDetailed(packet, maxWireBytes);
@@ -158,7 +159,7 @@ export class TakCompressor {
    * {@link compressWithRemarksFallback} loses the distinction.
    */
   async compressWithRemarksFallbackDetailed(
-    packet: Record<string, unknown>,
+    packet: TAKPacketV2,
     maxWireBytes: number,
   ): Promise<RemarksFallbackResult> {
     const full = await this.compress(packet);
@@ -166,7 +167,7 @@ export class TakCompressor {
       return { wirePayload: full, remarksStripped: false };
     }
 
-    const remarks = (packet.remarks as string) ?? "";
+    const remarks = packet.remarks ?? "";
     if (!remarks) {
       return { wirePayload: null, remarksStripped: false };
     }
@@ -179,14 +180,14 @@ export class TakCompressor {
   }
 
   /** Compress with stats for reporting. */
-  async compressWithStats(packet: Record<string, unknown>): Promise<CompressionResult> {
-    const TAKPacketV2 = await getTAKPacketV2Type();
-    const msg = TAKPacketV2.create(packet);
-    const protobufBytes = TAKPacketV2.encode(msg).finish();
+  async compressWithStats(packet: TAKPacketV2): Promise<CompressionResult> {
+    const TAKPacketV2Type = await getTAKPacketV2Type();
+    const msg = TAKPacketV2Type.create(packet);
+    const protobufBytes = TAKPacketV2Type.encode(msg).finish();
 
     const wirePayload = await this.compress(packet);
-    const cotTypeId = (packet.cotTypeId as number) ?? 0;
-    const cotTypeStr = (packet.cotTypeStr as string) ?? undefined;
+    const cotTypeId = packet.cotTypeId ?? 0;
+    const cotTypeStr = packet.cotTypeStr ?? undefined;
     const dictId = selectDictId(cotTypeId, cotTypeStr);
 
     return {

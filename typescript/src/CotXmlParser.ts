@@ -1,6 +1,11 @@
 import { XMLParser } from "fast-xml-parser";
 import { typeToEnum, howToEnum, COTTYPE_OTHER } from "./CotTypeMapper.js";
 import { argbToTeam } from "./AtakPalette.js";
+import type {
+  TAKPacketV2, GeoChat, AircraftTrack, DrawnShape, Marker,
+  RangeAndBearing, Route, RouteLink, CasevacReport, EmergencyAlert,
+  TaskRequest, CotGeoPoint, ZMistEntry,
+} from "./types.js";
 
 const TEAM_NAME_TO_ENUM: Record<string, number> = {
   White: 1, Yellow: 2, Orange: 3, Magenta: 4, Red: 5, Maroon: 6,
@@ -189,9 +194,18 @@ function toArray<T>(x: T | T[] | undefined | null): T[] {
  *
  * Only touches the top-level keys — nested objects are left to the caller.
  */
-function stripZeros<T extends Record<string, unknown>>(obj: T): T {
+/**
+ * protobufjs serializes scalar fields that are explicitly passed to
+ * `create()`, even when they hold the proto3 default value (0, "", false).
+ * Proto3 wire format elides defaults; this helper mimics that behavior by
+ * removing keys whose values are the zero-value for their type, so the
+ * resulting byte stream matches what a proto3-native encoder produces.
+ *
+ * Only touches the top-level keys — nested objects are left to the caller.
+ */
+function stripZeros<T extends object>(obj: T): T {
   const result: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(obj)) {
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
     if (v === 0 || v === "" || v === false) continue;
     if (Array.isArray(v) && v.length === 0) continue;
     result[k] = v;
@@ -204,14 +218,14 @@ function stripZeros<T extends Record<string, unknown>>(obj: T): T {
  * the 2-bytes-per-zero-vertex overhead that protobufjs would otherwise
  * add when `{ latDeltaI: 0, lonDeltaI: ... }` is passed to create().
  */
-function makeGeoPoint(latDeltaI: number, lonDeltaI: number): Record<string, number> {
-  const gp: Record<string, number> = {};
+function makeGeoPoint(latDeltaI: number, lonDeltaI: number): CotGeoPoint {
+  const gp: CotGeoPoint = {};
   if (latDeltaI !== 0) gp.latDeltaI = latDeltaI;
   if (lonDeltaI !== 0) gp.lonDeltaI = lonDeltaI;
   return gp;
 }
 
-export function parseCotXml(cotXml: string): Record<string, unknown> {
+export function parseCotXml(cotXml: string): TAKPacketV2 {
   // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion
   const lower = cotXml.toLowerCase();
   if (lower.includes("<!doctype") || lower.includes("<!entity")) {
@@ -311,7 +325,7 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
   const latitudeI = scaleLatitudeI(parseFloat(point["@_lat"] ?? "0"));
   const longitudeI = scaleLongitudeI(parseFloat(point["@_lon"] ?? "0"));
 
-  const pkt: Record<string, unknown> = {
+  const pkt: TAKPacketV2 = {
     cotTypeId,
     how: howToEnum(event["@_how"] ?? ""),
     callsign: contact["@_callsign"] ?? "",
@@ -482,7 +496,7 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
   let casevacFriendlies = "";
   let casevacEnemy = "";
   let casevacHlzRemarks = "";
-  const casevacZmist: Array<Record<string, string>> = [];
+  const casevacZmist: ZMistEntry[] = [];
   const medevacElem = detail._medevac_;
   if (medevacElem) {
     hasCasevacData = true;
@@ -749,24 +763,25 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
   if (isDeleteEvent) {
     pkt.pli = true;
   } else if (hasChat) {
-    const chat: Record<string, unknown> = { message: remarksText };
-    if (chatTo) chat.to = chatTo;
-    if (chatToCs) chat.toCallsign = chatToCs;
-    if (chatReceiptForUid) chat.receiptForUid = chatReceiptForUid;
-    if (chatReceiptType !== RECEIPT_TYPE_NONE) chat.receiptType = chatReceiptType;
-    pkt.chat = chat;
+    const chatPayload: GeoChat = { message: remarksText };
+    if (chatTo) chatPayload.to = chatTo;
+    if (chatToCs) chatPayload.toCallsign = chatToCs;
+    if (chatReceiptForUid) chatPayload.receiptForUid = chatReceiptForUid;
+    if (chatReceiptType !== RECEIPT_TYPE_NONE) chatPayload.receiptType = chatReceiptType;
+    pkt.chat = chatPayload;
   } else if (hasAircraft) {
-    pkt.aircraft = {
+    const aircraftPayload: AircraftTrack = {
       icao, registration: reg, flight, aircraftType: acType,
       squawk, category, rssiX10, gps, cotHostId,
     };
+    pkt.aircraft = aircraftPayload;
   } else if (hasRouteData && routeLinksAbs.length > 0) {
-    pkt.route = stripZeros({
+    pkt.route = stripZeros<Route>({
       method: routeMethod,
       direction: routeDirection,
       prefix: routePrefix,
       strokeWeightX10,
-      links: routeLinksAbs.map(l => ({
+      links: routeLinksAbs.map((l): RouteLink => ({
         point: makeGeoPoint(l.latI - latitudeI, l.lonI - longitudeI),
         uid: l.uid,
         callsign: l.callsign,
@@ -775,7 +790,7 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
       truncated: routeTruncated,
     });
   } else if (hasRabData) {
-    pkt.rab = stripZeros({
+    pkt.rab = stripZeros<RangeAndBearing>({
       anchor: makeGeoPoint(rabAnchorLatI - latitudeI, rabAnchorLonI - longitudeI),
       anchorUid: rabAnchorUid,
       rangeCm: rabRangeCm,
@@ -785,7 +800,7 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
       strokeWeightX10,
     });
   } else if (hasShapeData) {
-    pkt.shape = stripZeros({
+    pkt.shape = stripZeros<DrawnShape>({
       kind: SHAPE_KIND_BY_COT_TYPE[typeStr] ?? SHAPE_KIND_UNSPECIFIED,
       style: shapeStyle,
       majorCm: shapeMajorCm,
@@ -805,7 +820,7 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
       bullseyeUidRef,
     });
   } else if (hasMarkerData) {
-    pkt.marker = stripZeros({
+    pkt.marker = stripZeros<Marker>({
       kind: markerKindFromCotType(typeStr, markerIconset),
       color: argbToTeam(markerColorArgb),
       colorArgb: markerColorArgb,
@@ -816,7 +831,7 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
       iconset: markerIconset,
     });
   } else if (hasCasevacData) {
-    pkt.casevac = stripZeros({
+    pkt.casevac = stripZeros<CasevacReport>({
       precedence: casevacPrecedence,
       equipmentFlags: casevacEquipmentFlags,
       litterPatients: casevacLitterPatients,
@@ -852,7 +867,7 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
       zmist: casevacZmist.length > 0 ? casevacZmist : undefined,
     });
   } else if (hasEmergencyData) {
-    pkt.emergency = stripZeros({
+    pkt.emergency = stripZeros<EmergencyAlert>({
       type: emergencyType !== 0
         ? emergencyType
         : (EMERGENCY_TYPE_BY_COT[typeStr] ?? 0),
@@ -860,7 +875,7 @@ export function parseCotXml(cotXml: string): Record<string, unknown> {
       cancelReferenceUid: emergencyCancelReferenceUid,
     });
   } else if (hasTaskData) {
-    pkt.task = stripZeros({
+    pkt.task = stripZeros<TaskRequest>({
       taskType: taskTypeTag,
       targetUid: taskTargetUid,
       assigneeUid: taskAssigneeUid,

@@ -1,3 +1,4 @@
+export * from "./types.js";
 export * from "./CotTypeMapper.js";
 export * from "./DictionaryProvider.js";
 export * from "./TakCompressor.js";

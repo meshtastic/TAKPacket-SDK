@@ -1,5 +1,10 @@
 import { typeToString, howToString } from "./CotTypeMapper.js";
 import { resolveColor } from "./AtakPalette.js";
+import type {
+  TAKPacketV2, GeoChat, AircraftTrack, DrawnShape, Marker,
+  RangeAndBearing, Route, RouteLink, CasevacReport, EmergencyAlert,
+  TaskRequest, CotGeoPoint, ZMistEntry,
+} from "./types.js";
 
 const TEAM_NAMES: Record<number, string> = {
   1: "White", 2: "Yellow", 3: "Orange", 4: "Magenta", 5: "Red", 6: "Maroon",
@@ -81,25 +86,25 @@ function argbToSigned(argb: number): number {
   return argb | 0;
 }
 
-export function buildCotXml(packet: Record<string, unknown>): string {
+export function buildCotXml(packet: TAKPacketV2): string {
   const now = new Date().toISOString();
-  const staleSecs = Math.max((packet.staleSeconds as number) ?? 0, 45);
+  const staleSecs = Math.max(packet.staleSeconds ?? 0, 45);
   const stale = new Date(Date.now() + staleSecs * 1000).toISOString();
 
-  const cotType = typeToString(packet.cotTypeId as number) ?? (packet.cotTypeStr as string) ?? "";
-  const how = howToString(packet.how as number) ?? "m-g";
-  let lat = ((packet.latitudeI as number) ?? 0) / 1e7;
-  let lon = ((packet.longitudeI as number) ?? 0) / 1e7;
-  const routePayload = packet.route as Record<string, unknown> | undefined;
-  if (routePayload && ((packet.latitudeI as number) ?? 0) === 0 && ((packet.longitudeI as number) ?? 0) === 0) {
-    const routeLinks = (routePayload.links as Array<Record<string, unknown>>) ?? [];
+  const cotType = typeToString(packet.cotTypeId ?? 0) ?? packet.cotTypeStr ?? "";
+  const how = howToString(packet.how ?? 0) ?? "m-g";
+  let lat = (packet.latitudeI ?? 0) / 1e7;
+  let lon = (packet.longitudeI ?? 0) / 1e7;
+  const routePayload = packet.route;
+  if (routePayload && (packet.latitudeI ?? 0) === 0 && (packet.longitudeI ?? 0) === 0) {
+    const routeLinks = routePayload.links ?? [];
     if (routeLinks.length > 0) {
-      const firstPoint = (routeLinks[0].point as Record<string, number>) ?? {};
+      const firstPoint = routeLinks[0].point ?? {};
       lat = (firstPoint.latDeltaI ?? 0) / 1e7;
       lon = (firstPoint.lonDeltaI ?? 0) / 1e7;
     }
   }
-  const alt = (packet.altitude as number) ?? 0;
+  const alt = packet.altitude ?? 0;
 
   const lines: string[] = [
     `<?xml version="1.0" encoding="UTF-8"?>`,
@@ -108,17 +113,17 @@ export function buildCotXml(packet: Record<string, unknown>): string {
     `  <detail>`,
   ];
 
-  const callsign = packet.callsign as string ?? "";
+  const callsign = packet.callsign ?? "";
   const isRoute = packet.route != null;
   if (callsign && !isRoute) {
-    const ep = String(packet.endpoint ?? "") || "0.0.0.0:4242:tcp";
+    const ep = packet.endpoint || "0.0.0.0:4242:tcp";
     let tag = `    <contact callsign="${esc(callsign)}" endpoint="${esc(ep)}"`;
-    if (packet.phone) tag += ` phone="${esc(String(packet.phone))}"`;
+    if (packet.phone) tag += ` phone="${esc(packet.phone)}"`;
     lines.push(tag + "/>");
   }
 
-  const teamName = TEAM_NAMES[packet.team as number];
-  const roleName = ROLE_NAMES[packet.role as number];
+  const teamName = TEAM_NAMES[packet.team ?? 0];
+  const roleName = ROLE_NAMES[packet.role ?? 0];
   if (teamName || roleName) {
     let tag = "    <__group";
     if (roleName) tag += ` role="${roleName}"`;
@@ -126,51 +131,51 @@ export function buildCotXml(packet: Record<string, unknown>): string {
     lines.push(tag + "/>");
   }
 
-  const battery = (packet.battery as number) ?? 0;
+  const battery = packet.battery ?? 0;
   if (battery > 0) lines.push(`    <status battery="${battery}"/>`);
 
-  const speed = (packet.speed as number) ?? 0;
-  const course = (packet.course as number) ?? 0;
+  const speed = packet.speed ?? 0;
+  const course = packet.course ?? 0;
   if (speed > 0 || course > 0) {
     lines.push(`    <track speed="${speed / 100}" course="${course / 100}"/>`);
   }
 
-  const takVersion = packet.takVersion as string ?? "";
-  const takPlatform = packet.takPlatform as string ?? "";
+  const takVersion = packet.takVersion ?? "";
+  const takPlatform = packet.takPlatform ?? "";
   if (takVersion || takPlatform) {
     let tag = "    <takv";
-    if (packet.takDevice) tag += ` device="${esc(String(packet.takDevice))}"`;
+    if (packet.takDevice) tag += ` device="${esc(packet.takDevice)}"`;
     if (takPlatform) tag += ` platform="${esc(takPlatform)}"`;
-    if (packet.takOs) tag += ` os="${esc(String(packet.takOs))}"`;
+    if (packet.takOs) tag += ` os="${esc(packet.takOs)}"`;
     if (takVersion) tag += ` version="${esc(takVersion)}"`;
     lines.push(tag + "/>");
   }
 
-  const geoSrc = (packet.geoSrc as number) ?? 0;
-  const altSrc = (packet.altSrc as number) ?? 0;
+  const geoSrc = packet.geoSrc ?? 0;
+  const altSrc = packet.altSrc ?? 0;
   if (geoSrc > 0 || altSrc > 0) {
     lines.push(`    <precisionlocation geopointsrc="${GEO_SRC_NAMES[geoSrc] ?? "???"}" altsrc="${GEO_SRC_NAMES[altSrc] ?? "???"}"/>`);
   }
 
-  const deviceCallsign = packet.deviceCallsign as string ?? "";
+  const deviceCallsign = packet.deviceCallsign ?? "";
   if (deviceCallsign) lines.push(`    <uid Droid="${esc(deviceCallsign)}"/>`);
 
   // Payload-specific
-  const chat = packet.chat as Record<string, unknown> | undefined;
-  const aircraft = packet.aircraft as Record<string, unknown> | undefined;
-  const shape = packet.shape as Record<string, unknown> | undefined;
-  const marker = packet.marker as Record<string, unknown> | undefined;
-  const rab = packet.rab as Record<string, unknown> | undefined;
-  const route = packet.route as Record<string, unknown> | undefined;
-  const casevac = packet.casevac as Record<string, unknown> | undefined;
-  const emergency = packet.emergency as Record<string, unknown> | undefined;
-  const task = packet.task as Record<string, unknown> | undefined;
-  const eventLatI = (packet.latitudeI as number) ?? 0;
-  const eventLonI = (packet.longitudeI as number) ?? 0;
+  const chat = packet.chat;
+  const aircraft = packet.aircraft;
+  const shape = packet.shape;
+  const marker = packet.marker;
+  const rab = packet.rab;
+  const route = packet.route;
+  const casevac = packet.casevac;
+  const emergency = packet.emergency;
+  const task = packet.task;
+  const eventLatI = packet.latitudeI ?? 0;
+  const eventLonI = packet.longitudeI ?? 0;
 
   if (chat) {
-    const receiptType = (chat.receiptType as number) ?? RECEIPT_TYPE_NONE;
-    const receiptForUid = (chat.receiptForUid as string) ?? "";
+    const receiptType = chat.receiptType ?? RECEIPT_TYPE_NONE;
+    const receiptForUid = chat.receiptForUid ?? "";
     if (receiptType !== RECEIPT_TYPE_NONE && receiptForUid) {
       // Delivered / read receipt: emit a <link> pointing at the
       // original message UID. The envelope cot_type_id already
@@ -180,7 +185,7 @@ export function buildCotXml(packet: Record<string, unknown>): string {
       // Reconstruct the full __chat element that ATAK/iTAK needs
       // for routing and display. GeoChat event UID format:
       // GeoChat.{senderUid}.{chatroom}.{messageId}
-      const uid = String(packet.uid ?? "");
+      const uid = packet.uid ?? "";
       const gcParts = uid.split(".");
       // split(".") on "GeoChat.sender.chatroom.msgId" → exactly 4 parts
       // when the chatroom name contains no dots (the standard case).
@@ -188,8 +193,8 @@ export function buildCotXml(packet: Record<string, unknown>): string {
         const senderUid = gcParts[1];
         const msgId = gcParts[gcParts.length - 1];
         const chatroom = gcParts.slice(2, -1).join(".");
-        const senderCs = (chat.toCallsign as string) || String(packet.callsign ?? "") || "UNKNOWN";
-        const msg = (chat.message as string) ?? "";
+        const senderCs = chat.toCallsign || packet.callsign || "UNKNOWN";
+        const msg = chat.message ?? "";
         lines.push(`    <__chat parent="RootContactGroup" groupOwner="false" messageId="${esc(msgId)}" chatroom="${esc(chatroom)}" id="${esc(chatroom)}" senderCallsign="${esc(senderCs)}">`);
         lines.push(`      <chatgrp uid0="${esc(senderUid)}" uid1="${esc(chatroom)}" id="${esc(chatroom)}"/>`);
         lines.push(`    </__chat>`);
@@ -197,21 +202,21 @@ export function buildCotXml(packet: Record<string, unknown>): string {
         lines.push(`    <__serverdestination destinations="0.0.0.0:4242:tcp:${esc(senderUid)}"/>`);
         lines.push(`    <remarks source="BAO.F.ATAK.${esc(senderUid)}" to="${esc(chatroom)}" time="${now}">${esc(msg)}</remarks>`);
       } else {
-        lines.push(`    <remarks>${esc((chat.message as string) ?? "")}</remarks>`);
+        lines.push(`    <remarks>${esc(chat.message ?? "")}</remarks>`);
       }
     }
   } else if (aircraft) {
-    const icao = aircraft.icao as string ?? "";
+    const icao = aircraft.icao ?? "";
     if (icao) {
       let tag = `    <_aircot_ icao="${esc(icao)}"`;
-      if (aircraft.registration) tag += ` reg="${esc(String(aircraft.registration))}"`;
-      if (aircraft.flight) tag += ` flight="${esc(String(aircraft.flight))}"`;
-      if (aircraft.category) tag += ` cat="${esc(String(aircraft.category))}"`;
-      if (aircraft.cotHostId) tag += ` cot_host_id="${esc(String(aircraft.cotHostId))}"`;
+      if (aircraft.registration) tag += ` reg="${esc(aircraft.registration)}"`;
+      if (aircraft.flight) tag += ` flight="${esc(aircraft.flight)}"`;
+      if (aircraft.category) tag += ` cat="${esc(aircraft.category)}"`;
+      if (aircraft.cotHostId) tag += ` cot_host_id="${esc(aircraft.cotHostId)}"`;
       lines.push(tag + "/>");
     }
     // Squawk and aircraft metadata as remarks text (ATAK parses these from remarks)
-    const squawk = (aircraft.squawk as number) ?? 0;
+    const squawk = aircraft.squawk ?? 0;
     if (squawk > 0) {
       const parts: string[] = [];
       if (icao) parts.push(`ICAO: ${icao}`);
@@ -222,7 +227,7 @@ export function buildCotXml(packet: Record<string, unknown>): string {
       lines.push(`    <remarks>${esc(parts.join(" "))}</remarks>`);
     }
     // ADS-B receiver metadata
-    const rssiX10 = (aircraft.rssiX10 as number) ?? 0;
+    const rssiX10 = aircraft.rssiX10 ?? 0;
     if (rssiX10 !== 0) {
       const rssi = rssiX10 / 10.0;
       let radioTag = `    <_radio rssi="${rssi}"`;
@@ -230,13 +235,13 @@ export function buildCotXml(packet: Record<string, unknown>): string {
       lines.push(radioTag + "/>");
     }
   } else if (shape) {
-    emitShape(lines, shape, eventLatI, eventLonI, String(packet.uid ?? ""));
+    emitShape(lines, shape, eventLatI, eventLonI, packet.uid ?? "");
   } else if (marker) {
     emitMarker(lines, marker);
   } else if (rab) {
     emitRab(lines, rab, eventLatI, eventLonI);
   } else if (route) {
-    emitRoute(lines, route, eventLatI, eventLonI, String(packet.uid ?? ""), String(packet.remarks ?? ""), callsign);
+    emitRoute(lines, route, eventLatI, eventLonI, packet.uid ?? "", packet.remarks ?? "", callsign);
   } else if (casevac) {
     emitCasevac(lines, casevac);
   } else if (emergency) {
@@ -248,7 +253,7 @@ export function buildCotXml(packet: Record<string, unknown>): string {
     // element are shipped verbatim and re-emitted without any
     // normalization so the receiver round trip stays byte-exact with
     // the source XML.
-    const raw = packet.rawDetail as Buffer | Uint8Array | string;
+    const raw = packet.rawDetail;
     const text = typeof raw === "string"
       ? raw
       : Buffer.from(raw as Uint8Array).toString("utf-8");
@@ -258,7 +263,7 @@ export function buildCotXml(packet: Record<string, unknown>): string {
   // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
   // Chat uses GeoChat.message; Aircraft synthesizes from ICAO fields; Route handles
   // remarks in its own block above. All other types emit here.
-  const remarksStr = (packet.remarks as string) ?? "";
+  const remarksStr = packet.remarks ?? "";
   if (remarksStr && !chat && !aircraft && !route) {
     lines.push(`    <remarks>${esc(remarksStr)}</remarks>`);
   }
@@ -270,24 +275,24 @@ export function buildCotXml(packet: Record<string, unknown>): string {
 
 // --- Typed geometry emitters -------------------------------------------
 
-function emitShape(lines: string[], shape: Record<string, unknown>, eventLatI: number, eventLonI: number, uid: string = ""): void {
-  const kind = (shape.kind as number) ?? 0;
-  const style = (shape.style as number) ?? STYLE_UNSPECIFIED;
-  const strokeArgb = resolveColor((shape.strokeColor as number) ?? 0, (shape.strokeArgb as number) ?? 0);
-  const fillArgb = resolveColor((shape.fillColor as number) ?? 0, (shape.fillArgb as number) ?? 0);
+function emitShape(lines: string[], shape: DrawnShape, eventLatI: number, eventLonI: number, uid: string = ""): void {
+  const kind = shape.kind ?? 0;
+  const style = shape.style ?? STYLE_UNSPECIFIED;
+  const strokeArgb = resolveColor(shape.strokeColor ?? 0, shape.strokeArgb ?? 0);
+  const fillArgb = resolveColor(shape.fillColor ?? 0, shape.fillArgb ?? 0);
   const strokeVal = argbToSigned(strokeArgb);
   const fillVal = argbToSigned(fillArgb);
-  const strokeWeightX10 = (shape.strokeWeightX10 as number) ?? 0;
-  const labelsOn = (shape.labelsOn as boolean) ?? false;
+  const strokeWeightX10 = shape.strokeWeightX10 ?? 0;
+  const labelsOn = shape.labelsOn ?? false;
 
   const emitStroke = style === STYLE_STROKE_ONLY || style === STYLE_STROKE_AND_FILL ||
     (style === STYLE_UNSPECIFIED && strokeVal !== 0);
   const emitFill = style === STYLE_FILL_ONLY || style === STYLE_STROKE_AND_FILL ||
     (style === STYLE_UNSPECIFIED && fillVal !== 0);
 
-  const majorCm = (shape.majorCm as number) ?? 0;
-  const minorCm = (shape.minorCm as number) ?? 0;
-  const angleDeg = (shape.angleDeg as number) ?? 360;
+  const majorCm = shape.majorCm ?? 0;
+  const minorCm = shape.minorCm ?? 0;
+  const angleDeg = shape.angleDeg ?? 360;
 
   if (
     kind === SHAPE_KIND_CIRCLE ||
@@ -308,7 +313,7 @@ function emitShape(lines: string[], shape: Record<string, unknown>, eventLatI: n
       lines.push("    </shape>");
     }
   } else {
-    const vertices = (shape.vertices as Array<Record<string, number>>) ?? [];
+    const vertices = shape.vertices ?? [];
     for (const v of vertices) {
       const vlat = (eventLatI + (v.latDeltaI ?? 0)) / 1e7;
       const vlon = (eventLonI + (v.lonDeltaI ?? 0)) / 1e7;
@@ -317,10 +322,10 @@ function emitShape(lines: string[], shape: Record<string, unknown>, eventLatI: n
   }
 
   if (kind === SHAPE_KIND_BULLSEYE) {
-    const bullseyeDistanceDm = (shape.bullseyeDistanceDm as number) ?? 0;
-    const bullseyeBearingRef = (shape.bullseyeBearingRef as number) ?? 0;
-    const bullseyeFlags = (shape.bullseyeFlags as number) ?? 0;
-    const bullseyeUidRef = (shape.bullseyeUidRef as string) ?? "";
+    const bullseyeDistanceDm = shape.bullseyeDistanceDm ?? 0;
+    const bullseyeBearingRef = shape.bullseyeBearingRef ?? 0;
+    const bullseyeFlags = shape.bullseyeFlags ?? 0;
+    const bullseyeUidRef = shape.bullseyeUidRef ?? "";
     const parts: string[] = [];
     if (bullseyeDistanceDm > 0) parts.push(`distance="${bullseyeDistanceDm / 10}"`);
     const ref = BEARING_REF_NAMES[bullseyeBearingRef];
@@ -345,84 +350,84 @@ function emitShape(lines: string[], shape: Record<string, unknown>, eventLatI: n
   lines.push(`    <labels_on value="${labelsOn}"/>`);
 }
 
-function emitMarker(lines: string[], marker: Record<string, unknown>): void {
+function emitMarker(lines: string[], marker: Marker): void {
   if (marker.readiness === true) {
     lines.push(`    <status readiness="true"/>`);
   }
-  const parentUid = (marker.parentUid as string) ?? "";
+  const parentUid = marker.parentUid ?? "";
   if (parentUid) {
     const parts = [`uid="${esc(parentUid)}"`];
-    const parentType = (marker.parentType as string) ?? "";
+    const parentType = marker.parentType ?? "";
     if (parentType) parts.push(`type="${esc(parentType)}"`);
-    const parentCallsign = (marker.parentCallsign as string) ?? "";
+    const parentCallsign = marker.parentCallsign ?? "";
     if (parentCallsign) parts.push(`parent_callsign="${esc(parentCallsign)}"`);
     parts.push(`relation="p-p"`);
     lines.push(`    <link ${parts.join(" ")}/>`);
   }
-  const colorArgb = resolveColor((marker.color as number) ?? 0, (marker.colorArgb as number) ?? 0);
+  const colorArgb = resolveColor(marker.color ?? 0, marker.colorArgb ?? 0);
   const colorVal = argbToSigned(colorArgb);
   if (colorVal !== 0) {
     lines.push(`    <color argb="${colorVal}"/>`);
   }
-  const iconset = (marker.iconset as string) ?? "";
+  const iconset = marker.iconset ?? "";
   if (iconset) {
     lines.push(`    <usericon iconsetpath="${esc(iconset)}"/>`);
   }
 }
 
-function emitRab(lines: string[], rab: Record<string, unknown>, eventLatI: number, eventLonI: number): void {
-  const anchor = (rab.anchor as Record<string, number>) ?? {};
+function emitRab(lines: string[], rab: RangeAndBearing, eventLatI: number, eventLonI: number): void {
+  const anchor = rab.anchor ?? {};
   const anchorLatI = eventLatI + (anchor.latDeltaI ?? 0);
   const anchorLonI = eventLonI + (anchor.lonDeltaI ?? 0);
   if (anchorLatI !== 0 || anchorLonI !== 0) {
     const alat = anchorLatI / 1e7;
     const alon = anchorLonI / 1e7;
     const parts: string[] = [];
-    const anchorUid = (rab.anchorUid as string) ?? "";
+    const anchorUid = rab.anchorUid ?? "";
     if (anchorUid) parts.push(`uid="${esc(anchorUid)}"`);
     parts.push(`relation="p-p"`, `type="b-m-p-w"`, `point="${alat},${alon}"`);
     lines.push(`    <link ${parts.join(" ")}/>`);
   }
-  const rangeCm = (rab.rangeCm as number) ?? 0;
+  const rangeCm = rab.rangeCm ?? 0;
   if (rangeCm > 0) lines.push(`    <range value="${rangeCm / 100}"/>`);
-  const bearingCdeg = (rab.bearingCdeg as number) ?? 0;
+  const bearingCdeg = rab.bearingCdeg ?? 0;
   if (bearingCdeg > 0) lines.push(`    <bearing value="${bearingCdeg / 100}"/>`);
-  const strokeArgb = resolveColor((rab.strokeColor as number) ?? 0, (rab.strokeArgb as number) ?? 0);
+  const strokeArgb = resolveColor(rab.strokeColor ?? 0, rab.strokeArgb ?? 0);
   const strokeVal = argbToSigned(strokeArgb);
   if (strokeVal !== 0) lines.push(`    <strokeColor value="${strokeVal}"/>`);
-  const strokeWeightX10 = (rab.strokeWeightX10 as number) ?? 0;
+  const strokeWeightX10 = rab.strokeWeightX10 ?? 0;
   if (strokeWeightX10 > 0) lines.push(`    <strokeWeight value="${strokeWeightX10 / 10}"/>`);
 }
 
-function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: number, eventLonI: number, eventUid: string = "", remarks: string = "", callsign: string = ""): void {
+function emitRoute(lines: string[], route: Route, eventLatI: number, eventLonI: number, eventUid: string = "", remarks: string = "", callsign: string = ""): void {
   // Emit <link> elements BEFORE <link_attr> (ATAK expects waypoints first)
-  const links = (route.links as Array<Record<string, unknown>>) ?? [];
+  const links = route.links ?? [];
   for (let idx = 0; idx < links.length; idx++) {
     const link = links[idx];
-    const point = (link.point as Record<string, number>) ?? {};
+    const point = link.point ?? {};
     const llat = (eventLatI + (point.latDeltaI ?? 0)) / 1e7;
     const llon = (eventLonI + (point.lonDeltaI ?? 0)) / 1e7;
-    const linkType = (link.linkType as number) === 1 ? "b-m-p-c" : "b-m-p-w";
+    const linkType = link.linkType === 1 ? "b-m-p-c" : "b-m-p-w";
     const linkParts: string[] = [];
     // Generate deterministic uid when not present
-    const rawUid = (link.uid as string) ?? "";
+    const rawUid = link.uid ?? "";
     const uid = rawUid || `${eventUid}-${idx}`;
     linkParts.push(`uid="${esc(uid)}"`);
     linkParts.push(`type="${linkType}"`);
-    const linkCallsign = (link.callsign as string) ?? "";
+    const linkCallsign = link.callsign ?? "";
     if (linkCallsign) linkParts.push(`callsign="${esc(linkCallsign)}"`);
     // ATAK expects 3-component point: lat,lon,hae
     linkParts.push(`point="${llat},${llon},0" relation="c"`);
     lines.push(`    <link ${linkParts.join(" ")}/>`);
   }
   const parts: string[] = [];
-  const method = ROUTE_METHOD_NAMES[(route.method as number) ?? 0];
+  const method = ROUTE_METHOD_NAMES[route.method ?? 0];
   if (method) parts.push(`method="${method}"`);
-  const direction = ROUTE_DIRECTION_NAMES[(route.direction as number) ?? 0];
+  const direction = ROUTE_DIRECTION_NAMES[route.direction ?? 0];
   if (direction) parts.push(`direction="${direction}"`);
-  const prefix = (route.prefix as string) ?? "";
+  const prefix = route.prefix ?? "";
   if (prefix) parts.push(`prefix="${esc(prefix)}"`);
-  const strokeWeightX10 = (route.strokeWeightX10 as number) ?? 0;
+  const strokeWeightX10 = route.strokeWeightX10 ?? 0;
   if (strokeWeightX10 > 0) parts.push(`stroke="${strokeWeightX10 / 10}"`);
   lines.push(parts.length > 0 ? `    <link_attr ${parts.join(" ")}/>` : "    <link_attr/>");
   // Conditional remarks element (route block handles its own remarks)
@@ -434,7 +439,7 @@ function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: n
   // routeinfo with navcues child (after link_attr)
   lines.push("    <__routeinfo><__navcues/></__routeinfo>");
   lines.push(`    <strokeColor value="-1"/>`);
-  const routeStrokeW = (route.strokeWeightX10 as number) ?? 0;
+  const routeStrokeW = route.strokeWeightX10 ?? 0;
   lines.push(`    <strokeWeight value="${routeStrokeW > 0 ? routeStrokeW / 10 : 3}"/>`);
   lines.push(`    <strokeStyle value="solid"/>`);
   if (callsign) {
@@ -444,104 +449,104 @@ function emitRoute(lines: string[], route: Record<string, unknown>, eventLatI: n
   lines.push(`    <color value="-1"/>`);
 }
 
-function emitCasevac(lines: string[], casevac: Record<string, unknown>): void {
+function emitCasevac(lines: string[], casevac: CasevacReport): void {
   const parts: string[] = [];
 
   // Metadata (emit first to match ATAK's attribute ordering)
-  const title = (casevac.title as string) ?? "";
+  const title = casevac.title ?? "";
   if (title) parts.push(`title="${esc(title)}"`);
-  const medlineRemarks = (casevac.medlineRemarks as string) ?? "";
+  const medlineRemarks = casevac.medlineRemarks ?? "";
   if (medlineRemarks) parts.push(`medline_remarks="${esc(medlineRemarks)}"`);
-  const frequency = (casevac.frequency as string) ?? "";
+  const frequency = casevac.frequency ?? "";
   if (frequency) parts.push(`freq="${esc(frequency)}"`);
 
-  const precedence = (casevac.precedence as number) ?? 0;
+  const precedence = casevac.precedence ?? 0;
   const precedenceName = PRECEDENCE_INT_TO_NAME[precedence];
   if (precedenceName) parts.push(`precedence="${precedenceName}"`);
 
   // Precedence patient counts (newer ATAK format)
-  const urgent = (casevac.urgentCount as number) ?? 0;
+  const urgent = casevac.urgentCount ?? 0;
   if (urgent > 0) parts.push(`urgent="${urgent}"`);
-  const urgentSurgical = (casevac.urgentSurgicalCount as number) ?? 0;
+  const urgentSurgical = casevac.urgentSurgicalCount ?? 0;
   if (urgentSurgical > 0) parts.push(`urgent_surgical="${urgentSurgical}"`);
-  const priority = (casevac.priorityCount as number) ?? 0;
+  const priority = casevac.priorityCount ?? 0;
   if (priority > 0) parts.push(`priority="${priority}"`);
-  const routine = (casevac.routineCount as number) ?? 0;
+  const routine = casevac.routineCount ?? 0;
   if (routine > 0) parts.push(`routine="${routine}"`);
-  const convenience = (casevac.convenienceCount as number) ?? 0;
+  const convenience = casevac.convenienceCount ?? 0;
   if (convenience > 0) parts.push(`convenience="${convenience}"`);
 
   // Equipment bitfield flags
-  const eq = (casevac.equipmentFlags as number) ?? 0;
+  const eq = casevac.equipmentFlags ?? 0;
   if (eq & 0x01) parts.push(`none="true"`);
   if (eq & 0x02) parts.push(`hoist="true"`);
   if (eq & 0x04) parts.push(`extraction_equipment="true"`);
   if (eq & 0x08) parts.push(`ventilator="true"`);
   if (eq & 0x10) parts.push(`blood="true"`);
   if (eq & 0x20) parts.push(`equipment_other="true"`);
-  const equipmentDetail = (casevac.equipmentDetail as string) ?? "";
+  const equipmentDetail = casevac.equipmentDetail ?? "";
   if (equipmentDetail) parts.push(`equipment_detail="${esc(equipmentDetail)}"`);
 
-  const litter = (casevac.litterPatients as number) ?? 0;
+  const litter = casevac.litterPatients ?? 0;
   if (litter > 0) parts.push(`litter="${litter}"`);
-  const ambulatory = (casevac.ambulatoryPatients as number) ?? 0;
+  const ambulatory = casevac.ambulatoryPatients ?? 0;
   if (ambulatory > 0) parts.push(`ambulatory="${ambulatory}"`);
 
-  const security = (casevac.security as number) ?? 0;
+  const security = casevac.security ?? 0;
   const securityName = SECURITY_INT_TO_NAME[security];
   if (securityName) parts.push(`security="${securityName}"`);
 
-  const hlz = (casevac.hlzMarking as number) ?? 0;
+  const hlz = casevac.hlzMarking ?? 0;
   const hlzName = HLZ_MARKING_INT_TO_NAME[hlz];
   if (hlzName) parts.push(`hlz_marking="${hlzName}"`);
 
-  const usMil = (casevac.usMilitary as number) ?? 0;
+  const usMil = casevac.usMilitary ?? 0;
   if (usMil > 0) parts.push(`us_military="${usMil}"`);
-  const usCiv = (casevac.usCivilian as number) ?? 0;
+  const usCiv = casevac.usCivilian ?? 0;
   if (usCiv > 0) parts.push(`us_civilian="${usCiv}"`);
-  const nonUsMil = (casevac.nonUsMilitary as number) ?? 0;
+  const nonUsMil = casevac.nonUsMilitary ?? 0;
   if (nonUsMil > 0) parts.push(`non_us_military="${nonUsMil}"`);
-  const nonUsCiv = (casevac.nonUsCivilian as number) ?? 0;
+  const nonUsCiv = casevac.nonUsCivilian ?? 0;
   if (nonUsCiv > 0) parts.push(`non_us_civilian="${nonUsCiv}"`);
-  const epw = (casevac.epw as number) ?? 0;
+  const epw = casevac.epw ?? 0;
   if (epw > 0) parts.push(`epw="${epw}"`);
-  const child = (casevac.child as number) ?? 0;
+  const child = casevac.child ?? 0;
   if (child > 0) parts.push(`child="${child}"`);
 
   // Terrain bitfield flags + extended detail
-  const tf = (casevac.terrainFlags as number) ?? 0;
+  const tf = casevac.terrainFlags ?? 0;
   if (tf & 0x01) parts.push(`terrain_slope="true"`);
-  const terrainSlopeDir = (casevac.terrainSlopeDir as string) ?? "";
+  const terrainSlopeDir = casevac.terrainSlopeDir ?? "";
   if (terrainSlopeDir) parts.push(`terrain_slope_dir="${esc(terrainSlopeDir)}"`);
   if (tf & 0x02) parts.push(`terrain_rough="true"`);
   if (tf & 0x04) parts.push(`terrain_loose="true"`);
   if (tf & 0x08) parts.push(`terrain_trees="true"`);
   if (tf & 0x10) parts.push(`terrain_wires="true"`);
   if (tf & 0x20) parts.push(`terrain_other="true"`);
-  const terrainOtherDetail = (casevac.terrainOtherDetail as string) ?? "";
+  const terrainOtherDetail = casevac.terrainOtherDetail ?? "";
   if (terrainOtherDetail) parts.push(`terrain_other_detail="${esc(terrainOtherDetail)}"`);
 
   // Location / marking
-  const zoneProtectedCoord = (casevac.zoneProtectedCoord as string) ?? "";
+  const zoneProtectedCoord = casevac.zoneProtectedCoord ?? "";
   if (zoneProtectedCoord) parts.push(`zone_protected_coord="${esc(zoneProtectedCoord)}"`);
-  const zoneMarker = (casevac.zoneMarker as string) ?? "";
+  const zoneMarker = casevac.zoneMarker ?? "";
   if (zoneMarker) parts.push(`zone_prot_marker="${esc(zoneMarker)}"`);
-  const markedBy = (casevac.markedBy as string) ?? "";
+  const markedBy = casevac.markedBy ?? "";
   if (markedBy) parts.push(`marked_by="${esc(markedBy)}"`);
 
   // Situational awareness (tier-2 free-text)
-  const obstacles = (casevac.obstacles as string) ?? "";
+  const obstacles = casevac.obstacles ?? "";
   if (obstacles) parts.push(`obstacles="${esc(obstacles)}"`);
-  const windsAreFrom = (casevac.windsAreFrom as string) ?? "";
+  const windsAreFrom = casevac.windsAreFrom ?? "";
   if (windsAreFrom) parts.push(`winds_are_from="${esc(windsAreFrom)}"`);
-  const friendlies = (casevac.friendlies as string) ?? "";
+  const friendlies = casevac.friendlies ?? "";
   if (friendlies) parts.push(`friendlies="${esc(friendlies)}"`);
-  const enemy = (casevac.enemy as string) ?? "";
+  const enemy = casevac.enemy ?? "";
   if (enemy) parts.push(`enemy="${esc(enemy)}"`);
-  const hlzRemarks = (casevac.hlzRemarks as string) ?? "";
+  const hlzRemarks = casevac.hlzRemarks ?? "";
   if (hlzRemarks) parts.push(`hlz_remarks="${esc(hlzRemarks)}"`);
 
-  const zmist = (casevac.zmist as Array<Record<string, unknown>> | undefined) ?? [];
+  const zmist = casevac.zmist ?? [];
   if (!zmist || zmist.length === 0) {
     lines.push(parts.length > 0 ? `    <_medevac_ ${parts.join(" ")}/>` : "    <_medevac_/>");
   } else {
@@ -549,17 +554,17 @@ function emitCasevac(lines: string[], casevac: Record<string, unknown>): void {
     lines.push(`      <zMistsMap>`);
     for (const z of zmist) {
       const zParts: string[] = [];
-      const zt = (z.title as string) ?? "";
+      const zt = z.title ?? "";
       if (zt) zParts.push(`title="${esc(zt)}"`);
-      const zz = (z.z as string) ?? "";
+      const zz = z.z ?? "";
       if (zz) zParts.push(`z="${esc(zz)}"`);
-      const zm = (z.m as string) ?? "";
+      const zm = z.m ?? "";
       if (zm) zParts.push(`m="${esc(zm)}"`);
-      const zi = (z.i as string) ?? "";
+      const zi = z.i ?? "";
       if (zi) zParts.push(`i="${esc(zi)}"`);
-      const zs = (z.s as string) ?? "";
+      const zs = z.s ?? "";
       if (zs) zParts.push(`s="${esc(zs)}"`);
-      const zti = (z.t as string) ?? "";
+      const zti = z.t ?? "";
       if (zti) zParts.push(`t="${esc(zti)}"`);
       lines.push(zParts.length > 0 ? `        <zMist ${zParts.join(" ")}/>` : `        <zMist/>`);
     }
@@ -568,8 +573,8 @@ function emitCasevac(lines: string[], casevac: Record<string, unknown>): void {
   }
 }
 
-function emitEmergency(lines: string[], emergency: Record<string, unknown>): void {
-  const type = (emergency.type as number) ?? 0;
+function emitEmergency(lines: string[], emergency: EmergencyAlert): void {
+  const type = emergency.type ?? 0;
   const parts: string[] = [];
   if (type === 6) {
     // Cancel: ATAK writes <emergency cancel="true"/> rather than
@@ -581,39 +586,39 @@ function emitEmergency(lines: string[], emergency: Record<string, unknown>): voi
   }
   lines.push(parts.length > 0 ? `    <emergency ${parts.join(" ")}/>` : "    <emergency/>");
 
-  const authoringUid = (emergency.authoringUid as string) ?? "";
+  const authoringUid = emergency.authoringUid ?? "";
   if (authoringUid) {
     lines.push(`    <link uid="${esc(authoringUid)}" relation="p-p" type="a-f-G-U-C"/>`);
   }
-  const cancelReferenceUid = (emergency.cancelReferenceUid as string) ?? "";
+  const cancelReferenceUid = emergency.cancelReferenceUid ?? "";
   if (cancelReferenceUid) {
     lines.push(`    <link uid="${esc(cancelReferenceUid)}" relation="p-p" type="b-a-o-tbl"/>`);
   }
 }
 
-function emitTask(lines: string[], task: Record<string, unknown>): void {
+function emitTask(lines: string[], task: TaskRequest): void {
   const parts: string[] = [];
-  const taskType = (task.taskType as string) ?? "";
+  const taskType = task.taskType ?? "";
   if (taskType) parts.push(`type="${esc(taskType)}"`);
 
-  const priority = (task.priority as number) ?? 0;
+  const priority = task.priority ?? 0;
   const priorityName = TASK_PRIORITY_INT_TO_NAME[priority];
   if (priorityName) parts.push(`priority="${priorityName}"`);
 
-  const status = (task.status as number) ?? 0;
+  const status = task.status ?? 0;
   const statusName = TASK_STATUS_INT_TO_NAME[status];
   if (statusName) parts.push(`status="${statusName}"`);
 
-  const assigneeUid = (task.assigneeUid as string) ?? "";
+  const assigneeUid = task.assigneeUid ?? "";
   if (assigneeUid) parts.push(`assignee="${esc(assigneeUid)}"`);
 
-  const note = (task.note as string) ?? "";
+  const note = task.note ?? "";
   if (note) parts.push(`note="${esc(note)}"`);
 
   lines.push(parts.length > 0 ? `    <task ${parts.join(" ")}/>` : "    <task/>");
 
   // Target link
-  const targetUid = (task.targetUid as string) ?? "";
+  const targetUid = task.targetUid ?? "";
   if (targetUid) {
     lines.push(`    <link uid="${esc(targetUid)}" relation="p-p" type="a-f-G"/>`);
   }
