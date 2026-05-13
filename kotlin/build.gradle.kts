@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.meshtastic"
-version = "0.2.0"
+version = "0.2.1"
 
 repositories {
     mavenCentral()
@@ -77,88 +77,36 @@ tasks.withType<Test>().configureEach {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Split-JAR packaging (fix for https://github.com/meshtastic/TAKPacket-SDK/issues/5)
+// JVM JAR packaging (fix for https://github.com/meshtastic/TAKPacket-SDK/issues/5)
 //
-// Pre-0.2.0 the JVM publication bundled the Wire-generated `org.meshtastic.proto.*`
+// Pre-0.2.0 the JVM JAR bundled the Wire-generated `org.meshtastic.proto.*`
 // classes alongside the SDK's own `org.meshtastic.tak.*` classes. Any consumer
-// that also generated those proto classes from the same submodule (e.g. the
-// Meshtastic-Android `core:proto` module) hit R8 "Type ... is defined multiple
-// times" errors during release builds.
+// that also generated those proto classes from the same submodule (e.g.
+// Meshtastic-Android's `core:proto` module, which runs its own Wire codegen
+// against the same `meshtastic/atak.proto` file) hit R8 "Type ... is defined
+// multiple times" errors during release builds.
 //
-// The fix: the main `takpacket-sdk-jvm` JAR now excludes `org/meshtastic/proto/**`,
-// and a sibling `takpacket-sdk-protos-jvm` JAR contains only those classes,
-// published as a separate Maven publication. The main JAR declares the protos
-// JAR as a `runtime` dependency in its POM, so:
+// Fix: the JVM JAR no longer ships `org/meshtastic/proto/**`. The SDK's
+// compiled bytecode still REFERENCES those classes — `TAKPacketV2`, `CotType`,
+// `GeoChat`, etc. — but they must come from elsewhere on the consumer's
+// runtime classpath. Two valid sources:
 //
-//   * Standalone consumers pick up both jars transitively — no behavior change.
-//   * Consumers that already have the proto classes on their classpath exclude
-//     the transitive `takpacket-sdk-protos-jvm`:
+//   1. The consumer has its own Wire codegen target for the same proto file
+//      (the Meshtastic-Android `core:proto` module is the canonical case;
+//      it's a `kotlin("multiplatform") + com.squareup.wire` module that emits
+//      identical `org.meshtastic.proto.*` classes from the shared protobufs
+//      submodule).
+//   2. The consumer manually depends on a published artifact carrying those
+//      classes, or generates them with `protoc` / Wire / Protobuf-Lite / etc.
+//      against `meshtastic/atak.proto`.
 //
-//       implementation("com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm:vX.Y.Z") {
-//           exclude(group = "com.github.meshtastic.TAKPacket-SDK", module = "takpacket-sdk-protos-jvm")
-//       }
+// We don't ship a sibling "protos" JAR because every Meshtastic ecosystem
+// consumer already has a proto module of its own — bundling them would just
+// recreate the duplicate-class problem in a slightly different shape.
 //
-// This approach avoids restructuring into Gradle multi-project (which fights
-// the KMP plugin's strong assumptions about being a single project) — it ships
-// two artifacts from one project.
-
-// Mutate the JVM jar task in place to drop the proto/ classes. The Wire-
-// generated classes are part of `commonMain`, so iosArm64 / iosSimulatorArm64
-// klibs (which package their own representation of commonMain) are unaffected
-// — this exclusion applies only to the JVM target's `.jar`.
+// iosArm64 / iosSimulatorArm64 klibs are unchanged — proto classes still ship
+// inside them because iOS doesn't have R8's duplicate-class issue and there's
+// no analogous proto module on the Apple side.
 tasks.named<Jar>("jvmJar") {
     exclude("org/meshtastic/proto/**")
-}
-
-// Sibling JAR carrying only the proto classes, built from the SAME compiled
-// classes the JVM target produces. Done via `tasks.named("compileKotlinJvm")`
-// so the classes are guaranteed to be on disk by the time this jar runs.
-val jvmProtosJar = tasks.register<Jar>("jvmProtosJar") {
-    description = "JVM JAR containing only the Wire-generated org.meshtastic.proto.* classes (issue #5)"
-    group = "build"
-    archiveBaseName.set("takpacket-sdk-protos")
-    archiveClassifier.set("")
-    dependsOn(tasks.named("compileKotlinJvm"))
-    from(layout.buildDirectory.dir("classes/kotlin/jvm/main")) {
-        include("org/meshtastic/proto/**")
-    }
-}
-
-afterEvaluate {
-    publishing {
-        publications {
-            // Add the protos JAR as a separate publication. Standalone
-            // consumers pull it transitively via the dependency we add to
-            // the JVM publication's POM below; consumers with their own
-            // proto module can `exclude` it.
-            create<MavenPublication>("jvmProtos") {
-                artifactId = "takpacket-sdk-protos-jvm"
-                artifact(jvmProtosJar.get())
-                pom.withXml {
-                    val deps = asNode().appendNode("dependencies")
-                    val dep = deps.appendNode("dependency")
-                    dep.appendNode("groupId", "com.squareup.wire")
-                    dep.appendNode("artifactId", "wire-runtime-jvm")
-                    dep.appendNode("version", "6.2.0")
-                    dep.appendNode("scope", "compile")
-                }
-            }
-
-            // Declare the protos JAR as a transitive runtime dep in the
-            // JVM publication's POM so standalone consumers pick it up
-            // automatically when they depend on `takpacket-sdk-jvm`.
-            named<MavenPublication>("jvm") {
-                pom.withXml {
-                    val deps = (asNode().children().find {
-                        (it as groovy.util.Node).name().toString().endsWith("dependencies")
-                    } as? groovy.util.Node) ?: asNode().appendNode("dependencies")
-                    val dep = deps.appendNode("dependency")
-                    dep.appendNode("groupId", project.group)
-                    dep.appendNode("artifactId", "takpacket-sdk-protos-jvm")
-                    dep.appendNode("version", project.version)
-                    dep.appendNode("scope", "runtime")
-                }
-            }
-        }
-    }
 }
