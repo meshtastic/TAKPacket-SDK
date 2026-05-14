@@ -141,110 +141,125 @@ namespace Meshtastic.Protobufs {
             "dGljYWwQBCKQAQoGU3RhdHVzEhYKElN0YXR1c19VbnNwZWNpZmllZBAAEhIK",
             "DlN0YXR1c19QZW5kaW5nEAESFwoTU3RhdHVzX0Fja25vd2xlZGdlZBACEhUK",
             "EVN0YXR1c19JblByb2dyZXNzEAMSFAoQU3RhdHVzX0NvbXBsZXRlZBAEEhQK",
-            "EFN0YXR1c19DYW5jZWxsZWQQBSL8BwoLVEFLUGFja2V0VjISKAoLY290X3R5",
-            "cGVfaWQYASABKA4yEy5tZXNodGFzdGljLkNvdFR5cGUSHwoDaG93GAIgASgO",
-            "MhIubWVzaHRhc3RpYy5Db3RIb3cSEAoIY2FsbHNpZ24YAyABKAkSHgoEdGVh",
-            "bRgEIAEoDjIQLm1lc2h0YXN0aWMuVGVhbRIkCgRyb2xlGAUgASgOMhYubWVz",
-            "aHRhc3RpYy5NZW1iZXJSb2xlEhIKCmxhdGl0dWRlX2kYBiABKA8SEwoLbG9u",
-            "Z2l0dWRlX2kYByABKA8SEAoIYWx0aXR1ZGUYCCABKBESDQoFc3BlZWQYCSAB",
-            "KA0SDgoGY291cnNlGAogASgNEg8KB2JhdHRlcnkYCyABKA0SKwoHZ2VvX3Ny",
-            "YxgMIAEoDjIaLm1lc2h0YXN0aWMuR2VvUG9pbnRTb3VyY2USKwoHYWx0X3Ny",
-            "YxgNIAEoDjIaLm1lc2h0YXN0aWMuR2VvUG9pbnRTb3VyY2USCwoDdWlkGA4g",
-            "ASgJEhcKD2RldmljZV9jYWxsc2lnbhgPIAEoCRIVCg1zdGFsZV9zZWNvbmRz",
-            "GBAgASgNEhMKC3Rha192ZXJzaW9uGBEgASgJEhIKCnRha19kZXZpY2UYEiAB",
-            "KAkSFAoMdGFrX3BsYXRmb3JtGBMgASgJEg4KBnRha19vcxgUIAEoCRIQCghl",
-            "bmRwb2ludBgVIAEoCRINCgVwaG9uZRgWIAEoCRIUCgxjb3RfdHlwZV9zdHIY",
-            "FyABKAkSDwoHcmVtYXJrcxgYIAEoCRINCgNwbGkYHiABKAhIABIjCgRjaGF0",
-            "GB8gASgLMhMubWVzaHRhc3RpYy5HZW9DaGF0SAASLQoIYWlyY3JhZnQYICAB",
-            "KAsyGS5tZXNodGFzdGljLkFpcmNyYWZ0VHJhY2tIABIUCgpyYXdfZGV0YWls",
-            "GCEgASgMSAASJwoFc2hhcGUYIiABKAsyFi5tZXNodGFzdGljLkRyYXduU2hh",
-            "cGVIABIkCgZtYXJrZXIYIyABKAsyEi5tZXNodGFzdGljLk1hcmtlckgAEioK",
-            "A3JhYhgkIAEoCzIbLm1lc2h0YXN0aWMuUmFuZ2VBbmRCZWFyaW5nSAASIgoF",
-            "cm91dGUYJSABKAsyES5tZXNodGFzdGljLlJvdXRlSAASLAoHY2FzZXZhYxgm",
-            "IAEoCzIZLm1lc2h0YXN0aWMuQ2FzZXZhY1JlcG9ydEgAEi8KCWVtZXJnZW5j",
-            "eRgnIAEoCzIaLm1lc2h0YXN0aWMuRW1lcmdlbmN5QWxlcnRIABInCgR0YXNr",
-            "GCggASgLMhcubWVzaHRhc3RpYy5UYXNrUmVxdWVzdEgAQhEKD3BheWxvYWRf",
-            "dmFyaWFudCrAAQoEVGVhbRIUChBVbnNwZWNpZmVkX0NvbG9yEAASCQoFV2hp",
-            "dGUQARIKCgZZZWxsb3cQAhIKCgZPcmFuZ2UQAxILCgdNYWdlbnRhEAQSBwoD",
-            "UmVkEAUSCgoGTWFyb29uEAYSCgoGUHVycGxlEAcSDQoJRGFya19CbHVlEAgS",
-            "CAoEQmx1ZRAJEggKBEN5YW4QChIICgRUZWFsEAsSCQoFR3JlZW4QDBIOCgpE",
-            "YXJrX0dyZWVuEA0SCQoFQnJvd24QDip/CgpNZW1iZXJSb2xlEg4KClVuc3Bl",
-            "Y2lmZWQQABIOCgpUZWFtTWVtYmVyEAESDAoIVGVhbUxlYWQQAhIGCgJIURAD",
-            "EgoKBlNuaXBlchAEEgkKBU1lZGljEAUSEwoPRm9yd2FyZE9ic2VydmVyEAYS",
-            "BwoDUlRPEAcSBgoCSzkQCCqWAQoGQ290SG93EhYKEkNvdEhvd19VbnNwZWNp",
-            "ZmllZBAAEg4KCkNvdEhvd19oX2UQARIOCgpDb3RIb3dfbV9nEAISFAoQQ290",
-            "SG93X2hfZ19pX2dfbxADEg4KCkNvdEhvd19tX3IQBBIOCgpDb3RIb3dfbV9m",
-            "EAUSDgoKQ290SG93X21fcBAGEg4KCkNvdEhvd19tX3MQByrhFgoHQ290VHlw",
-            "ZRIRCg1Db3RUeXBlX090aGVyEAASFQoRQ290VHlwZV9hX2ZfR19VX0MQARIX",
-            "ChNDb3RUeXBlX2FfZl9HX1VfQ19JEAISFQoRQ290VHlwZV9hX25fQV9DX0YQ",
-            "AxIVChFDb3RUeXBlX2Ffbl9BX0NfSBAEEhMKD0NvdFR5cGVfYV9uX0FfQxAF",
-            "EhUKEUNvdFR5cGVfYV9mX0FfTV9IEAYSEwoPQ290VHlwZV9hX2ZfQV9NEAcS",
-            "FwoTQ290VHlwZV9hX2ZfQV9NX0ZfRhAIEhcKE0NvdFR5cGVfYV9mX0FfTV9I",
-            "X0EQCRIZChVDb3RUeXBlX2FfZl9BX01fSF9VX00QChIXChNDb3RUeXBlX2Ff",
-            "aF9BX01fRl9GEAsSFwoTQ290VHlwZV9hX2hfQV9NX0hfQRAMEhMKD0NvdFR5",
-            "cGVfYV91X0FfQxANEhMKD0NvdFR5cGVfdF94X2RfZBAOEhcKE0NvdFR5cGVf",
-            "YV9mX0dfRV9TX0UQDxIXChNDb3RUeXBlX2FfZl9HX0VfVl9DEBASEQoNQ290",
-            "VHlwZV9hX2ZfUxAREhUKEUNvdFR5cGVfYV9mX0FfTV9GEBISGQoVQ290VHlw",
-            "ZV9hX2ZfQV9NX0ZfQ19IEBMSGQoVQ290VHlwZV9hX2ZfQV9NX0ZfVV9MEBQS",
-            "FwoTQ290VHlwZV9hX2ZfQV9NX0ZfTBAVEhcKE0NvdFR5cGVfYV9mX0FfTV9G",
-            "X1AQFhIVChFDb3RUeXBlX2FfZl9BX0NfSBAXEhcKE0NvdFR5cGVfYV9uX0Ff",
-            "TV9GX1EQGBIRCg1Db3RUeXBlX2JfdF9mEBkSFQoRQ290VHlwZV9iX3JfZl9o",
-            "X2MQGhIVChFDb3RUeXBlX2JfYV9vX3BhbhAbEhUKEUNvdFR5cGVfYl9hX29f",
-            "b3BuEBwSFQoRQ290VHlwZV9iX2Ffb19jYW4QHRIVChFDb3RUeXBlX2JfYV9v",
-            "X3RibBAeEhEKDUNvdFR5cGVfYl9hX2cQHxIRCg1Db3RUeXBlX2FfZl9HECAS",
-            "EwoPQ290VHlwZV9hX2ZfR19VECESEQoNQ290VHlwZV9hX2hfRxAiEhEKDUNv",
-            "dFR5cGVfYV91X0cQIxIRCg1Db3RUeXBlX2Ffbl9HECQSEQoNQ290VHlwZV9i",
-            "X21fchAlEhMKD0NvdFR5cGVfYl9tX3BfdxAmEhcKE0NvdFR5cGVfYl9tX3Bf",
-            "c19wX2kQJxIRCg1Db3RUeXBlX3VfZF9mECgSEQoNQ290VHlwZV91X2RfchAp",
-            "EhMKD0NvdFR5cGVfdV9kX2NfYxAqEhIKDkNvdFR5cGVfdV9yYl9hECsSEQoN",
-            "Q290VHlwZV9hX2hfQRAsEhEKDUNvdFR5cGVfYV91X0EQLRIXChNDb3RUeXBl",
-            "X2FfZl9BX01fSF9REC4SFQoRQ290VHlwZV9hX2ZfQV9DX0YQLxITCg9Db3RU",
-            "eXBlX2FfZl9BX0MQMBIVChFDb3RUeXBlX2FfZl9BX0NfTBAxEhEKDUNvdFR5",
-            "cGVfYV9mX0EQMhIXChNDb3RUeXBlX2FfZl9BX01fSF9DEDMSFwoTQ290VHlw",
-            "ZV9hX25fQV9NX0ZfRhA0EhUKEUNvdFR5cGVfYV91X0FfQ19GEDUSGwoXQ290",
-            "VHlwZV9hX2ZfR19VX0NfRl9UX0EQNhIZChVDb3RUeXBlX2FfZl9HX1VfQ19W",
-            "X1MQNxIZChVDb3RUeXBlX2FfZl9HX1VfQ19SX1gQOBIZChVDb3RUeXBlX2Ff",
-            "Zl9HX1VfQ19JX1oQORIbChdDb3RUeXBlX2FfZl9HX1VfQ19FX0NfVxA6EhkK",
-            "FUNvdFR5cGVfYV9mX0dfVV9DX0lfTBA7EhkKFUNvdFR5cGVfYV9mX0dfVV9D",
-            "X1JfTxA8EhkKFUNvdFR5cGVfYV9mX0dfVV9DX1JfVhA9EhUKEUNvdFR5cGVf",
-            "YV9mX0dfVV9IED4SGwoXQ290VHlwZV9hX2ZfR19VX1VfTV9TX0UQPxIZChVD",
-            "b3RUeXBlX2FfZl9HX1VfU19NX0MQQBIVChFDb3RUeXBlX2FfZl9HX0VfUxBB",
-            "EhMKD0NvdFR5cGVfYV9mX0dfRRBCEhkKFUNvdFR5cGVfYV9mX0dfRV9WX0Nf",
-            "VRBDEhoKFkNvdFR5cGVfYV9mX0dfRV9WX0NfcHMQRBIVChFDb3RUeXBlX2Ff",
-            "dV9HX0VfVhBFEhcKE0NvdFR5cGVfYV9mX1NfTl9OX1IQRhITCg9Db3RUeXBl",
-            "X2FfZl9GX0IQRxIZChVDb3RUeXBlX2JfbV9wX3NfcF9sb2MQSBIRCg1Db3RU",
-            "eXBlX2JfaV92EEkSEwoPQ290VHlwZV9iX2ZfdF9yEEoSEwoPQ290VHlwZV9i",
-            "X2ZfdF9hEEsSEwoPQ290VHlwZV91X2RfZl9tEEwSEQoNQ290VHlwZV91X2Rf",
-            "cBBNEhUKEUNvdFR5cGVfYl9tX3Bfc19tEE4SEwoPQ290VHlwZV9iX21fcF9j",
-            "EE8SFQoRQ290VHlwZV91X3JfYl9jX2MQUBIaChZDb3RUeXBlX3Vfcl9iX2J1",
-            "bGxzZXllEFESFwoTQ290VHlwZV9hX2ZfR19FX1ZfQRBSEhEKDUNvdFR5cGVf",
-            "YV9uX0EQUxIXChNDb3RUeXBlX2FfdV9HX1VfQ19GEFQSFwoTQ290VHlwZV9h",
-            "X25fR19VX0NfRhBVEhcKE0NvdFR5cGVfYV9oX0dfVV9DX0YQVhIXChNDb3RU",
-            "eXBlX2FfZl9HX1VfQ19GEFcSEwoPQ290VHlwZV9hX3VfR19JEFgSEwoPQ290",
-            "VHlwZV9hX25fR19JEFkSEwoPQ290VHlwZV9hX2hfR19JEFoSEwoPQ290VHlw",
-            "ZV9hX2ZfR19JEFsSFwoTQ290VHlwZV9hX3VfR19FX1hfTRBcEhcKE0NvdFR5",
-            "cGVfYV9uX0dfRV9YX00QXRIXChNDb3RUeXBlX2FfaF9HX0VfWF9NEF4SFwoT",
-            "Q290VHlwZV9hX2ZfR19FX1hfTRBfEhEKDUNvdFR5cGVfYV91X1MQYBIRCg1D",
-            "b3RUeXBlX2Ffbl9TEGESEQoNQ290VHlwZV9hX2hfUxBiEhkKFUNvdFR5cGVf",
-            "YV91X0dfVV9DX0lfZBBjEhkKFUNvdFR5cGVfYV9uX0dfVV9DX0lfZBBkEhkK",
-            "FUNvdFR5cGVfYV9oX0dfVV9DX0lfZBBlEhkKFUNvdFR5cGVfYV9mX0dfVV9D",
-            "X0lfZBBmEhkKFUNvdFR5cGVfYV91X0dfRV9WX0FfVBBnEhkKFUNvdFR5cGVf",
-            "YV9uX0dfRV9WX0FfVBBoEhkKFUNvdFR5cGVfYV9oX0dfRV9WX0FfVBBpEhkK",
-            "FUNvdFR5cGVfYV9mX0dfRV9WX0FfVBBqEhcKE0NvdFR5cGVfYV91X0dfVV9D",
-            "X0kQaxIXChNDb3RUeXBlX2Ffbl9HX1VfQ19JEGwSFwoTQ290VHlwZV9hX2hf",
-            "R19VX0NfSRBtEhUKEUNvdFR5cGVfYV9uX0dfRV9WEG4SFQoRQ290VHlwZV9h",
-            "X2hfR19FX1YQbxIVChFDb3RUeXBlX2FfZl9HX0VfVhBwEhgKFENvdFR5cGVf",
-            "Yl9tX3Bfd19HT1RPEHESFgoSQ290VHlwZV9iX21fcF9jX2lwEHISFgoSQ290",
-            "VHlwZV9iX21fcF9jX2NwEHMSGAoUQ290VHlwZV9iX21fcF9zX3Bfb3AQdBIR",
-            "Cg1Db3RUeXBlX3VfZF92EHUSEwoPQ290VHlwZV91X2Rfdl9tEHYSEwoPQ290",
-            "VHlwZV91X2RfY19lEHcSEwoPQ290VHlwZV9iX2lfeF9pEHgSEwoPQ290VHlw",
-            "ZV9iX3RfZl9kEHkSEwoPQ290VHlwZV9iX3RfZl9yEHoSEwoPQ290VHlwZV9i",
-            "X2Ffb19jEHsSDwoLQ290VHlwZV90X3MQfCp9Cg5HZW9Qb2ludFNvdXJjZRIe",
-            "ChpHZW9Qb2ludFNvdXJjZV9VbnNwZWNpZmllZBAAEhYKEkdlb1BvaW50U291",
-            "cmNlX0dQUxABEhcKE0dlb1BvaW50U291cmNlX1VTRVIQAhIaChZHZW9Qb2lu",
-            "dFNvdXJjZV9ORVRXT1JLEANCYAoUb3JnLm1lc2h0YXN0aWMucHJvdG9CCkFU",
-            "QUtQcm90b3NaImdpdGh1Yi5jb20vbWVzaHRhc3RpYy9nby9nZW5lcmF0ZWSq",
-            "AhRNZXNodGFzdGljLlByb3RvYnVmc7oCAGIGcHJvdG8z"));
+            "EFN0YXR1c19DYW5jZWxsZWQQBSJgCg5UQUtFbnZpcm9ubWVudBIZChF0ZW1w",
+            "ZXJhdHVyZV9jX3gxMBgBIAEoERIaChJ3aW5kX2RpcmVjdGlvbl9kZWcYAiAB",
+            "KA0SFwoPd2luZF9zcGVlZF9jbV9zGAMgASgNIo0DCglTZW5zb3JGb3YSLgoE",
+            "dHlwZRgBIAEoDjIgLm1lc2h0YXN0aWMuU2Vuc29yRm92LlNlbnNvclR5cGUS",
+            "EwoLYXppbXV0aF9kZWcYAiABKA0SFAoHcmFuZ2VfbRgDIAEoDUgAiAEBEhoK",
+            "EmZvdl9ob3Jpem9udGFsX2RlZxgEIAEoDRIYChBmb3ZfdmVydGljYWxfZGVn",
+            "GAUgASgNEhUKDWVsZXZhdGlvbl9kZWcYBiABKBESEAoIcm9sbF9kZWcYByAB",
+            "KBESDQoFbW9kZWwYCCABKAkiqgEKClNlbnNvclR5cGUSGgoWU2Vuc29yVHlw",
+            "ZV9VbnNwZWNpZmllZBAAEhUKEVNlbnNvclR5cGVfQ2FtZXJhEAESFgoSU2Vu",
+            "c29yVHlwZV9UaGVybWFsEAISFAoQU2Vuc29yVHlwZV9MYXNlchADEhIKDlNl",
+            "bnNvclR5cGVfTnZnEAQSEQoNU2Vuc29yVHlwZV9SZhAFEhQKEFNlbnNvclR5",
+            "cGVfT3RoZXIQBkIKCghfcmFuZ2VfbSKTCQoLVEFLUGFja2V0VjISKAoLY290",
+            "X3R5cGVfaWQYASABKA4yEy5tZXNodGFzdGljLkNvdFR5cGUSHwoDaG93GAIg",
+            "ASgOMhIubWVzaHRhc3RpYy5Db3RIb3cSEAoIY2FsbHNpZ24YAyABKAkSHgoE",
+            "dGVhbRgEIAEoDjIQLm1lc2h0YXN0aWMuVGVhbRIkCgRyb2xlGAUgASgOMhYu",
+            "bWVzaHRhc3RpYy5NZW1iZXJSb2xlEhIKCmxhdGl0dWRlX2kYBiABKA8SEwoL",
+            "bG9uZ2l0dWRlX2kYByABKA8SEAoIYWx0aXR1ZGUYCCABKBESDQoFc3BlZWQY",
+            "CSABKA0SDgoGY291cnNlGAogASgNEg8KB2JhdHRlcnkYCyABKA0SKwoHZ2Vv",
+            "X3NyYxgMIAEoDjIaLm1lc2h0YXN0aWMuR2VvUG9pbnRTb3VyY2USKwoHYWx0",
+            "X3NyYxgNIAEoDjIaLm1lc2h0YXN0aWMuR2VvUG9pbnRTb3VyY2USCwoDdWlk",
+            "GA4gASgJEhcKD2RldmljZV9jYWxsc2lnbhgPIAEoCRIVCg1zdGFsZV9zZWNv",
+            "bmRzGBAgASgNEhMKC3Rha192ZXJzaW9uGBEgASgJEhIKCnRha19kZXZpY2UY",
+            "EiABKAkSFAoMdGFrX3BsYXRmb3JtGBMgASgJEg4KBnRha19vcxgUIAEoCRIQ",
+            "CghlbmRwb2ludBgVIAEoCRINCgVwaG9uZRgWIAEoCRIUCgxjb3RfdHlwZV9z",
+            "dHIYFyABKAkSDwoHcmVtYXJrcxgYIAEoCRI0CgtlbnZpcm9ubWVudBgZIAEo",
+            "CzIaLm1lc2h0YXN0aWMuVEFLRW52aXJvbm1lbnRIAYgBARIuCgpzZW5zb3Jf",
+            "Zm92GBogASgLMhUubWVzaHRhc3RpYy5TZW5zb3JGb3ZIAogBARINCgNwbGkY",
+            "HiABKAhIABIjCgRjaGF0GB8gASgLMhMubWVzaHRhc3RpYy5HZW9DaGF0SAAS",
+            "LQoIYWlyY3JhZnQYICABKAsyGS5tZXNodGFzdGljLkFpcmNyYWZ0VHJhY2tI",
+            "ABIUCgpyYXdfZGV0YWlsGCEgASgMSAASJwoFc2hhcGUYIiABKAsyFi5tZXNo",
+            "dGFzdGljLkRyYXduU2hhcGVIABIkCgZtYXJrZXIYIyABKAsyEi5tZXNodGFz",
+            "dGljLk1hcmtlckgAEioKA3JhYhgkIAEoCzIbLm1lc2h0YXN0aWMuUmFuZ2VB",
+            "bmRCZWFyaW5nSAASIgoFcm91dGUYJSABKAsyES5tZXNodGFzdGljLlJvdXRl",
+            "SAASLAoHY2FzZXZhYxgmIAEoCzIZLm1lc2h0YXN0aWMuQ2FzZXZhY1JlcG9y",
+            "dEgAEi8KCWVtZXJnZW5jeRgnIAEoCzIaLm1lc2h0YXN0aWMuRW1lcmdlbmN5",
+            "QWxlcnRIABInCgR0YXNrGCggASgLMhcubWVzaHRhc3RpYy5UYXNrUmVxdWVz",
+            "dEgAQhEKD3BheWxvYWRfdmFyaWFudEIOCgxfZW52aXJvbm1lbnRCDQoLX3Nl",
+            "bnNvcl9mb3ZKBAgbEBxKBAgcEB1KBAgdEB4qwAEKBFRlYW0SFAoQVW5zcGVj",
+            "aWZlZF9Db2xvchAAEgkKBVdoaXRlEAESCgoGWWVsbG93EAISCgoGT3Jhbmdl",
+            "EAMSCwoHTWFnZW50YRAEEgcKA1JlZBAFEgoKBk1hcm9vbhAGEgoKBlB1cnBs",
+            "ZRAHEg0KCURhcmtfQmx1ZRAIEggKBEJsdWUQCRIICgRDeWFuEAoSCAoEVGVh",
+            "bBALEgkKBUdyZWVuEAwSDgoKRGFya19HcmVlbhANEgkKBUJyb3duEA4qfwoK",
+            "TWVtYmVyUm9sZRIOCgpVbnNwZWNpZmVkEAASDgoKVGVhbU1lbWJlchABEgwK",
+            "CFRlYW1MZWFkEAISBgoCSFEQAxIKCgZTbmlwZXIQBBIJCgVNZWRpYxAFEhMK",
+            "D0ZvcndhcmRPYnNlcnZlchAGEgcKA1JUTxAHEgYKAks5EAgqlgEKBkNvdEhv",
+            "dxIWChJDb3RIb3dfVW5zcGVjaWZpZWQQABIOCgpDb3RIb3dfaF9lEAESDgoK",
+            "Q290SG93X21fZxACEhQKEENvdEhvd19oX2dfaV9nX28QAxIOCgpDb3RIb3df",
+            "bV9yEAQSDgoKQ290SG93X21fZhAFEg4KCkNvdEhvd19tX3AQBhIOCgpDb3RI",
+            "b3dfbV9zEAcq4RYKB0NvdFR5cGUSEQoNQ290VHlwZV9PdGhlchAAEhUKEUNv",
+            "dFR5cGVfYV9mX0dfVV9DEAESFwoTQ290VHlwZV9hX2ZfR19VX0NfSRACEhUK",
+            "EUNvdFR5cGVfYV9uX0FfQ19GEAMSFQoRQ290VHlwZV9hX25fQV9DX0gQBBIT",
+            "Cg9Db3RUeXBlX2Ffbl9BX0MQBRIVChFDb3RUeXBlX2FfZl9BX01fSBAGEhMK",
+            "D0NvdFR5cGVfYV9mX0FfTRAHEhcKE0NvdFR5cGVfYV9mX0FfTV9GX0YQCBIX",
+            "ChNDb3RUeXBlX2FfZl9BX01fSF9BEAkSGQoVQ290VHlwZV9hX2ZfQV9NX0hf",
+            "VV9NEAoSFwoTQ290VHlwZV9hX2hfQV9NX0ZfRhALEhcKE0NvdFR5cGVfYV9o",
+            "X0FfTV9IX0EQDBITCg9Db3RUeXBlX2FfdV9BX0MQDRITCg9Db3RUeXBlX3Rf",
+            "eF9kX2QQDhIXChNDb3RUeXBlX2FfZl9HX0VfU19FEA8SFwoTQ290VHlwZV9h",
+            "X2ZfR19FX1ZfQxAQEhEKDUNvdFR5cGVfYV9mX1MQERIVChFDb3RUeXBlX2Ff",
+            "Zl9BX01fRhASEhkKFUNvdFR5cGVfYV9mX0FfTV9GX0NfSBATEhkKFUNvdFR5",
+            "cGVfYV9mX0FfTV9GX1VfTBAUEhcKE0NvdFR5cGVfYV9mX0FfTV9GX0wQFRIX",
+            "ChNDb3RUeXBlX2FfZl9BX01fRl9QEBYSFQoRQ290VHlwZV9hX2ZfQV9DX0gQ",
+            "FxIXChNDb3RUeXBlX2Ffbl9BX01fRl9REBgSEQoNQ290VHlwZV9iX3RfZhAZ",
+            "EhUKEUNvdFR5cGVfYl9yX2ZfaF9jEBoSFQoRQ290VHlwZV9iX2Ffb19wYW4Q",
+            "GxIVChFDb3RUeXBlX2JfYV9vX29wbhAcEhUKEUNvdFR5cGVfYl9hX29fY2Fu",
+            "EB0SFQoRQ290VHlwZV9iX2Ffb190YmwQHhIRCg1Db3RUeXBlX2JfYV9nEB8S",
+            "EQoNQ290VHlwZV9hX2ZfRxAgEhMKD0NvdFR5cGVfYV9mX0dfVRAhEhEKDUNv",
+            "dFR5cGVfYV9oX0cQIhIRCg1Db3RUeXBlX2FfdV9HECMSEQoNQ290VHlwZV9h",
+            "X25fRxAkEhEKDUNvdFR5cGVfYl9tX3IQJRITCg9Db3RUeXBlX2JfbV9wX3cQ",
+            "JhIXChNDb3RUeXBlX2JfbV9wX3NfcF9pECcSEQoNQ290VHlwZV91X2RfZhAo",
+            "EhEKDUNvdFR5cGVfdV9kX3IQKRITCg9Db3RUeXBlX3VfZF9jX2MQKhISCg5D",
+            "b3RUeXBlX3VfcmJfYRArEhEKDUNvdFR5cGVfYV9oX0EQLBIRCg1Db3RUeXBl",
+            "X2FfdV9BEC0SFwoTQ290VHlwZV9hX2ZfQV9NX0hfURAuEhUKEUNvdFR5cGVf",
+            "YV9mX0FfQ19GEC8SEwoPQ290VHlwZV9hX2ZfQV9DEDASFQoRQ290VHlwZV9h",
+            "X2ZfQV9DX0wQMRIRCg1Db3RUeXBlX2FfZl9BEDISFwoTQ290VHlwZV9hX2Zf",
+            "QV9NX0hfQxAzEhcKE0NvdFR5cGVfYV9uX0FfTV9GX0YQNBIVChFDb3RUeXBl",
+            "X2FfdV9BX0NfRhA1EhsKF0NvdFR5cGVfYV9mX0dfVV9DX0ZfVF9BEDYSGQoV",
+            "Q290VHlwZV9hX2ZfR19VX0NfVl9TEDcSGQoVQ290VHlwZV9hX2ZfR19VX0Nf",
+            "Ul9YEDgSGQoVQ290VHlwZV9hX2ZfR19VX0NfSV9aEDkSGwoXQ290VHlwZV9h",
+            "X2ZfR19VX0NfRV9DX1cQOhIZChVDb3RUeXBlX2FfZl9HX1VfQ19JX0wQOxIZ",
+            "ChVDb3RUeXBlX2FfZl9HX1VfQ19SX08QPBIZChVDb3RUeXBlX2FfZl9HX1Vf",
+            "Q19SX1YQPRIVChFDb3RUeXBlX2FfZl9HX1VfSBA+EhsKF0NvdFR5cGVfYV9m",
+            "X0dfVV9VX01fU19FED8SGQoVQ290VHlwZV9hX2ZfR19VX1NfTV9DEEASFQoR",
+            "Q290VHlwZV9hX2ZfR19FX1MQQRITCg9Db3RUeXBlX2FfZl9HX0UQQhIZChVD",
+            "b3RUeXBlX2FfZl9HX0VfVl9DX1UQQxIaChZDb3RUeXBlX2FfZl9HX0VfVl9D",
+            "X3BzEEQSFQoRQ290VHlwZV9hX3VfR19FX1YQRRIXChNDb3RUeXBlX2FfZl9T",
+            "X05fTl9SEEYSEwoPQ290VHlwZV9hX2ZfRl9CEEcSGQoVQ290VHlwZV9iX21f",
+            "cF9zX3BfbG9jEEgSEQoNQ290VHlwZV9iX2lfdhBJEhMKD0NvdFR5cGVfYl9m",
+            "X3RfchBKEhMKD0NvdFR5cGVfYl9mX3RfYRBLEhMKD0NvdFR5cGVfdV9kX2Zf",
+            "bRBMEhEKDUNvdFR5cGVfdV9kX3AQTRIVChFDb3RUeXBlX2JfbV9wX3NfbRBO",
+            "EhMKD0NvdFR5cGVfYl9tX3BfYxBPEhUKEUNvdFR5cGVfdV9yX2JfY19jEFAS",
+            "GgoWQ290VHlwZV91X3JfYl9idWxsc2V5ZRBREhcKE0NvdFR5cGVfYV9mX0df",
+            "RV9WX0EQUhIRCg1Db3RUeXBlX2Ffbl9BEFMSFwoTQ290VHlwZV9hX3VfR19V",
+            "X0NfRhBUEhcKE0NvdFR5cGVfYV9uX0dfVV9DX0YQVRIXChNDb3RUeXBlX2Ff",
+            "aF9HX1VfQ19GEFYSFwoTQ290VHlwZV9hX2ZfR19VX0NfRhBXEhMKD0NvdFR5",
+            "cGVfYV91X0dfSRBYEhMKD0NvdFR5cGVfYV9uX0dfSRBZEhMKD0NvdFR5cGVf",
+            "YV9oX0dfSRBaEhMKD0NvdFR5cGVfYV9mX0dfSRBbEhcKE0NvdFR5cGVfYV91",
+            "X0dfRV9YX00QXBIXChNDb3RUeXBlX2Ffbl9HX0VfWF9NEF0SFwoTQ290VHlw",
+            "ZV9hX2hfR19FX1hfTRBeEhcKE0NvdFR5cGVfYV9mX0dfRV9YX00QXxIRCg1D",
+            "b3RUeXBlX2FfdV9TEGASEQoNQ290VHlwZV9hX25fUxBhEhEKDUNvdFR5cGVf",
+            "YV9oX1MQYhIZChVDb3RUeXBlX2FfdV9HX1VfQ19JX2QQYxIZChVDb3RUeXBl",
+            "X2Ffbl9HX1VfQ19JX2QQZBIZChVDb3RUeXBlX2FfaF9HX1VfQ19JX2QQZRIZ",
+            "ChVDb3RUeXBlX2FfZl9HX1VfQ19JX2QQZhIZChVDb3RUeXBlX2FfdV9HX0Vf",
+            "Vl9BX1QQZxIZChVDb3RUeXBlX2Ffbl9HX0VfVl9BX1QQaBIZChVDb3RUeXBl",
+            "X2FfaF9HX0VfVl9BX1QQaRIZChVDb3RUeXBlX2FfZl9HX0VfVl9BX1QQahIX",
+            "ChNDb3RUeXBlX2FfdV9HX1VfQ19JEGsSFwoTQ290VHlwZV9hX25fR19VX0Nf",
+            "SRBsEhcKE0NvdFR5cGVfYV9oX0dfVV9DX0kQbRIVChFDb3RUeXBlX2Ffbl9H",
+            "X0VfVhBuEhUKEUNvdFR5cGVfYV9oX0dfRV9WEG8SFQoRQ290VHlwZV9hX2Zf",
+            "R19FX1YQcBIYChRDb3RUeXBlX2JfbV9wX3dfR09UTxBxEhYKEkNvdFR5cGVf",
+            "Yl9tX3BfY19pcBByEhYKEkNvdFR5cGVfYl9tX3BfY19jcBBzEhgKFENvdFR5",
+            "cGVfYl9tX3Bfc19wX29wEHQSEQoNQ290VHlwZV91X2RfdhB1EhMKD0NvdFR5",
+            "cGVfdV9kX3ZfbRB2EhMKD0NvdFR5cGVfdV9kX2NfZRB3EhMKD0NvdFR5cGVf",
+            "Yl9pX3hfaRB4EhMKD0NvdFR5cGVfYl90X2ZfZBB5EhMKD0NvdFR5cGVfYl90",
+            "X2ZfchB6EhMKD0NvdFR5cGVfYl9hX29fYxB7Eg8KC0NvdFR5cGVfdF9zEHwq",
+            "fQoOR2VvUG9pbnRTb3VyY2USHgoaR2VvUG9pbnRTb3VyY2VfVW5zcGVjaWZp",
+            "ZWQQABIWChJHZW9Qb2ludFNvdXJjZV9HUFMQARIXChNHZW9Qb2ludFNvdXJj",
+            "ZV9VU0VSEAISGgoWR2VvUG9pbnRTb3VyY2VfTkVUV09SSxADQmAKFG9yZy5t",
+            "ZXNodGFzdGljLnByb3RvQgpBVEFLUHJvdG9zWiJnaXRodWIuY29tL21lc2h0",
+            "YXN0aWMvZ28vZ2VuZXJhdGVkqgIUTWVzaHRhc3RpYy5Qcm90b2J1ZnO6AgBi",
+            "BnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Meshtastic.Protobufs.Team), typeof(global::Meshtastic.Protobufs.MemberRole), typeof(global::Meshtastic.Protobufs.CotHow), typeof(global::Meshtastic.Protobufs.CotType), typeof(global::Meshtastic.Protobufs.GeoPointSource), }, null, new pbr::GeneratedClrTypeInfo[] {
@@ -264,7 +279,9 @@ namespace Meshtastic.Protobufs {
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.ZMistEntry), global::Meshtastic.Protobufs.ZMistEntry.Parser, new[]{ "Title", "Z", "M", "I", "S", "T" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.EmergencyAlert), global::Meshtastic.Protobufs.EmergencyAlert.Parser, new[]{ "Type", "AuthoringUid", "CancelReferenceUid" }, null, new[]{ typeof(global::Meshtastic.Protobufs.EmergencyAlert.Types.Type) }, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TaskRequest), global::Meshtastic.Protobufs.TaskRequest.Parser, new[]{ "TaskType", "TargetUid", "AssigneeUid", "Priority", "Status", "Note" }, null, new[]{ typeof(global::Meshtastic.Protobufs.TaskRequest.Types.Priority), typeof(global::Meshtastic.Protobufs.TaskRequest.Types.Status) }, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKPacketV2), global::Meshtastic.Protobufs.TAKPacketV2.Parser, new[]{ "CotTypeId", "How", "Callsign", "Team", "Role", "LatitudeI", "LongitudeI", "Altitude", "Speed", "Course", "Battery", "GeoSrc", "AltSrc", "Uid", "DeviceCallsign", "StaleSeconds", "TakVersion", "TakDevice", "TakPlatform", "TakOs", "Endpoint", "Phone", "CotTypeStr", "Remarks", "Pli", "Chat", "Aircraft", "RawDetail", "Shape", "Marker", "Rab", "Route", "Casevac", "Emergency", "Task" }, new[]{ "PayloadVariant" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKEnvironment), global::Meshtastic.Protobufs.TAKEnvironment.Parser, new[]{ "TemperatureCX10", "WindDirectionDeg", "WindSpeedCmS" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.SensorFov), global::Meshtastic.Protobufs.SensorFov.Parser, new[]{ "Type", "AzimuthDeg", "RangeM", "FovHorizontalDeg", "FovVerticalDeg", "ElevationDeg", "RollDeg", "Model" }, new[]{ "RangeM" }, new[]{ typeof(global::Meshtastic.Protobufs.SensorFov.Types.SensorType) }, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKPacketV2), global::Meshtastic.Protobufs.TAKPacketV2.Parser, new[]{ "CotTypeId", "How", "Callsign", "Team", "Role", "LatitudeI", "LongitudeI", "Altitude", "Speed", "Course", "Battery", "GeoSrc", "AltSrc", "Uid", "DeviceCallsign", "StaleSeconds", "TakVersion", "TakDevice", "TakPlatform", "TakOs", "Endpoint", "Phone", "CotTypeStr", "Remarks", "Environment", "SensorFov", "Pli", "Chat", "Aircraft", "RawDetail", "Shape", "Marker", "Rab", "Route", "Casevac", "Emergency", "Task" }, new[]{ "PayloadVariant", "Environment", "SensorFov" }, null, null, null)
           }));
     }
     #endregion
@@ -1995,8 +2012,8 @@ namespace Meshtastic.Protobufs {
       /// or b-t-f-r (read). ReceiptType_None is the default for a normal chat
       /// message (cot_type_id = b-t-f).
       ///
-      /// Receivers can detect a receipt by checking receipt_type != None without
-      /// re-parsing the envelope cot_type_id.
+      /// Receivers can detect a receipt by checking receipt_type != ReceiptType_None
+      /// without re-parsing the envelope cot_type_id.
       /// </summary>
       public enum ReceiptType {
         /// <summary>
@@ -3902,7 +3919,7 @@ namespace Meshtastic.Protobufs {
   /// Covers CoT types u-d-c-c, u-d-r, u-d-f, u-d-f-m, u-d-p, u-r-b-c-c,
   /// u-r-b-bullseye. The shape's anchor position is carried on
   /// TAKPacketV2.latitude_i/longitude_i; polyline/polygon vertices are in the
-  /// `vertices` repeated field (absolute, not deltas).
+  /// `vertices` repeated field as `CotGeoPoint` deltas from that anchor.
   ///
   /// Colors use the Team enum as a 14-color palette (see color encoding below)
   /// with a fixed32 exact-ARGB fallback for custom user-picked colors that
@@ -4038,7 +4055,9 @@ namespace Meshtastic.Protobufs {
     private uint angleDeg_;
     /// <summary>
     ///
-    /// Ellipse rotation angle in degrees (0..360). Default 360 = circle.
+    /// Ellipse rotation angle in degrees. Valid values are 0..360 inclusive;
+    /// 0 and 360 are equivalent rotations. In proto3, an unset uint32 reads
+    /// as 0, so senders should emit 0 when the angle is unspecified.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -9541,6 +9560,879 @@ namespace Meshtastic.Protobufs {
 
   /// <summary>
   ///
+  /// Weather annotation from &lt;environment> CoT detail element.
+  ///
+  /// Attaches to any TAKPacketV2 regardless of payload_variant — an Aircraft,
+  /// PLI, or Marker can all carry observed conditions at the emitting station.
+  /// ATAK-CIV ships an XSD for &lt;environment> but no dedicated handler, so the
+  /// element round-trips through the generic detail pipeline; this message
+  /// promotes it to a first-class structured field.
+  ///
+  /// Target wire cost: ~6-8 bytes compressed with a fully populated instance.
+  ///
+  /// Named `TAKEnvironment` (not just `Environment`) because the bare name
+  /// collides with `SwiftUI.Environment` — every SwiftUI view in a consuming
+  /// iOS app uses the `@Environment` property wrapper, and importing the
+  /// generated proto module would make `Environment` ambiguous in every one
+  /// of those files. The `TAK` prefix matches the convention used by the
+  /// outer `TAKPacketV2` wrapper and is unambiguous across all target
+  /// languages (Swift, Kotlin, Python, TypeScript, C#).
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class TAKEnvironment : pb::IMessage<TAKEnvironment>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<TAKEnvironment> _parser = new pb::MessageParser<TAKEnvironment>(() => new TAKEnvironment());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<TAKEnvironment> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[16]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TAKEnvironment() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TAKEnvironment(TAKEnvironment other) : this() {
+      temperatureCX10_ = other.temperatureCX10_;
+      windDirectionDeg_ = other.windDirectionDeg_;
+      windSpeedCmS_ = other.windSpeedCmS_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TAKEnvironment Clone() {
+      return new TAKEnvironment(this);
+    }
+
+    /// <summary>Field number for the "temperature_c_x10" field.</summary>
+    public const int TemperatureCX10FieldNumber = 1;
+    private int temperatureCX10_;
+    /// <summary>
+    ///
+    /// Temperature in deci-degrees Celsius. 225 = 22.5°C.
+    /// Range covers -50°C to +50°C (-500 to +500) which spans every realistic
+    /// outdoor TAK deployment. sint32 because negative temps are common in
+    /// cold-weather ops.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int TemperatureCX10 {
+      get { return temperatureCX10_; }
+      set {
+        temperatureCX10_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "wind_direction_deg" field.</summary>
+    public const int WindDirectionDegFieldNumber = 2;
+    private uint windDirectionDeg_;
+    /// <summary>
+    ///
+    /// Wind direction in whole degrees, 0-359. "Direction FROM" per
+    /// meteorological convention (matches CoT / ATAK).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint WindDirectionDeg {
+      get { return windDirectionDeg_; }
+      set {
+        windDirectionDeg_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "wind_speed_cm_s" field.</summary>
+    public const int WindSpeedCmSFieldNumber = 3;
+    private uint windSpeedCmS_;
+    /// <summary>
+    ///
+    /// Wind speed in cm/s. Matches the unit of TAKPacketV2.speed for
+    /// consistency. 1200 = 12.00 m/s = ~27 mph.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint WindSpeedCmS {
+      get { return windSpeedCmS_; }
+      set {
+        windSpeedCmS_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as TAKEnvironment);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(TAKEnvironment other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TemperatureCX10 != other.TemperatureCX10) return false;
+      if (WindDirectionDeg != other.WindDirectionDeg) return false;
+      if (WindSpeedCmS != other.WindSpeedCmS) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TemperatureCX10 != 0) hash ^= TemperatureCX10.GetHashCode();
+      if (WindDirectionDeg != 0) hash ^= WindDirectionDeg.GetHashCode();
+      if (WindSpeedCmS != 0) hash ^= WindSpeedCmS.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (TemperatureCX10 != 0) {
+        output.WriteRawTag(8);
+        output.WriteSInt32(TemperatureCX10);
+      }
+      if (WindDirectionDeg != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(WindDirectionDeg);
+      }
+      if (WindSpeedCmS != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(WindSpeedCmS);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (TemperatureCX10 != 0) {
+        output.WriteRawTag(8);
+        output.WriteSInt32(TemperatureCX10);
+      }
+      if (WindDirectionDeg != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(WindDirectionDeg);
+      }
+      if (WindSpeedCmS != 0) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(WindSpeedCmS);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (TemperatureCX10 != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeSInt32Size(TemperatureCX10);
+      }
+      if (WindDirectionDeg != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(WindDirectionDeg);
+      }
+      if (WindSpeedCmS != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(WindSpeedCmS);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(TAKEnvironment other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TemperatureCX10 != 0) {
+        TemperatureCX10 = other.TemperatureCX10;
+      }
+      if (other.WindDirectionDeg != 0) {
+        WindDirectionDeg = other.WindDirectionDeg;
+      }
+      if (other.WindSpeedCmS != 0) {
+        WindSpeedCmS = other.WindSpeedCmS;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            TemperatureCX10 = input.ReadSInt32();
+            break;
+          }
+          case 16: {
+            WindDirectionDeg = input.ReadUInt32();
+            break;
+          }
+          case 24: {
+            WindSpeedCmS = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            TemperatureCX10 = input.ReadSInt32();
+            break;
+          }
+          case 16: {
+            WindDirectionDeg = input.ReadUInt32();
+            break;
+          }
+          case 24: {
+            WindSpeedCmS = input.ReadUInt32();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  ///
+  /// Sensor field-of-view cone from &lt;sensor> CoT detail element.
+  ///
+  /// Encodes the 8 geometry attributes that ATAK-CIV's SensorDetailHandler
+  /// reads from the wire; drops the 9 visual-styling attributes that are
+  /// receiver-side render hints (fovAlpha, fovRed/Green/Blue, strokeColor,
+  /// strokeWeight, displayMagneticReference, hideFov, fovLabels, rangeLines).
+  /// The receiving ATAK client restores those from its own defaults, same as
+  /// every other CoT carried over Meshtastic today.
+  ///
+  /// Attaches to any TAKPacketV2 — a PLI with a sensor on the operator's head,
+  /// an Aircraft with a FLIR turret, a Marker dropped on a UAV.
+  /// Target wire cost: ~7-14 bytes compressed (dominated by model string).
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class SensorFov : pb::IMessage<SensorFov>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<SensorFov> _parser = new pb::MessageParser<SensorFov>(() => new SensorFov());
+    private pb::UnknownFieldSet _unknownFields;
+    private int _hasBits0;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<SensorFov> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[17]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SensorFov() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SensorFov(SensorFov other) : this() {
+      _hasBits0 = other._hasBits0;
+      type_ = other.type_;
+      azimuthDeg_ = other.azimuthDeg_;
+      rangeM_ = other.rangeM_;
+      fovHorizontalDeg_ = other.fovHorizontalDeg_;
+      fovVerticalDeg_ = other.fovVerticalDeg_;
+      elevationDeg_ = other.elevationDeg_;
+      rollDeg_ = other.rollDeg_;
+      model_ = other.model_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public SensorFov Clone() {
+      return new SensorFov(this);
+    }
+
+    /// <summary>Field number for the "type" field.</summary>
+    public const int TypeFieldNumber = 1;
+    private global::Meshtastic.Protobufs.SensorFov.Types.SensorType type_ = global::Meshtastic.Protobufs.SensorFov.Types.SensorType.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.SensorFov.Types.SensorType Type {
+      get { return type_; }
+      set {
+        type_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "azimuth_deg" field.</summary>
+    public const int AzimuthDegFieldNumber = 2;
+    private uint azimuthDeg_;
+    /// <summary>
+    ///
+    /// Azimuth in whole degrees, 0-359. "Pointing direction" of the cone axis,
+    /// measured clockwise from true north. Whole degrees match ATAK-CIV's
+    /// SensorDetailHandler default (270°) and save varint bytes over centi-deg.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint AzimuthDeg {
+      get { return azimuthDeg_; }
+      set {
+        azimuthDeg_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "range_m" field.</summary>
+    public const int RangeMFieldNumber = 3;
+    private readonly static uint RangeMDefaultValue = 0;
+
+    private uint rangeM_;
+    /// <summary>
+    ///
+    /// Maximum range of the cone in meters.
+    /// Optional — if unset, receivers should use the ATAK-CIV default of 100m.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint RangeM {
+      get { if ((_hasBits0 & 1) != 0) { return rangeM_; } else { return RangeMDefaultValue; } }
+      set {
+        _hasBits0 |= 1;
+        rangeM_ = value;
+      }
+    }
+    /// <summary>Gets whether the "range_m" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasRangeM {
+      get { return (_hasBits0 & 1) != 0; }
+    }
+    /// <summary>Clears the value of the "range_m" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearRangeM() {
+      _hasBits0 &= ~1;
+    }
+
+    /// <summary>Field number for the "fov_horizontal_deg" field.</summary>
+    public const int FovHorizontalDegFieldNumber = 4;
+    private uint fovHorizontalDeg_;
+    /// <summary>
+    ///
+    /// Horizontal field of view in whole degrees (cone's angular width).
+    /// ATAK-CIV default is 45°.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint FovHorizontalDeg {
+      get { return fovHorizontalDeg_; }
+      set {
+        fovHorizontalDeg_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "fov_vertical_deg" field.</summary>
+    public const int FovVerticalDegFieldNumber = 5;
+    private uint fovVerticalDeg_;
+    /// <summary>
+    ///
+    /// Vertical field of view in whole degrees. ATAK-CIV default is 45°.
+    /// Optional — a value of 0 means "not set / use horizontal FOV".
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint FovVerticalDeg {
+      get { return fovVerticalDeg_; }
+      set {
+        fovVerticalDeg_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "elevation_deg" field.</summary>
+    public const int ElevationDegFieldNumber = 6;
+    private int elevationDeg_;
+    /// <summary>
+    ///
+    /// Elevation angle in whole degrees. Positive = up, negative = down.
+    /// Range -90 to +90. sint32 for varint efficiency on small negatives.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int ElevationDeg {
+      get { return elevationDeg_; }
+      set {
+        elevationDeg_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "roll_deg" field.</summary>
+    public const int RollDegFieldNumber = 7;
+    private int rollDeg_;
+    /// <summary>
+    ///
+    /// Roll (camera tilt) in whole degrees, -180 to +180.
+    /// Optional — use 0 if the sensor doesn't track roll.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int RollDeg {
+      get { return rollDeg_; }
+      set {
+        rollDeg_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "model" field.</summary>
+    public const int ModelFieldNumber = 8;
+    private string model_ = "";
+    /// <summary>
+    ///
+    /// Free-form device model identifier, e.g. "FLIR-Boson-640", "SEEK".
+    /// Optional — empty string means "unknown model" (ATAK-CIV default).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Model {
+      get { return model_; }
+      set {
+        model_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as SensorFov);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(SensorFov other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Type != other.Type) return false;
+      if (AzimuthDeg != other.AzimuthDeg) return false;
+      if (RangeM != other.RangeM) return false;
+      if (FovHorizontalDeg != other.FovHorizontalDeg) return false;
+      if (FovVerticalDeg != other.FovVerticalDeg) return false;
+      if (ElevationDeg != other.ElevationDeg) return false;
+      if (RollDeg != other.RollDeg) return false;
+      if (Model != other.Model) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Type != global::Meshtastic.Protobufs.SensorFov.Types.SensorType.Unspecified) hash ^= Type.GetHashCode();
+      if (AzimuthDeg != 0) hash ^= AzimuthDeg.GetHashCode();
+      if (HasRangeM) hash ^= RangeM.GetHashCode();
+      if (FovHorizontalDeg != 0) hash ^= FovHorizontalDeg.GetHashCode();
+      if (FovVerticalDeg != 0) hash ^= FovVerticalDeg.GetHashCode();
+      if (ElevationDeg != 0) hash ^= ElevationDeg.GetHashCode();
+      if (RollDeg != 0) hash ^= RollDeg.GetHashCode();
+      if (Model.Length != 0) hash ^= Model.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Type != global::Meshtastic.Protobufs.SensorFov.Types.SensorType.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) Type);
+      }
+      if (AzimuthDeg != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(AzimuthDeg);
+      }
+      if (HasRangeM) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(RangeM);
+      }
+      if (FovHorizontalDeg != 0) {
+        output.WriteRawTag(32);
+        output.WriteUInt32(FovHorizontalDeg);
+      }
+      if (FovVerticalDeg != 0) {
+        output.WriteRawTag(40);
+        output.WriteUInt32(FovVerticalDeg);
+      }
+      if (ElevationDeg != 0) {
+        output.WriteRawTag(48);
+        output.WriteSInt32(ElevationDeg);
+      }
+      if (RollDeg != 0) {
+        output.WriteRawTag(56);
+        output.WriteSInt32(RollDeg);
+      }
+      if (Model.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(Model);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Type != global::Meshtastic.Protobufs.SensorFov.Types.SensorType.Unspecified) {
+        output.WriteRawTag(8);
+        output.WriteEnum((int) Type);
+      }
+      if (AzimuthDeg != 0) {
+        output.WriteRawTag(16);
+        output.WriteUInt32(AzimuthDeg);
+      }
+      if (HasRangeM) {
+        output.WriteRawTag(24);
+        output.WriteUInt32(RangeM);
+      }
+      if (FovHorizontalDeg != 0) {
+        output.WriteRawTag(32);
+        output.WriteUInt32(FovHorizontalDeg);
+      }
+      if (FovVerticalDeg != 0) {
+        output.WriteRawTag(40);
+        output.WriteUInt32(FovVerticalDeg);
+      }
+      if (ElevationDeg != 0) {
+        output.WriteRawTag(48);
+        output.WriteSInt32(ElevationDeg);
+      }
+      if (RollDeg != 0) {
+        output.WriteRawTag(56);
+        output.WriteSInt32(RollDeg);
+      }
+      if (Model.Length != 0) {
+        output.WriteRawTag(66);
+        output.WriteString(Model);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Type != global::Meshtastic.Protobufs.SensorFov.Types.SensorType.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Type);
+      }
+      if (AzimuthDeg != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(AzimuthDeg);
+      }
+      if (HasRangeM) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(RangeM);
+      }
+      if (FovHorizontalDeg != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(FovHorizontalDeg);
+      }
+      if (FovVerticalDeg != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(FovVerticalDeg);
+      }
+      if (ElevationDeg != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeSInt32Size(ElevationDeg);
+      }
+      if (RollDeg != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeSInt32Size(RollDeg);
+      }
+      if (Model.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Model);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(SensorFov other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Type != global::Meshtastic.Protobufs.SensorFov.Types.SensorType.Unspecified) {
+        Type = other.Type;
+      }
+      if (other.AzimuthDeg != 0) {
+        AzimuthDeg = other.AzimuthDeg;
+      }
+      if (other.HasRangeM) {
+        RangeM = other.RangeM;
+      }
+      if (other.FovHorizontalDeg != 0) {
+        FovHorizontalDeg = other.FovHorizontalDeg;
+      }
+      if (other.FovVerticalDeg != 0) {
+        FovVerticalDeg = other.FovVerticalDeg;
+      }
+      if (other.ElevationDeg != 0) {
+        ElevationDeg = other.ElevationDeg;
+      }
+      if (other.RollDeg != 0) {
+        RollDeg = other.RollDeg;
+      }
+      if (other.Model.Length != 0) {
+        Model = other.Model;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            Type = (global::Meshtastic.Protobufs.SensorFov.Types.SensorType) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            AzimuthDeg = input.ReadUInt32();
+            break;
+          }
+          case 24: {
+            RangeM = input.ReadUInt32();
+            break;
+          }
+          case 32: {
+            FovHorizontalDeg = input.ReadUInt32();
+            break;
+          }
+          case 40: {
+            FovVerticalDeg = input.ReadUInt32();
+            break;
+          }
+          case 48: {
+            ElevationDeg = input.ReadSInt32();
+            break;
+          }
+          case 56: {
+            RollDeg = input.ReadSInt32();
+            break;
+          }
+          case 66: {
+            Model = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            Type = (global::Meshtastic.Protobufs.SensorFov.Types.SensorType) input.ReadEnum();
+            break;
+          }
+          case 16: {
+            AzimuthDeg = input.ReadUInt32();
+            break;
+          }
+          case 24: {
+            RangeM = input.ReadUInt32();
+            break;
+          }
+          case 32: {
+            FovHorizontalDeg = input.ReadUInt32();
+            break;
+          }
+          case 40: {
+            FovVerticalDeg = input.ReadUInt32();
+            break;
+          }
+          case 48: {
+            ElevationDeg = input.ReadSInt32();
+            break;
+          }
+          case 56: {
+            RollDeg = input.ReadSInt32();
+            break;
+          }
+          case 66: {
+            Model = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+    #region Nested types
+    /// <summary>Container for nested types declared in the SensorFov message type.</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static partial class Types {
+      /// <summary>
+      ///
+      /// Coarse sensor category, inferred from `model` on parse when the source
+      /// XML doesn't label it. Receivers that render differently per sensor
+      /// class (thermal overlay vs daylight cone) use this.
+      /// </summary>
+      public enum SensorType {
+        [pbr::OriginalName("SensorType_Unspecified")] Unspecified = 0,
+        /// <summary>
+        /// daylight / general optical
+        /// </summary>
+        [pbr::OriginalName("SensorType_Camera")] Camera = 1,
+        /// <summary>
+        /// FLIR, thermal imager
+        /// </summary>
+        [pbr::OriginalName("SensorType_Thermal")] Thermal = 2,
+        /// <summary>
+        /// rangefinder, LRF, designator
+        /// </summary>
+        [pbr::OriginalName("SensorType_Laser")] Laser = 3,
+        /// <summary>
+        /// night vision goggles
+        /// </summary>
+        [pbr::OriginalName("SensorType_Nvg")] Nvg = 4,
+        /// <summary>
+        /// radio/radar direction-finding
+        /// </summary>
+        [pbr::OriginalName("SensorType_Rf")] Rf = 5,
+        [pbr::OriginalName("SensorType_Other")] Other = 6,
+      }
+
+    }
+    #endregion
+
+  }
+
+  /// <summary>
+  ///
   /// ATAK v2 packet with expanded CoT field support and zstd dictionary compression.
   /// Sent on ATAK_PLUGIN_V2 port. The wire payload is:
   ///   [1 byte flags][zstd-compressed TAKPacketV2 protobuf]
@@ -9561,7 +10453,7 @@ namespace Meshtastic.Protobufs {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[16]; }
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[18]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -9605,6 +10497,8 @@ namespace Meshtastic.Protobufs {
       phone_ = other.phone_;
       cotTypeStr_ = other.cotTypeStr_;
       remarks_ = other.remarks_;
+      environment_ = other.environment_ != null ? other.environment_.Clone() : null;
+      sensorFov_ = other.sensorFov_ != null ? other.sensorFov_.Clone() : null;
       switch (other.PayloadVariantCase) {
         case PayloadVariantOneofCase.Pli:
           Pli = other.Pli;
@@ -10039,6 +10933,40 @@ namespace Meshtastic.Protobufs {
       }
     }
 
+    /// <summary>Field number for the "environment" field.</summary>
+    public const int EnvironmentFieldNumber = 25;
+    private global::Meshtastic.Protobufs.TAKEnvironment environment_;
+    /// <summary>
+    ///
+    /// Observed weather conditions (temperature, wind). From &lt;environment>.
+    /// Type is `TAKEnvironment`, not `Environment`, to avoid colliding with
+    /// SwiftUI's `@Environment` property wrapper in iOS consumers.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.TAKEnvironment Environment {
+      get { return environment_; }
+      set {
+        environment_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "sensor_fov" field.</summary>
+    public const int SensorFovFieldNumber = 26;
+    private global::Meshtastic.Protobufs.SensorFov sensorFov_;
+    /// <summary>
+    ///
+    /// Sensor field-of-view cone (camera, FLIR, laser, etc.). From &lt;sensor>.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.SensorFov SensorFov {
+      get { return sensorFov_; }
+      set {
+        sensorFov_ = value;
+      }
+    }
+
     /// <summary>Field number for the "pli" field.</summary>
     public const int PliFieldNumber = 30;
     /// <summary>
@@ -10316,6 +11244,8 @@ namespace Meshtastic.Protobufs {
       if (Phone != other.Phone) return false;
       if (CotTypeStr != other.CotTypeStr) return false;
       if (Remarks != other.Remarks) return false;
+      if (!object.Equals(Environment, other.Environment)) return false;
+      if (!object.Equals(SensorFov, other.SensorFov)) return false;
       if (Pli != other.Pli) return false;
       if (!object.Equals(Chat, other.Chat)) return false;
       if (!object.Equals(Aircraft, other.Aircraft)) return false;
@@ -10359,6 +11289,8 @@ namespace Meshtastic.Protobufs {
       if (Phone.Length != 0) hash ^= Phone.GetHashCode();
       if (CotTypeStr.Length != 0) hash ^= CotTypeStr.GetHashCode();
       if (Remarks.Length != 0) hash ^= Remarks.GetHashCode();
+      if (environment_ != null) hash ^= Environment.GetHashCode();
+      if (sensorFov_ != null) hash ^= SensorFov.GetHashCode();
       if (HasPli) hash ^= Pli.GetHashCode();
       if (payloadVariantCase_ == PayloadVariantOneofCase.Chat) hash ^= Chat.GetHashCode();
       if (payloadVariantCase_ == PayloadVariantOneofCase.Aircraft) hash ^= Aircraft.GetHashCode();
@@ -10484,6 +11416,14 @@ namespace Meshtastic.Protobufs {
       if (Remarks.Length != 0) {
         output.WriteRawTag(194, 1);
         output.WriteString(Remarks);
+      }
+      if (environment_ != null) {
+        output.WriteRawTag(202, 1);
+        output.WriteMessage(Environment);
+      }
+      if (sensorFov_ != null) {
+        output.WriteRawTag(210, 1);
+        output.WriteMessage(SensorFov);
       }
       if (HasPli) {
         output.WriteRawTag(240, 1);
@@ -10635,6 +11575,14 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(194, 1);
         output.WriteString(Remarks);
       }
+      if (environment_ != null) {
+        output.WriteRawTag(202, 1);
+        output.WriteMessage(Environment);
+      }
+      if (sensorFov_ != null) {
+        output.WriteRawTag(210, 1);
+        output.WriteMessage(SensorFov);
+      }
       if (HasPli) {
         output.WriteRawTag(240, 1);
         output.WriteBool(Pli);
@@ -10761,6 +11709,12 @@ namespace Meshtastic.Protobufs {
       if (Remarks.Length != 0) {
         size += 2 + pb::CodedOutputStream.ComputeStringSize(Remarks);
       }
+      if (environment_ != null) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Environment);
+      }
+      if (sensorFov_ != null) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(SensorFov);
+      }
       if (HasPli) {
         size += 2 + 1;
       }
@@ -10877,6 +11831,18 @@ namespace Meshtastic.Protobufs {
       }
       if (other.Remarks.Length != 0) {
         Remarks = other.Remarks;
+      }
+      if (other.environment_ != null) {
+        if (environment_ == null) {
+          Environment = new global::Meshtastic.Protobufs.TAKEnvironment();
+        }
+        Environment.MergeFrom(other.Environment);
+      }
+      if (other.sensorFov_ != null) {
+        if (sensorFov_ == null) {
+          SensorFov = new global::Meshtastic.Protobufs.SensorFov();
+        }
+        SensorFov.MergeFrom(other.SensorFov);
       }
       switch (other.PayloadVariantCase) {
         case PayloadVariantOneofCase.Pli:
@@ -11054,6 +12020,20 @@ namespace Meshtastic.Protobufs {
           }
           case 194: {
             Remarks = input.ReadString();
+            break;
+          }
+          case 202: {
+            if (environment_ == null) {
+              Environment = new global::Meshtastic.Protobufs.TAKEnvironment();
+            }
+            input.ReadMessage(Environment);
+            break;
+          }
+          case 210: {
+            if (sensorFov_ == null) {
+              SensorFov = new global::Meshtastic.Protobufs.SensorFov();
+            }
+            input.ReadMessage(SensorFov);
             break;
           }
           case 240: {
@@ -11258,6 +12238,20 @@ namespace Meshtastic.Protobufs {
           }
           case 194: {
             Remarks = input.ReadString();
+            break;
+          }
+          case 202: {
+            if (environment_ == null) {
+              Environment = new global::Meshtastic.Protobufs.TAKEnvironment();
+            }
+            input.ReadMessage(Environment);
+            break;
+          }
+          case 210: {
+            if (sensorFov_ == null) {
+              SensorFov = new global::Meshtastic.Protobufs.SensorFov();
+            }
+            input.ReadMessage(SensorFov);
             break;
           }
           case 240: {
