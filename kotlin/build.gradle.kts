@@ -77,7 +77,7 @@ tasks.withType<Test>().configureEach {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// JVM JAR packaging — proto classes are now SHIPPED, not stripped.
+// JVM JAR packaging — proto classes are SHIPPED with two surgical exceptions.
 //
 // Background: issue #5 was the inverse of issue #6.
 //
@@ -85,8 +85,8 @@ tasks.withType<Test>().configureEach {
 //   alongside `org.meshtastic.tak.*`. Consumers that also ran Wire codegen
 //   against the shared `meshtastic/atak.proto` (notably Meshtastic-Android's
 //   `core:proto` module) hit R8 "Type is defined multiple times" errors
-//   during release builds. The fix at the time was to strip the proto classes
-//   from the JAR so the consumer's codegen became the single source.
+//   during release builds. The fix at the time was to strip ALL proto
+//   classes from the JAR so the consumer's codegen became the single source.
 //
 //   issue #6 (this change): that strategy is ABI-fragile. The SDK's
 //   bytecode REFERENCES the proto classes — `SensorFov.getRange_m()`,
@@ -99,17 +99,32 @@ tasks.withType<Test>().configureEach {
 //   classpath had method signatures the SDK's call sites didn't match,
 //   producing NoSuchMethodError at first invocation.
 //
-// New strategy (#6): the SDK is the single owner of `atak.proto` codegen.
-// The JAR ships `org.meshtastic.proto.**` alongside `org.meshtastic.tak.**`,
-// and the SDK's protobufs submodule pointer is the authoritative version.
-// Consumers stop running their own Wire codegen for these classes — instead
-// they prune them out of their proto module (Wire's `prune("meshtastic.XYZ")`
-// directive) and pull them transitively from the SDK dependency.
+// New strategy (#6): the SDK is the single owner of `atak.proto` codegen
+// for ALMOST every type. The JAR ships `org.meshtastic.proto.**` (115
+// classes) alongside `org.meshtastic.tak.**`. Consumers prune the same
+// types from their own Wire codegen and pull them transitively from this
+// JAR. No second codegen, no ABI drift.
 //
-// This means proto-class shape is always consistent with the SDK bytecode
-// that calls into it. No more cross-repo ABI drift.
+// The two exceptions are `meshtastic.Team` and `meshtastic.MemberRole`.
+// Both enums are referenced from `meshtastic/module_config.proto`'s
+// `ModuleConfig.TAKConfig` (`Team team = 1`, `MemberRole role = 2`), so
+// consumer Wire codegen REFUSES to prune them — pruning would propagate
+// to those fields too, leaving consumer code with no way to read
+// `takConfig.team`. We strip them from this JAR so the consumer's own
+// codegen remains the single source; the SDK's bytecode references to
+// `Team` / `MemberRole` resolve transitively at the consumer's classpath.
+// These two enums are tiny and stable (no field shape to ABI-drift), so
+// the issue #6 ABI argument doesn't apply meaningfully to them.
 //
-// iOS klibs already shipped proto classes — unchanged.
+// iOS klibs ship all proto classes unconditionally — no R8 step on Apple.
 //
 // See https://github.com/meshtastic/TAKPacket-SDK/issues/6 for the full
 // rationale and the Meshtastic-Android-side prune list.
+tasks.named<Jar>("jvmJar") {
+    // Strip ONLY Team and MemberRole (and their nested ProtoAdapter inner
+    // classes). Everything else in org.meshtastic.proto.** stays in the JAR.
+    exclude("org/meshtastic/proto/Team.class")
+    exclude("org/meshtastic/proto/Team\$*.class")
+    exclude("org/meshtastic/proto/MemberRole.class")
+    exclude("org/meshtastic/proto/MemberRole\$*.class")
+}
