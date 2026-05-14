@@ -1,0 +1,42 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommitTypeAll(chore)",
+    "group:recommended"
+  ],
+  "commitMessageTopic": "{{depName}}",
+  "labels": [
+    "dependencies"
+  ],
+  "git-submodules": {
+    "enabled": true
+  },
+  "packageRules": [
+    {
+      "description": "Track meshtastic/protobufs submodule and link the diff in PR bodies. The SDK owns Wire codegen for atak.proto (issue #6) so submodule bumps land here first, then Renovate-bumps the SDK release in downstream consumers.",
+      "matchPackageNames": [
+        "https://github.com/meshtastic/protobufs.git"
+      ],
+      "changelogUrl": "https://github.com/meshtastic/protobufs/compare/{{currentDigest}}...{{newDigest}}"
+    },
+    {
+      "description": "Automerge non-major dependency updates",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "digest"
+      ],
+      "automerge": true
+    },
+    {
+      "description": "Disable automerge for major updates",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false
+    }
+  ]
+}
