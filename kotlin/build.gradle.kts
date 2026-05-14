@@ -77,36 +77,39 @@ tasks.withType<Test>().configureEach {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// JVM JAR packaging (fix for https://github.com/meshtastic/TAKPacket-SDK/issues/5)
+// JVM JAR packaging — proto classes are now SHIPPED, not stripped.
 //
-// Pre-0.2.0 the JVM JAR bundled the Wire-generated `org.meshtastic.proto.*`
-// classes alongside the SDK's own `org.meshtastic.tak.*` classes. Any consumer
-// that also generated those proto classes from the same submodule (e.g.
-// Meshtastic-Android's `core:proto` module, which runs its own Wire codegen
-// against the same `meshtastic/atak.proto` file) hit R8 "Type ... is defined
-// multiple times" errors during release builds.
+// Background: issue #5 was the inverse of issue #6.
 //
-// Fix: the JVM JAR no longer ships `org/meshtastic/proto/**`. The SDK's
-// compiled bytecode still REFERENCES those classes — `TAKPacketV2`, `CotType`,
-// `GeoChat`, etc. — but they must come from elsewhere on the consumer's
-// runtime classpath. Two valid sources:
+//   issue #5 (0.2.0–0.2.1): the JVM JAR bundled `org.meshtastic.proto.*`
+//   alongside `org.meshtastic.tak.*`. Consumers that also ran Wire codegen
+//   against the shared `meshtastic/atak.proto` (notably Meshtastic-Android's
+//   `core:proto` module) hit R8 "Type is defined multiple times" errors
+//   during release builds. The fix at the time was to strip the proto classes
+//   from the JAR so the consumer's codegen became the single source.
 //
-//   1. The consumer has its own Wire codegen target for the same proto file
-//      (the Meshtastic-Android `core:proto` module is the canonical case;
-//      it's a `kotlin("multiplatform") + com.squareup.wire` module that emits
-//      identical `org.meshtastic.proto.*` classes from the shared protobufs
-//      submodule).
-//   2. The consumer manually depends on a published artifact carrying those
-//      classes, or generates them with `protoc` / Wire / Protobuf-Lite / etc.
-//      against `meshtastic/atak.proto`.
+//   issue #6 (this change): that strategy is ABI-fragile. The SDK's
+//   bytecode REFERENCES the proto classes — `SensorFov.getRange_m()`,
+//   `TAKPacketV2.Builder.payload(...)`, etc. — and those signatures shift
+//   whenever the proto file changes (e.g. when `range_m` flipped from
+//   `uint32` to `optional uint32`, Wire's generated accessor went from
+//   `int getRange_m()` to `Integer getRange_m()`). If the SDK was compiled
+//   against the new proto but the consumer's `core:proto` regenerated
+//   against an older submodule pointer (or vice versa), the runtime
+//   classpath had method signatures the SDK's call sites didn't match,
+//   producing NoSuchMethodError at first invocation.
 //
-// We don't ship a sibling "protos" JAR because every Meshtastic ecosystem
-// consumer already has a proto module of its own — bundling them would just
-// recreate the duplicate-class problem in a slightly different shape.
+// New strategy (#6): the SDK is the single owner of `atak.proto` codegen.
+// The JAR ships `org.meshtastic.proto.**` alongside `org.meshtastic.tak.**`,
+// and the SDK's protobufs submodule pointer is the authoritative version.
+// Consumers stop running their own Wire codegen for these classes — instead
+// they prune them out of their proto module (Wire's `prune("meshtastic.XYZ")`
+// directive) and pull them transitively from the SDK dependency.
 //
-// iosArm64 / iosSimulatorArm64 klibs are unchanged — proto classes still ship
-// inside them because iOS doesn't have R8's duplicate-class issue and there's
-// no analogous proto module on the Apple side.
-tasks.named<Jar>("jvmJar") {
-    exclude("org/meshtastic/proto/**")
-}
+// This means proto-class shape is always consistent with the SDK bytecode
+// that calls into it. No more cross-repo ABI drift.
+//
+// iOS klibs already shipped proto classes — unchanged.
+//
+// See https://github.com/meshtastic/TAKPacket-SDK/issues/6 for the full
+// rationale and the Meshtastic-Android-side prune list.
