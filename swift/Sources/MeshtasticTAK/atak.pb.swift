@@ -1381,8 +1381,8 @@ public struct GeoChat: Sendable {
   /// or b-t-f-r (read). ReceiptType_None is the default for a normal chat
   /// message (cot_type_id = b-t-f).
   ///
-  /// Receivers can detect a receipt by checking receipt_type != None without
-  /// re-parsing the envelope cot_type_id.
+  /// Receivers can detect a receipt by checking receipt_type != ReceiptType_None
+  /// without re-parsing the envelope cot_type_id.
   public enum ReceiptType: SwiftProtobuf.Enum, Swift.CaseIterable {
     public typealias RawValue = Int
 
@@ -1621,7 +1621,7 @@ public struct CotGeoPoint: Sendable {
 /// Covers CoT types u-d-c-c, u-d-r, u-d-f, u-d-f-m, u-d-p, u-r-b-c-c,
 /// u-r-b-bullseye. The shape's anchor position is carried on
 /// TAKPacketV2.latitude_i/longitude_i; polyline/polygon vertices are in the
-/// `vertices` repeated field (absolute, not deltas).
+/// `vertices` repeated field as `CotGeoPoint` deltas from that anchor.
 ///
 /// Colors use the Team enum as a 14-color palette (see color encoding below)
 /// with a fixed32 exact-ARGB fallback for custom user-picked colors that
@@ -1660,7 +1660,9 @@ public struct DrawnShape: @unchecked Sendable {
   }
 
   ///
-  /// Ellipse rotation angle in degrees (0..360). Default 360 = circle.
+  /// Ellipse rotation angle in degrees. Valid values are 0..360 inclusive;
+  /// 0 and 360 are equivalent rotations. In proto3, an unset uint32 reads
+  /// as 0, so senders should emit 0 when the angle is unspecified.
   public var angleDeg: UInt32 {
     get {return _storage._angleDeg}
     set {_uniqueStorage()._angleDeg = newValue}
@@ -3108,6 +3110,189 @@ public struct TaskRequest: Sendable {
 }
 
 ///
+/// Weather annotation from <environment> CoT detail element.
+///
+/// Attaches to any TAKPacketV2 regardless of payload_variant — an Aircraft,
+/// PLI, or Marker can all carry observed conditions at the emitting station.
+/// ATAK-CIV ships an XSD for <environment> but no dedicated handler, so the
+/// element round-trips through the generic detail pipeline; this message
+/// promotes it to a first-class structured field.
+///
+/// Target wire cost: ~6-8 bytes compressed with a fully populated instance.
+///
+/// Named `TAKEnvironment` (not just `Environment`) because the bare name
+/// collides with `SwiftUI.Environment` — every SwiftUI view in a consuming
+/// iOS app uses the `@Environment` property wrapper, and importing the
+/// generated proto module would make `Environment` ambiguous in every one
+/// of those files. The `TAK` prefix matches the convention used by the
+/// outer `TAKPacketV2` wrapper and is unambiguous across all target
+/// languages (Swift, Kotlin, Python, TypeScript, C#).
+public struct TAKEnvironment: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  ///
+  /// Temperature in deci-degrees Celsius. 225 = 22.5°C.
+  /// Range covers -50°C to +50°C (-500 to +500) which spans every realistic
+  /// outdoor TAK deployment. sint32 because negative temps are common in
+  /// cold-weather ops.
+  public var temperatureCX10: Int32 = 0
+
+  ///
+  /// Wind direction in whole degrees, 0-359. "Direction FROM" per
+  /// meteorological convention (matches CoT / ATAK).
+  public var windDirectionDeg: UInt32 = 0
+
+  ///
+  /// Wind speed in cm/s. Matches the unit of TAKPacketV2.speed for
+  /// consistency. 1200 = 12.00 m/s = ~27 mph.
+  public var windSpeedCmS: UInt32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+///
+/// Sensor field-of-view cone from <sensor> CoT detail element.
+///
+/// Encodes the 8 geometry attributes that ATAK-CIV's SensorDetailHandler
+/// reads from the wire; drops the 9 visual-styling attributes that are
+/// receiver-side render hints (fovAlpha, fovRed/Green/Blue, strokeColor,
+/// strokeWeight, displayMagneticReference, hideFov, fovLabels, rangeLines).
+/// The receiving ATAK client restores those from its own defaults, same as
+/// every other CoT carried over Meshtastic today.
+///
+/// Attaches to any TAKPacketV2 — a PLI with a sensor on the operator's head,
+/// an Aircraft with a FLIR turret, a Marker dropped on a UAV.
+/// Target wire cost: ~7-14 bytes compressed (dominated by model string).
+public struct SensorFov: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var type: SensorFov.SensorType = .unspecified
+
+  ///
+  /// Azimuth in whole degrees, 0-359. "Pointing direction" of the cone axis,
+  /// measured clockwise from true north. Whole degrees match ATAK-CIV's
+  /// SensorDetailHandler default (270°) and save varint bytes over centi-deg.
+  public var azimuthDeg: UInt32 = 0
+
+  ///
+  /// Maximum range of the cone in meters.
+  /// Optional — if unset, receivers should use the ATAK-CIV default of 100m.
+  public var rangeM: UInt32 {
+    get {return _rangeM ?? 0}
+    set {_rangeM = newValue}
+  }
+  /// Returns true if `rangeM` has been explicitly set.
+  public var hasRangeM: Bool {return self._rangeM != nil}
+  /// Clears the value of `rangeM`. Subsequent reads from it will return its default value.
+  public mutating func clearRangeM() {self._rangeM = nil}
+
+  ///
+  /// Horizontal field of view in whole degrees (cone's angular width).
+  /// ATAK-CIV default is 45°.
+  public var fovHorizontalDeg: UInt32 = 0
+
+  ///
+  /// Vertical field of view in whole degrees. ATAK-CIV default is 45°.
+  /// Optional — a value of 0 means "not set / use horizontal FOV".
+  public var fovVerticalDeg: UInt32 = 0
+
+  ///
+  /// Elevation angle in whole degrees. Positive = up, negative = down.
+  /// Range -90 to +90. sint32 for varint efficiency on small negatives.
+  public var elevationDeg: Int32 = 0
+
+  ///
+  /// Roll (camera tilt) in whole degrees, -180 to +180.
+  /// Optional — use 0 if the sensor doesn't track roll.
+  public var rollDeg: Int32 = 0
+
+  ///
+  /// Free-form device model identifier, e.g. "FLIR-Boson-640", "SEEK".
+  /// Optional — empty string means "unknown model" (ATAK-CIV default).
+  public var model: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  ///
+  /// Coarse sensor category, inferred from `model` on parse when the source
+  /// XML doesn't label it. Receivers that render differently per sensor
+  /// class (thermal overlay vs daylight cone) use this.
+  public enum SensorType: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+    case unspecified // = 0
+
+    /// daylight / general optical
+    case camera // = 1
+
+    /// FLIR, thermal imager
+    case thermal // = 2
+
+    /// rangefinder, LRF, designator
+    case laser // = 3
+
+    /// night vision goggles
+    case nvg // = 4
+
+    /// radio/radar direction-finding
+    case rf // = 5
+    case other // = 6
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .camera
+      case 2: self = .thermal
+      case 3: self = .laser
+      case 4: self = .nvg
+      case 5: self = .rf
+      case 6: self = .other
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .camera: return 1
+      case .thermal: return 2
+      case .laser: return 3
+      case .nvg: return 4
+      case .rf: return 5
+      case .other: return 6
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [SensorFov.SensorType] = [
+      .unspecified,
+      .camera,
+      .thermal,
+      .laser,
+      .nvg,
+      .rf,
+      .other,
+    ]
+
+  }
+
+  public init() {}
+
+  fileprivate var _rangeM: UInt32? = nil
+}
+
+///
 /// ATAK v2 packet with expanded CoT field support and zstd dictionary compression.
 /// Sent on ATAK_PLUGIN_V2 port. The wire payload is:
 ///   [1 byte flags][zstd-compressed TAKPacketV2 protobuf]
@@ -3289,6 +3474,30 @@ public struct TAKPacketV2: @unchecked Sendable {
     get {return _storage._remarks}
     set {_uniqueStorage()._remarks = newValue}
   }
+
+  ///
+  /// Observed weather conditions (temperature, wind). From <environment>.
+  /// Type is `TAKEnvironment`, not `Environment`, to avoid colliding with
+  /// SwiftUI's `@Environment` property wrapper in iOS consumers.
+  public var environment: TAKEnvironment {
+    get {return _storage._environment ?? TAKEnvironment()}
+    set {_uniqueStorage()._environment = newValue}
+  }
+  /// Returns true if `environment` has been explicitly set.
+  public var hasEnvironment: Bool {return _storage._environment != nil}
+  /// Clears the value of `environment`. Subsequent reads from it will return its default value.
+  public mutating func clearEnvironment() {_uniqueStorage()._environment = nil}
+
+  ///
+  /// Sensor field-of-view cone (camera, FLIR, laser, etc.). From <sensor>.
+  public var sensorFov: SensorFov {
+    get {return _storage._sensorFov ?? SensorFov()}
+    set {_uniqueStorage()._sensorFov = newValue}
+  }
+  /// Returns true if `sensorFov` has been explicitly set.
+  public var hasSensorFov: Bool {return _storage._sensorFov != nil}
+  /// Clears the value of `sensorFov`. Subsequent reads from it will return its default value.
+  public mutating func clearSensorFov() {_uniqueStorage()._sensorFov = nil}
 
   ///
   /// The payload of the packet
@@ -4792,9 +5001,122 @@ extension TaskRequest.Status: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Status_Unspecified\0\u{1}Status_Pending\0\u{1}Status_Acknowledged\0\u{1}Status_InProgress\0\u{1}Status_Completed\0\u{1}Status_Cancelled\0")
 }
 
+extension TAKEnvironment: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TAKEnvironment"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}temperature_c_x10\0\u{3}wind_direction_deg\0\u{3}wind_speed_cm_s\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularSInt32Field(value: &self.temperatureCX10) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.windDirectionDeg) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.windSpeedCmS) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.temperatureCX10 != 0 {
+      try visitor.visitSingularSInt32Field(value: self.temperatureCX10, fieldNumber: 1)
+    }
+    if self.windDirectionDeg != 0 {
+      try visitor.visitSingularUInt32Field(value: self.windDirectionDeg, fieldNumber: 2)
+    }
+    if self.windSpeedCmS != 0 {
+      try visitor.visitSingularUInt32Field(value: self.windSpeedCmS, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: TAKEnvironment, rhs: TAKEnvironment) -> Bool {
+    if lhs.temperatureCX10 != rhs.temperatureCX10 {return false}
+    if lhs.windDirectionDeg != rhs.windDirectionDeg {return false}
+    if lhs.windSpeedCmS != rhs.windSpeedCmS {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension SensorFov: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SensorFov"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}type\0\u{3}azimuth_deg\0\u{3}range_m\0\u{3}fov_horizontal_deg\0\u{3}fov_vertical_deg\0\u{3}elevation_deg\0\u{3}roll_deg\0\u{1}model\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.type) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.azimuthDeg) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self._rangeM) }()
+      case 4: try { try decoder.decodeSingularUInt32Field(value: &self.fovHorizontalDeg) }()
+      case 5: try { try decoder.decodeSingularUInt32Field(value: &self.fovVerticalDeg) }()
+      case 6: try { try decoder.decodeSingularSInt32Field(value: &self.elevationDeg) }()
+      case 7: try { try decoder.decodeSingularSInt32Field(value: &self.rollDeg) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.model) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.type != .unspecified {
+      try visitor.visitSingularEnumField(value: self.type, fieldNumber: 1)
+    }
+    if self.azimuthDeg != 0 {
+      try visitor.visitSingularUInt32Field(value: self.azimuthDeg, fieldNumber: 2)
+    }
+    try { if let v = self._rangeM {
+      try visitor.visitSingularUInt32Field(value: v, fieldNumber: 3)
+    } }()
+    if self.fovHorizontalDeg != 0 {
+      try visitor.visitSingularUInt32Field(value: self.fovHorizontalDeg, fieldNumber: 4)
+    }
+    if self.fovVerticalDeg != 0 {
+      try visitor.visitSingularUInt32Field(value: self.fovVerticalDeg, fieldNumber: 5)
+    }
+    if self.elevationDeg != 0 {
+      try visitor.visitSingularSInt32Field(value: self.elevationDeg, fieldNumber: 6)
+    }
+    if self.rollDeg != 0 {
+      try visitor.visitSingularSInt32Field(value: self.rollDeg, fieldNumber: 7)
+    }
+    if !self.model.isEmpty {
+      try visitor.visitSingularStringField(value: self.model, fieldNumber: 8)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: SensorFov, rhs: SensorFov) -> Bool {
+    if lhs.type != rhs.type {return false}
+    if lhs.azimuthDeg != rhs.azimuthDeg {return false}
+    if lhs._rangeM != rhs._rangeM {return false}
+    if lhs.fovHorizontalDeg != rhs.fovHorizontalDeg {return false}
+    if lhs.fovVerticalDeg != rhs.fovVerticalDeg {return false}
+    if lhs.elevationDeg != rhs.elevationDeg {return false}
+    if lhs.rollDeg != rhs.rollDeg {return false}
+    if lhs.model != rhs.model {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension SensorFov.SensorType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SensorType_Unspecified\0\u{1}SensorType_Camera\0\u{1}SensorType_Thermal\0\u{1}SensorType_Laser\0\u{1}SensorType_Nvg\0\u{1}SensorType_Rf\0\u{1}SensorType_Other\0")
+}
+
 extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TAKPacketV2"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}cot_type_id\0\u{1}how\0\u{1}callsign\0\u{1}team\0\u{1}role\0\u{3}latitude_i\0\u{3}longitude_i\0\u{1}altitude\0\u{1}speed\0\u{1}course\0\u{1}battery\0\u{3}geo_src\0\u{3}alt_src\0\u{1}uid\0\u{3}device_callsign\0\u{3}stale_seconds\0\u{3}tak_version\0\u{3}tak_device\0\u{3}tak_platform\0\u{3}tak_os\0\u{1}endpoint\0\u{1}phone\0\u{3}cot_type_str\0\u{1}remarks\0\u{2}\u{6}pli\0\u{1}chat\0\u{1}aircraft\0\u{3}raw_detail\0\u{1}shape\0\u{1}marker\0\u{1}rab\0\u{1}route\0\u{1}casevac\0\u{1}emergency\0\u{1}task\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}cot_type_id\0\u{1}how\0\u{1}callsign\0\u{1}team\0\u{1}role\0\u{3}latitude_i\0\u{3}longitude_i\0\u{1}altitude\0\u{1}speed\0\u{1}course\0\u{1}battery\0\u{3}geo_src\0\u{3}alt_src\0\u{1}uid\0\u{3}device_callsign\0\u{3}stale_seconds\0\u{3}tak_version\0\u{3}tak_device\0\u{3}tak_platform\0\u{3}tak_os\0\u{1}endpoint\0\u{1}phone\0\u{3}cot_type_str\0\u{1}remarks\0\u{1}environment\0\u{3}sensor_fov\0\u{2}\u{4}pli\0\u{1}chat\0\u{1}aircraft\0\u{3}raw_detail\0\u{1}shape\0\u{1}marker\0\u{1}rab\0\u{1}route\0\u{1}casevac\0\u{1}emergency\0\u{1}task\0\u{c}\u{1b}\u{1}\u{c}\u{1c}\u{1}\u{c}\u{1d}\u{1}")
 
   fileprivate class _StorageClass {
     var _cotTypeID: CotType = .other
@@ -4821,6 +5143,8 @@ extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
     var _phone: String = String()
     var _cotTypeStr: String = String()
     var _remarks: String = String()
+    var _environment: TAKEnvironment? = nil
+    var _sensorFov: SensorFov? = nil
     var _payloadVariant: TAKPacketV2.OneOf_PayloadVariant?
 
       // This property is used as the initial default value for new instances of the type.
@@ -4856,6 +5180,8 @@ extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
       _phone = source._phone
       _cotTypeStr = source._cotTypeStr
       _remarks = source._remarks
+      _environment = source._environment
+      _sensorFov = source._sensorFov
       _payloadVariant = source._payloadVariant
     }
   }
@@ -4899,6 +5225,8 @@ extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
         case 22: try { try decoder.decodeSingularStringField(value: &_storage._phone) }()
         case 23: try { try decoder.decodeSingularStringField(value: &_storage._cotTypeStr) }()
         case 24: try { try decoder.decodeSingularStringField(value: &_storage._remarks) }()
+        case 25: try { try decoder.decodeSingularMessageField(value: &_storage._environment) }()
+        case 26: try { try decoder.decodeSingularMessageField(value: &_storage._sensorFov) }()
         case 30: try {
           var v: Bool?
           try decoder.decodeSingularBoolField(value: &v)
@@ -5116,6 +5444,12 @@ extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
       if !_storage._remarks.isEmpty {
         try visitor.visitSingularStringField(value: _storage._remarks, fieldNumber: 24)
       }
+      try { if let v = _storage._environment {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 25)
+      } }()
+      try { if let v = _storage._sensorFov {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 26)
+      } }()
       switch _storage._payloadVariant {
       case .pli?: try {
         guard case .pli(let v)? = _storage._payloadVariant else { preconditionFailure() }
@@ -5196,6 +5530,8 @@ extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementati
         if _storage._phone != rhs_storage._phone {return false}
         if _storage._cotTypeStr != rhs_storage._cotTypeStr {return false}
         if _storage._remarks != rhs_storage._remarks {return false}
+        if _storage._environment != rhs_storage._environment {return false}
+        if _storage._sensorFov != rhs_storage._sensorFov {return false}
         if _storage._payloadVariant != rhs_storage._payloadVariant {return false}
         return true
       }
