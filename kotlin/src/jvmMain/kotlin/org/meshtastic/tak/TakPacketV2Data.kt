@@ -76,8 +76,13 @@ data class TakPacketV2Data(
         val type: SensorType = SensorType.Unspecified,
         /** Cone axis azimuth in whole degrees, 0–359, clockwise from true north. */
         val azimuthDeg: Int = 270,
-        /** Maximum cone range in whole meters. ATAK-CIV default is 100. */
-        val rangeMeters: Int = 100,
+        /**
+         * Maximum cone range in whole meters. `null` = not set on the wire —
+         * receivers should fall back to the ATAK-CIV default of 100. Tracks the
+         * proto's `optional uint32 range_m` so absence and explicit-zero / -100
+         * remain distinguishable end-to-end.
+         */
+        val rangeMeters: Int? = null,
         /** Horizontal field of view in whole degrees. ATAK-CIV default is 45. */
         val fovHorizontalDeg: Int = 45,
         /** Vertical FOV in whole degrees. `null` = not set / use horizontal FOV. */

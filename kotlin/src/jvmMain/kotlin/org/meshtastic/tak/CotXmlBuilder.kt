@@ -222,12 +222,14 @@ class CotXmlBuilder {
         }
 
         // SensorFov (camera / FLIR / laser cone) — geometry only; receiver
-        // restores visual styling from its own defaults. Always emit the 4
-        // required geometry attributes plus any optional ones that were set.
+        // restores visual styling from its own defaults. Emit the required
+        // geometry attributes plus any optional ones that were set. `range`
+        // is omitted when null so receivers can apply the ATAK-CIV 100m
+        // default rather than seeing an explicit value.
         packet.sensorFov?.let { s ->
             sb.append("    <sensor")
             sb.append(""" azimuth="${s.azimuthDeg}"""")
-            sb.append(""" range="${s.rangeMeters}"""")
+            s.rangeMeters?.let { sb.append(""" range="$it"""") }
             sb.append(""" fov="${s.fovHorizontalDeg}"""")
             s.fovVerticalDeg?.let { sb.append(""" vfov="$it"""") }
             sb.append(""" elevation="${s.elevationDeg}"""")

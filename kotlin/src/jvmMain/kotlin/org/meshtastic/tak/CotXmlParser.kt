@@ -836,8 +836,11 @@ class CotXmlParser {
                                 // still round-trip without emitting extra attrs.
                                 azimuthDeg = parser.getAttributeValue(null, "azimuth")
                                     ?.toDoubleOrNull()?.roundToInt() ?: 270,
+                                // `range` is optional on the wire. Keep null when the
+                                // attribute is absent so it round-trips as "use default"
+                                // rather than being baked into an explicit 100.
                                 rangeMeters = parser.getAttributeValue(null, "range")
-                                    ?.toDoubleOrNull()?.roundToInt() ?: 100,
+                                    ?.toDoubleOrNull()?.roundToInt(),
                                 fovHorizontalDeg = parser.getAttributeValue(null, "fov")
                                     ?.toDoubleOrNull()?.roundToInt() ?: 45,
                                 fovVerticalDeg = parser.getAttributeValue(null, "vfov")
