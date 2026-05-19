@@ -33,9 +33,9 @@ kotlin {
         val jvmTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation("org.junit.jupiter:junit-jupiter:5.14.4")
-                implementation("org.junit.jupiter:junit-jupiter-params:5.14.4")
-                runtimeOnly("org.junit.platform:junit-platform-launcher:1.14.4")
+                implementation("org.junit.jupiter:junit-jupiter:6.1.0")
+                implementation("org.junit.jupiter:junit-jupiter-params:6.1.0")
+                runtimeOnly("org.junit.platform:junit-platform-launcher:6.1.0")
             }
         }
     }
