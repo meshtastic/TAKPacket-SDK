@@ -21,7 +21,7 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                api("com.squareup.wire:wire-runtime:6.2.0")
+                api("com.squareup.wire:wire-runtime:6.4.0")
             }
         }
         val jvmMain by getting {
