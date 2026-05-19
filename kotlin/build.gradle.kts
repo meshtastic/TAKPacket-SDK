@@ -1,14 +1,11 @@
 plugins {
     kotlin("multiplatform") version "2.1.20"
     id("com.squareup.wire") version "6.2.0"
-    // Required so JitPack (and any other Maven consumer) can resolve the
-    // KMP artifacts via `publishToMavenLocal`. kotlin("multiplatform") does
-    // not auto-apply this plugin — it has to be declared explicitly.
-    `maven-publish`
+    id("com.vanniktech.maven.publish") version "0.30.0"
 }
 
 group = "org.meshtastic"
-version = "0.2.1"
+version = providers.gradleProperty("VERSION_NAME").getOrElse("0.2.3")
 
 repositories {
     mavenCentral()
@@ -127,4 +124,41 @@ tasks.named<Jar>("jvmJar") {
     exclude("org/meshtastic/proto/Team\$*.class")
     exclude("org/meshtastic/proto/MemberRole.class")
     exclude("org/meshtastic/proto/MemberRole\$*.class")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Maven Central publishing via Vanniktech maven-publish plugin.
+// Coordinates are read from gradle.properties: GROUP, POM_ARTIFACT_ID, VERSION_NAME.
+// Signing is conditional — only applied when CI provides the key via Gradle properties.
+mavenPublishing {
+    publishToMavenCentral()
+    if (providers.gradleProperty("signingInMemoryKey").isPresent) {
+        signAllPublications()
+    }
+
+    pom {
+        name.set("TAKPacket-SDK")
+        description.set("Cross-platform CoT XML to TAKPacketV2 protobuf conversion with zstd dictionary compression for Meshtastic LoRa mesh transport.")
+        inceptionYear.set("2025")
+        url.set("https://github.com/meshtastic/TAKPacket-SDK")
+        licenses {
+            license {
+                name.set("GNU General Public License, Version 3.0")
+                url.set("https://www.gnu.org/licenses/gpl-3.0.html")
+                distribution.set("repo")
+            }
+        }
+        developers {
+            developer {
+                id.set("meshtastic")
+                name.set("Meshtastic")
+                url.set("https://meshtastic.org")
+            }
+        }
+        scm {
+            url.set("https://github.com/meshtastic/TAKPacket-SDK")
+            connection.set("scm:git:git://github.com/meshtastic/TAKPacket-SDK.git")
+            developerConnection.set("scm:git:ssh://git@github.com/meshtastic/TAKPacket-SDK.git")
+        }
+    }
 }
