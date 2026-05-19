@@ -26,7 +26,7 @@ kotlin {
         }
         val jvmMain by getting {
             dependencies {
-                implementation("com.github.luben:zstd-jni:1.5.7-7")
+                implementation("com.github.luben:zstd-jni:1.5.7-8")
                 implementation("org.ogce:xpp3:1.1.6")
             }
         }
