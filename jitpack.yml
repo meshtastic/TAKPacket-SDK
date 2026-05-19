@@ -1,5 +1,9 @@
 # Build configuration for https://jitpack.io
 #
+# NOTE: Maven Central is now the preferred distribution channel for the Kotlin
+# KMP artifacts (org.meshtastic:takpacket-sdk). JitPack remains as a fallback
+# for consumers that haven't migrated yet.
+#
 # JitPack clones the repo with submodules, runs the `install` step below, and
 # serves the resulting Maven artifacts under the coordinate
 #     com.github.meshtastic:TAKPacket-SDK:<version>

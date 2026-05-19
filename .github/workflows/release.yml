@@ -1,10 +1,14 @@
 name: Release
 
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -21,7 +25,8 @@ jobs:
         id: version
         run: echo "version=$(cat VERSION | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
 
-      - name: Check tag doesn't already exist
+      - name: Check tag doesn't already exist (manual dispatch only)
+        if: github.event_name == 'workflow_dispatch'
         run: |
           if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
             echo "Tag v${{ steps.version.outputs.version }} already exists!"
@@ -61,8 +66,6 @@ jobs:
 
       - name: Test Kotlin
         working-directory: kotlin
-        # Kotlin module is kotlin("multiplatform") with a jvm() target — use
-        # `jvmTest` instead of the old kotlin("jvm") `test` task.
         run: gradle jvmTest --quiet
 
       - name: Test Swift
@@ -83,12 +86,22 @@ jobs:
         working-directory: csharp
         run: dotnet test --verbosity quiet
 
+      # ── Publish to Maven Central ─────────────────────────────────────────
+
+      - name: Publish to Maven Central
+        working-directory: kotlin
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+        run: gradle publishAllPublicationsToMavenCentralRepository --stacktrace
+
       # ── Build artifacts ─────────────────────────────────────────────────
 
       - name: Build Kotlin JAR
         working-directory: kotlin
-        # KMP jvm() target produces its JAR via `jvmJar`, not the old `jar` task.
-        # Output lands at `build/libs/takpacket-sdk-jvm-<version>.jar`.
         run: gradle jvmJar --quiet
 
       - name: Build Python wheel
@@ -117,9 +130,7 @@ jobs:
           mkdir -p release-artifacts
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Kotlin JAR — KMP's jvm() target produces `takpacket-sdk-jvm-<version>.jar`
-          # alongside a Kotlin metadata jar; select the JVM classifier explicitly
-          # so we don't accidentally pack the metadata-only jar.
+          # Kotlin JAR
           cp kotlin/build/libs/takpacket-sdk-jvm-*.jar "release-artifacts/meshtastic-tak-${VERSION}.jar"
 
           # Python wheel + sdist
@@ -154,7 +165,7 @@ jobs:
 
             | Platform | File | Usage |
             |----------|------|-------|
-            | **Kotlin** | `.jar` | Add to Android/JVM project classpath |
+            | **Kotlin** | `.jar` | `implementation("org.meshtastic:takpacket-sdk:${{ steps.version.outputs.version }}")` via Maven Central |
             | **Swift** | `.zip` | Add via SPM: point to this repo tag `v${{ steps.version.outputs.version }}` |
             | **Python** | `.whl` | `pip install meshtastic_tak-*.whl` |
             | **TypeScript** | `.tgz` | `npm install meshtastic-takpacket-sdk-*.tgz` |
