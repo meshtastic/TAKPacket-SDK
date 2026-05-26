@@ -11,6 +11,8 @@ concurrency:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -89,6 +91,26 @@ jobs:
         run: dotnet test --verbosity quiet
 
       # ── Publish to Maven Central ─────────────────────────────────────────
+
+      - name: Stage signed artifacts locally
+        working-directory: kotlin
+        env:
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+        run: ./gradlew publishToMavenLocal --stacktrace
+
+      - name: Collect Maven artifacts for attestation
+        run: |
+          mkdir -p maven-attestation
+          find ~/.m2/repository/org/meshtastic -type f \
+            \( -name "*.jar" -o -name "*.pom" -o -name "*.module" -o -name "*.klib" \) \
+            -exec cp {} maven-attestation/ \;
+          echo "Maven artifacts to attest:"
+          ls -lh maven-attestation/
+
+      - name: Attest Maven artifacts
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: maven-attestation/*
 
       - name: Publish to Maven Central
         working-directory: kotlin
