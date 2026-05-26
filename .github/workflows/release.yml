@@ -7,12 +7,10 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
-  id-token: write
-  attestations: write
 
 jobs:
   release:
@@ -70,7 +68,7 @@ jobs:
 
       - name: Test Kotlin
         working-directory: kotlin
-        run: gradle jvmTest --quiet
+        run: ./gradlew jvmTest --quiet
 
       - name: Test Swift
         working-directory: swift
@@ -98,13 +96,13 @@ jobs:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
           ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_PASSWORD }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
-        run: gradle publishAllPublicationsToMavenCentralRepository --stacktrace
+        run: ./gradlew publishAllPublicationsToMavenCentralRepository --stacktrace
 
       # ── Build artifacts ─────────────────────────────────────────────────
 
       - name: Build Kotlin JAR
         working-directory: kotlin
-        run: gradle jvmJar --quiet
+        run: ./gradlew jvmJar --quiet
 
       - name: Build Python wheel
         working-directory: python
@@ -132,8 +130,8 @@ jobs:
           mkdir -p release-artifacts
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Kotlin JAR
-          cp kotlin/build/libs/takpacket-sdk-jvm-*.jar "release-artifacts/meshtastic-tak-${VERSION}.jar"
+          # Kotlin JAR — select only the main artifact, not -sources or -javadoc
+          cp "kotlin/build/libs/takpacket-sdk-jvm-${VERSION}.jar" "release-artifacts/meshtastic-tak-${VERSION}.jar"
 
           # Python wheel + sdist
           cp python/dist/*.whl release-artifacts/
