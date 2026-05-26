@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "fast-xml-parser": "^5.5.10",
-    "protobufjs": "^7.4.0",
+    "protobufjs": "^8.0.0",
     "zstd-napi": "^0.0.12"
   },
   "files": [
