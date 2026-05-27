@@ -102,3 +102,63 @@ Kotlin `TakPacketV2Data` uses camelCase field names. Wire-generated proto types 
 - Don't change the `Team.Unspecifed_Color` typo — it's the canonical Wire-generated name
 - Don't retrain dictionaries without coordinating a version bump — new dicts break wire compatibility with old receivers
 - Don't use `toInt()` for `(longitude * 1e7)` comparisons — IEEE 754 rounding requires `roundToInt()`
+
+## PII and test-fixture sanitization (CRITICAL)
+
+**Never commit unredacted real-world ATAK captures.** CoT XML carries position
+data (lat/lon to sub-meter precision), Android device IDs that act as
+permanent device fingerprints, private LAN IPs that reveal home network
+topology, and personal callsigns. Anything captured from an operator's actual
+deployment must be sanitized BEFORE landing in `testdata/`, the SDK README,
+or the proto submodule — once it's in a git commit pushed to a public mirror,
+no amount of force-pushing scrubs it from caches, forks, or pre-existing
+clones reliably.
+
+### Required replacements when sanitizing a real capture
+
+| What | Pattern | Replace with |
+|---|---|---|
+| GPS coordinates | any real lat/lon | Public landmark coords (e.g. `38.8895, -77.0353` Washington Monument; `38.8814, -77.0502` Lincoln Memorial). For routes/polygons, pick distinct landmark pairs so the path topology survives. |
+| Stationary / not-a-place markers | — | `lat="0.0" lon="0.0"` (matches ATAK's "null island" convention for non-positional events like `m-t-t` and `y-`) |
+| Android device IDs (`ANDROID-[16 hex chars]`) | real device fingerprint | Sequential placeholders: `ANDROID-0000000000000001`, `…02`, etc. (Test fakes are already in this format — extend the numbering.) |
+| Private LAN IPs (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`) | real network IP | RFC 5737 documentation range: `192.0.2.1`, `198.51.100.1`, `203.0.113.1` (these ranges are reserved for examples and never route on the public internet). |
+| MAC addresses | real radio MAC | Random or `00:00:00:00:00:0X` placeholder |
+| Real callsigns | personally-identifying handles | Generic operator handles: `ALPHA-1`, `BRAVO-2`, `ASPEN`, `ETHEL`, `CHARLIE` are fine — they're well-worn placeholders. Avoid the actual operator's first name, military rank+last-name, or amateur radio call. |
+| UUIDs | (no action) | Random UUIDs are high-entropy and not by themselves identifying. Keep them. |
+| Voice profile IDs, room IDs, chatgrp UIDs | (no action unless they look like a real account ID) | Usually safe — they're UUIDs. |
+
+### Workflow when adding a new fixture from a real capture
+
+1. **Diff-redact, don't just rename.** Pull the source XML into `/tmp/` and edit there. Apply every replacement above. Save back into `testdata/cot_xml/`.
+2. **Scan before staging.** Run this against the new file:
+   ```bash
+   grep -nE '\b\d{1,3}\.\d{5,}\b|ANDROID-[0-9a-f]{12,}|\b(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]+\.[0-9]+\b' testdata/cot_xml/<your-new-fixture>.xml
+   ```
+   Hits on the coord regex with 5+ decimal places, on a non-sequential ANDROID hex ID, or on an RFC 1918 IP, mean it isn't sanitized yet. The sequential `ANDROID-0+\d+` pattern is fine — that's the test-fake convention.
+3. **Add a redaction note** in the commit message: "redacted: coords → DC landmarks; android ids → 000…0NN; LAN IP → 192.0.2.1".
+4. **Regenerate goldens twice.** `gradle jvmTest --tests CompressionTest.generate compression report --rerun-tasks` — the first pass mints `.pb`/`.bin`; rerun to confirm steady state.
+5. **Never assume binary blobs auto-sanitize.** Filter-repo's `--replace-text` skips files containing null bytes, so the `.pb` protobuf intermediates and `.bin` golden files retain whatever bytes were generated. After scrubbing the source XML, ALWAYS regenerate the derived binaries.
+
+### Pre-push self-check
+
+Before `git push`, especially when pushing fixture changes, run from repo root:
+
+```bash
+# Quick PII sweep
+grep -rEon '\b34\.[0-9]{1,2}\.[0-9]{5,}|\b\d{1,3}\.\d{5,}\b|ANDROID-[0-9a-f]{12,}|\b(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]+\.[0-9]+\b' \
+  --include='*.xml' --include='*.md' --include='*.swift' --include='*.kt' \
+  --include='*.cs' --include='*.py' --include='*.ts' \
+  | grep -v 'ANDROID-0\{12\}'
+```
+
+Empty output = clean. Any hit gets eyeballed before push.
+
+### If real PII slips through
+
+If you discover real PII in a commit that has already been pushed:
+1. **Stop pushing** anything that builds on the leak.
+2. Use `git filter-repo --replace-text` for text-format leaks (XML, README, code).
+3. Follow up with `git filter-repo --blob-callback` for binary leaks (`.pb`, `.bin`) — filter-repo's `--replace-text` SKIPS files with null bytes, so binaries need an explicit callback that swaps the bad blob SHA for a clean re-baselined version.
+4. Force-push every branch and tag (`git push --force origin master --tags`).
+5. Open a GitHub Support ticket to purge the orphaned commits from cache — they remain accessible by SHA URL for 30+ days otherwise.
+6. Reach out to fork owners — your force-push doesn't propagate.

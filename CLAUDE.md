@@ -158,3 +158,38 @@ cd kotlin && gradle jvmTest
 
 - **Meshtastic-Android** (`core/takserver`): depends on `takpacket-sdk-jvm` via JitPack, proto submodule at `core/proto/src/main/proto`
 - **Meshtastic-Apple**: depends on `MeshtasticTAK` Swift package via remote SPM URL, proto submodule at `protobufs/`, regenerated `atak.pb.swift` at `MeshtasticProtobufs/Sources/meshtastic/`
+
+## PII / sensitive-data handling — read before adding any fixture
+
+The repo has had real-world ATAK captures land in test fixtures by accident
+before. The compressed `.bin` and `.pb` intermediates retain the leaked
+identifiers even after the source XML is fixed, because filter-repo's text
+replacement skips files containing null bytes. Treat this as a recurring
+hazard.
+
+**Patterns that must never appear in committed fixtures or docs:**
+
+| Pattern | What it leaks | Required substitute |
+|---|---|---|
+| High-precision lat/lon (5+ decimals) that's not a public landmark | Operator's actual location, often a home | DC-area public landmarks: `38.8895,-77.0353` (Washington Monument), `38.8814,-77.0502` (Lincoln Memorial), or `0.0,0.0` for non-positional events like `m-t-t` / `y-` |
+| `ANDROID-[16 hex chars]` where the hex isn't all-zeros | A specific Android device's ANDROID_ID — never changes, can fingerprint the device for years | Sequential placeholder: `ANDROID-0000000000000001`, `…02`, etc. |
+| RFC 1918 private IPs (`192.168.x.x`, `10.x.x.x`, `172.16-31.x.x`) | Home/office network topology | RFC 5737 docs range: `192.0.2.1`, `198.51.100.1`, `203.0.113.1` |
+| MAC addresses | Hardware fingerprint | `00:00:00:00:00:0X` placeholder |
+| Real operator callsigns (first names, military rank+name, ham calls) | Identity | Generic operator handles: `ALPHA-1`, `BRAVO-2`, `ASPEN`, `ETHEL` |
+
+**When you're handed a real CoT Explorer capture / pg_dump excerpt to add as a fixture:**
+
+1. Don't drop it into `testdata/` raw. Edit a redacted copy in `/tmp/` first.
+2. Apply every substitution above. Random UUIDs (message IDs, room IDs, chatgrp UIDs) can stay — they're high-entropy and not identifying on their own.
+3. Sanity-grep the redacted file before staging:
+   ```bash
+   grep -nE '\b\d{1,3}\.\d{5,}\b|ANDROID-[0-9a-f]{12,}|\b(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]+\.[0-9]+\b' /tmp/<file>.xml
+   ```
+   Hits on coords with 5+ decimal places, non-sequential ANDROID hex, or RFC 1918 IPs mean it's still dirty. (Sequential `ANDROID-0+\d+` is allowed — that's the test-fake convention.)
+4. Regenerate goldens via `gradle jvmTest --tests "CompressionTest.generate compression report" --rerun-tasks` so the derived `.pb` / `.bin` artifacts pick up the clean strings. The Kotlin test writes both into `testdata/golden/` and `testdata/protobuf/`.
+
+**If a leak ships to master:**
+
+The recovery is `git filter-repo` in two passes — text substitution for the XML/code/docs, then a `--blob-callback` for the binary `.pb` and `.bin` files (filter-repo skips text replacement on files with null bytes, so binaries need an explicit callback that swaps the bad blob SHAs for clean re-baselined ones). Force-push every branch and tag. Open a GitHub Support ticket to purge orphaned commits — they remain reachable by SHA URL until cache expires (~30 days). Forks aren't touched by the force-push.
+
+The detailed playbook is in `.github/copilot-instructions.md` under "PII and test-fixture sanitization."
