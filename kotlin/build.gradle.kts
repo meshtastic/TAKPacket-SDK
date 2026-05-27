@@ -131,7 +131,13 @@ tasks.named<Jar>("jvmJar") {
 // Coordinates are read from gradle.properties: GROUP, POM_ARTIFACT_ID, VERSION_NAME.
 // Signing is conditional — only applied when CI provides the key via Gradle properties.
 mavenPublishing {
-    publishToMavenCentral()
+    // automaticRelease = true makes the Sonatype Central Portal publish the
+    // upload directly to Maven Central instead of leaving it in a pending
+    // "validated, awaiting approval" state. Without this, each release
+    // requires a manual click in the Sonatype Central UI after the workflow
+    // finishes — bit us once on v0.3.0 where the workflow reported success
+    // but the artifact never synced to repo1.maven.org.
+    publishToMavenCentral(automaticRelease = true)
     if (providers.gradleProperty("signingInMemoryKey").isPresent) {
         signAllPublications()
     }
