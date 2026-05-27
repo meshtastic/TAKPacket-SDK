@@ -632,11 +632,23 @@ class RoundTripTest {
         val tt = packet.payload as TakPacketV2Data.Payload.TakTalk
         assertEquals("Testing 123", tt.text)
         assertTrue(tt.fromVoice, "source had <voice/> — fromVoice must be true")
+        // Regression for in-field bug where TAKTALK m-t-t reached the receiver
+        // missing <callsign> and <voice/> because the parser only captured
+        // callsign from <contact callsign=> attribute (used by PLI/chat), not
+        // from <callsign>SENDER</callsign> direct child of <detail> (used by
+        // TAKTALK m-t-t).  Without the sender callsign the TAKTALK plugin on
+        // the receiver couldn't attribute the message and silently dropped it
+        // instead of running TTS.  See:
+        //   ~/Downloads/cotexplorer-20260527T170723Z.txt lines 105 vs 106
+        assertEquals("ASPEN", packet.callsign,
+            "TAKTALK m-t-t carries sender in <callsign>X</callsign> direct child; parser must capture it")
 
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
         assertTrue(rebuilt.contains("<voice/>"),
             "rebuilt XML must re-emit the <voice/> push-to-talk marker")
         assertTrue(rebuilt.contains("<text>Testing 123</text>"))
+        assertTrue(rebuilt.contains("<callsign>ASPEN</callsign>"),
+            "rebuilt XML must re-emit <callsign>SENDER</callsign> so TAKTALK can attribute and TTS-play it")
     }
 
     @Test

@@ -102,6 +102,10 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var inTaktalkText = false
     private var inTaktalkChatroomId = false
     private var inTaktalkLang = false
+    // TAKTALK m-t-t direct-child <callsign>SENDER</callsign> capture.
+    // Distinct from <contact callsign=...> used by PLI/chat.
+    private var inMttCallsign = false
+    private var mttCallsignBuffer = ""
 
     // --- TAKTALK b-t-f sidecar accumulators (decorate Chat) -----------
     private var chatLang = ""
@@ -262,6 +266,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         talkText = ""; talkChatroomId = ""; talkLang = ""
         fromVoice = false
         inTaktalkText = false; inTaktalkChatroomId = false; inTaktalkLang = false
+        inMttCallsign = false; mttCallsignBuffer = ""
         chatLang = ""; chatRoomId = ""; chatVoiceProfileId = ""
         chatHasVoiceProfile = false
         inChatEa = false; inChatRoomId = false; inChatVoiceProfileId = false
@@ -812,6 +817,13 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         case "voice":
             // Empty marker — presence alone sets fromVoice.
             if cotTypeStr == "m-t-t" { hasTakTalkData = true; fromVoice = true }
+        case "callsign":
+            // TAKTALK m-t-t carries the sender callsign as a direct child
+            // <callsign>SENDER</callsign>, NOT as a <contact callsign=...>
+            // attribute.  Without this, the receive-side builder emits no
+            // <callsign>, and the TAKTALK plugin can't attribute the
+            // message and silently drops it instead of TTS-playing it.
+            if cotTypeStr == "m-t-t" { hasTakTalkData = true; inMttCallsign = true }
         // b-t-f TAKTALK sidecars; only fire alongside <__chat>.
         case "Ea":
             if hasChatData { inChatEa = true }
@@ -1133,6 +1145,8 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             talkChatroomId += string
         } else if inTaktalkLang {
             talkLang += string
+        } else if inMttCallsign {
+            mttCallsignBuffer += string
         } else if inChatEa {
             chatLang += string
         } else if inChatRoomId {
@@ -1181,6 +1195,12 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             if inTaktalkLang {
                 talkLang = talkLang.trimmingCharacters(in: .whitespacesAndNewlines)
                 inTaktalkLang = false
+            }
+        case "callsign":
+            if inMttCallsign {
+                packet.callsign = mttCallsignBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
+                inMttCallsign = false
+                mttCallsignBuffer = ""
             }
         // TAKTALK b-t-f sidecars
         case "Ea":

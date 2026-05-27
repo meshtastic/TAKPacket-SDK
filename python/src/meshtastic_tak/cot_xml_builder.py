@@ -71,7 +71,14 @@ class CotXmlBuilder:
         stale_str = stale.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
         cot_type = CotTypeMapper.type_to_string(packet.cot_type_id) or packet.cot_type_str or ""
-        how = CotTypeMapper.how_to_string(packet.how) or "m-g"
+        # For most CoT types, missing/Unspecified how falls back to "m-g".
+        # TAKTALK m-t-t and y- are special-cased to use ATAK's "null" how
+        # convention — the plugin's inbound classifier gates on this value
+        # for TTS routing, so source how="null" must NOT round-trip as "m-g".
+        how = (
+            CotTypeMapper.how_to_string(packet.how)
+            or ("null" if cot_type in ("m-t-t", "y-") else "m-g")
+        )
         lat = packet.latitude_i / 1e7
         lon = packet.longitude_i / 1e7
         if (packet.WhichOneof("payload_variant") == "route"

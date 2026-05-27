@@ -565,6 +565,16 @@ public class CotXmlParser
                     hasTakTalk = true;
                     fromVoice = true;
                     break;
+                case "callsign" when typeStr == "m-t-t":
+                    // TAKTALK m-t-t carries the sender callsign as a direct
+                    // child <callsign>SENDER</callsign> of <detail>, distinct
+                    // from the <contact callsign=...> attribute used by PLI /
+                    // chat.  Without this, the rebuild on the receive side
+                    // emits no <callsign>, and the TAKTALK plugin silently
+                    // drops the message instead of TTS-playing it.
+                    hasTakTalk = true;
+                    pkt.Callsign = el.Value.Trim();
+                    break;
                 // --- TAKTALK b-t-f sidecars (fire only alongside <__chat>) ---
                 case "Ea" when hasChat:
                     chatLang = el.Value.Trim();

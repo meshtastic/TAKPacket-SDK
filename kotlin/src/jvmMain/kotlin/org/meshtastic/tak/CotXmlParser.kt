@@ -420,6 +420,13 @@ class CotXmlParser {
         var inTaktalkText = false
         var inTaktalkChatroomId = false
         var inTaktalkLang = false
+        // TAKTALK m-t-t (voice/text) events carry the sender callsign as a
+        // direct child of <detail>: <callsign>ASPEN</callsign>.  Distinct
+        // from the <contact callsign=...> attribute that PLI and chat use.
+        // Without capturing this, the receive-side builder emits no
+        // <callsign> element, and the TAKTALK plugin can't attribute the
+        // message and won't TTS-play it.
+        var inMttCallsign = false
 
         // --- TAKTALK b-t-f sidecar accumulators (decorate Payload.Chat) -
         // <Ea>/<roomId>/<voice_profile_id> appear alongside the standard
@@ -667,6 +674,17 @@ class CotXmlParser {
                         "voice" -> if (cotTypeStr == "m-t-t") {
                             // Empty marker — presence alone sets the flag.
                             hasTakTalkData = true; fromVoice = true
+                        }
+                        // TAKTALK m-t-t carries the sender callsign as a
+                        // direct child <callsign>SENDER</callsign>, NOT as
+                        // a <contact callsign=...> attribute.  Capture it
+                        // into the top-level callsign field; the builder
+                        // re-emits via packet.callsign for m-t-t events.
+                        // Guarded on cotTypeStr to avoid colliding with any
+                        // event type that might carry a stray <callsign>
+                        // child elsewhere.
+                        "callsign" -> if (cotTypeStr == "m-t-t") {
+                            hasTakTalkData = true; inMttCallsign = true
                         }
                         // b-t-f TAKTALK sidecars. Only fire when we've also
                         // seen <__chat>, so a stray <Ea>/<roomId> on some
@@ -1078,6 +1096,7 @@ class CotXmlParser {
                             inRoomDataId = false
                         }
                         "lang" -> inTaktalkLang = false
+                        "callsign" -> inMttCallsign = false
                         // TAKTALK b-t-f sidecars
                         "Ea" -> inChatEa = false
                         "roomId" -> inChatRoomId = false
@@ -1106,6 +1125,9 @@ class CotXmlParser {
                                 inTaktalkText -> talkText = text
                                 inTaktalkChatroomId -> talkChatroomId = text
                                 inTaktalkLang -> talkLang = text
+                                // TAKTALK m-t-t sender callsign via direct
+                                // <callsign>SENDER</callsign> child element.
+                                inMttCallsign -> callsign = text
                                 inChatEa -> chatLang = text
                                 inChatRoomId -> chatRoomId = text
                                 inChatVoiceProfileId -> chatVoiceProfileId = text

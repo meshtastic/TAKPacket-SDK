@@ -126,7 +126,12 @@ public class CotXmlBuilder
         var staleStr = stale.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
         var cotType = CotTypeMapper.TypeToString((int)pkt.CotTypeId) ?? pkt.CotTypeStr ?? "";
-        var how = CotTypeMapper.HowToString((int)pkt.How) ?? "m-g";
+        // For most CoT types, missing/Unspecified how falls back to "m-g".
+        // TAKTALK m-t-t and y- are special-cased to use ATAK's "null" how
+        // convention — the plugin's inbound classifier gates on this value
+        // for TTS routing, so source how="null" must NOT round-trip as "m-g".
+        var how = CotTypeMapper.HowToString((int)pkt.How)
+                  ?? ((cotType == "m-t-t" || cotType == "y-") ? "null" : "m-g");
         var lat = pkt.LatitudeI / 1e7;
         var lon = pkt.LongitudeI / 1e7;
         if (pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route

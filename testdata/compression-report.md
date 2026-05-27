@@ -20,8 +20,8 @@ Generated: 2026-05-27 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 | casevac_medline | b-r-f-h-c | 1045B | 177B | 191B | 5.5x | non-aircraft |
 | chat_receipt_delivered | b-t-f-d | 479B | 109B | 109B | 4.4x | non-aircraft |
 | chat_receipt_read | b-t-f-r | 479B | 109B | 109B | 4.4x | non-aircraft |
-| chat_taktalk_dm | b-t-f | 1146B | 217B | 171B | 6.7x | non-aircraft |
-| chat_taktalk_voice_profile | b-t-f | 1203B | 257B | 200B | 6.0x | non-aircraft |
+| chat_taktalk_dm | b-t-f | 1138B | 217B | 155B | 7.3x | non-aircraft |
+| chat_taktalk_voice_profile | b-t-f | 1195B | 257B | 183B | 6.5x | non-aircraft |
 | delete_event | t-x-d-d | 476B | 48B | 62B | 7.7x | non-aircraft |
 | drawing_circle | u-d-c-c | 933B | 114B | 128B | 7.3x | non-aircraft |
 | drawing_circle_large | u-d-c-c | 626B | 109B | 119B | 5.3x | non-aircraft |
@@ -55,8 +55,8 @@ Generated: 2026-05-27 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 | route_3wp | b-m-r | 861B | 185B | 169B | 5.1x | non-aircraft |
 | route_itak_3wp | b-m-r | 771B | 233B | 217B | 3.6x | non-aircraft |
 | taktalk_room_data | y- | 558B | 123B | 119B | 4.7x | non-aircraft |
-| taktalk_text | m-t-t | 483B | 103B | 101B | 4.8x | non-aircraft |
-| taktalk_voice | m-t-t | 482B | 91B | 97B | 5.0x | non-aircraft |
+| taktalk_text | m-t-t | 483B | 110B | 108B | 4.5x | non-aircraft |
+| taktalk_voice | m-t-t | 482B | 98B | 105B | 4.6x | non-aircraft |
 | task_engage | t-s | 531B | 109B | 108B | 4.9x | non-aircraft |
 | waypoint | b-m-p-w | 574B | 124B | 116B | 4.9x | non-aircraft |
 
@@ -70,12 +70,12 @@ marker_goto            93B |###################
 emergency_cancel       94B |###################
 ranging_circle         94B |###################
 pli_itak               97B |####################
-taktalk_voice          97B |####################
 geochat_dm             98B |####################
 geochat_broadcast     101B |#####################
-taktalk_text          101B |#####################
+taktalk_voice         105B |######################
 pli_takaware          106B |######################
 pli_with_sensor       107B |######################
+taktalk_text          108B |######################
 task_engage           108B |######################
 chat_receipt_delivered  109B |######################
 chat_receipt_read     109B |######################
@@ -99,13 +99,13 @@ aircraft_adsb         147B |###############################
 casevac               147B |###############################
 drawing_rectangle     151B |###############################
 drawing_polygon       154B |################################
+chat_taktalk_dm       155B |################################
 drawing_freeform      158B |#################################
 marker_icon_set       160B |#################################
 route_3wp             169B |###################################
 marker_goto_itak      170B |###################################
-chat_taktalk_dm       171B |####################################
+chat_taktalk_voice_profile  183B |######################################
 casevac_medline       191B |########################################
-chat_taktalk_voice_profile  200B |##########################################
 drawing_telestration  215B |#############################################
 route_itak_3wp        217B |#############################################
 LoRa MTU              237B |##################################################

@@ -132,7 +132,15 @@ class CotXmlBuilder {
         val staleStr = isoFormatter.format(stale)
 
         val cotType = packet.cotTypeString()
-        val how = packet.howString().ifEmpty { "m-g" }
+        // For most CoT types, missing/Unspecified how falls back to "m-g"
+        // (the most common machine-generated value).  TAKTALK m-t-t and y-
+        // events are special-cased to use ATAK's "null" how convention —
+        // the TAKTALK plugin's inbound classifier appears to gate on this
+        // value, so a source how="null" that round-trips as "m-g" prevents
+        // TTS playback on the receive side.
+        val how = packet.howString().ifEmpty {
+            if (cotType == "m-t-t" || cotType == "y-") "null" else "m-g"
+        }
 
         var lat = packet.latitudeI / 1e7
         var lon = packet.longitudeI / 1e7

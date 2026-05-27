@@ -92,7 +92,12 @@ export function buildCotXml(packet: TAKPacketV2): string {
   const stale = new Date(Date.now() + staleSecs * 1000).toISOString();
 
   const cotType = typeToString(packet.cotTypeId ?? 0) ?? packet.cotTypeStr ?? "";
-  const how = howToString(packet.how ?? 0) ?? "m-g";
+  // For most CoT types, missing/Unspecified how falls back to "m-g".
+  // TAKTALK m-t-t and y- are special-cased to use ATAK's "null" how
+  // convention — the plugin's inbound classifier gates on this value
+  // for TTS routing, so source how="null" must NOT round-trip as "m-g".
+  const how = howToString(packet.how ?? 0)
+    ?? ((cotType === "m-t-t" || cotType === "y-") ? "null" : "m-g");
   let lat = (packet.latitudeI ?? 0) / 1e7;
   let lon = (packet.longitudeI ?? 0) / 1e7;
   const routePayload = packet.route;

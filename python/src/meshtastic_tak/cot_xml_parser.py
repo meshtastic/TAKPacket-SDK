@@ -556,6 +556,15 @@ class CotXmlParser:
                 # Empty marker — presence alone sets the flag.
                 has_taktalk = True
                 from_voice = True
+            elif tag == "callsign" and cot_type_str == "m-t-t":
+                # TAKTALK m-t-t carries the sender callsign as a direct
+                # child <callsign>SENDER</callsign> of <detail>, distinct
+                # from the <contact callsign=...> attribute used by PLI /
+                # chat.  Without this, the rebuild on the receive side
+                # emits no <callsign>, and the TAKTALK plugin silently
+                # drops the message instead of TTS-playing it.
+                has_taktalk = True
+                pkt.callsign = (elem.text or "").strip()
             # --- TAKTALK b-t-f sidecars (fire only alongside <__chat>) ---
             elif tag == "Ea" and has_chat:
                 chat_lang = (elem.text or "").strip()

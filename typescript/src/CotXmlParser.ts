@@ -275,6 +275,12 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   let hasTakTalk = false;
   let talkText = "", talkChatroomId = "", talkLang = "";
   let fromVoice = false;
+  // TAKTALK m-t-t direct-child <callsign>SENDER</callsign> capture.
+  // Distinct from <contact callsign=...> attribute used by PLI / chat.
+  // Without this, the rebuild on the receive side emits no <callsign>,
+  // and the TAKTALK plugin silently drops the message instead of TTS-
+  // playing it.
+  let mttCallsign = "";
 
   // --- TAKTALK b-t-f sidecar accumulators (decorate Chat) ---
   let chatLang = "", chatRoomId = "", chatVoiceProfileId = "";
@@ -321,6 +327,12 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
       // Empty marker; presence alone sets the flag.
       hasTakTalk = true;
       fromVoice = true;
+    }
+    if (detail.callsign !== undefined) {
+      // Direct child <callsign>SENDER</callsign>, distinct from
+      // <contact callsign=...> which m-t-t doesn't have.
+      const t = elemText(detail.callsign);
+      if (t.length > 0) { hasTakTalk = true; mttCallsign = t; }
     }
   }
 
@@ -427,7 +439,12 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   const pkt: TAKPacketV2 = {
     cotTypeId,
     how: howToEnum(event["@_how"] ?? ""),
-    callsign: contact["@_callsign"] ?? "",
+    // For TAKTALK m-t-t the sender callsign lives in <callsign>SENDER</callsign>
+    // directly under <detail>, not in <contact callsign=...>.  Prefer the
+    // m-t-t value when present so TAKTALK plugins can attribute the message
+    // and TTS-play it; fall back to the <contact> attribute for everything
+    // else.
+    callsign: mttCallsign || contact["@_callsign"] || "",
     team: TEAM_NAME_TO_ENUM[group["@_name"]] ?? 0,
     role: ROLE_NAME_TO_ENUM[group["@_role"]] ?? 0,
     latitudeI,
