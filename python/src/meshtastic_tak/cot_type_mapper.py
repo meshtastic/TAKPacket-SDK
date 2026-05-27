@@ -149,6 +149,11 @@ COTTYPE_B_T_F_D = 121
 COTTYPE_B_T_F_R = 122
 COTTYPE_B_A_O_C = 123
 COTTYPE_T_S = 124
+# TAKTALK plugin shapes. "y-" literally has a trailing dash and no second
+# atom — that's the wire format ATAK + TAKTALK emit for room broadcasts.
+# Not a typo.
+COTTYPE_M_T_T = 125          # TAKTALK voice/text chat message
+COTTYPE_Y_DASH = 126         # TAKTALK room/membership broadcast
 
 # CotHow enum values
 COTHOW_UNSPECIFIED = 0
@@ -227,6 +232,7 @@ _STRING_TO_TYPE = {
     "u-d-c-e": COTTYPE_U_D_C_E, "b-i-x-i": COTTYPE_B_I_X_I,
     "b-t-f-d": COTTYPE_B_T_F_D, "b-t-f-r": COTTYPE_B_T_F_R,
     "b-a-o-c": COTTYPE_B_A_O_C, "t-s": COTTYPE_T_S,
+    "m-t-t": COTTYPE_M_T_T, "y-": COTTYPE_Y_DASH,
 }
 _TYPE_TO_STRING = {v: k for k, v in _STRING_TO_TYPE.items()}
 

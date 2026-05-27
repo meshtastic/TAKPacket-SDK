@@ -240,6 +240,26 @@ class CotXmlParser:
         remarks_text = ""
         chat_to = chat_to_cs = None
 
+        # --- TAKTALK m-t-t accumulators ---
+        has_taktalk = False
+        talk_text = ""
+        talk_chatroom_id = ""
+        talk_lang = ""
+        from_voice = False
+
+        # --- TAKTALK b-t-f sidecar accumulators (decorate Chat) ---
+        chat_lang = ""
+        chat_room_id = ""
+        chat_voice_profile_id = ""
+        chat_has_voice_profile = False
+
+        # --- TAKTALK y- room broadcast accumulators ---
+        has_room_data = False
+        room_sender = ""
+        room_data_id = ""
+        room_name = ""
+        room_participants: list[str] = []
+
         # --- Drawn shape accumulators ---
         has_shape_data = False
         shape_major_cm = 0
@@ -512,6 +532,52 @@ class CotXmlParser:
                 chat_to = None if chat_id == "All Chat Rooms" else chat_id
             elif tag == "remarks":
                 remarks_text = (elem.text or "").strip()
+            # --- TAKTALK m-t-t children ---
+            # We dispatch on the LOCAL cot_type_str (which is always populated
+            # from the <event type="..."> attribute), NOT pkt.cot_type_str —
+            # the proto field is only set when type_to_enum returned 0 (i.e.
+            # the type is unknown to the enum). m-t-t / y- ARE known (125 /
+            # 126) so pkt.cot_type_str stays empty for them and a check
+            # against it would never match.
+            elif tag == "text" and cot_type_str == "m-t-t":
+                has_taktalk = True
+                talk_text = (elem.text or "").strip()
+            elif tag == "chatroom-id":
+                if cot_type_str == "m-t-t":
+                    has_taktalk = True
+                    talk_chatroom_id = (elem.text or "").strip()
+                elif cot_type_str == "y-":
+                    has_room_data = True
+                    room_data_id = (elem.text or "").strip()
+            elif tag == "lang" and cot_type_str == "m-t-t":
+                has_taktalk = True
+                talk_lang = (elem.text or "").strip()
+            elif tag == "voice" and cot_type_str == "m-t-t":
+                # Empty marker — presence alone sets the flag.
+                has_taktalk = True
+                from_voice = True
+            # --- TAKTALK b-t-f sidecars (fire only alongside <__chat>) ---
+            elif tag == "Ea" and has_chat:
+                chat_lang = (elem.text or "").strip()
+            elif tag == "roomId" and has_chat:
+                chat_room_id = (elem.text or "").strip()
+            elif tag == "voice_profile_id" and has_chat:
+                chat_has_voice_profile = True
+                chat_voice_profile_id = (elem.text or "").strip()
+            # --- TAKTALK y- room broadcast children ---
+            elif tag == "sender-callsign" and cot_type_str == "y-":
+                has_room_data = True
+                room_sender = (elem.text or "").strip()
+            elif tag == "chatroom-name" and cot_type_str == "y-":
+                has_room_data = True
+                room_name = (elem.text or "").strip()
+            elif tag == "chatroom-participants" and cot_type_str == "y-":
+                has_room_data = True
+                raw = (elem.text or "").strip()
+                if raw:
+                    room_participants = [
+                        p.strip() for p in raw.split(",") if p.strip()
+                    ]
             elif tag == "link":
                 handle_link(elem)
             elif tag == "shape":
@@ -768,6 +834,21 @@ class CotXmlParser:
         # marker > casevac > emergency > task > pli.
         if is_delete_event:
             pkt.pli = True
+        elif has_room_data and cot_type_str == "y-":
+            # TAKTALK y- room/membership broadcast — checked before chat so a
+            # y- event with a UUID <chatroom-id> can't be reinterpreted.
+            room = pkt.taktalk_room
+            room.sender_callsign = room_sender
+            room.room_id = room_data_id
+            room.room_name = room_name
+            if room_participants:
+                room.participants.extend(room_participants)
+        elif has_taktalk and cot_type_str == "m-t-t":
+            tt = pkt.taktalk
+            tt.text = talk_text
+            tt.chatroom_id = talk_chatroom_id
+            tt.lang = talk_lang
+            tt.from_voice = from_voice
         elif has_chat:
             chat = pkt.chat
             chat.message = remarks_text
@@ -777,6 +858,12 @@ class CotXmlParser:
                 chat.receipt_for_uid = chat_receipt_for_uid
             if chat_receipt_type:
                 chat.receipt_type = chat_receipt_type
+            # TAKTALK sidecars — empty / false on regular ATAK GeoChat.
+            # The empty `<voice_profile_id/>` marker maps to has_voice_profile
+            # via proto3-optional presence on voice_profile_id (set to "").
+            if chat_lang: chat.lang = chat_lang
+            if chat_room_id: chat.room_id = chat_room_id
+            if chat_has_voice_profile: chat.voice_profile_id = chat_voice_profile_id
         elif has_aircraft:
             ac = pkt.aircraft
             ac.icao = icao

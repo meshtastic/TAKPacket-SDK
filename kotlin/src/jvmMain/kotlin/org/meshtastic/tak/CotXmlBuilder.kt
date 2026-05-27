@@ -275,6 +275,80 @@ class CotXmlBuilder {
                         sb.append("""    <remarks>${esc(payload.message)}</remarks>""")
                         sb.append("\n")
                     }
+                    // TAKTALK-flavored sidecars. Only emit when any flag is
+                    // set, so non-TAKTALK chats round-trip byte-for-byte
+                    // unchanged. Order matches what ATAK emits (voice_profile_id,
+                    // callsign, Ea, roomId — see the b-t-f capture in
+                    // cotexplorer-20260526T211059Z.txt).
+                    val isTaktalk = payload.hasVoiceProfile ||
+                        payload.lang.isNotEmpty() ||
+                        payload.roomId.isNotEmpty()
+                    if (isTaktalk) {
+                        if (payload.hasVoiceProfile) {
+                            if (payload.voiceProfileId.isEmpty()) {
+                                // Self-closing marker exactly as ATAK + TAKTALK emit it.
+                                sb.append("    <voice_profile_id/>\n")
+                            } else {
+                                sb.append("    <voice_profile_id>")
+                                    .append(esc(payload.voiceProfileId))
+                                    .append("</voice_profile_id>\n")
+                            }
+                        }
+                        if (packet.callsign.isNotEmpty()) {
+                            // TAKTALK duplicates the sender callsign inside
+                            // <detail> alongside __chat[senderCallsign]. Match
+                            // the source format so the receiver's TAKTALK
+                            // plugin recognizes the message as TAKTALK-origin.
+                            sb.append("    <callsign>").append(esc(packet.callsign)).append("</callsign>\n")
+                        }
+                        if (payload.lang.isNotEmpty()) {
+                            sb.append("    <Ea>").append(esc(payload.lang)).append("</Ea>\n")
+                        }
+                        if (payload.roomId.isNotEmpty()) {
+                            sb.append("    <roomId>").append(esc(payload.roomId)).append("</roomId>\n")
+                        }
+                    }
+                }
+            }
+            // TAKTALK voice/text message (CoT type m-t-t). Element-body shape
+            // matches what ATAK + the TAKTALK plugin emit so the receiver's
+            // plugin parses it natively without translation.
+            is TakPacketV2Data.Payload.TakTalk -> {
+                if (packet.callsign.isNotEmpty()) {
+                    sb.append("    <callsign>").append(esc(packet.callsign)).append("</callsign>\n")
+                }
+                if (payload.lang.isNotEmpty()) {
+                    sb.append("    <lang>").append(esc(payload.lang)).append("</lang>\n")
+                }
+                sb.append("    <text>").append(esc(payload.text)).append("</text>\n")
+                if (payload.chatroomId.isNotEmpty()) {
+                    sb.append("    <chatroom-id>").append(esc(payload.chatroomId)).append("</chatroom-id>\n")
+                }
+                if (payload.fromVoice) {
+                    sb.append("    <voice/>\n")
+                }
+            }
+            // TAKTALK room/membership broadcast (CoT type y-).
+            is TakPacketV2Data.Payload.TakTalkRoom -> {
+                if (payload.senderCallsign.isNotEmpty()) {
+                    sb.append("    <sender-callsign>")
+                        .append(esc(payload.senderCallsign))
+                        .append("</sender-callsign>\n")
+                }
+                if (payload.roomId.isNotEmpty()) {
+                    sb.append("    <chatroom-id>")
+                        .append(esc(payload.roomId))
+                        .append("</chatroom-id>\n")
+                }
+                if (payload.roomName.isNotEmpty()) {
+                    sb.append("    <chatroom-name>")
+                        .append(esc(payload.roomName))
+                        .append("</chatroom-name>\n")
+                }
+                if (payload.participants.isNotEmpty()) {
+                    sb.append("    <chatroom-participants>")
+                        .append(esc(payload.participants.joinToString(",")))
+                        .append("</chatroom-participants>\n")
                 }
             }
             is TakPacketV2Data.Payload.Aircraft -> {
@@ -655,12 +729,16 @@ class CotXmlBuilder {
 
         // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
         // Chat uses GeoChat.message; Aircraft synthesizes from ICAO fields; Route handles
-        // remarks in its own block above. All other types (shapes, markers, RAB, casevac,
-        // emergency, task) emit here.
+        // remarks in its own block above. TAKTALK variants own their detail emission too —
+        // m-t-t and y- don't use <remarks> at all, so excluding them prevents accidental
+        // double-emission when callers populate the legacy remarks field. All other types
+        // (shapes, markers, RAB, casevac, emergency, task) emit here.
         if (packet.remarks.isNotEmpty()
             && packet.payload !is TakPacketV2Data.Payload.Chat
             && packet.payload !is TakPacketV2Data.Payload.Aircraft
             && packet.payload !is TakPacketV2Data.Payload.Route
+            && packet.payload !is TakPacketV2Data.Payload.TakTalk
+            && packet.payload !is TakPacketV2Data.Payload.TakTalkRoom
         ) {
             sb.append("    <remarks>${esc(packet.remarks)}</remarks>\n")
         }

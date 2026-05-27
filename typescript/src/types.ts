@@ -48,6 +48,34 @@ export interface GeoChat {
   receiptForUid?: string;
   /** 0 = None, 1 = Delivered, 2 = Read */
   receiptType?: number;
+  // --- TAKTALK-flavored b-t-f extensions ---
+  /** TAKTALK language tag from <Ea> (e.g. "English"). Absent on non-TAKTALK chats. */
+  lang?: string;
+  /** TAKTALK room UUID from <roomId>. Absent on non-TAKTALK chats. */
+  roomId?: string;
+  /**
+   * TAKTALK voice profile pointer from <voice_profile_id>. Often empty
+   * even when present — the empty marker is still a TAKTALK origination
+   * signal. Use "field is defined at all" to distinguish from "absent".
+   */
+  voiceProfileId?: string;
+}
+
+/** TAKTALK voice/text chat message (CoT type m-t-t). */
+export interface TakTalkMessage {
+  text?: string;
+  chatroomId?: string;
+  lang?: string;
+  /** True when the source CoT carried a <voice/> push-to-talk marker. */
+  fromVoice?: boolean;
+}
+
+/** TAKTALK room/membership broadcast (CoT type y-). */
+export interface TakTalkRoomData {
+  senderCallsign?: string;
+  roomId?: string;
+  roomName?: string;
+  participants?: string[];
 }
 
 /** ADS-B / military air track data. */
@@ -278,4 +306,6 @@ export interface TAKPacketV2 {
   casevac?: CasevacReport;
   emergency?: EmergencyAlert;
   task?: TaskRequest;
+  taktalk?: TakTalkMessage;
+  taktalkRoom?: TakTalkRoomData;
 }

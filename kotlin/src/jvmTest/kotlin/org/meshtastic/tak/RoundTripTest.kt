@@ -60,6 +60,26 @@ class RoundTripTest {
                 val d = decompressed.payload as TakPacketV2Data.Payload.Chat
                 assertEquals(p.message, d.message, "chat message mismatch in $fixture")
                 assertEquals(p.to, d.to, "chat to mismatch in $fixture")
+                // TAKTALK sidecars — empty / false on regular ATAK GeoChat,
+                // populated when ATAK uses TAKTALK to send a TAK Chat.
+                assertEquals(p.lang, d.lang, "chat lang mismatch in $fixture")
+                assertEquals(p.roomId, d.roomId, "chat roomId mismatch in $fixture")
+                assertEquals(p.voiceProfileId, d.voiceProfileId, "chat voiceProfileId mismatch in $fixture")
+                assertEquals(p.hasVoiceProfile, d.hasVoiceProfile, "chat hasVoiceProfile mismatch in $fixture")
+            }
+            is TakPacketV2Data.Payload.TakTalk -> {
+                val d = decompressed.payload as TakPacketV2Data.Payload.TakTalk
+                assertEquals(p.text, d.text, "taktalk text mismatch in $fixture")
+                assertEquals(p.chatroomId, d.chatroomId, "taktalk chatroomId mismatch in $fixture")
+                assertEquals(p.lang, d.lang, "taktalk lang mismatch in $fixture")
+                assertEquals(p.fromVoice, d.fromVoice, "taktalk fromVoice mismatch in $fixture")
+            }
+            is TakPacketV2Data.Payload.TakTalkRoom -> {
+                val d = decompressed.payload as TakPacketV2Data.Payload.TakTalkRoom
+                assertEquals(p.senderCallsign, d.senderCallsign, "room senderCallsign mismatch in $fixture")
+                assertEquals(p.roomId, d.roomId, "room roomId mismatch in $fixture")
+                assertEquals(p.roomName, d.roomName, "room roomName mismatch in $fixture")
+                assertEquals(p.participants, d.participants, "room participants mismatch in $fixture")
             }
             is TakPacketV2Data.Payload.Aircraft -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.Aircraft
@@ -569,5 +589,107 @@ class RoundTripTest {
         assertEquals(packet.cotTypeId, decompressed.cotTypeId)
         assertEquals(packet.callsign, decompressed.callsign)
         assertEquals(packet.latitudeI, decompressed.latitudeI)
+    }
+
+    // ── TAKTALK plugin support ──────────────────────────────────────────
+    // CoT shapes derived from a CoT Explorer capture of ATAK CIV running
+    // the TAKTALK plugin. Three event types appear: m-t-t (voice/text
+    // chat), y- (room/membership broadcast), and standard b-t-f with
+    // TAKTALK-specific sidecar detail children (<voice_profile_id/>,
+    // <callsign>, <Ea>, <roomId>). See:
+    //   ~/Downloads/cotexplorer-20260526T211059Z.txt
+
+    @Test
+    fun `m-t-t typed message parses text, chatroom-id, lang and no voice`() {
+        val xml = loadFixture("taktalk_text.xml")
+        val packet = parser.parse(xml)
+        assertEquals(CotTypeMapper.COTTYPE_M_T_T, packet.cotTypeId)
+        val tt = packet.payload as TakPacketV2Data.Payload.TakTalk
+        assertEquals("Testing 123, testing 123.", tt.text)
+        assertEquals("1", tt.chatroomId)
+        assertEquals("English", tt.lang)
+        assertFalse(tt.fromVoice, "no <voice/> in source — fromVoice must be false")
+
+        // Round-trip through compress → decompress → build preserves the four
+        // TAKTALK fields. The rebuilt XML must carry element-body children so
+        // ATAK's TAKTALK plugin parses it natively.
+        val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
+        assertTrue(rebuilt.contains("<text>Testing 123, testing 123.</text>"),
+            "rebuilt XML must re-emit <text> element body")
+        assertTrue(rebuilt.contains("<chatroom-id>1</chatroom-id>"),
+            "rebuilt XML must re-emit <chatroom-id>")
+        assertTrue(rebuilt.contains("<lang>English</lang>"),
+            "rebuilt XML must re-emit <lang>")
+        assertFalse(rebuilt.contains("<voice/>"),
+            "no source <voice/> means no rebuilt <voice/>")
+    }
+
+    @Test
+    fun `m-t-t voice push-to-talk preserves fromVoice and re-emits voice marker`() {
+        val xml = loadFixture("taktalk_voice.xml")
+        val packet = parser.parse(xml)
+        assertEquals(CotTypeMapper.COTTYPE_M_T_T, packet.cotTypeId)
+        val tt = packet.payload as TakPacketV2Data.Payload.TakTalk
+        assertEquals("Testing 123", tt.text)
+        assertTrue(tt.fromVoice, "source had <voice/> — fromVoice must be true")
+
+        val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
+        assertTrue(rebuilt.contains("<voice/>"),
+            "rebuilt XML must re-emit the <voice/> push-to-talk marker")
+        assertTrue(rebuilt.contains("<text>Testing 123</text>"))
+    }
+
+    @Test
+    fun `y- room data broadcast parses sender, room UUID, name and roster`() {
+        val xml = loadFixture("taktalk_room_data.xml")
+        val packet = parser.parse(xml)
+        assertEquals(CotTypeMapper.COTTYPE_Y_DASH, packet.cotTypeId)
+        val room = packet.payload as TakPacketV2Data.Payload.TakTalkRoom
+        assertEquals("ASPEN", room.senderCallsign)
+        assertEquals("30b2755c-c547-44ef-a0cc-cdbd8a15616f", room.roomId)
+        assertEquals("test", room.roomName)
+        assertEquals(listOf("ETHEL", "ASPEN"), room.participants,
+            "participants must round-trip as ordered list, not just a joined string")
+
+        val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
+        assertTrue(rebuilt.contains("<chatroom-name>test</chatroom-name>"))
+        assertTrue(rebuilt.contains("<chatroom-participants>ETHEL,ASPEN</chatroom-participants>"),
+            "participants must be joined with ',' on the wire-side XML")
+    }
+
+    @Test
+    fun `b-t-f TAK Chat carries TAKTALK lang and roomId sidecars`() {
+        val xml = loadFixture("chat_taktalk_dm.xml")
+        val packet = parser.parse(xml)
+        val chat = packet.payload as TakPacketV2Data.Payload.Chat
+        assertEquals("Test message", chat.message)
+        assertEquals("English", chat.lang)
+        assertEquals("30b2755c-c547-44ef-a0cc-cdbd8a15616f", chat.roomId)
+        assertTrue(chat.hasVoiceProfile,
+            "source has <voice_profile_id/> empty marker — hasVoiceProfile must be true")
+        assertEquals("", chat.voiceProfileId,
+            "empty marker maps to empty string content")
+
+        val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
+        assertTrue(rebuilt.contains("<Ea>English</Ea>"))
+        assertTrue(rebuilt.contains("<roomId>30b2755c-c547-44ef-a0cc-cdbd8a15616f</roomId>"))
+        assertTrue(rebuilt.contains("<voice_profile_id/>"),
+            "empty marker must round-trip as self-closing element")
+    }
+
+    @Test
+    fun `b-t-f TAK Chat with non-empty voice_profile_id preserves content`() {
+        val xml = loadFixture("chat_taktalk_voice_profile.xml")
+        val packet = parser.parse(xml)
+        val chat = packet.payload as TakPacketV2Data.Payload.Chat
+        assertTrue(chat.hasVoiceProfile)
+        assertEquals("profile-uuid-9f8e7d6c-5b4a-3210-fedc-ba9876543210",
+            chat.voiceProfileId,
+            "non-empty voice_profile_id must round-trip with content intact")
+
+        val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
+        assertTrue(rebuilt.contains(
+            "<voice_profile_id>profile-uuid-9f8e7d6c-5b4a-3210-fedc-ba9876543210</voice_profile_id>"),
+            "non-empty value emits as <voice_profile_id>X</voice_profile_id>, not as marker")
     }
 }

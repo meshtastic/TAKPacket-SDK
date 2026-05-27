@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="GeoChat.ANDROID-0000000000000010.ANDROID-0000000000000011.e4275cd1-c5c0-4a07-8196-aa8e490c5b62" type="b-t-f" how="h-g-i-g-o" time="2026-05-27T02:09:20.718Z" start="2026-05-27T02:09:20.718Z" stale="2026-05-28T02:09:20.718Z">
+  <point lat="38.8895" lon="-77.0353" hae="73.863" ce="6.9" le="9999999.0"/>
+  <detail>
+    <__chat parent="RootContactGroup" groupOwner="false" messageId="e4275cd1-c5c0-4a07-8196-aa8e490c5b62" chatroom="ETHEL" id="ANDROID-0000000000000011" senderCallsign="ASPEN">
+      <chatgrp uid0="ANDROID-0000000000000010" uid1="ANDROID-0000000000000011" id="ANDROID-0000000000000011"/>
+    </__chat>
+    <link uid="ANDROID-0000000000000010" type="a-f-G-U-C" relation="p-p"/>
+    <__serverdestination destinations="192.0.2.1:4242:tcp:ANDROID-0000000000000010"/>
+    <remarks source="BAO.F.ATAK.ANDROID-0000000000000010" to="ANDROID-0000000000000011" time="2026-05-27T02:09:20.718Z">Test message</remarks>
+    <voice_profile_id/>
+    <callsign>ASPEN</callsign>
+    <Ea>English</Ea>
+    <roomId>30b2755c-c547-44ef-a0cc-cdbd8a15616f</roomId>
+  </detail>
+</event>

@@ -219,6 +219,57 @@ public class CotXmlBuilder
                     {
                         sb.AppendLine($"    <remarks>{Esc(pkt.Chat.Message)}</remarks>");
                     }
+                    // TAKTALK-flavored sidecars. proto3-optional HasField()
+                    // distinguishes "absent" from "explicit empty"; the empty
+                    // <voice_profile_id/> marker re-emits faithfully.
+                    var hasVoiceProfile = pkt.Chat.HasVoiceProfileId;
+                    var isTaktalk = hasVoiceProfile
+                        || pkt.Chat.HasLang
+                        || pkt.Chat.HasRoomId;
+                    if (isTaktalk)
+                    {
+                        if (hasVoiceProfile)
+                        {
+                            if (string.IsNullOrEmpty(pkt.Chat.VoiceProfileId))
+                                sb.AppendLine("    <voice_profile_id/>");
+                            else
+                                sb.AppendLine($"    <voice_profile_id>{Esc(pkt.Chat.VoiceProfileId)}</voice_profile_id>");
+                        }
+                        if (!string.IsNullOrEmpty(pkt.Callsign))
+                            sb.AppendLine($"    <callsign>{Esc(pkt.Callsign)}</callsign>");
+                        if (pkt.Chat.HasLang && !string.IsNullOrEmpty(pkt.Chat.Lang))
+                            sb.AppendLine($"    <Ea>{Esc(pkt.Chat.Lang)}</Ea>");
+                        if (pkt.Chat.HasRoomId && !string.IsNullOrEmpty(pkt.Chat.RoomId))
+                            sb.AppendLine($"    <roomId>{Esc(pkt.Chat.RoomId)}</roomId>");
+                    }
+                }
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.Taktalk:
+                // TAKTALK m-t-t voice/text message. Element-body shape matches
+                // what ATAK + the TAKTALK plugin emit so the receiver's plugin
+                // parses it natively.
+                if (!string.IsNullOrEmpty(pkt.Callsign))
+                    sb.AppendLine($"    <callsign>{Esc(pkt.Callsign)}</callsign>");
+                if (!string.IsNullOrEmpty(pkt.Taktalk.Lang))
+                    sb.AppendLine($"    <lang>{Esc(pkt.Taktalk.Lang)}</lang>");
+                sb.AppendLine($"    <text>{Esc(pkt.Taktalk.Text)}</text>");
+                if (!string.IsNullOrEmpty(pkt.Taktalk.ChatroomId))
+                    sb.AppendLine($"    <chatroom-id>{Esc(pkt.Taktalk.ChatroomId)}</chatroom-id>");
+                if (pkt.Taktalk.FromVoice)
+                    sb.AppendLine("    <voice/>");
+                break;
+            case TAKPacketV2.PayloadVariantOneofCase.TaktalkRoom:
+                // TAKTALK y- room/membership broadcast.
+                if (!string.IsNullOrEmpty(pkt.TaktalkRoom.SenderCallsign))
+                    sb.AppendLine($"    <sender-callsign>{Esc(pkt.TaktalkRoom.SenderCallsign)}</sender-callsign>");
+                if (!string.IsNullOrEmpty(pkt.TaktalkRoom.RoomId))
+                    sb.AppendLine($"    <chatroom-id>{Esc(pkt.TaktalkRoom.RoomId)}</chatroom-id>");
+                if (!string.IsNullOrEmpty(pkt.TaktalkRoom.RoomName))
+                    sb.AppendLine($"    <chatroom-name>{Esc(pkt.TaktalkRoom.RoomName)}</chatroom-name>");
+                if (pkt.TaktalkRoom.Participants.Count > 0)
+                {
+                    var joined = string.Join(",", pkt.TaktalkRoom.Participants);
+                    sb.AppendLine($"    <chatroom-participants>{Esc(joined)}</chatroom-participants>");
                 }
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.Aircraft when !string.IsNullOrEmpty(pkt.Aircraft.Icao):
@@ -287,11 +338,14 @@ public class CotXmlBuilder
 
         // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
         // Chat uses GeoChat.Message; Aircraft synthesizes from ICAO fields; Route handles
-        // remarks in its own block above. All other types emit here.
+        // remarks in its own block above. TAKTALK variants own their detail emission too —
+        // m-t-t and y- don't carry <remarks>.
         if (!string.IsNullOrEmpty(pkt.Remarks)
             && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Chat
             && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Aircraft
-            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Route)
+            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Route
+            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.Taktalk
+            && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.TaktalkRoom)
         {
             sb.AppendLine($"    <remarks>{Esc(pkt.Remarks)}</remarks>");
         }

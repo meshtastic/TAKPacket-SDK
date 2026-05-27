@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="TAKTALK-MESSAGE-81b51caa-82f6-464e-bd89-7d4066adff6e" type="m-t-t" how="null" time="2026-05-27T01:38:25.770Z" start="2026-05-27T01:38:25.770Z" stale="2026-05-27T01:14:26.994Z">
+  <point lat="0.0" lon="0.0" hae="9999999.0" ce="9999999.0" le="9999999.0"/>
+  <detail>
+    <callsign>ASPEN</callsign>
+    <lang>English</lang>
+    <text>Testing 123</text>
+    <chatroom-id>1</chatroom-id>
+    <voice/>
+  </detail>
+</event>

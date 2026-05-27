@@ -127,6 +127,11 @@ public enum CotTypeMapper {
         "b-t-f-r": .bTFR,
         "b-a-o-c": .bAOC,
         "t-s": .tS,
+        // TAKTALK plugin shapes. The "y-" string literally has a trailing
+        // dash and no second atom — that's the wire format ATAK + TAKTALK
+        // emit for room broadcasts. Not a typo.
+        "m-t-t": .mTT,
+        "y-": .y,
     ]
 
     private static let typeToStr: [CotType: String] = {

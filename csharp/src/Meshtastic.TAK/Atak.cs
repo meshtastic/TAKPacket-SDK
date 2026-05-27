@@ -30,241 +30,250 @@ namespace Meshtastic.Protobufs {
             "dGljLkdyb3VwEiIKBnN0YXR1cxgEIAEoCzISLm1lc2h0YXN0aWMuU3RhdHVz",
             "Eh4KA3BsaRgFIAEoCzIPLm1lc2h0YXN0aWMuUExJSAASIwoEY2hhdBgGIAEo",
             "CzITLm1lc2h0YXN0aWMuR2VvQ2hhdEgAEhAKBmRldGFpbBgHIAEoDEgAQhEK",
-            "D3BheWxvYWRfdmFyaWFudCKCAgoHR2VvQ2hhdBIPCgdtZXNzYWdlGAEgASgJ",
+            "D3BheWxvYWRfdmFyaWFudCL0AgoHR2VvQ2hhdBIPCgdtZXNzYWdlGAEgASgJ",
             "Eg8KAnRvGAIgASgJSACIAQESGAoLdG9fY2FsbHNpZ24YAyABKAlIAYgBARIX",
             "Cg9yZWNlaXB0X2Zvcl91aWQYBCABKAkSNQoMcmVjZWlwdF90eXBlGAUgASgO",
-            "Mh8ubWVzaHRhc3RpYy5HZW9DaGF0LlJlY2VpcHRUeXBlIlQKC1JlY2VpcHRU",
-            "eXBlEhQKEFJlY2VpcHRUeXBlX05vbmUQABIZChVSZWNlaXB0VHlwZV9EZWxp",
-            "dmVyZWQQARIUChBSZWNlaXB0VHlwZV9SZWFkEAJCBQoDX3RvQg4KDF90b19j",
-            "YWxsc2lnbiJNCgVHcm91cBIkCgRyb2xlGAEgASgOMhYubWVzaHRhc3RpYy5N",
-            "ZW1iZXJSb2xlEh4KBHRlYW0YAiABKA4yEC5tZXNodGFzdGljLlRlYW0iGQoG",
-            "U3RhdHVzEg8KB2JhdHRlcnkYASABKA0iNAoHQ29udGFjdBIQCghjYWxsc2ln",
-            "bhgBIAEoCRIXCg9kZXZpY2VfY2FsbHNpZ24YAiABKAkiXwoDUExJEhIKCmxh",
-            "dGl0dWRlX2kYASABKA8SEwoLbG9uZ2l0dWRlX2kYAiABKA8SEAoIYWx0aXR1",
-            "ZGUYAyABKAUSDQoFc3BlZWQYBCABKA0SDgoGY291cnNlGAUgASgNIrABCg1B",
-            "aXJjcmFmdFRyYWNrEgwKBGljYW8YASABKAkSFAoMcmVnaXN0cmF0aW9uGAIg",
-            "ASgJEg4KBmZsaWdodBgDIAEoCRIVCg1haXJjcmFmdF90eXBlGAQgASgJEg4K",
-            "BnNxdWF3axgFIAEoDRIQCghjYXRlZ29yeRgGIAEoCRIQCghyc3NpX3gxMBgH",
-            "IAEoERILCgNncHMYCCABKAgSEwoLY290X2hvc3RfaWQYCSABKAkiNwoLQ290",
-            "R2VvUG9pbnQSEwoLbGF0X2RlbHRhX2kYASABKBESEwoLbG9uX2RlbHRhX2kY",
-            "AiABKBEiywYKCkRyYXduU2hhcGUSKQoEa2luZBgBIAEoDjIbLm1lc2h0YXN0",
-            "aWMuRHJhd25TaGFwZS5LaW5kEi8KBXN0eWxlGAIgASgOMiAubWVzaHRhc3Rp",
-            "Yy5EcmF3blNoYXBlLlN0eWxlTW9kZRIQCghtYWpvcl9jbRgDIAEoDRIQCght",
-            "aW5vcl9jbRgEIAEoDRIRCglhbmdsZV9kZWcYBSABKA0SJgoMc3Ryb2tlX2Nv",
-            "bG9yGAYgASgOMhAubWVzaHRhc3RpYy5UZWFtEhMKC3N0cm9rZV9hcmdiGAcg",
-            "ASgHEhkKEXN0cm9rZV93ZWlnaHRfeDEwGAggASgNEiQKCmZpbGxfY29sb3IY",
-            "CSABKA4yEC5tZXNodGFzdGljLlRlYW0SEQoJZmlsbF9hcmdiGAogASgHEhEK",
-            "CWxhYmVsc19vbhgLIAEoCBIpCgh2ZXJ0aWNlcxgMIAMoCzIXLm1lc2h0YXN0",
-            "aWMuQ290R2VvUG9pbnQSEQoJdHJ1bmNhdGVkGA0gASgIEhwKFGJ1bGxzZXll",
-            "X2Rpc3RhbmNlX2RtGA4gASgNEhwKFGJ1bGxzZXllX2JlYXJpbmdfcmVmGA8g",
-            "ASgNEhYKDmJ1bGxzZXllX2ZsYWdzGBAgASgNEhgKEGJ1bGxzZXllX3VpZF9y",
-            "ZWYYESABKAki4gEKBEtpbmQSFAoQS2luZF9VbnNwZWNpZmllZBAAEg8KC0tp",
-            "bmRfQ2lyY2xlEAESEgoOS2luZF9SZWN0YW5nbGUQAhIRCg1LaW5kX0ZyZWVm",
-            "b3JtEAMSFQoRS2luZF9UZWxlc3RyYXRpb24QBBIQCgxLaW5kX1BvbHlnb24Q",
-            "BRIWChJLaW5kX1JhbmdpbmdDaXJjbGUQBhIRCg1LaW5kX0J1bGxzZXllEAcS",
-            "EAoMS2luZF9FbGxpcHNlEAgSEgoOS2luZF9WZWhpY2xlMkQQCRISCg5LaW5k",
-            "X1ZlaGljbGUzRBAKInUKCVN0eWxlTW9kZRIZChVTdHlsZU1vZGVfVW5zcGVj",
-            "aWZpZWQQABIYChRTdHlsZU1vZGVfU3Ryb2tlT25seRABEhYKElN0eWxlTW9k",
-            "ZV9GaWxsT25seRACEhsKF1N0eWxlTW9kZV9TdHJva2VBbmRGaWxsEAMi5QMK",
-            "Bk1hcmtlchIlCgRraW5kGAEgASgOMhcubWVzaHRhc3RpYy5NYXJrZXIuS2lu",
-            "ZBIfCgVjb2xvchgCIAEoDjIQLm1lc2h0YXN0aWMuVGVhbRISCgpjb2xvcl9h",
-            "cmdiGAMgASgHEhEKCXJlYWRpbmVzcxgEIAEoCBISCgpwYXJlbnRfdWlkGAUg",
-            "ASgJEhMKC3BhcmVudF90eXBlGAYgASgJEhcKD3BhcmVudF9jYWxsc2lnbhgH",
-            "IAEoCRIPCgdpY29uc2V0GAggASgJIpgCCgRLaW5kEhQKEEtpbmRfVW5zcGVj",
-            "aWZpZWQQABINCglLaW5kX1Nwb3QQARIRCg1LaW5kX1dheXBvaW50EAISEwoP",
-            "S2luZF9DaGVja3BvaW50EAMSFQoRS2luZF9TZWxmUG9zaXRpb24QBBITCg9L",
-            "aW5kX1N5bWJvbDI1MjUQBRIQCgxLaW5kX1Nwb3RNYXAQBhITCg9LaW5kX0N1",
-            "c3RvbUljb24QBxISCg5LaW5kX0dvVG9Qb2ludBAIEhUKEUtpbmRfSW5pdGlh",
-            "bFBvaW50EAkSFQoRS2luZF9Db250YWN0UG9pbnQQChIYChRLaW5kX09ic2Vy",
-            "dmF0aW9uUG9zdBALEhQKEEtpbmRfSW1hZ2VNYXJrZXIQDCLOAQoPUmFuZ2VB",
-            "bmRCZWFyaW5nEicKBmFuY2hvchgBIAEoCzIXLm1lc2h0YXN0aWMuQ290R2Vv",
-            "UG9pbnQSEgoKYW5jaG9yX3VpZBgCIAEoCRIQCghyYW5nZV9jbRgDIAEoDRIU",
-            "CgxiZWFyaW5nX2NkZWcYBCABKA0SJgoMc3Ryb2tlX2NvbG9yGAUgASgOMhAu",
-            "bWVzaHRhc3RpYy5UZWFtEhMKC3N0cm9rZV9hcmdiGAYgASgHEhkKEXN0cm9r",
-            "ZV93ZWlnaHRfeDEwGAcgASgNIoQECgVSb3V0ZRIoCgZtZXRob2QYASABKA4y",
-            "GC5tZXNodGFzdGljLlJvdXRlLk1ldGhvZBIuCglkaXJlY3Rpb24YAiABKA4y",
-            "Gy5tZXNodGFzdGljLlJvdXRlLkRpcmVjdGlvbhIOCgZwcmVmaXgYAyABKAkS",
-            "GQoRc3Ryb2tlX3dlaWdodF94MTAYBCABKA0SJQoFbGlua3MYBSADKAsyFi5t",
-            "ZXNodGFzdGljLlJvdXRlLkxpbmsSEQoJdHJ1bmNhdGVkGAYgASgIGmAKBExp",
-            "bmsSJgoFcG9pbnQYASABKAsyFy5tZXNodGFzdGljLkNvdEdlb1BvaW50EgsK",
-            "A3VpZBgCIAEoCRIQCghjYWxsc2lnbhgDIAEoCRIRCglsaW5rX3R5cGUYBCAB",
-            "KA0ihwEKBk1ldGhvZBIWChJNZXRob2RfVW5zcGVjaWZpZWQQABISCg5NZXRo",
-            "b2RfRHJpdmluZxABEhIKDk1ldGhvZF9XYWxraW5nEAISEQoNTWV0aG9kX0Zs",
-            "eWluZxADEhMKD01ldGhvZF9Td2ltbWluZxAEEhUKEU1ldGhvZF9XYXRlcmNy",
-            "YWZ0EAUiUAoJRGlyZWN0aW9uEhkKFURpcmVjdGlvbl9VbnNwZWNpZmllZBAA",
-            "EhMKD0RpcmVjdGlvbl9JbmZpbBABEhMKD0RpcmVjdGlvbl9FeGZpbBACItYK",
-            "Cg1DYXNldmFjUmVwb3J0EjgKCnByZWNlZGVuY2UYASABKA4yJC5tZXNodGFz",
-            "dGljLkNhc2V2YWNSZXBvcnQuUHJlY2VkZW5jZRIXCg9lcXVpcG1lbnRfZmxh",
-            "Z3MYAiABKA0SFwoPbGl0dGVyX3BhdGllbnRzGAMgASgNEhsKE2FtYnVsYXRv",
-            "cnlfcGF0aWVudHMYBCABKA0SNAoIc2VjdXJpdHkYBSABKA4yIi5tZXNodGFz",
-            "dGljLkNhc2V2YWNSZXBvcnQuU2VjdXJpdHkSOQoLaGx6X21hcmtpbmcYBiAB",
-            "KA4yJC5tZXNodGFzdGljLkNhc2V2YWNSZXBvcnQuSGx6TWFya2luZxITCgt6",
-            "b25lX21hcmtlchgHIAEoCRITCgt1c19taWxpdGFyeRgIIAEoDRITCgt1c19j",
-            "aXZpbGlhbhgJIAEoDRIXCg9ub25fdXNfbWlsaXRhcnkYCiABKA0SFwoPbm9u",
-            "X3VzX2NpdmlsaWFuGAsgASgNEgsKA2VwdxgMIAEoDRINCgVjaGlsZBgNIAEo",
-            "DRIVCg10ZXJyYWluX2ZsYWdzGA4gASgNEhEKCWZyZXF1ZW5jeRgPIAEoCRIN",
-            "CgV0aXRsZRgQIAEoCRIXCg9tZWRsaW5lX3JlbWFya3MYESABKAkSFAoMdXJn",
-            "ZW50X2NvdW50GBIgASgNEh0KFXVyZ2VudF9zdXJnaWNhbF9jb3VudBgTIAEo",
-            "DRIWCg5wcmlvcml0eV9jb3VudBgUIAEoDRIVCg1yb3V0aW5lX2NvdW50GBUg",
-            "ASgNEhkKEWNvbnZlbmllbmNlX2NvdW50GBYgASgNEhgKEGVxdWlwbWVudF9k",
-            "ZXRhaWwYFyABKAkSHAoUem9uZV9wcm90ZWN0ZWRfY29vcmQYGCABKAkSGQoR",
-            "dGVycmFpbl9zbG9wZV9kaXIYGSABKAkSHAoUdGVycmFpbl9vdGhlcl9kZXRh",
-            "aWwYGiABKAkSEQoJbWFya2VkX2J5GBsgASgJEhEKCW9ic3RhY2xlcxgcIAEo",
-            "CRIWCg53aW5kc19hcmVfZnJvbRgdIAEoCRISCgpmcmllbmRsaWVzGB4gASgJ",
-            "Eg0KBWVuZW15GB8gASgJEhMKC2hsel9yZW1hcmtzGCAgASgJEiUKBXptaXN0",
-            "GCEgAygLMhYubWVzaHRhc3RpYy5aTWlzdEVudHJ5IqsBCgpQcmVjZWRlbmNl",
-            "EhoKFlByZWNlZGVuY2VfVW5zcGVjaWZpZWQQABIVChFQcmVjZWRlbmNlX1Vy",
-            "Z2VudBABEh0KGVByZWNlZGVuY2VfVXJnZW50U3VyZ2ljYWwQAhIXChNQcmVj",
-            "ZWRlbmNlX1ByaW9yaXR5EAMSFgoSUHJlY2VkZW5jZV9Sb3V0aW5lEAQSGgoW",
-            "UHJlY2VkZW5jZV9Db252ZW5pZW5jZRAFIpsBCgpIbHpNYXJraW5nEhoKFkhs",
-            "ek1hcmtpbmdfVW5zcGVjaWZpZWQQABIVChFIbHpNYXJraW5nX1BhbmVscxAB",
-            "EhkKFUhsek1hcmtpbmdfUHlyb1NpZ25hbBACEhQKEEhsek1hcmtpbmdfU21v",
-            "a2UQAxITCg9IbHpNYXJraW5nX05vbmUQBBIUChBIbHpNYXJraW5nX090aGVy",
-            "EAUikgEKCFNlY3VyaXR5EhgKFFNlY3VyaXR5X1Vuc3BlY2lmaWVkEAASFAoQ",
-            "U2VjdXJpdHlfTm9FbmVteRABEhoKFlNlY3VyaXR5X1Bvc3NpYmxlRW5lbXkQ",
-            "AhIYChRTZWN1cml0eV9FbmVteUluQXJlYRADEiAKHFNlY3VyaXR5X0VuZW15",
-            "SW5Bcm1lZENvbnRhY3QQBCJSCgpaTWlzdEVudHJ5Eg0KBXRpdGxlGAEgASgJ",
-            "EgkKAXoYAiABKAkSCQoBbRgDIAEoCRIJCgFpGAQgASgJEgkKAXMYBSABKAkS",
-            "CQoBdBgGIAEoCSKNAgoORW1lcmdlbmN5QWxlcnQSLQoEdHlwZRgBIAEoDjIf",
-            "Lm1lc2h0YXN0aWMuRW1lcmdlbmN5QWxlcnQuVHlwZRIVCg1hdXRob3Jpbmdf",
-            "dWlkGAIgASgJEhwKFGNhbmNlbF9yZWZlcmVuY2VfdWlkGAMgASgJIpYBCgRU",
-            "eXBlEhQKEFR5cGVfVW5zcGVjaWZpZWQQABIRCg1UeXBlX0FsZXJ0OTExEAES",
-            "FAoQVHlwZV9SaW5nVGhlQmVsbBACEhIKDlR5cGVfSW5Db250YWN0EAMSGQoV",
-            "VHlwZV9HZW9GZW5jZUJyZWFjaGVkEAQSDwoLVHlwZV9DdXN0b20QBRIPCgtU",
-            "eXBlX0NhbmNlbBAGIsYDCgtUYXNrUmVxdWVzdBIRCgl0YXNrX3R5cGUYASAB",
-            "KAkSEgoKdGFyZ2V0X3VpZBgCIAEoCRIUCgxhc3NpZ25lZV91aWQYAyABKAkS",
-            "MgoIcHJpb3JpdHkYBCABKA4yIC5tZXNodGFzdGljLlRhc2tSZXF1ZXN0LlBy",
-            "aW9yaXR5Ei4KBnN0YXR1cxgFIAEoDjIeLm1lc2h0YXN0aWMuVGFza1JlcXVl",
-            "c3QuU3RhdHVzEgwKBG5vdGUYBiABKAkidQoIUHJpb3JpdHkSGAoUUHJpb3Jp",
-            "dHlfVW5zcGVjaWZpZWQQABIQCgxQcmlvcml0eV9Mb3cQARITCg9Qcmlvcml0",
-            "eV9Ob3JtYWwQAhIRCg1Qcmlvcml0eV9IaWdoEAMSFQoRUHJpb3JpdHlfQ3Jp",
-            "dGljYWwQBCKQAQoGU3RhdHVzEhYKElN0YXR1c19VbnNwZWNpZmllZBAAEhIK",
-            "DlN0YXR1c19QZW5kaW5nEAESFwoTU3RhdHVzX0Fja25vd2xlZGdlZBACEhUK",
-            "EVN0YXR1c19JblByb2dyZXNzEAMSFAoQU3RhdHVzX0NvbXBsZXRlZBAEEhQK",
-            "EFN0YXR1c19DYW5jZWxsZWQQBSJgCg5UQUtFbnZpcm9ubWVudBIZChF0ZW1w",
-            "ZXJhdHVyZV9jX3gxMBgBIAEoERIaChJ3aW5kX2RpcmVjdGlvbl9kZWcYAiAB",
-            "KA0SFwoPd2luZF9zcGVlZF9jbV9zGAMgASgNIo0DCglTZW5zb3JGb3YSLgoE",
-            "dHlwZRgBIAEoDjIgLm1lc2h0YXN0aWMuU2Vuc29yRm92LlNlbnNvclR5cGUS",
-            "EwoLYXppbXV0aF9kZWcYAiABKA0SFAoHcmFuZ2VfbRgDIAEoDUgAiAEBEhoK",
-            "EmZvdl9ob3Jpem9udGFsX2RlZxgEIAEoDRIYChBmb3ZfdmVydGljYWxfZGVn",
-            "GAUgASgNEhUKDWVsZXZhdGlvbl9kZWcYBiABKBESEAoIcm9sbF9kZWcYByAB",
-            "KBESDQoFbW9kZWwYCCABKAkiqgEKClNlbnNvclR5cGUSGgoWU2Vuc29yVHlw",
-            "ZV9VbnNwZWNpZmllZBAAEhUKEVNlbnNvclR5cGVfQ2FtZXJhEAESFgoSU2Vu",
-            "c29yVHlwZV9UaGVybWFsEAISFAoQU2Vuc29yVHlwZV9MYXNlchADEhIKDlNl",
-            "bnNvclR5cGVfTnZnEAQSEQoNU2Vuc29yVHlwZV9SZhAFEhQKEFNlbnNvclR5",
-            "cGVfT3RoZXIQBkIKCghfcmFuZ2VfbSKTCQoLVEFLUGFja2V0VjISKAoLY290",
-            "X3R5cGVfaWQYASABKA4yEy5tZXNodGFzdGljLkNvdFR5cGUSHwoDaG93GAIg",
-            "ASgOMhIubWVzaHRhc3RpYy5Db3RIb3cSEAoIY2FsbHNpZ24YAyABKAkSHgoE",
-            "dGVhbRgEIAEoDjIQLm1lc2h0YXN0aWMuVGVhbRIkCgRyb2xlGAUgASgOMhYu",
-            "bWVzaHRhc3RpYy5NZW1iZXJSb2xlEhIKCmxhdGl0dWRlX2kYBiABKA8SEwoL",
-            "bG9uZ2l0dWRlX2kYByABKA8SEAoIYWx0aXR1ZGUYCCABKBESDQoFc3BlZWQY",
-            "CSABKA0SDgoGY291cnNlGAogASgNEg8KB2JhdHRlcnkYCyABKA0SKwoHZ2Vv",
-            "X3NyYxgMIAEoDjIaLm1lc2h0YXN0aWMuR2VvUG9pbnRTb3VyY2USKwoHYWx0",
-            "X3NyYxgNIAEoDjIaLm1lc2h0YXN0aWMuR2VvUG9pbnRTb3VyY2USCwoDdWlk",
-            "GA4gASgJEhcKD2RldmljZV9jYWxsc2lnbhgPIAEoCRIVCg1zdGFsZV9zZWNv",
-            "bmRzGBAgASgNEhMKC3Rha192ZXJzaW9uGBEgASgJEhIKCnRha19kZXZpY2UY",
-            "EiABKAkSFAoMdGFrX3BsYXRmb3JtGBMgASgJEg4KBnRha19vcxgUIAEoCRIQ",
-            "CghlbmRwb2ludBgVIAEoCRINCgVwaG9uZRgWIAEoCRIUCgxjb3RfdHlwZV9z",
-            "dHIYFyABKAkSDwoHcmVtYXJrcxgYIAEoCRI0CgtlbnZpcm9ubWVudBgZIAEo",
-            "CzIaLm1lc2h0YXN0aWMuVEFLRW52aXJvbm1lbnRIAYgBARIuCgpzZW5zb3Jf",
-            "Zm92GBogASgLMhUubWVzaHRhc3RpYy5TZW5zb3JGb3ZIAogBARINCgNwbGkY",
-            "HiABKAhIABIjCgRjaGF0GB8gASgLMhMubWVzaHRhc3RpYy5HZW9DaGF0SAAS",
-            "LQoIYWlyY3JhZnQYICABKAsyGS5tZXNodGFzdGljLkFpcmNyYWZ0VHJhY2tI",
-            "ABIUCgpyYXdfZGV0YWlsGCEgASgMSAASJwoFc2hhcGUYIiABKAsyFi5tZXNo",
-            "dGFzdGljLkRyYXduU2hhcGVIABIkCgZtYXJrZXIYIyABKAsyEi5tZXNodGFz",
-            "dGljLk1hcmtlckgAEioKA3JhYhgkIAEoCzIbLm1lc2h0YXN0aWMuUmFuZ2VB",
-            "bmRCZWFyaW5nSAASIgoFcm91dGUYJSABKAsyES5tZXNodGFzdGljLlJvdXRl",
-            "SAASLAoHY2FzZXZhYxgmIAEoCzIZLm1lc2h0YXN0aWMuQ2FzZXZhY1JlcG9y",
-            "dEgAEi8KCWVtZXJnZW5jeRgnIAEoCzIaLm1lc2h0YXN0aWMuRW1lcmdlbmN5",
-            "QWxlcnRIABInCgR0YXNrGCggASgLMhcubWVzaHRhc3RpYy5UYXNrUmVxdWVz",
-            "dEgAQhEKD3BheWxvYWRfdmFyaWFudEIOCgxfZW52aXJvbm1lbnRCDQoLX3Nl",
-            "bnNvcl9mb3ZKBAgbEBxKBAgcEB1KBAgdEB4qwAEKBFRlYW0SFAoQVW5zcGVj",
-            "aWZlZF9Db2xvchAAEgkKBVdoaXRlEAESCgoGWWVsbG93EAISCgoGT3Jhbmdl",
-            "EAMSCwoHTWFnZW50YRAEEgcKA1JlZBAFEgoKBk1hcm9vbhAGEgoKBlB1cnBs",
-            "ZRAHEg0KCURhcmtfQmx1ZRAIEggKBEJsdWUQCRIICgRDeWFuEAoSCAoEVGVh",
-            "bBALEgkKBUdyZWVuEAwSDgoKRGFya19HcmVlbhANEgkKBUJyb3duEA4qfwoK",
-            "TWVtYmVyUm9sZRIOCgpVbnNwZWNpZmVkEAASDgoKVGVhbU1lbWJlchABEgwK",
-            "CFRlYW1MZWFkEAISBgoCSFEQAxIKCgZTbmlwZXIQBBIJCgVNZWRpYxAFEhMK",
-            "D0ZvcndhcmRPYnNlcnZlchAGEgcKA1JUTxAHEgYKAks5EAgqlgEKBkNvdEhv",
-            "dxIWChJDb3RIb3dfVW5zcGVjaWZpZWQQABIOCgpDb3RIb3dfaF9lEAESDgoK",
-            "Q290SG93X21fZxACEhQKEENvdEhvd19oX2dfaV9nX28QAxIOCgpDb3RIb3df",
-            "bV9yEAQSDgoKQ290SG93X21fZhAFEg4KCkNvdEhvd19tX3AQBhIOCgpDb3RI",
-            "b3dfbV9zEAcq4RYKB0NvdFR5cGUSEQoNQ290VHlwZV9PdGhlchAAEhUKEUNv",
-            "dFR5cGVfYV9mX0dfVV9DEAESFwoTQ290VHlwZV9hX2ZfR19VX0NfSRACEhUK",
-            "EUNvdFR5cGVfYV9uX0FfQ19GEAMSFQoRQ290VHlwZV9hX25fQV9DX0gQBBIT",
-            "Cg9Db3RUeXBlX2Ffbl9BX0MQBRIVChFDb3RUeXBlX2FfZl9BX01fSBAGEhMK",
-            "D0NvdFR5cGVfYV9mX0FfTRAHEhcKE0NvdFR5cGVfYV9mX0FfTV9GX0YQCBIX",
-            "ChNDb3RUeXBlX2FfZl9BX01fSF9BEAkSGQoVQ290VHlwZV9hX2ZfQV9NX0hf",
-            "VV9NEAoSFwoTQ290VHlwZV9hX2hfQV9NX0ZfRhALEhcKE0NvdFR5cGVfYV9o",
-            "X0FfTV9IX0EQDBITCg9Db3RUeXBlX2FfdV9BX0MQDRITCg9Db3RUeXBlX3Rf",
-            "eF9kX2QQDhIXChNDb3RUeXBlX2FfZl9HX0VfU19FEA8SFwoTQ290VHlwZV9h",
-            "X2ZfR19FX1ZfQxAQEhEKDUNvdFR5cGVfYV9mX1MQERIVChFDb3RUeXBlX2Ff",
-            "Zl9BX01fRhASEhkKFUNvdFR5cGVfYV9mX0FfTV9GX0NfSBATEhkKFUNvdFR5",
-            "cGVfYV9mX0FfTV9GX1VfTBAUEhcKE0NvdFR5cGVfYV9mX0FfTV9GX0wQFRIX",
-            "ChNDb3RUeXBlX2FfZl9BX01fRl9QEBYSFQoRQ290VHlwZV9hX2ZfQV9DX0gQ",
-            "FxIXChNDb3RUeXBlX2Ffbl9BX01fRl9REBgSEQoNQ290VHlwZV9iX3RfZhAZ",
-            "EhUKEUNvdFR5cGVfYl9yX2ZfaF9jEBoSFQoRQ290VHlwZV9iX2Ffb19wYW4Q",
-            "GxIVChFDb3RUeXBlX2JfYV9vX29wbhAcEhUKEUNvdFR5cGVfYl9hX29fY2Fu",
-            "EB0SFQoRQ290VHlwZV9iX2Ffb190YmwQHhIRCg1Db3RUeXBlX2JfYV9nEB8S",
-            "EQoNQ290VHlwZV9hX2ZfRxAgEhMKD0NvdFR5cGVfYV9mX0dfVRAhEhEKDUNv",
-            "dFR5cGVfYV9oX0cQIhIRCg1Db3RUeXBlX2FfdV9HECMSEQoNQ290VHlwZV9h",
-            "X25fRxAkEhEKDUNvdFR5cGVfYl9tX3IQJRITCg9Db3RUeXBlX2JfbV9wX3cQ",
-            "JhIXChNDb3RUeXBlX2JfbV9wX3NfcF9pECcSEQoNQ290VHlwZV91X2RfZhAo",
-            "EhEKDUNvdFR5cGVfdV9kX3IQKRITCg9Db3RUeXBlX3VfZF9jX2MQKhISCg5D",
-            "b3RUeXBlX3VfcmJfYRArEhEKDUNvdFR5cGVfYV9oX0EQLBIRCg1Db3RUeXBl",
-            "X2FfdV9BEC0SFwoTQ290VHlwZV9hX2ZfQV9NX0hfURAuEhUKEUNvdFR5cGVf",
-            "YV9mX0FfQ19GEC8SEwoPQ290VHlwZV9hX2ZfQV9DEDASFQoRQ290VHlwZV9h",
-            "X2ZfQV9DX0wQMRIRCg1Db3RUeXBlX2FfZl9BEDISFwoTQ290VHlwZV9hX2Zf",
-            "QV9NX0hfQxAzEhcKE0NvdFR5cGVfYV9uX0FfTV9GX0YQNBIVChFDb3RUeXBl",
-            "X2FfdV9BX0NfRhA1EhsKF0NvdFR5cGVfYV9mX0dfVV9DX0ZfVF9BEDYSGQoV",
-            "Q290VHlwZV9hX2ZfR19VX0NfVl9TEDcSGQoVQ290VHlwZV9hX2ZfR19VX0Nf",
-            "Ul9YEDgSGQoVQ290VHlwZV9hX2ZfR19VX0NfSV9aEDkSGwoXQ290VHlwZV9h",
-            "X2ZfR19VX0NfRV9DX1cQOhIZChVDb3RUeXBlX2FfZl9HX1VfQ19JX0wQOxIZ",
-            "ChVDb3RUeXBlX2FfZl9HX1VfQ19SX08QPBIZChVDb3RUeXBlX2FfZl9HX1Vf",
-            "Q19SX1YQPRIVChFDb3RUeXBlX2FfZl9HX1VfSBA+EhsKF0NvdFR5cGVfYV9m",
-            "X0dfVV9VX01fU19FED8SGQoVQ290VHlwZV9hX2ZfR19VX1NfTV9DEEASFQoR",
-            "Q290VHlwZV9hX2ZfR19FX1MQQRITCg9Db3RUeXBlX2FfZl9HX0UQQhIZChVD",
-            "b3RUeXBlX2FfZl9HX0VfVl9DX1UQQxIaChZDb3RUeXBlX2FfZl9HX0VfVl9D",
-            "X3BzEEQSFQoRQ290VHlwZV9hX3VfR19FX1YQRRIXChNDb3RUeXBlX2FfZl9T",
-            "X05fTl9SEEYSEwoPQ290VHlwZV9hX2ZfRl9CEEcSGQoVQ290VHlwZV9iX21f",
-            "cF9zX3BfbG9jEEgSEQoNQ290VHlwZV9iX2lfdhBJEhMKD0NvdFR5cGVfYl9m",
-            "X3RfchBKEhMKD0NvdFR5cGVfYl9mX3RfYRBLEhMKD0NvdFR5cGVfdV9kX2Zf",
-            "bRBMEhEKDUNvdFR5cGVfdV9kX3AQTRIVChFDb3RUeXBlX2JfbV9wX3NfbRBO",
-            "EhMKD0NvdFR5cGVfYl9tX3BfYxBPEhUKEUNvdFR5cGVfdV9yX2JfY19jEFAS",
-            "GgoWQ290VHlwZV91X3JfYl9idWxsc2V5ZRBREhcKE0NvdFR5cGVfYV9mX0df",
-            "RV9WX0EQUhIRCg1Db3RUeXBlX2Ffbl9BEFMSFwoTQ290VHlwZV9hX3VfR19V",
-            "X0NfRhBUEhcKE0NvdFR5cGVfYV9uX0dfVV9DX0YQVRIXChNDb3RUeXBlX2Ff",
-            "aF9HX1VfQ19GEFYSFwoTQ290VHlwZV9hX2ZfR19VX0NfRhBXEhMKD0NvdFR5",
-            "cGVfYV91X0dfSRBYEhMKD0NvdFR5cGVfYV9uX0dfSRBZEhMKD0NvdFR5cGVf",
-            "YV9oX0dfSRBaEhMKD0NvdFR5cGVfYV9mX0dfSRBbEhcKE0NvdFR5cGVfYV91",
-            "X0dfRV9YX00QXBIXChNDb3RUeXBlX2Ffbl9HX0VfWF9NEF0SFwoTQ290VHlw",
-            "ZV9hX2hfR19FX1hfTRBeEhcKE0NvdFR5cGVfYV9mX0dfRV9YX00QXxIRCg1D",
-            "b3RUeXBlX2FfdV9TEGASEQoNQ290VHlwZV9hX25fUxBhEhEKDUNvdFR5cGVf",
-            "YV9oX1MQYhIZChVDb3RUeXBlX2FfdV9HX1VfQ19JX2QQYxIZChVDb3RUeXBl",
-            "X2Ffbl9HX1VfQ19JX2QQZBIZChVDb3RUeXBlX2FfaF9HX1VfQ19JX2QQZRIZ",
-            "ChVDb3RUeXBlX2FfZl9HX1VfQ19JX2QQZhIZChVDb3RUeXBlX2FfdV9HX0Vf",
-            "Vl9BX1QQZxIZChVDb3RUeXBlX2Ffbl9HX0VfVl9BX1QQaBIZChVDb3RUeXBl",
-            "X2FfaF9HX0VfVl9BX1QQaRIZChVDb3RUeXBlX2FfZl9HX0VfVl9BX1QQahIX",
-            "ChNDb3RUeXBlX2FfdV9HX1VfQ19JEGsSFwoTQ290VHlwZV9hX25fR19VX0Nf",
-            "SRBsEhcKE0NvdFR5cGVfYV9oX0dfVV9DX0kQbRIVChFDb3RUeXBlX2Ffbl9H",
-            "X0VfVhBuEhUKEUNvdFR5cGVfYV9oX0dfRV9WEG8SFQoRQ290VHlwZV9hX2Zf",
-            "R19FX1YQcBIYChRDb3RUeXBlX2JfbV9wX3dfR09UTxBxEhYKEkNvdFR5cGVf",
-            "Yl9tX3BfY19pcBByEhYKEkNvdFR5cGVfYl9tX3BfY19jcBBzEhgKFENvdFR5",
-            "cGVfYl9tX3Bfc19wX29wEHQSEQoNQ290VHlwZV91X2RfdhB1EhMKD0NvdFR5",
-            "cGVfdV9kX3ZfbRB2EhMKD0NvdFR5cGVfdV9kX2NfZRB3EhMKD0NvdFR5cGVf",
-            "Yl9pX3hfaRB4EhMKD0NvdFR5cGVfYl90X2ZfZBB5EhMKD0NvdFR5cGVfYl90",
-            "X2ZfchB6EhMKD0NvdFR5cGVfYl9hX29fYxB7Eg8KC0NvdFR5cGVfdF9zEHwq",
-            "fQoOR2VvUG9pbnRTb3VyY2USHgoaR2VvUG9pbnRTb3VyY2VfVW5zcGVjaWZp",
-            "ZWQQABIWChJHZW9Qb2ludFNvdXJjZV9HUFMQARIXChNHZW9Qb2ludFNvdXJj",
-            "ZV9VU0VSEAISGgoWR2VvUG9pbnRTb3VyY2VfTkVUV09SSxADQmAKFG9yZy5t",
-            "ZXNodGFzdGljLnByb3RvQgpBVEFLUHJvdG9zWiJnaXRodWIuY29tL21lc2h0",
-            "YXN0aWMvZ28vZ2VuZXJhdGVkqgIUTWVzaHRhc3RpYy5Qcm90b2J1ZnO6AgBi",
-            "BnByb3RvMw=="));
+            "Mh8ubWVzaHRhc3RpYy5HZW9DaGF0LlJlY2VpcHRUeXBlEhEKBGxhbmcYBiAB",
+            "KAlIAogBARIUCgdyb29tX2lkGAcgASgJSAOIAQESHQoQdm9pY2VfcHJvZmls",
+            "ZV9pZBgIIAEoCUgEiAEBIlQKC1JlY2VpcHRUeXBlEhQKEFJlY2VpcHRUeXBl",
+            "X05vbmUQABIZChVSZWNlaXB0VHlwZV9EZWxpdmVyZWQQARIUChBSZWNlaXB0",
+            "VHlwZV9SZWFkEAJCBQoDX3RvQg4KDF90b19jYWxsc2lnbkIHCgVfbGFuZ0IK",
+            "Cghfcm9vbV9pZEITChFfdm9pY2VfcHJvZmlsZV9pZCJNCgVHcm91cBIkCgRy",
+            "b2xlGAEgASgOMhYubWVzaHRhc3RpYy5NZW1iZXJSb2xlEh4KBHRlYW0YAiAB",
+            "KA4yEC5tZXNodGFzdGljLlRlYW0iGQoGU3RhdHVzEg8KB2JhdHRlcnkYASAB",
+            "KA0iNAoHQ29udGFjdBIQCghjYWxsc2lnbhgBIAEoCRIXCg9kZXZpY2VfY2Fs",
+            "bHNpZ24YAiABKAkiXwoDUExJEhIKCmxhdGl0dWRlX2kYASABKA8SEwoLbG9u",
+            "Z2l0dWRlX2kYAiABKA8SEAoIYWx0aXR1ZGUYAyABKAUSDQoFc3BlZWQYBCAB",
+            "KA0SDgoGY291cnNlGAUgASgNIrABCg1BaXJjcmFmdFRyYWNrEgwKBGljYW8Y",
+            "ASABKAkSFAoMcmVnaXN0cmF0aW9uGAIgASgJEg4KBmZsaWdodBgDIAEoCRIV",
+            "Cg1haXJjcmFmdF90eXBlGAQgASgJEg4KBnNxdWF3axgFIAEoDRIQCghjYXRl",
+            "Z29yeRgGIAEoCRIQCghyc3NpX3gxMBgHIAEoERILCgNncHMYCCABKAgSEwoL",
+            "Y290X2hvc3RfaWQYCSABKAkiNwoLQ290R2VvUG9pbnQSEwoLbGF0X2RlbHRh",
+            "X2kYASABKBESEwoLbG9uX2RlbHRhX2kYAiABKBEiywYKCkRyYXduU2hhcGUS",
+            "KQoEa2luZBgBIAEoDjIbLm1lc2h0YXN0aWMuRHJhd25TaGFwZS5LaW5kEi8K",
+            "BXN0eWxlGAIgASgOMiAubWVzaHRhc3RpYy5EcmF3blNoYXBlLlN0eWxlTW9k",
+            "ZRIQCghtYWpvcl9jbRgDIAEoDRIQCghtaW5vcl9jbRgEIAEoDRIRCglhbmds",
+            "ZV9kZWcYBSABKA0SJgoMc3Ryb2tlX2NvbG9yGAYgASgOMhAubWVzaHRhc3Rp",
+            "Yy5UZWFtEhMKC3N0cm9rZV9hcmdiGAcgASgHEhkKEXN0cm9rZV93ZWlnaHRf",
+            "eDEwGAggASgNEiQKCmZpbGxfY29sb3IYCSABKA4yEC5tZXNodGFzdGljLlRl",
+            "YW0SEQoJZmlsbF9hcmdiGAogASgHEhEKCWxhYmVsc19vbhgLIAEoCBIpCgh2",
+            "ZXJ0aWNlcxgMIAMoCzIXLm1lc2h0YXN0aWMuQ290R2VvUG9pbnQSEQoJdHJ1",
+            "bmNhdGVkGA0gASgIEhwKFGJ1bGxzZXllX2Rpc3RhbmNlX2RtGA4gASgNEhwK",
+            "FGJ1bGxzZXllX2JlYXJpbmdfcmVmGA8gASgNEhYKDmJ1bGxzZXllX2ZsYWdz",
+            "GBAgASgNEhgKEGJ1bGxzZXllX3VpZF9yZWYYESABKAki4gEKBEtpbmQSFAoQ",
+            "S2luZF9VbnNwZWNpZmllZBAAEg8KC0tpbmRfQ2lyY2xlEAESEgoOS2luZF9S",
+            "ZWN0YW5nbGUQAhIRCg1LaW5kX0ZyZWVmb3JtEAMSFQoRS2luZF9UZWxlc3Ry",
+            "YXRpb24QBBIQCgxLaW5kX1BvbHlnb24QBRIWChJLaW5kX1JhbmdpbmdDaXJj",
+            "bGUQBhIRCg1LaW5kX0J1bGxzZXllEAcSEAoMS2luZF9FbGxpcHNlEAgSEgoO",
+            "S2luZF9WZWhpY2xlMkQQCRISCg5LaW5kX1ZlaGljbGUzRBAKInUKCVN0eWxl",
+            "TW9kZRIZChVTdHlsZU1vZGVfVW5zcGVjaWZpZWQQABIYChRTdHlsZU1vZGVf",
+            "U3Ryb2tlT25seRABEhYKElN0eWxlTW9kZV9GaWxsT25seRACEhsKF1N0eWxl",
+            "TW9kZV9TdHJva2VBbmRGaWxsEAMi5QMKBk1hcmtlchIlCgRraW5kGAEgASgO",
+            "MhcubWVzaHRhc3RpYy5NYXJrZXIuS2luZBIfCgVjb2xvchgCIAEoDjIQLm1l",
+            "c2h0YXN0aWMuVGVhbRISCgpjb2xvcl9hcmdiGAMgASgHEhEKCXJlYWRpbmVz",
+            "cxgEIAEoCBISCgpwYXJlbnRfdWlkGAUgASgJEhMKC3BhcmVudF90eXBlGAYg",
+            "ASgJEhcKD3BhcmVudF9jYWxsc2lnbhgHIAEoCRIPCgdpY29uc2V0GAggASgJ",
+            "IpgCCgRLaW5kEhQKEEtpbmRfVW5zcGVjaWZpZWQQABINCglLaW5kX1Nwb3QQ",
+            "ARIRCg1LaW5kX1dheXBvaW50EAISEwoPS2luZF9DaGVja3BvaW50EAMSFQoR",
+            "S2luZF9TZWxmUG9zaXRpb24QBBITCg9LaW5kX1N5bWJvbDI1MjUQBRIQCgxL",
+            "aW5kX1Nwb3RNYXAQBhITCg9LaW5kX0N1c3RvbUljb24QBxISCg5LaW5kX0dv",
+            "VG9Qb2ludBAIEhUKEUtpbmRfSW5pdGlhbFBvaW50EAkSFQoRS2luZF9Db250",
+            "YWN0UG9pbnQQChIYChRLaW5kX09ic2VydmF0aW9uUG9zdBALEhQKEEtpbmRf",
+            "SW1hZ2VNYXJrZXIQDCLOAQoPUmFuZ2VBbmRCZWFyaW5nEicKBmFuY2hvchgB",
+            "IAEoCzIXLm1lc2h0YXN0aWMuQ290R2VvUG9pbnQSEgoKYW5jaG9yX3VpZBgC",
+            "IAEoCRIQCghyYW5nZV9jbRgDIAEoDRIUCgxiZWFyaW5nX2NkZWcYBCABKA0S",
+            "JgoMc3Ryb2tlX2NvbG9yGAUgASgOMhAubWVzaHRhc3RpYy5UZWFtEhMKC3N0",
+            "cm9rZV9hcmdiGAYgASgHEhkKEXN0cm9rZV93ZWlnaHRfeDEwGAcgASgNIoQE",
+            "CgVSb3V0ZRIoCgZtZXRob2QYASABKA4yGC5tZXNodGFzdGljLlJvdXRlLk1l",
+            "dGhvZBIuCglkaXJlY3Rpb24YAiABKA4yGy5tZXNodGFzdGljLlJvdXRlLkRp",
+            "cmVjdGlvbhIOCgZwcmVmaXgYAyABKAkSGQoRc3Ryb2tlX3dlaWdodF94MTAY",
+            "BCABKA0SJQoFbGlua3MYBSADKAsyFi5tZXNodGFzdGljLlJvdXRlLkxpbmsS",
+            "EQoJdHJ1bmNhdGVkGAYgASgIGmAKBExpbmsSJgoFcG9pbnQYASABKAsyFy5t",
+            "ZXNodGFzdGljLkNvdEdlb1BvaW50EgsKA3VpZBgCIAEoCRIQCghjYWxsc2ln",
+            "bhgDIAEoCRIRCglsaW5rX3R5cGUYBCABKA0ihwEKBk1ldGhvZBIWChJNZXRo",
+            "b2RfVW5zcGVjaWZpZWQQABISCg5NZXRob2RfRHJpdmluZxABEhIKDk1ldGhv",
+            "ZF9XYWxraW5nEAISEQoNTWV0aG9kX0ZseWluZxADEhMKD01ldGhvZF9Td2lt",
+            "bWluZxAEEhUKEU1ldGhvZF9XYXRlcmNyYWZ0EAUiUAoJRGlyZWN0aW9uEhkK",
+            "FURpcmVjdGlvbl9VbnNwZWNpZmllZBAAEhMKD0RpcmVjdGlvbl9JbmZpbBAB",
+            "EhMKD0RpcmVjdGlvbl9FeGZpbBACItYKCg1DYXNldmFjUmVwb3J0EjgKCnBy",
+            "ZWNlZGVuY2UYASABKA4yJC5tZXNodGFzdGljLkNhc2V2YWNSZXBvcnQuUHJl",
+            "Y2VkZW5jZRIXCg9lcXVpcG1lbnRfZmxhZ3MYAiABKA0SFwoPbGl0dGVyX3Bh",
+            "dGllbnRzGAMgASgNEhsKE2FtYnVsYXRvcnlfcGF0aWVudHMYBCABKA0SNAoI",
+            "c2VjdXJpdHkYBSABKA4yIi5tZXNodGFzdGljLkNhc2V2YWNSZXBvcnQuU2Vj",
+            "dXJpdHkSOQoLaGx6X21hcmtpbmcYBiABKA4yJC5tZXNodGFzdGljLkNhc2V2",
+            "YWNSZXBvcnQuSGx6TWFya2luZxITCgt6b25lX21hcmtlchgHIAEoCRITCgt1",
+            "c19taWxpdGFyeRgIIAEoDRITCgt1c19jaXZpbGlhbhgJIAEoDRIXCg9ub25f",
+            "dXNfbWlsaXRhcnkYCiABKA0SFwoPbm9uX3VzX2NpdmlsaWFuGAsgASgNEgsK",
+            "A2VwdxgMIAEoDRINCgVjaGlsZBgNIAEoDRIVCg10ZXJyYWluX2ZsYWdzGA4g",
+            "ASgNEhEKCWZyZXF1ZW5jeRgPIAEoCRINCgV0aXRsZRgQIAEoCRIXCg9tZWRs",
+            "aW5lX3JlbWFya3MYESABKAkSFAoMdXJnZW50X2NvdW50GBIgASgNEh0KFXVy",
+            "Z2VudF9zdXJnaWNhbF9jb3VudBgTIAEoDRIWCg5wcmlvcml0eV9jb3VudBgU",
+            "IAEoDRIVCg1yb3V0aW5lX2NvdW50GBUgASgNEhkKEWNvbnZlbmllbmNlX2Nv",
+            "dW50GBYgASgNEhgKEGVxdWlwbWVudF9kZXRhaWwYFyABKAkSHAoUem9uZV9w",
+            "cm90ZWN0ZWRfY29vcmQYGCABKAkSGQoRdGVycmFpbl9zbG9wZV9kaXIYGSAB",
+            "KAkSHAoUdGVycmFpbl9vdGhlcl9kZXRhaWwYGiABKAkSEQoJbWFya2VkX2J5",
+            "GBsgASgJEhEKCW9ic3RhY2xlcxgcIAEoCRIWCg53aW5kc19hcmVfZnJvbRgd",
+            "IAEoCRISCgpmcmllbmRsaWVzGB4gASgJEg0KBWVuZW15GB8gASgJEhMKC2hs",
+            "el9yZW1hcmtzGCAgASgJEiUKBXptaXN0GCEgAygLMhYubWVzaHRhc3RpYy5a",
+            "TWlzdEVudHJ5IqsBCgpQcmVjZWRlbmNlEhoKFlByZWNlZGVuY2VfVW5zcGVj",
+            "aWZpZWQQABIVChFQcmVjZWRlbmNlX1VyZ2VudBABEh0KGVByZWNlZGVuY2Vf",
+            "VXJnZW50U3VyZ2ljYWwQAhIXChNQcmVjZWRlbmNlX1ByaW9yaXR5EAMSFgoS",
+            "UHJlY2VkZW5jZV9Sb3V0aW5lEAQSGgoWUHJlY2VkZW5jZV9Db252ZW5pZW5j",
+            "ZRAFIpsBCgpIbHpNYXJraW5nEhoKFkhsek1hcmtpbmdfVW5zcGVjaWZpZWQQ",
+            "ABIVChFIbHpNYXJraW5nX1BhbmVscxABEhkKFUhsek1hcmtpbmdfUHlyb1Np",
+            "Z25hbBACEhQKEEhsek1hcmtpbmdfU21va2UQAxITCg9IbHpNYXJraW5nX05v",
+            "bmUQBBIUChBIbHpNYXJraW5nX090aGVyEAUikgEKCFNlY3VyaXR5EhgKFFNl",
+            "Y3VyaXR5X1Vuc3BlY2lmaWVkEAASFAoQU2VjdXJpdHlfTm9FbmVteRABEhoK",
+            "FlNlY3VyaXR5X1Bvc3NpYmxlRW5lbXkQAhIYChRTZWN1cml0eV9FbmVteUlu",
+            "QXJlYRADEiAKHFNlY3VyaXR5X0VuZW15SW5Bcm1lZENvbnRhY3QQBCJSCgpa",
+            "TWlzdEVudHJ5Eg0KBXRpdGxlGAEgASgJEgkKAXoYAiABKAkSCQoBbRgDIAEo",
+            "CRIJCgFpGAQgASgJEgkKAXMYBSABKAkSCQoBdBgGIAEoCSKNAgoORW1lcmdl",
+            "bmN5QWxlcnQSLQoEdHlwZRgBIAEoDjIfLm1lc2h0YXN0aWMuRW1lcmdlbmN5",
+            "QWxlcnQuVHlwZRIVCg1hdXRob3JpbmdfdWlkGAIgASgJEhwKFGNhbmNlbF9y",
+            "ZWZlcmVuY2VfdWlkGAMgASgJIpYBCgRUeXBlEhQKEFR5cGVfVW5zcGVjaWZp",
+            "ZWQQABIRCg1UeXBlX0FsZXJ0OTExEAESFAoQVHlwZV9SaW5nVGhlQmVsbBAC",
+            "EhIKDlR5cGVfSW5Db250YWN0EAMSGQoVVHlwZV9HZW9GZW5jZUJyZWFjaGVk",
+            "EAQSDwoLVHlwZV9DdXN0b20QBRIPCgtUeXBlX0NhbmNlbBAGIsYDCgtUYXNr",
+            "UmVxdWVzdBIRCgl0YXNrX3R5cGUYASABKAkSEgoKdGFyZ2V0X3VpZBgCIAEo",
+            "CRIUCgxhc3NpZ25lZV91aWQYAyABKAkSMgoIcHJpb3JpdHkYBCABKA4yIC5t",
+            "ZXNodGFzdGljLlRhc2tSZXF1ZXN0LlByaW9yaXR5Ei4KBnN0YXR1cxgFIAEo",
+            "DjIeLm1lc2h0YXN0aWMuVGFza1JlcXVlc3QuU3RhdHVzEgwKBG5vdGUYBiAB",
+            "KAkidQoIUHJpb3JpdHkSGAoUUHJpb3JpdHlfVW5zcGVjaWZpZWQQABIQCgxQ",
+            "cmlvcml0eV9Mb3cQARITCg9Qcmlvcml0eV9Ob3JtYWwQAhIRCg1Qcmlvcml0",
+            "eV9IaWdoEAMSFQoRUHJpb3JpdHlfQ3JpdGljYWwQBCKQAQoGU3RhdHVzEhYK",
+            "ElN0YXR1c19VbnNwZWNpZmllZBAAEhIKDlN0YXR1c19QZW5kaW5nEAESFwoT",
+            "U3RhdHVzX0Fja25vd2xlZGdlZBACEhUKEVN0YXR1c19JblByb2dyZXNzEAMS",
+            "FAoQU3RhdHVzX0NvbXBsZXRlZBAEEhQKEFN0YXR1c19DYW5jZWxsZWQQBSJg",
+            "Cg5UQUtFbnZpcm9ubWVudBIZChF0ZW1wZXJhdHVyZV9jX3gxMBgBIAEoERIa",
+            "ChJ3aW5kX2RpcmVjdGlvbl9kZWcYAiABKA0SFwoPd2luZF9zcGVlZF9jbV9z",
+            "GAMgASgNIo0DCglTZW5zb3JGb3YSLgoEdHlwZRgBIAEoDjIgLm1lc2h0YXN0",
+            "aWMuU2Vuc29yRm92LlNlbnNvclR5cGUSEwoLYXppbXV0aF9kZWcYAiABKA0S",
+            "FAoHcmFuZ2VfbRgDIAEoDUgAiAEBEhoKEmZvdl9ob3Jpem9udGFsX2RlZxgE",
+            "IAEoDRIYChBmb3ZfdmVydGljYWxfZGVnGAUgASgNEhUKDWVsZXZhdGlvbl9k",
+            "ZWcYBiABKBESEAoIcm9sbF9kZWcYByABKBESDQoFbW9kZWwYCCABKAkiqgEK",
+            "ClNlbnNvclR5cGUSGgoWU2Vuc29yVHlwZV9VbnNwZWNpZmllZBAAEhUKEVNl",
+            "bnNvclR5cGVfQ2FtZXJhEAESFgoSU2Vuc29yVHlwZV9UaGVybWFsEAISFAoQ",
+            "U2Vuc29yVHlwZV9MYXNlchADEhIKDlNlbnNvclR5cGVfTnZnEAQSEQoNU2Vu",
+            "c29yVHlwZV9SZhAFEhQKEFNlbnNvclR5cGVfT3RoZXIQBkIKCghfcmFuZ2Vf",
+            "bSJVCg5UYWtUYWxrTWVzc2FnZRIMCgR0ZXh0GAEgASgJEhMKC2NoYXRyb29t",
+            "X2lkGAIgASgJEgwKBGxhbmcYAyABKAkSEgoKZnJvbV92b2ljZRgEIAEoCCJk",
+            "Cg9UYWtUYWxrUm9vbURhdGESFwoPc2VuZGVyX2NhbGxzaWduGAEgASgJEg8K",
+            "B3Jvb21faWQYAiABKAkSEQoJcm9vbV9uYW1lGAMgASgJEhQKDHBhcnRpY2lw",
+            "YW50cxgEIAMoCSL3CQoLVEFLUGFja2V0VjISKAoLY290X3R5cGVfaWQYASAB",
+            "KA4yEy5tZXNodGFzdGljLkNvdFR5cGUSHwoDaG93GAIgASgOMhIubWVzaHRh",
+            "c3RpYy5Db3RIb3cSEAoIY2FsbHNpZ24YAyABKAkSHgoEdGVhbRgEIAEoDjIQ",
+            "Lm1lc2h0YXN0aWMuVGVhbRIkCgRyb2xlGAUgASgOMhYubWVzaHRhc3RpYy5N",
+            "ZW1iZXJSb2xlEhIKCmxhdGl0dWRlX2kYBiABKA8SEwoLbG9uZ2l0dWRlX2kY",
+            "ByABKA8SEAoIYWx0aXR1ZGUYCCABKBESDQoFc3BlZWQYCSABKA0SDgoGY291",
+            "cnNlGAogASgNEg8KB2JhdHRlcnkYCyABKA0SKwoHZ2VvX3NyYxgMIAEoDjIa",
+            "Lm1lc2h0YXN0aWMuR2VvUG9pbnRTb3VyY2USKwoHYWx0X3NyYxgNIAEoDjIa",
+            "Lm1lc2h0YXN0aWMuR2VvUG9pbnRTb3VyY2USCwoDdWlkGA4gASgJEhcKD2Rl",
+            "dmljZV9jYWxsc2lnbhgPIAEoCRIVCg1zdGFsZV9zZWNvbmRzGBAgASgNEhMK",
+            "C3Rha192ZXJzaW9uGBEgASgJEhIKCnRha19kZXZpY2UYEiABKAkSFAoMdGFr",
+            "X3BsYXRmb3JtGBMgASgJEg4KBnRha19vcxgUIAEoCRIQCghlbmRwb2ludBgV",
+            "IAEoCRINCgVwaG9uZRgWIAEoCRIUCgxjb3RfdHlwZV9zdHIYFyABKAkSDwoH",
+            "cmVtYXJrcxgYIAEoCRI0CgtlbnZpcm9ubWVudBgZIAEoCzIaLm1lc2h0YXN0",
+            "aWMuVEFLRW52aXJvbm1lbnRIAYgBARIuCgpzZW5zb3JfZm92GBogASgLMhUu",
+            "bWVzaHRhc3RpYy5TZW5zb3JGb3ZIAogBARINCgNwbGkYHiABKAhIABIjCgRj",
+            "aGF0GB8gASgLMhMubWVzaHRhc3RpYy5HZW9DaGF0SAASLQoIYWlyY3JhZnQY",
+            "ICABKAsyGS5tZXNodGFzdGljLkFpcmNyYWZ0VHJhY2tIABIUCgpyYXdfZGV0",
+            "YWlsGCEgASgMSAASJwoFc2hhcGUYIiABKAsyFi5tZXNodGFzdGljLkRyYXdu",
+            "U2hhcGVIABIkCgZtYXJrZXIYIyABKAsyEi5tZXNodGFzdGljLk1hcmtlckgA",
+            "EioKA3JhYhgkIAEoCzIbLm1lc2h0YXN0aWMuUmFuZ2VBbmRCZWFyaW5nSAAS",
+            "IgoFcm91dGUYJSABKAsyES5tZXNodGFzdGljLlJvdXRlSAASLAoHY2FzZXZh",
+            "YxgmIAEoCzIZLm1lc2h0YXN0aWMuQ2FzZXZhY1JlcG9ydEgAEi8KCWVtZXJn",
+            "ZW5jeRgnIAEoCzIaLm1lc2h0YXN0aWMuRW1lcmdlbmN5QWxlcnRIABInCgR0",
+            "YXNrGCggASgLMhcubWVzaHRhc3RpYy5UYXNrUmVxdWVzdEgAEi0KB3Rha3Rh",
+            "bGsYKSABKAsyGi5tZXNodGFzdGljLlRha1RhbGtNZXNzYWdlSAASMwoMdGFr",
+            "dGFsa19yb29tGCogASgLMhsubWVzaHRhc3RpYy5UYWtUYWxrUm9vbURhdGFI",
+            "AEIRCg9wYXlsb2FkX3ZhcmlhbnRCDgoMX2Vudmlyb25tZW50Qg0KC19zZW5z",
+            "b3JfZm92SgQIGxAcSgQIHBAdSgQIHRAeKsABCgRUZWFtEhQKEFVuc3BlY2lm",
+            "ZWRfQ29sb3IQABIJCgVXaGl0ZRABEgoKBlllbGxvdxACEgoKBk9yYW5nZRAD",
+            "EgsKB01hZ2VudGEQBBIHCgNSZWQQBRIKCgZNYXJvb24QBhIKCgZQdXJwbGUQ",
+            "BxINCglEYXJrX0JsdWUQCBIICgRCbHVlEAkSCAoEQ3lhbhAKEggKBFRlYWwQ",
+            "CxIJCgVHcmVlbhAMEg4KCkRhcmtfR3JlZW4QDRIJCgVCcm93bhAOKn8KCk1l",
+            "bWJlclJvbGUSDgoKVW5zcGVjaWZlZBAAEg4KClRlYW1NZW1iZXIQARIMCghU",
+            "ZWFtTGVhZBACEgYKAkhREAMSCgoGU25pcGVyEAQSCQoFTWVkaWMQBRITCg9G",
+            "b3J3YXJkT2JzZXJ2ZXIQBhIHCgNSVE8QBxIGCgJLORAIKpYBCgZDb3RIb3cS",
+            "FgoSQ290SG93X1Vuc3BlY2lmaWVkEAASDgoKQ290SG93X2hfZRABEg4KCkNv",
+            "dEhvd19tX2cQAhIUChBDb3RIb3dfaF9nX2lfZ19vEAMSDgoKQ290SG93X21f",
+            "chAEEg4KCkNvdEhvd19tX2YQBRIOCgpDb3RIb3dfbV9wEAYSDgoKQ290SG93",
+            "X21fcxAHKoMXCgdDb3RUeXBlEhEKDUNvdFR5cGVfT3RoZXIQABIVChFDb3RU",
+            "eXBlX2FfZl9HX1VfQxABEhcKE0NvdFR5cGVfYV9mX0dfVV9DX0kQAhIVChFD",
+            "b3RUeXBlX2Ffbl9BX0NfRhADEhUKEUNvdFR5cGVfYV9uX0FfQ19IEAQSEwoP",
+            "Q290VHlwZV9hX25fQV9DEAUSFQoRQ290VHlwZV9hX2ZfQV9NX0gQBhITCg9D",
+            "b3RUeXBlX2FfZl9BX00QBxIXChNDb3RUeXBlX2FfZl9BX01fRl9GEAgSFwoT",
+            "Q290VHlwZV9hX2ZfQV9NX0hfQRAJEhkKFUNvdFR5cGVfYV9mX0FfTV9IX1Vf",
+            "TRAKEhcKE0NvdFR5cGVfYV9oX0FfTV9GX0YQCxIXChNDb3RUeXBlX2FfaF9B",
+            "X01fSF9BEAwSEwoPQ290VHlwZV9hX3VfQV9DEA0SEwoPQ290VHlwZV90X3hf",
+            "ZF9kEA4SFwoTQ290VHlwZV9hX2ZfR19FX1NfRRAPEhcKE0NvdFR5cGVfYV9m",
+            "X0dfRV9WX0MQEBIRCg1Db3RUeXBlX2FfZl9TEBESFQoRQ290VHlwZV9hX2Zf",
+            "QV9NX0YQEhIZChVDb3RUeXBlX2FfZl9BX01fRl9DX0gQExIZChVDb3RUeXBl",
+            "X2FfZl9BX01fRl9VX0wQFBIXChNDb3RUeXBlX2FfZl9BX01fRl9MEBUSFwoT",
+            "Q290VHlwZV9hX2ZfQV9NX0ZfUBAWEhUKEUNvdFR5cGVfYV9mX0FfQ19IEBcS",
+            "FwoTQ290VHlwZV9hX25fQV9NX0ZfURAYEhEKDUNvdFR5cGVfYl90X2YQGRIV",
+            "ChFDb3RUeXBlX2Jfcl9mX2hfYxAaEhUKEUNvdFR5cGVfYl9hX29fcGFuEBsS",
+            "FQoRQ290VHlwZV9iX2Ffb19vcG4QHBIVChFDb3RUeXBlX2JfYV9vX2NhbhAd",
+            "EhUKEUNvdFR5cGVfYl9hX29fdGJsEB4SEQoNQ290VHlwZV9iX2FfZxAfEhEK",
+            "DUNvdFR5cGVfYV9mX0cQIBITCg9Db3RUeXBlX2FfZl9HX1UQIRIRCg1Db3RU",
+            "eXBlX2FfaF9HECISEQoNQ290VHlwZV9hX3VfRxAjEhEKDUNvdFR5cGVfYV9u",
+            "X0cQJBIRCg1Db3RUeXBlX2JfbV9yECUSEwoPQ290VHlwZV9iX21fcF93ECYS",
+            "FwoTQ290VHlwZV9iX21fcF9zX3BfaRAnEhEKDUNvdFR5cGVfdV9kX2YQKBIR",
+            "Cg1Db3RUeXBlX3VfZF9yECkSEwoPQ290VHlwZV91X2RfY19jECoSEgoOQ290",
+            "VHlwZV91X3JiX2EQKxIRCg1Db3RUeXBlX2FfaF9BECwSEQoNQ290VHlwZV9h",
+            "X3VfQRAtEhcKE0NvdFR5cGVfYV9mX0FfTV9IX1EQLhIVChFDb3RUeXBlX2Ff",
+            "Zl9BX0NfRhAvEhMKD0NvdFR5cGVfYV9mX0FfQxAwEhUKEUNvdFR5cGVfYV9m",
+            "X0FfQ19MEDESEQoNQ290VHlwZV9hX2ZfQRAyEhcKE0NvdFR5cGVfYV9mX0Ff",
+            "TV9IX0MQMxIXChNDb3RUeXBlX2Ffbl9BX01fRl9GEDQSFQoRQ290VHlwZV9h",
+            "X3VfQV9DX0YQNRIbChdDb3RUeXBlX2FfZl9HX1VfQ19GX1RfQRA2EhkKFUNv",
+            "dFR5cGVfYV9mX0dfVV9DX1ZfUxA3EhkKFUNvdFR5cGVfYV9mX0dfVV9DX1Jf",
+            "WBA4EhkKFUNvdFR5cGVfYV9mX0dfVV9DX0lfWhA5EhsKF0NvdFR5cGVfYV9m",
+            "X0dfVV9DX0VfQ19XEDoSGQoVQ290VHlwZV9hX2ZfR19VX0NfSV9MEDsSGQoV",
+            "Q290VHlwZV9hX2ZfR19VX0NfUl9PEDwSGQoVQ290VHlwZV9hX2ZfR19VX0Nf",
+            "Ul9WED0SFQoRQ290VHlwZV9hX2ZfR19VX0gQPhIbChdDb3RUeXBlX2FfZl9H",
+            "X1VfVV9NX1NfRRA/EhkKFUNvdFR5cGVfYV9mX0dfVV9TX01fQxBAEhUKEUNv",
+            "dFR5cGVfYV9mX0dfRV9TEEESEwoPQ290VHlwZV9hX2ZfR19FEEISGQoVQ290",
+            "VHlwZV9hX2ZfR19FX1ZfQ19VEEMSGgoWQ290VHlwZV9hX2ZfR19FX1ZfQ19w",
+            "cxBEEhUKEUNvdFR5cGVfYV91X0dfRV9WEEUSFwoTQ290VHlwZV9hX2ZfU19O",
+            "X05fUhBGEhMKD0NvdFR5cGVfYV9mX0ZfQhBHEhkKFUNvdFR5cGVfYl9tX3Bf",
+            "c19wX2xvYxBIEhEKDUNvdFR5cGVfYl9pX3YQSRITCg9Db3RUeXBlX2JfZl90",
+            "X3IQShITCg9Db3RUeXBlX2JfZl90X2EQSxITCg9Db3RUeXBlX3VfZF9mX20Q",
+            "TBIRCg1Db3RUeXBlX3VfZF9wEE0SFQoRQ290VHlwZV9iX21fcF9zX20QThIT",
+            "Cg9Db3RUeXBlX2JfbV9wX2MQTxIVChFDb3RUeXBlX3Vfcl9iX2NfYxBQEhoK",
+            "FkNvdFR5cGVfdV9yX2JfYnVsbHNleWUQURIXChNDb3RUeXBlX2FfZl9HX0Vf",
+            "Vl9BEFISEQoNQ290VHlwZV9hX25fQRBTEhcKE0NvdFR5cGVfYV91X0dfVV9D",
+            "X0YQVBIXChNDb3RUeXBlX2Ffbl9HX1VfQ19GEFUSFwoTQ290VHlwZV9hX2hf",
+            "R19VX0NfRhBWEhcKE0NvdFR5cGVfYV9mX0dfVV9DX0YQVxITCg9Db3RUeXBl",
+            "X2FfdV9HX0kQWBITCg9Db3RUeXBlX2Ffbl9HX0kQWRITCg9Db3RUeXBlX2Ff",
+            "aF9HX0kQWhITCg9Db3RUeXBlX2FfZl9HX0kQWxIXChNDb3RUeXBlX2FfdV9H",
+            "X0VfWF9NEFwSFwoTQ290VHlwZV9hX25fR19FX1hfTRBdEhcKE0NvdFR5cGVf",
+            "YV9oX0dfRV9YX00QXhIXChNDb3RUeXBlX2FfZl9HX0VfWF9NEF8SEQoNQ290",
+            "VHlwZV9hX3VfUxBgEhEKDUNvdFR5cGVfYV9uX1MQYRIRCg1Db3RUeXBlX2Ff",
+            "aF9TEGISGQoVQ290VHlwZV9hX3VfR19VX0NfSV9kEGMSGQoVQ290VHlwZV9h",
+            "X25fR19VX0NfSV9kEGQSGQoVQ290VHlwZV9hX2hfR19VX0NfSV9kEGUSGQoV",
+            "Q290VHlwZV9hX2ZfR19VX0NfSV9kEGYSGQoVQ290VHlwZV9hX3VfR19FX1Zf",
+            "QV9UEGcSGQoVQ290VHlwZV9hX25fR19FX1ZfQV9UEGgSGQoVQ290VHlwZV9h",
+            "X2hfR19FX1ZfQV9UEGkSGQoVQ290VHlwZV9hX2ZfR19FX1ZfQV9UEGoSFwoT",
+            "Q290VHlwZV9hX3VfR19VX0NfSRBrEhcKE0NvdFR5cGVfYV9uX0dfVV9DX0kQ",
+            "bBIXChNDb3RUeXBlX2FfaF9HX1VfQ19JEG0SFQoRQ290VHlwZV9hX25fR19F",
+            "X1YQbhIVChFDb3RUeXBlX2FfaF9HX0VfVhBvEhUKEUNvdFR5cGVfYV9mX0df",
+            "RV9WEHASGAoUQ290VHlwZV9iX21fcF93X0dPVE8QcRIWChJDb3RUeXBlX2Jf",
+            "bV9wX2NfaXAQchIWChJDb3RUeXBlX2JfbV9wX2NfY3AQcxIYChRDb3RUeXBl",
+            "X2JfbV9wX3NfcF9vcBB0EhEKDUNvdFR5cGVfdV9kX3YQdRITCg9Db3RUeXBl",
+            "X3VfZF92X20QdhITCg9Db3RUeXBlX3VfZF9jX2UQdxITCg9Db3RUeXBlX2Jf",
+            "aV94X2kQeBITCg9Db3RUeXBlX2JfdF9mX2QQeRITCg9Db3RUeXBlX2JfdF9m",
+            "X3IQehITCg9Db3RUeXBlX2JfYV9vX2MQexIPCgtDb3RUeXBlX3RfcxB8EhEK",
+            "DUNvdFR5cGVfbV90X3QQfRINCglDb3RUeXBlX3kQfip9Cg5HZW9Qb2ludFNv",
+            "dXJjZRIeChpHZW9Qb2ludFNvdXJjZV9VbnNwZWNpZmllZBAAEhYKEkdlb1Bv",
+            "aW50U291cmNlX0dQUxABEhcKE0dlb1BvaW50U291cmNlX1VTRVIQAhIaChZH",
+            "ZW9Qb2ludFNvdXJjZV9ORVRXT1JLEANCYAoUb3JnLm1lc2h0YXN0aWMucHJv",
+            "dG9CCkFUQUtQcm90b3NaImdpdGh1Yi5jb20vbWVzaHRhc3RpYy9nby9nZW5l",
+            "cmF0ZWSqAhRNZXNodGFzdGljLlByb3RvYnVmc7oCAGIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Meshtastic.Protobufs.Team), typeof(global::Meshtastic.Protobufs.MemberRole), typeof(global::Meshtastic.Protobufs.CotHow), typeof(global::Meshtastic.Protobufs.CotType), typeof(global::Meshtastic.Protobufs.GeoPointSource), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKPacket), global::Meshtastic.Protobufs.TAKPacket.Parser, new[]{ "IsCompressed", "Contact", "Group", "Status", "Pli", "Chat", "Detail" }, new[]{ "PayloadVariant" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.GeoChat), global::Meshtastic.Protobufs.GeoChat.Parser, new[]{ "Message", "To", "ToCallsign", "ReceiptForUid", "ReceiptType" }, new[]{ "To", "ToCallsign" }, new[]{ typeof(global::Meshtastic.Protobufs.GeoChat.Types.ReceiptType) }, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.GeoChat), global::Meshtastic.Protobufs.GeoChat.Parser, new[]{ "Message", "To", "ToCallsign", "ReceiptForUid", "ReceiptType", "Lang", "RoomId", "VoiceProfileId" }, new[]{ "To", "ToCallsign", "Lang", "RoomId", "VoiceProfileId" }, new[]{ typeof(global::Meshtastic.Protobufs.GeoChat.Types.ReceiptType) }, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.Group), global::Meshtastic.Protobufs.Group.Parser, new[]{ "Role", "Team" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.Status), global::Meshtastic.Protobufs.Status.Parser, new[]{ "Battery" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.Contact), global::Meshtastic.Protobufs.Contact.Parser, new[]{ "Callsign", "DeviceCallsign" }, null, null, null, null),
@@ -281,7 +290,9 @@ namespace Meshtastic.Protobufs {
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TaskRequest), global::Meshtastic.Protobufs.TaskRequest.Parser, new[]{ "TaskType", "TargetUid", "AssigneeUid", "Priority", "Status", "Note" }, null, new[]{ typeof(global::Meshtastic.Protobufs.TaskRequest.Types.Priority), typeof(global::Meshtastic.Protobufs.TaskRequest.Types.Status) }, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKEnvironment), global::Meshtastic.Protobufs.TAKEnvironment.Parser, new[]{ "TemperatureCX10", "WindDirectionDeg", "WindSpeedCmS" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.SensorFov), global::Meshtastic.Protobufs.SensorFov.Parser, new[]{ "Type", "AzimuthDeg", "RangeM", "FovHorizontalDeg", "FovVerticalDeg", "ElevationDeg", "RollDeg", "Model" }, new[]{ "RangeM" }, new[]{ typeof(global::Meshtastic.Protobufs.SensorFov.Types.SensorType) }, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKPacketV2), global::Meshtastic.Protobufs.TAKPacketV2.Parser, new[]{ "CotTypeId", "How", "Callsign", "Team", "Role", "LatitudeI", "LongitudeI", "Altitude", "Speed", "Course", "Battery", "GeoSrc", "AltSrc", "Uid", "DeviceCallsign", "StaleSeconds", "TakVersion", "TakDevice", "TakPlatform", "TakOs", "Endpoint", "Phone", "CotTypeStr", "Remarks", "Environment", "SensorFov", "Pli", "Chat", "Aircraft", "RawDetail", "Shape", "Marker", "Rab", "Route", "Casevac", "Emergency", "Task" }, new[]{ "PayloadVariant", "Environment", "SensorFov" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TakTalkMessage), global::Meshtastic.Protobufs.TakTalkMessage.Parser, new[]{ "Text", "ChatroomId", "Lang", "FromVoice" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TakTalkRoomData), global::Meshtastic.Protobufs.TakTalkRoomData.Parser, new[]{ "SenderCallsign", "RoomId", "RoomName", "Participants" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.TAKPacketV2), global::Meshtastic.Protobufs.TAKPacketV2.Parser, new[]{ "CotTypeId", "How", "Callsign", "Team", "Role", "LatitudeI", "LongitudeI", "Altitude", "Speed", "Course", "Battery", "GeoSrc", "AltSrc", "Uid", "DeviceCallsign", "StaleSeconds", "TakVersion", "TakDevice", "TakPlatform", "TakOs", "Endpoint", "Phone", "CotTypeStr", "Remarks", "Environment", "SensorFov", "Pli", "Chat", "Aircraft", "RawDetail", "Shape", "Marker", "Rab", "Route", "Casevac", "Emergency", "Task", "Taktalk", "TaktalkRoom" }, new[]{ "PayloadVariant", "Environment", "SensorFov" }, null, null, null)
           }));
     }
     #endregion
@@ -1013,6 +1024,20 @@ namespace Meshtastic.Protobufs {
     /// TaskRequest typed variant.
     /// </summary>
     [pbr::OriginalName("CotType_t_s")] TS = 124,
+    /// <summary>
+    ///
+    /// m-t-t: TAKTALK voice/text chat message. Payload carried via the
+    /// TakTalkMessage typed variant (text, chatroom_id, lang, from_voice).
+    /// </summary>
+    [pbr::OriginalName("CotType_m_t_t")] MTT = 125,
+    /// <summary>
+    ///
+    /// y-: TAKTALK room/membership broadcast. Payload carried via the
+    /// TakTalkRoomData typed variant (sender_callsign, room_id, room_name,
+    /// participants). The CoT type literally has a trailing dash and no
+    /// second atom — not a typo.
+    /// </summary>
+    [pbr::OriginalName("CotType_y")] Y = 126,
   }
 
   /// <summary>
@@ -1645,6 +1670,9 @@ namespace Meshtastic.Protobufs {
       toCallsign_ = other.toCallsign_;
       receiptForUid_ = other.receiptForUid_;
       receiptType_ = other.receiptType_;
+      lang_ = other.lang_;
+      roomId_ = other.roomId_;
+      voiceProfileId_ = other.voiceProfileId_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1766,6 +1794,102 @@ namespace Meshtastic.Protobufs {
       }
     }
 
+    /// <summary>Field number for the "lang" field.</summary>
+    public const int LangFieldNumber = 6;
+    private readonly static string LangDefaultValue = "";
+
+    private string lang_;
+    /// <summary>
+    ///
+    /// BCP-47-ish language tag or human-readable name (e.g. "en", "English")
+    /// that the originator's TAKTALK plugin recorded for the message.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Lang {
+      get { return lang_ ?? LangDefaultValue; }
+      set {
+        lang_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "lang" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasLang {
+      get { return lang_ != null; }
+    }
+    /// <summary>Clears the value of the "lang" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearLang() {
+      lang_ = null;
+    }
+
+    /// <summary>Field number for the "room_id" field.</summary>
+    public const int RoomIdFieldNumber = 7;
+    private readonly static string RoomIdDefaultValue = "";
+
+    private string roomId_;
+    /// <summary>
+    ///
+    /// TAKTALK chatroom UUID (e.g. "30b2755c-c547-44ef-a0cc-cdbd8a15616f") that
+    /// the receiver's TAKTALK plugin uses to thread the message under the
+    /// right room. Resolved to a friendly name via TakTalkRoomData broadcasts.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RoomId {
+      get { return roomId_ ?? RoomIdDefaultValue; }
+      set {
+        roomId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "room_id" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasRoomId {
+      get { return roomId_ != null; }
+    }
+    /// <summary>Clears the value of the "room_id" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearRoomId() {
+      roomId_ = null;
+    }
+
+    /// <summary>Field number for the "voice_profile_id" field.</summary>
+    public const int VoiceProfileIdFieldNumber = 8;
+    private readonly static string VoiceProfileIdDefaultValue = "";
+
+    private string voiceProfileId_;
+    /// <summary>
+    ///
+    /// TAKTALK voice profile pointer. Often empty in practice (the empty
+    /// marker `&lt;voice_profile_id/>` still signals TAKTALK origination), so
+    /// receivers should treat empty-but-present as the equivalent of the
+    /// marker rather than a missing field.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string VoiceProfileId {
+      get { return voiceProfileId_ ?? VoiceProfileIdDefaultValue; }
+      set {
+        voiceProfileId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+    /// <summary>Gets whether the "voice_profile_id" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasVoiceProfileId {
+      get { return voiceProfileId_ != null; }
+    }
+    /// <summary>Clears the value of the "voice_profile_id" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearVoiceProfileId() {
+      voiceProfileId_ = null;
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1786,6 +1910,9 @@ namespace Meshtastic.Protobufs {
       if (ToCallsign != other.ToCallsign) return false;
       if (ReceiptForUid != other.ReceiptForUid) return false;
       if (ReceiptType != other.ReceiptType) return false;
+      if (Lang != other.Lang) return false;
+      if (RoomId != other.RoomId) return false;
+      if (VoiceProfileId != other.VoiceProfileId) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1798,6 +1925,9 @@ namespace Meshtastic.Protobufs {
       if (HasToCallsign) hash ^= ToCallsign.GetHashCode();
       if (ReceiptForUid.Length != 0) hash ^= ReceiptForUid.GetHashCode();
       if (ReceiptType != global::Meshtastic.Protobufs.GeoChat.Types.ReceiptType.None) hash ^= ReceiptType.GetHashCode();
+      if (HasLang) hash ^= Lang.GetHashCode();
+      if (HasRoomId) hash ^= RoomId.GetHashCode();
+      if (HasVoiceProfileId) hash ^= VoiceProfileId.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1836,6 +1966,18 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(40);
         output.WriteEnum((int) ReceiptType);
       }
+      if (HasLang) {
+        output.WriteRawTag(50);
+        output.WriteString(Lang);
+      }
+      if (HasRoomId) {
+        output.WriteRawTag(58);
+        output.WriteString(RoomId);
+      }
+      if (HasVoiceProfileId) {
+        output.WriteRawTag(66);
+        output.WriteString(VoiceProfileId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1866,6 +2008,18 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(40);
         output.WriteEnum((int) ReceiptType);
       }
+      if (HasLang) {
+        output.WriteRawTag(50);
+        output.WriteString(Lang);
+      }
+      if (HasRoomId) {
+        output.WriteRawTag(58);
+        output.WriteString(RoomId);
+      }
+      if (HasVoiceProfileId) {
+        output.WriteRawTag(66);
+        output.WriteString(VoiceProfileId);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1890,6 +2044,15 @@ namespace Meshtastic.Protobufs {
       }
       if (ReceiptType != global::Meshtastic.Protobufs.GeoChat.Types.ReceiptType.None) {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) ReceiptType);
+      }
+      if (HasLang) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Lang);
+      }
+      if (HasRoomId) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RoomId);
+      }
+      if (HasVoiceProfileId) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(VoiceProfileId);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1917,6 +2080,15 @@ namespace Meshtastic.Protobufs {
       }
       if (other.ReceiptType != global::Meshtastic.Protobufs.GeoChat.Types.ReceiptType.None) {
         ReceiptType = other.ReceiptType;
+      }
+      if (other.HasLang) {
+        Lang = other.Lang;
+      }
+      if (other.HasRoomId) {
+        RoomId = other.RoomId;
+      }
+      if (other.HasVoiceProfileId) {
+        VoiceProfileId = other.VoiceProfileId;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1957,6 +2129,18 @@ namespace Meshtastic.Protobufs {
             ReceiptType = (global::Meshtastic.Protobufs.GeoChat.Types.ReceiptType) input.ReadEnum();
             break;
           }
+          case 50: {
+            Lang = input.ReadString();
+            break;
+          }
+          case 58: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 66: {
+            VoiceProfileId = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1994,6 +2178,18 @@ namespace Meshtastic.Protobufs {
           }
           case 40: {
             ReceiptType = (global::Meshtastic.Protobufs.GeoChat.Types.ReceiptType) input.ReadEnum();
+            break;
+          }
+          case 50: {
+            Lang = input.ReadString();
+            break;
+          }
+          case 58: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 66: {
+            VoiceProfileId = input.ReadString();
             break;
           }
         }
@@ -10433,6 +10629,683 @@ namespace Meshtastic.Protobufs {
 
   /// <summary>
   ///
+  /// TAKTALK chat message payload (CoT type m-t-t).
+  ///
+  /// TAKTALK is an ATAK plugin for voice + text team messaging. The voice
+  /// audio stream goes over UDP/RTP and is NOT carried by the mesh — only
+  /// the text envelope (this message) is. `from_voice` marks messages sent
+  /// via push-to-talk speech-to-text so receivers can render a mic icon
+  /// next to the text.
+  ///
+  /// Wire shape inside &lt;event type="m-t-t">/&lt;detail>:
+  ///   &lt;callsign>...&lt;/callsign>        - mapped to TAKPacketV2.callsign
+  ///   &lt;lang>English&lt;/lang>            - lang
+  ///   &lt;text>...&lt;/text>                - text
+  ///   &lt;chatroom-id>1&lt;/chatroom-id>    - chatroom_id
+  ///   &lt;voice/>                        - presence sets from_voice = true
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class TakTalkMessage : pb::IMessage<TakTalkMessage>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<TakTalkMessage> _parser = new pb::MessageParser<TakTalkMessage>(() => new TakTalkMessage());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<TakTalkMessage> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[18]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TakTalkMessage() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TakTalkMessage(TakTalkMessage other) : this() {
+      text_ = other.text_;
+      chatroomId_ = other.chatroomId_;
+      lang_ = other.lang_;
+      fromVoice_ = other.fromVoice_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TakTalkMessage Clone() {
+      return new TakTalkMessage(this);
+    }
+
+    /// <summary>Field number for the "text" field.</summary>
+    public const int TextFieldNumber = 1;
+    private string text_ = "";
+    /// <summary>
+    ///
+    /// The text body of the TAKTALK message (speech-to-text transcript when
+    /// from_voice = true, typed message otherwise).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Text {
+      get { return text_; }
+      set {
+        text_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "chatroom_id" field.</summary>
+    public const int ChatroomIdFieldNumber = 2;
+    private string chatroomId_ = "";
+    /// <summary>
+    ///
+    /// TAKTALK chatroom identifier. May be a short id like "1" for the
+    /// default room or a UUID like "30b2755c-c547-44ef-a0cc-cdbd8a15616f"
+    /// for custom rooms (resolved by TakTalkRoomData broadcasts).
+    /// Empty = broadcast room.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ChatroomId {
+      get { return chatroomId_; }
+      set {
+        chatroomId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "lang" field.</summary>
+    public const int LangFieldNumber = 3;
+    private string lang_ = "";
+    /// <summary>
+    ///
+    /// BCP-47-ish language tag or human-readable name (e.g. "en", "English").
+    /// Empty = unspecified.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Lang {
+      get { return lang_; }
+      set {
+        lang_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "from_voice" field.</summary>
+    public const int FromVoiceFieldNumber = 4;
+    private bool fromVoice_;
+    /// <summary>
+    ///
+    /// True when the source CoT carried a &lt;voice/> marker, i.e. the message
+    /// originated as push-to-talk speech-to-text. Lets receivers show a mic
+    /// icon. Proto3 only encodes when true so empty payload cost is 0 bytes.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool FromVoice {
+      get { return fromVoice_; }
+      set {
+        fromVoice_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as TakTalkMessage);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(TakTalkMessage other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Text != other.Text) return false;
+      if (ChatroomId != other.ChatroomId) return false;
+      if (Lang != other.Lang) return false;
+      if (FromVoice != other.FromVoice) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Text.Length != 0) hash ^= Text.GetHashCode();
+      if (ChatroomId.Length != 0) hash ^= ChatroomId.GetHashCode();
+      if (Lang.Length != 0) hash ^= Lang.GetHashCode();
+      if (FromVoice != false) hash ^= FromVoice.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Text.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Text);
+      }
+      if (ChatroomId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ChatroomId);
+      }
+      if (Lang.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Lang);
+      }
+      if (FromVoice != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(FromVoice);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Text.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Text);
+      }
+      if (ChatroomId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(ChatroomId);
+      }
+      if (Lang.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Lang);
+      }
+      if (FromVoice != false) {
+        output.WriteRawTag(32);
+        output.WriteBool(FromVoice);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Text.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Text);
+      }
+      if (ChatroomId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ChatroomId);
+      }
+      if (Lang.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Lang);
+      }
+      if (FromVoice != false) {
+        size += 1 + 1;
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(TakTalkMessage other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Text.Length != 0) {
+        Text = other.Text;
+      }
+      if (other.ChatroomId.Length != 0) {
+        ChatroomId = other.ChatroomId;
+      }
+      if (other.Lang.Length != 0) {
+        Lang = other.Lang;
+      }
+      if (other.FromVoice != false) {
+        FromVoice = other.FromVoice;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Text = input.ReadString();
+            break;
+          }
+          case 18: {
+            ChatroomId = input.ReadString();
+            break;
+          }
+          case 26: {
+            Lang = input.ReadString();
+            break;
+          }
+          case 32: {
+            FromVoice = input.ReadBool();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Text = input.ReadString();
+            break;
+          }
+          case 18: {
+            ChatroomId = input.ReadString();
+            break;
+          }
+          case 26: {
+            Lang = input.ReadString();
+            break;
+          }
+          case 32: {
+            FromVoice = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  ///
+  /// TAKTALK room/membership broadcast (CoT type y-).
+  ///
+  /// Announces a TAKTALK chatroom's friendly name and roster so peers can
+  /// resolve room UUIDs (used in TakTalkMessage.chatroom_id and
+  /// GeoChat.room_id) to a display name and participant list. Not a chat
+  /// message itself — these events are emitted by TAKTALK when rooms are
+  /// created or memberships change.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class TakTalkRoomData : pb::IMessage<TakTalkRoomData>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<TakTalkRoomData> _parser = new pb::MessageParser<TakTalkRoomData>(() => new TakTalkRoomData());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<TakTalkRoomData> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[19]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TakTalkRoomData() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TakTalkRoomData(TakTalkRoomData other) : this() {
+      senderCallsign_ = other.senderCallsign_;
+      roomId_ = other.roomId_;
+      roomName_ = other.roomName_;
+      participants_ = other.participants_.Clone();
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public TakTalkRoomData Clone() {
+      return new TakTalkRoomData(this);
+    }
+
+    /// <summary>Field number for the "sender_callsign" field.</summary>
+    public const int SenderCallsignFieldNumber = 1;
+    private string senderCallsign_ = "";
+    /// <summary>
+    ///
+    /// Callsign of the device broadcasting the room state (typically the
+    /// room owner / latest writer).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string SenderCallsign {
+      get { return senderCallsign_; }
+      set {
+        senderCallsign_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "room_id" field.</summary>
+    public const int RoomIdFieldNumber = 2;
+    private string roomId_ = "";
+    /// <summary>
+    ///
+    /// Room UUID, matches TakTalkMessage.chatroom_id / GeoChat.room_id on
+    /// messages routed into this room.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RoomId {
+      get { return roomId_; }
+      set {
+        roomId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "room_name" field.</summary>
+    public const int RoomNameFieldNumber = 3;
+    private string roomName_ = "";
+    /// <summary>
+    ///
+    /// Friendly display name for the room (e.g. "test", "Alpha Team").
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string RoomName {
+      get { return roomName_; }
+      set {
+        roomName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "participants" field.</summary>
+    public const int ParticipantsFieldNumber = 4;
+    private static readonly pb::FieldCodec<string> _repeated_participants_codec
+        = pb::FieldCodec.ForString(34);
+    private readonly pbc::RepeatedField<string> participants_ = new pbc::RepeatedField<string>();
+    /// <summary>
+    ///
+    /// Member callsigns. Wire-encoded as repeated strings; the underlying
+    /// CoT carries them as a single &lt;chatroom-participants>A,B,C&lt;/> element
+    /// which parsers split / builders join on ','.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<string> Participants {
+      get { return participants_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as TakTalkRoomData);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(TakTalkRoomData other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (SenderCallsign != other.SenderCallsign) return false;
+      if (RoomId != other.RoomId) return false;
+      if (RoomName != other.RoomName) return false;
+      if(!participants_.Equals(other.participants_)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (SenderCallsign.Length != 0) hash ^= SenderCallsign.GetHashCode();
+      if (RoomId.Length != 0) hash ^= RoomId.GetHashCode();
+      if (RoomName.Length != 0) hash ^= RoomName.GetHashCode();
+      hash ^= participants_.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (SenderCallsign.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(SenderCallsign);
+      }
+      if (RoomId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(RoomId);
+      }
+      if (RoomName.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RoomName);
+      }
+      participants_.WriteTo(output, _repeated_participants_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (SenderCallsign.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(SenderCallsign);
+      }
+      if (RoomId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(RoomId);
+      }
+      if (RoomName.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(RoomName);
+      }
+      participants_.WriteTo(ref output, _repeated_participants_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (SenderCallsign.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(SenderCallsign);
+      }
+      if (RoomId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RoomId);
+      }
+      if (RoomName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(RoomName);
+      }
+      size += participants_.CalculateSize(_repeated_participants_codec);
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(TakTalkRoomData other) {
+      if (other == null) {
+        return;
+      }
+      if (other.SenderCallsign.Length != 0) {
+        SenderCallsign = other.SenderCallsign;
+      }
+      if (other.RoomId.Length != 0) {
+        RoomId = other.RoomId;
+      }
+      if (other.RoomName.Length != 0) {
+        RoomName = other.RoomName;
+      }
+      participants_.Add(other.participants_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            SenderCallsign = input.ReadString();
+            break;
+          }
+          case 18: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RoomName = input.ReadString();
+            break;
+          }
+          case 34: {
+            participants_.AddEntriesFrom(input, _repeated_participants_codec);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            SenderCallsign = input.ReadString();
+            break;
+          }
+          case 18: {
+            RoomId = input.ReadString();
+            break;
+          }
+          case 26: {
+            RoomName = input.ReadString();
+            break;
+          }
+          case 34: {
+            participants_.AddEntriesFrom(ref input, _repeated_participants_codec);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  ///
   /// ATAK v2 packet with expanded CoT field support and zstd dictionary compression.
   /// Sent on ATAK_PLUGIN_V2 port. The wire payload is:
   ///   [1 byte flags][zstd-compressed TAKPacketV2 protobuf]
@@ -10453,7 +11326,7 @@ namespace Meshtastic.Protobufs {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[18]; }
+      get { return global::Meshtastic.Protobufs.AtakReflection.Descriptor.MessageTypes[20]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -10532,6 +11405,12 @@ namespace Meshtastic.Protobufs {
           break;
         case PayloadVariantOneofCase.Task:
           Task = other.Task.Clone();
+          break;
+        case PayloadVariantOneofCase.Taktalk:
+          Taktalk = other.Taktalk.Clone();
+          break;
+        case PayloadVariantOneofCase.TaktalkRoom:
+          TaktalkRoom = other.TaktalkRoom.Clone();
           break;
       }
 
@@ -11175,6 +12054,42 @@ namespace Meshtastic.Protobufs {
       }
     }
 
+    /// <summary>Field number for the "taktalk" field.</summary>
+    public const int TaktalkFieldNumber = 41;
+    /// <summary>
+    ///
+    /// TAKTALK chat message (CoT type m-t-t). See TakTalkMessage.
+    /// Voice audio itself rides UDP/RTP outside the mesh; this carries the
+    /// text envelope plus a from_voice marker for receiver UX.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.TakTalkMessage Taktalk {
+      get { return payloadVariantCase_ == PayloadVariantOneofCase.Taktalk ? (global::Meshtastic.Protobufs.TakTalkMessage) payloadVariant_ : null; }
+      set {
+        payloadVariant_ = value;
+        payloadVariantCase_ = value == null ? PayloadVariantOneofCase.None : PayloadVariantOneofCase.Taktalk;
+      }
+    }
+
+    /// <summary>Field number for the "taktalk_room" field.</summary>
+    public const int TaktalkRoomFieldNumber = 42;
+    /// <summary>
+    ///
+    /// TAKTALK room/membership broadcast (CoT type y-). See TakTalkRoomData.
+    /// Resolves room UUIDs (used in TakTalkMessage.chatroom_id and
+    /// GeoChat.room_id) to display name + roster on receivers.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Meshtastic.Protobufs.TakTalkRoomData TaktalkRoom {
+      get { return payloadVariantCase_ == PayloadVariantOneofCase.TaktalkRoom ? (global::Meshtastic.Protobufs.TakTalkRoomData) payloadVariant_ : null; }
+      set {
+        payloadVariant_ = value;
+        payloadVariantCase_ = value == null ? PayloadVariantOneofCase.None : PayloadVariantOneofCase.TaktalkRoom;
+      }
+    }
+
     private object payloadVariant_;
     /// <summary>Enum of possible cases for the "payload_variant" oneof.</summary>
     public enum PayloadVariantOneofCase {
@@ -11190,6 +12105,8 @@ namespace Meshtastic.Protobufs {
       Casevac = 38,
       Emergency = 39,
       Task = 40,
+      Taktalk = 41,
+      TaktalkRoom = 42,
     }
     private PayloadVariantOneofCase payloadVariantCase_ = PayloadVariantOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -11257,6 +12174,8 @@ namespace Meshtastic.Protobufs {
       if (!object.Equals(Casevac, other.Casevac)) return false;
       if (!object.Equals(Emergency, other.Emergency)) return false;
       if (!object.Equals(Task, other.Task)) return false;
+      if (!object.Equals(Taktalk, other.Taktalk)) return false;
+      if (!object.Equals(TaktalkRoom, other.TaktalkRoom)) return false;
       if (PayloadVariantCase != other.PayloadVariantCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -11302,6 +12221,8 @@ namespace Meshtastic.Protobufs {
       if (payloadVariantCase_ == PayloadVariantOneofCase.Casevac) hash ^= Casevac.GetHashCode();
       if (payloadVariantCase_ == PayloadVariantOneofCase.Emergency) hash ^= Emergency.GetHashCode();
       if (payloadVariantCase_ == PayloadVariantOneofCase.Task) hash ^= Task.GetHashCode();
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Taktalk) hash ^= Taktalk.GetHashCode();
+      if (payloadVariantCase_ == PayloadVariantOneofCase.TaktalkRoom) hash ^= TaktalkRoom.GetHashCode();
       hash ^= (int) payloadVariantCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -11469,6 +12390,14 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(194, 2);
         output.WriteMessage(Task);
       }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Taktalk) {
+        output.WriteRawTag(202, 2);
+        output.WriteMessage(Taktalk);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.TaktalkRoom) {
+        output.WriteRawTag(210, 2);
+        output.WriteMessage(TaktalkRoom);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -11627,6 +12556,14 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(194, 2);
         output.WriteMessage(Task);
       }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Taktalk) {
+        output.WriteRawTag(202, 2);
+        output.WriteMessage(Taktalk);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.TaktalkRoom) {
+        output.WriteRawTag(210, 2);
+        output.WriteMessage(TaktalkRoom);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -11747,6 +12684,12 @@ namespace Meshtastic.Protobufs {
       }
       if (payloadVariantCase_ == PayloadVariantOneofCase.Task) {
         size += 2 + pb::CodedOutputStream.ComputeMessageSize(Task);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.Taktalk) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Taktalk);
+      }
+      if (payloadVariantCase_ == PayloadVariantOneofCase.TaktalkRoom) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(TaktalkRoom);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -11904,6 +12847,18 @@ namespace Meshtastic.Protobufs {
             Task = new global::Meshtastic.Protobufs.TaskRequest();
           }
           Task.MergeFrom(other.Task);
+          break;
+        case PayloadVariantOneofCase.Taktalk:
+          if (Taktalk == null) {
+            Taktalk = new global::Meshtastic.Protobufs.TakTalkMessage();
+          }
+          Taktalk.MergeFrom(other.Taktalk);
+          break;
+        case PayloadVariantOneofCase.TaktalkRoom:
+          if (TaktalkRoom == null) {
+            TaktalkRoom = new global::Meshtastic.Protobufs.TakTalkRoomData();
+          }
+          TaktalkRoom.MergeFrom(other.TaktalkRoom);
           break;
       }
 
@@ -12125,6 +13080,24 @@ namespace Meshtastic.Protobufs {
             Task = subBuilder;
             break;
           }
+          case 330: {
+            global::Meshtastic.Protobufs.TakTalkMessage subBuilder = new global::Meshtastic.Protobufs.TakTalkMessage();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Taktalk) {
+              subBuilder.MergeFrom(Taktalk);
+            }
+            input.ReadMessage(subBuilder);
+            Taktalk = subBuilder;
+            break;
+          }
+          case 338: {
+            global::Meshtastic.Protobufs.TakTalkRoomData subBuilder = new global::Meshtastic.Protobufs.TakTalkRoomData();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.TaktalkRoom) {
+              subBuilder.MergeFrom(TaktalkRoom);
+            }
+            input.ReadMessage(subBuilder);
+            TaktalkRoom = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -12341,6 +13314,24 @@ namespace Meshtastic.Protobufs {
             }
             input.ReadMessage(subBuilder);
             Task = subBuilder;
+            break;
+          }
+          case 330: {
+            global::Meshtastic.Protobufs.TakTalkMessage subBuilder = new global::Meshtastic.Protobufs.TakTalkMessage();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.Taktalk) {
+              subBuilder.MergeFrom(Taktalk);
+            }
+            input.ReadMessage(subBuilder);
+            Taktalk = subBuilder;
+            break;
+          }
+          case 338: {
+            global::Meshtastic.Protobufs.TakTalkRoomData subBuilder = new global::Meshtastic.Protobufs.TakTalkRoomData();
+            if (payloadVariantCase_ == PayloadVariantOneofCase.TaktalkRoom) {
+              subBuilder.MergeFrom(TaktalkRoom);
+            }
+            input.ReadMessage(subBuilder);
+            TaktalkRoom = subBuilder;
             break;
           }
         }

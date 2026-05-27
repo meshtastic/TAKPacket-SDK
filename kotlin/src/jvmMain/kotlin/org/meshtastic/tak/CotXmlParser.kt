@@ -411,6 +411,46 @@ class CotXmlParser {
         var inDetail = false
         var detailDepth = 0
 
+        // --- TAKTALK m-t-t accumulators ---------------------------------
+        var hasTakTalkData = false
+        var talkText = ""
+        var talkChatroomId = ""
+        var talkLang = ""
+        var fromVoice = false
+        var inTaktalkText = false
+        var inTaktalkChatroomId = false
+        var inTaktalkLang = false
+
+        // --- TAKTALK b-t-f sidecar accumulators (decorate Payload.Chat) -
+        // <Ea>/<roomId>/<voice_profile_id> appear alongside the standard
+        // GeoChat envelope when ATAK sends a chat through TAKTALK.
+        var chatLang = ""
+        var chatRoomId = ""
+        var chatVoiceProfileId = ""
+        var chatHasVoiceProfile = false
+        var inChatEa = false
+        var inChatRoomId = false
+        var inChatVoiceProfileId = false
+
+        // --- TAKTALK y- room broadcast accumulators ---------------------
+        var hasRoomData = false
+        var roomSender = ""
+        var roomDataId = ""
+        var roomName = ""
+        val roomParticipants = mutableListOf<String>()
+        var inRoomSender = false
+        var inRoomDataId = false
+        var inRoomName = false
+        var inRoomParticipants = false
+
+        // Tracks whether we are directly inside <remarks>. Previously the
+        // TEXT handler would write *any* detail-level element body to
+        // remarksText, which let TAKTALK's trailing <callsign>SENDER</callsign>
+        // clobber the actual chat message. Now remarksText is only updated
+        // inside <remarks>; other element bodies route through their own
+        // accumulator or get swallowed.
+        var inRemarks = false
+
         // --- Drawn shape accumulators -----------------------------------
         var hasShapeData = false
         var inShape = false
@@ -608,6 +648,49 @@ class CotXmlParser {
                             // "All Chat Rooms" is the broadcast sentinel — omit from proto
                             // so the field costs 0 bytes on the wire instead of 16.
                             chatTo = if (chatId == "All Chat Rooms") null else chatId
+                        }
+                        // --- TAKTALK elements ------------------------------
+                        // m-t-t uses bare children inside <detail> for its
+                        // body fields. Guard each on cotTypeStr so generic
+                        // element names like <text> only trigger TAKTALK
+                        // parsing when the event actually identifies as m-t-t.
+                        "text" -> if (cotTypeStr == "m-t-t") {
+                            hasTakTalkData = true; inTaktalkText = true
+                        }
+                        "chatroom-id" -> when (cotTypeStr) {
+                            "m-t-t" -> { hasTakTalkData = true; inTaktalkChatroomId = true }
+                            "y-"    -> { hasRoomData = true; inRoomDataId = true }
+                        }
+                        "lang" -> if (cotTypeStr == "m-t-t") {
+                            hasTakTalkData = true; inTaktalkLang = true
+                        }
+                        "voice" -> if (cotTypeStr == "m-t-t") {
+                            // Empty marker — presence alone sets the flag.
+                            hasTakTalkData = true; fromVoice = true
+                        }
+                        // b-t-f TAKTALK sidecars. Only fire when we've also
+                        // seen <__chat>, so a stray <Ea>/<roomId> on some
+                        // non-chat event doesn't false-positive.
+                        "Ea" -> if (hasChatData) inChatEa = true
+                        "roomId" -> if (hasChatData) inChatRoomId = true
+                        "voice_profile_id" -> if (hasChatData) {
+                            chatHasVoiceProfile = true
+                            inChatVoiceProfileId = true
+                        }
+                        // y- room broadcast children.
+                        "sender-callsign" -> if (cotTypeStr == "y-") {
+                            hasRoomData = true; inRoomSender = true
+                        }
+                        // Track <remarks> explicitly so its body is the only
+                        // detail-level text routed to remarksText. Without
+                        // this, TAKTALK's trailing <callsign>SENDER</callsign>
+                        // overwrites the captured chat message.
+                        "remarks" -> inRemarks = true
+                        "chatroom-name" -> if (cotTypeStr == "y-") {
+                            hasRoomData = true; inRoomName = true
+                        }
+                        "chatroom-participants" -> if (cotTypeStr == "y-") {
+                            hasRoomData = true; inRoomParticipants = true
                         }
                         // --- Drawn shape elements --------------------------
                         "shape" -> {
@@ -986,14 +1069,61 @@ class CotXmlParser {
                     }
                 }
                 XmlPullParser.END_TAG -> {
-                    if (parser.name == "shape") inShape = false
+                    when (parser.name) {
+                        "shape" -> inShape = false
+                        // TAKTALK m-t-t children
+                        "text" -> inTaktalkText = false
+                        "chatroom-id" -> {
+                            inTaktalkChatroomId = false
+                            inRoomDataId = false
+                        }
+                        "lang" -> inTaktalkLang = false
+                        // TAKTALK b-t-f sidecars
+                        "Ea" -> inChatEa = false
+                        "roomId" -> inChatRoomId = false
+                        "voice_profile_id" -> inChatVoiceProfileId = false
+                        // TAKTALK y- room broadcast children
+                        "sender-callsign" -> inRoomSender = false
+                        "chatroom-name" -> inRoomName = false
+                        "chatroom-participants" -> inRoomParticipants = false
+                        "remarks" -> inRemarks = false
+                    }
                 }
                 XmlPullParser.TEXT -> {
-                    // Capture remarks text
+                    // Route element-body text. TAKTALK shapes have multiple
+                    // text-bearing children inside <detail>, so we must
+                    // dispatch by which `in*` flag is currently set. Any
+                    // detail-level text not covered by a specific flag is
+                    // dropped — historically the parser wrote it to
+                    // remarksText, but that let TAKTALK's <callsign> /
+                    // <Ea> / etc. overwrite the chat message. remarksText
+                    // is now updated only when we're directly inside
+                    // <remarks>.
                     if (inDetail) {
                         val text = parser.text?.trim() ?: ""
                         if (text.isNotEmpty()) {
-                            remarksText = text
+                            when {
+                                inTaktalkText -> talkText = text
+                                inTaktalkChatroomId -> talkChatroomId = text
+                                inTaktalkLang -> talkLang = text
+                                inChatEa -> chatLang = text
+                                inChatRoomId -> chatRoomId = text
+                                inChatVoiceProfileId -> chatVoiceProfileId = text
+                                inRoomSender -> roomSender = text
+                                inRoomDataId -> roomDataId = text
+                                inRoomName -> roomName = text
+                                inRoomParticipants -> roomParticipants.addAll(
+                                    text.split(",")
+                                        .map { it.trim() }
+                                        .filter { it.isNotEmpty() }
+                                )
+                                inRemarks -> remarksText = text
+                                // else: text from <callsign>, free-floating
+                                // text nodes, etc. — silently dropped, since
+                                // there's no canonical home for them on the
+                                // proto side and they'd false-positive into
+                                // remarksText if we routed them.
+                            }
                         }
                     }
                 }
@@ -1064,12 +1194,36 @@ class CotXmlParser {
             // Delete events (t-x-d-d) short-circuit everything — their <link>
             // references what to delete, not a marker parent.
             isDeleteEvent -> TakPacketV2Data.Payload.Pli(true)
+            // TAKTALK shapes are checked *before* chat: m-t-t and y- are
+            // TAKTALK-exclusive, and a y- room broadcast that happens to
+            // mention a UUID in <chatroom-id> shouldn't get reinterpreted
+            // as a chat. We also guard on cotTypeStr to avoid false
+            // positives from other shapes that might use the same child
+            // element names.
+            hasRoomData && cotTypeStr == "y-" -> TakPacketV2Data.Payload.TakTalkRoom(
+                senderCallsign = roomSender,
+                roomId = roomDataId,
+                roomName = roomName,
+                participants = roomParticipants.toList(),
+            )
+            hasTakTalkData && cotTypeStr == "m-t-t" -> TakPacketV2Data.Payload.TakTalk(
+                text = talkText,
+                chatroomId = talkChatroomId,
+                lang = talkLang,
+                fromVoice = fromVoice,
+            )
             hasChatData -> TakPacketV2Data.Payload.Chat(
                 message = remarksText,
                 to = chatTo,
                 toCallsign = chatToCallsign,
                 receiptForUid = chatReceiptForUid,
                 receiptType = chatReceiptType,
+                // TAKTALK sidecars; empty / false when the originating ATAK
+                // doesn't run TAKTALK, so the wire encoder pays 0 bytes.
+                lang = chatLang,
+                roomId = chatRoomId,
+                voiceProfileId = chatVoiceProfileId,
+                hasVoiceProfile = chatHasVoiceProfile,
             )
             hasAircraftData -> TakPacketV2Data.Payload.Aircraft(
                 icao = icao,

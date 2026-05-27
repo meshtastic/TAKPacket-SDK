@@ -129,6 +129,52 @@ data class TakPacketV2Data(
             val receiptForUid: String = "",
             /** Receipt kind: 0 = none (regular chat), 1 = delivered, 2 = read. */
             val receiptType: Int = 0,
+            // --- TAKTALK-flavored b-t-f sidecars ---
+            // Empty / false for regular ATAK GeoChat. When the originator's
+            // ATAK runs the TAKTALK plugin, these mirror the <Ea>, <roomId>,
+            // <voice_profile_id> elements ATAK appends to the chat detail.
+            /** TAKTALK language tag from <Ea> (e.g. "English"). Empty = absent. */
+            val lang: String = "",
+            /** TAKTALK room UUID from <roomId>. Empty = absent. */
+            val roomId: String = "",
+            /**
+             * TAKTALK voice profile pointer from <voice_profile_id>. Often
+             * empty even when present (the empty element marker still signals
+             * TAKTALK origination). Use [hasVoiceProfile] to distinguish
+             * "empty marker present" from "field absent entirely".
+             */
+            val voiceProfileId: String = "",
+            /**
+             * True when the source CoT carried a `<voice_profile_id/>` element
+             * (with or without content). Lets the builder re-emit the marker
+             * faithfully even when [voiceProfileId] is empty. False on
+             * non-TAKTALK chats.
+             */
+            val hasVoiceProfile: Boolean = false,
+        ) : Payload()
+        /**
+         * TAKTALK voice/text chat message (CoT type m-t-t). The voice audio
+         * itself rides UDP/RTP outside the mesh; this carries the text
+         * envelope plus a from_voice marker for receiver UX.
+         */
+        data class TakTalk(
+            val text: String = "",
+            val chatroomId: String = "",
+            val lang: String = "",
+            /** True when the source CoT had a `<voice/>` marker (speech-to-text origin). */
+            val fromVoice: Boolean = false,
+        ) : Payload()
+        /**
+         * TAKTALK room/membership broadcast (CoT type y-). Not a chat message;
+         * receivers cache these to resolve room UUIDs (used in
+         * [TakTalk.chatroomId] and [Chat.roomId]) to a friendly name +
+         * roster for display.
+         */
+        data class TakTalkRoom(
+            val senderCallsign: String = "",
+            val roomId: String = "",
+            val roomName: String = "",
+            val participants: List<String> = emptyList(),
         ) : Payload()
         data class Aircraft(
             val icao: String = "",

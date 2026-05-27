@@ -272,6 +272,19 @@ public class CotXmlParser
         uint squawk = 0; int rssiX10 = 0; bool gps = false;
         string? chatTo = null, chatToCs = null;
 
+        // --- TAKTALK m-t-t accumulators ---
+        bool hasTakTalk = false, fromVoice = false;
+        string talkText = "", talkChatroomId = "", talkLang = "";
+
+        // --- TAKTALK b-t-f sidecar accumulators (decorate Chat) ---
+        string chatLang = "", chatRoomId = "", chatVoiceProfileId = "";
+        bool chatHasVoiceProfile = false;
+
+        // --- TAKTALK y- room broadcast accumulators ---
+        bool hasRoomData = false;
+        string roomSender = "", roomDataId = "", roomName = "";
+        var roomParticipants = new List<string>();
+
         // --- Drawn shape accumulators ---
         bool hasShapeData = false;
         uint shapeMajorCm = 0, shapeMinorCm = 0, shapeAngleDeg = 360;
@@ -529,6 +542,59 @@ public class CotXmlParser
                     break;
                 case "remarks":
                     remarksText = el.Value.Trim();
+                    break;
+                // --- TAKTALK m-t-t children ---
+                case "text" when typeStr == "m-t-t":
+                    hasTakTalk = true;
+                    talkText = el.Value.Trim();
+                    break;
+                case "chatroom-id" when typeStr == "m-t-t":
+                    hasTakTalk = true;
+                    talkChatroomId = el.Value.Trim();
+                    break;
+                case "chatroom-id" when typeStr == "y-":
+                    hasRoomData = true;
+                    roomDataId = el.Value.Trim();
+                    break;
+                case "lang" when typeStr == "m-t-t":
+                    hasTakTalk = true;
+                    talkLang = el.Value.Trim();
+                    break;
+                case "voice" when typeStr == "m-t-t":
+                    // Empty marker — presence alone sets the flag.
+                    hasTakTalk = true;
+                    fromVoice = true;
+                    break;
+                // --- TAKTALK b-t-f sidecars (fire only alongside <__chat>) ---
+                case "Ea" when hasChat:
+                    chatLang = el.Value.Trim();
+                    break;
+                case "roomId" when hasChat:
+                    chatRoomId = el.Value.Trim();
+                    break;
+                case "voice_profile_id" when hasChat:
+                    chatHasVoiceProfile = true;
+                    chatVoiceProfileId = el.Value.Trim();
+                    break;
+                // --- TAKTALK y- room broadcast children ---
+                case "sender-callsign" when typeStr == "y-":
+                    hasRoomData = true;
+                    roomSender = el.Value.Trim();
+                    break;
+                case "chatroom-name" when typeStr == "y-":
+                    hasRoomData = true;
+                    roomName = el.Value.Trim();
+                    break;
+                case "chatroom-participants" when typeStr == "y-":
+                    hasRoomData = true;
+                    var raw = el.Value.Trim();
+                    if (raw.Length > 0)
+                    {
+                        roomParticipants = raw.Split(',')
+                            .Select(p => p.Trim())
+                            .Where(p => p.Length > 0)
+                            .ToList();
+                    }
                     break;
                 case "link":
                     HandleLink(el);
@@ -792,6 +858,29 @@ public class CotXmlParser
         {
             pkt.Pli = true;
         }
+        else if (hasRoomData && typeStr == "y-")
+        {
+            // TAKTALK y- room/membership broadcast checked before chat so a
+            // y- event with a UUID <chatroom-id> can't be reinterpreted.
+            var room = new TakTalkRoomData
+            {
+                SenderCallsign = roomSender,
+                RoomId = roomDataId,
+                RoomName = roomName,
+            };
+            if (roomParticipants.Count > 0) room.Participants.AddRange(roomParticipants);
+            pkt.TaktalkRoom = room;
+        }
+        else if (hasTakTalk && typeStr == "m-t-t")
+        {
+            pkt.Taktalk = new TakTalkMessage
+            {
+                Text = talkText,
+                ChatroomId = talkChatroomId,
+                Lang = talkLang,
+                FromVoice = fromVoice,
+            };
+        }
         else if (hasChat)
         {
             var chat = new GeoChat { Message = remarksText };
@@ -799,6 +888,12 @@ public class CotXmlParser
             if (chatToCs != null) chat.ToCallsign = chatToCs;
             if (chatReceiptForUid.Length > 0) chat.ReceiptForUid = chatReceiptForUid;
             if (chatReceiptType != GeoChat.Types.ReceiptType.None) chat.ReceiptType = chatReceiptType;
+            // TAKTALK sidecars — empty / false on regular ATAK GeoChat.
+            // proto3-optional means setting voice_profile_id to "" still
+            // marks it as present (the empty <voice_profile_id/> marker).
+            if (chatLang.Length > 0) chat.Lang = chatLang;
+            if (chatRoomId.Length > 0) chat.RoomId = chatRoomId;
+            if (chatHasVoiceProfile) chat.VoiceProfileId = chatVoiceProfileId;
             pkt.Chat = chat;
         }
         else if (hasAircraft)

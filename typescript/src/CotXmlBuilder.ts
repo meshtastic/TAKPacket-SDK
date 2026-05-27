@@ -170,10 +170,37 @@ export function buildCotXml(packet: TAKPacketV2): string {
   const casevac = packet.casevac;
   const emergency = packet.emergency;
   const task = packet.task;
+  const taktalk = packet.taktalk;
+  const taktalkRoom = packet.taktalkRoom;
   const eventLatI = packet.latitudeI ?? 0;
   const eventLonI = packet.longitudeI ?? 0;
 
-  if (chat) {
+  // TAKTALK variants checked before chat so a y- broadcast can't get
+  // misclassified into the chat branch.
+  if (taktalkRoom) {
+    // TAKTALK y- room/membership broadcast.
+    const senderCs = taktalkRoom.senderCallsign ?? "";
+    if (senderCs) lines.push(`    <sender-callsign>${esc(senderCs)}</sender-callsign>`);
+    const roomId = taktalkRoom.roomId ?? "";
+    if (roomId) lines.push(`    <chatroom-id>${esc(roomId)}</chatroom-id>`);
+    const roomName = taktalkRoom.roomName ?? "";
+    if (roomName) lines.push(`    <chatroom-name>${esc(roomName)}</chatroom-name>`);
+    const participants = taktalkRoom.participants ?? [];
+    if (participants.length > 0) {
+      lines.push(`    <chatroom-participants>${esc(participants.join(","))}</chatroom-participants>`);
+    }
+  } else if (taktalk) {
+    // TAKTALK m-t-t voice/text message. Element-body shape matches what
+    // ATAK + the TAKTALK plugin emit so the receiver's plugin parses it
+    // natively.
+    if (callsign) lines.push(`    <callsign>${esc(callsign)}</callsign>`);
+    const lang = taktalk.lang ?? "";
+    if (lang) lines.push(`    <lang>${esc(lang)}</lang>`);
+    lines.push(`    <text>${esc(taktalk.text ?? "")}</text>`);
+    const chatroomId = taktalk.chatroomId ?? "";
+    if (chatroomId) lines.push(`    <chatroom-id>${esc(chatroomId)}</chatroom-id>`);
+    if (taktalk.fromVoice) lines.push(`    <voice/>`);
+  } else if (chat) {
     const receiptType = chat.receiptType ?? RECEIPT_TYPE_NONE;
     const receiptForUid = chat.receiptForUid ?? "";
     if (receiptType !== RECEIPT_TYPE_NONE && receiptForUid) {
@@ -203,6 +230,27 @@ export function buildCotXml(packet: TAKPacketV2): string {
         lines.push(`    <remarks source="BAO.F.ATAK.${esc(senderUid)}" to="${esc(chatroom)}" time="${now}">${esc(msg)}</remarks>`);
       } else {
         lines.push(`    <remarks>${esc(chat.message ?? "")}</remarks>`);
+      }
+      // TAKTALK-flavored sidecars. `voiceProfileId !== undefined` covers
+      // the empty <voice_profile_id/> marker (the field is defined but
+      // empty string), while `chat.lang`/`chat.roomId` cover the labeled
+      // fields. ATAK source order: voice_profile_id, callsign, Ea, roomId.
+      const hasVoiceProfile = chat.voiceProfileId !== undefined;
+      const ttLang = chat.lang ?? "";
+      const ttRoomId = chat.roomId ?? "";
+      const isTaktalk = hasVoiceProfile || ttLang.length > 0 || ttRoomId.length > 0;
+      if (isTaktalk) {
+        if (hasVoiceProfile) {
+          const vpid = chat.voiceProfileId ?? "";
+          if (vpid.length === 0) {
+            lines.push(`    <voice_profile_id/>`);
+          } else {
+            lines.push(`    <voice_profile_id>${esc(vpid)}</voice_profile_id>`);
+          }
+        }
+        if (callsign) lines.push(`    <callsign>${esc(callsign)}</callsign>`);
+        if (ttLang) lines.push(`    <Ea>${esc(ttLang)}</Ea>`);
+        if (ttRoomId) lines.push(`    <roomId>${esc(ttRoomId)}</roomId>`);
       }
     }
   } else if (aircraft) {
@@ -262,9 +310,10 @@ export function buildCotXml(packet: TAKPacketV2): string {
 
   // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
   // Chat uses GeoChat.message; Aircraft synthesizes from ICAO fields; Route handles
-  // remarks in its own block above. All other types emit here.
+  // remarks in its own block above. TAKTALK variants own their detail emission too —
+  // m-t-t and y- don't carry <remarks>.
   const remarksStr = packet.remarks ?? "";
-  if (remarksStr && !chat && !aircraft && !route) {
+  if (remarksStr && !chat && !aircraft && !route && !taktalk && !taktalkRoom) {
     lines.push(`    <remarks>${esc(remarksStr)}</remarks>`);
   }
 

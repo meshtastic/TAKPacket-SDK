@@ -151,6 +151,62 @@ public class CotXmlBuilder {
                 } else {
                     s += "    <remarks>\(esc(chat.message))</remarks>\n"
                 }
+                // TAKTALK-flavored sidecars. Empty / false on non-TAKTALK
+                // chats so round-trip is byte-identical for the common case.
+                // Order matches ATAK + TAKTALK's source format
+                // (<voice_profile_id>, <callsign>, <Ea>, <roomId>).
+                let isTaktalk = chat.hasVoiceProfileID
+                    || !chat.lang.isEmpty
+                    || !chat.roomID.isEmpty
+                if isTaktalk {
+                    if chat.hasVoiceProfileID {
+                        if chat.voiceProfileID.isEmpty {
+                            s += "    <voice_profile_id/>\n"
+                        } else {
+                            s += "    <voice_profile_id>\(esc(chat.voiceProfileID))</voice_profile_id>\n"
+                        }
+                    }
+                    if !packet.callsign.isEmpty {
+                        s += "    <callsign>\(esc(packet.callsign))</callsign>\n"
+                    }
+                    if !chat.lang.isEmpty {
+                        s += "    <Ea>\(esc(chat.lang))</Ea>\n"
+                    }
+                    if !chat.roomID.isEmpty {
+                        s += "    <roomId>\(esc(chat.roomID))</roomId>\n"
+                    }
+                }
+            }
+        case .taktalk(let tt):
+            // TAKTALK m-t-t voice/text message. Element-body shape mirrors
+            // what ATAK + the TAKTALK plugin emit so the receiver's plugin
+            // parses it natively.
+            if !packet.callsign.isEmpty {
+                s += "    <callsign>\(esc(packet.callsign))</callsign>\n"
+            }
+            if !tt.lang.isEmpty {
+                s += "    <lang>\(esc(tt.lang))</lang>\n"
+            }
+            s += "    <text>\(esc(tt.text))</text>\n"
+            if !tt.chatroomID.isEmpty {
+                s += "    <chatroom-id>\(esc(tt.chatroomID))</chatroom-id>\n"
+            }
+            if tt.fromVoice {
+                s += "    <voice/>\n"
+            }
+        case .taktalkRoom(let room):
+            // TAKTALK y- room/membership broadcast.
+            if !room.senderCallsign.isEmpty {
+                s += "    <sender-callsign>\(esc(room.senderCallsign))</sender-callsign>\n"
+            }
+            if !room.roomID.isEmpty {
+                s += "    <chatroom-id>\(esc(room.roomID))</chatroom-id>\n"
+            }
+            if !room.roomName.isEmpty {
+                s += "    <chatroom-name>\(esc(room.roomName))</chatroom-name>\n"
+            }
+            if !room.participants.isEmpty {
+                s += "    <chatroom-participants>\(esc(room.participants.joined(separator: ",")))</chatroom-participants>\n"
             }
         case .aircraft(let ac):
             if !ac.icao.isEmpty {
@@ -213,13 +269,20 @@ public class CotXmlBuilder {
             let isChat: Bool
             let isAircraft: Bool
             let isRoute: Bool
+            let isTaktalk: Bool
             switch packet.payloadVariant {
-            case .chat: isChat = true; isAircraft = false; isRoute = false
-            case .aircraft: isChat = false; isAircraft = true; isRoute = false
-            case .route: isChat = false; isAircraft = false; isRoute = true
-            default: isChat = false; isAircraft = false; isRoute = false
+            case .chat: isChat = true; isAircraft = false; isRoute = false; isTaktalk = false
+            case .aircraft: isChat = false; isAircraft = true; isRoute = false; isTaktalk = false
+            case .route: isChat = false; isAircraft = false; isRoute = true; isTaktalk = false
+            // TAKTALK variants own their detail emission; <remarks> isn't part of
+            // the m-t-t / y- wire shape and emitting it would confuse ATAK's
+            // TAKTALK plugin parser.
+            case .taktalk, .taktalkRoom:
+                isChat = false; isAircraft = false; isRoute = false; isTaktalk = true
+            default:
+                isChat = false; isAircraft = false; isRoute = false; isTaktalk = false
             }
-            if !isChat && !isAircraft && !isRoute {
+            if !isChat && !isAircraft && !isRoute && !isTaktalk {
                 s += "    <remarks>\(esc(packet.remarks))</remarks>\n"
             }
         }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="ROOM-DATA-5eac9336-2698-4dbb-9fa2-62b100e469fe" type="y-" how="null" time="2026-05-27T02:09:08.426Z" start="2026-05-27T02:09:08.426Z" stale="2026-05-27T01:45:09.699Z">
+  <point lat="0.0" lon="0.0" hae="9999999.0" ce="9999999.0" le="9999999.0"/>
+  <detail>
+    <sender-callsign>ASPEN</sender-callsign>
+    <chatroom-id>30b2755c-c547-44ef-a0cc-cdbd8a15616f</chatroom-id>
+    <chatroom-name>test</chatroom-name>
+    <chatroom-participants>ETHEL,ASPEN</chatroom-participants>
+  </detail>
+</event>

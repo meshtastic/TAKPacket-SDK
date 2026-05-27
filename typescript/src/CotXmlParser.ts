@@ -5,6 +5,7 @@ import type {
   TAKPacketV2, GeoChat, AircraftTrack, DrawnShape, Marker,
   RangeAndBearing, Route, RouteLink, CasevacReport, EmergencyAlert,
   TaskRequest, CotGeoPoint, ZMistEntry,
+  TakTalkMessage, TakTalkRoomData,
 } from "./types.js";
 
 const TEAM_NAME_TO_ENUM: Record<string, number> = {
@@ -270,6 +271,85 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   let squawk = 0, rssiX10 = 0, gps = false;
   let chatTo: string | undefined, chatToCs: string | undefined;
 
+  // --- TAKTALK m-t-t accumulators ---
+  let hasTakTalk = false;
+  let talkText = "", talkChatroomId = "", talkLang = "";
+  let fromVoice = false;
+
+  // --- TAKTALK b-t-f sidecar accumulators (decorate Chat) ---
+  let chatLang = "", chatRoomId = "", chatVoiceProfileId = "";
+  let chatHasVoiceProfile = false;
+
+  // --- TAKTALK y- room broadcast accumulators ---
+  let hasRoomData = false;
+  let roomSender = "", roomDataId = "", roomName = "";
+  const roomParticipants: string[] = [];
+
+  // fast-xml-parser stores element body content as a string (or as a `#text`
+  // property if attributes are also present). The default config also
+  // auto-coerces numeric-looking bodies — e.g. <chatroom-id>1</chatroom-id>
+  // comes back as the number `1`, not the string "1" — so the helper also
+  // tolerates numbers and booleans by stringifying them.
+  const elemText = (val: unknown): string => {
+    if (typeof val === "string") return val.trim();
+    if (typeof val === "number" || typeof val === "boolean") return String(val);
+    if (val && typeof val === "object" && "#text" in (val as Record<string, unknown>)) {
+      const raw = (val as Record<string, unknown>)["#text"];
+      if (typeof raw === "string") return raw.trim();
+      if (typeof raw === "number" || typeof raw === "boolean") return String(raw);
+      return "";
+    }
+    return "";
+  };
+
+  // --- TAKTALK m-t-t children. Guard on the source CoT type so generic
+  // element names like "text" / "lang" only trigger TAKTALK for m-t-t.
+  if (typeStr === "m-t-t") {
+    if (detail.text !== undefined) {
+      const t = elemText(detail.text);
+      if (t.length > 0) { hasTakTalk = true; talkText = t; }
+    }
+    if (detail["chatroom-id"] !== undefined) {
+      const t = elemText(detail["chatroom-id"]);
+      if (t.length > 0) { hasTakTalk = true; talkChatroomId = t; }
+    }
+    if (detail.lang !== undefined) {
+      const t = elemText(detail.lang);
+      if (t.length > 0) { hasTakTalk = true; talkLang = t; }
+    }
+    if (detail.voice !== undefined) {
+      // Empty marker; presence alone sets the flag.
+      hasTakTalk = true;
+      fromVoice = true;
+    }
+  }
+
+  // --- TAKTALK y- room broadcast children.
+  if (typeStr === "y-") {
+    if (detail["sender-callsign"] !== undefined) {
+      const t = elemText(detail["sender-callsign"]);
+      if (t.length > 0) { hasRoomData = true; roomSender = t; }
+    }
+    if (detail["chatroom-id"] !== undefined) {
+      const t = elemText(detail["chatroom-id"]);
+      if (t.length > 0) { hasRoomData = true; roomDataId = t; }
+    }
+    if (detail["chatroom-name"] !== undefined) {
+      const t = elemText(detail["chatroom-name"]);
+      if (t.length > 0) { hasRoomData = true; roomName = t; }
+    }
+    if (detail["chatroom-participants"] !== undefined) {
+      const t = elemText(detail["chatroom-participants"]);
+      if (t.length > 0) {
+        hasRoomData = true;
+        for (const p of t.split(",")) {
+          const trimmed = p.trim();
+          if (trimmed.length > 0) roomParticipants.push(trimmed);
+        }
+      }
+    }
+  }
+
   // _radio
   if (radio["@_rssi"]) {
     rssiX10 = Math.round(parseFloat(radio["@_rssi"]) * 10);
@@ -295,6 +375,25 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
     // so the field costs 0 bytes on the wire instead of 16.
     const chatId = chatElem["@_id"];
     chatTo = chatId === "All Chat Rooms" ? undefined : chatId;
+  }
+
+  // --- TAKTALK b-t-f sidecars. Fire only alongside <__chat> so a stray
+  // <Ea>/<roomId> on a non-chat event doesn't false-positive.
+  if (hasChat) {
+    if (detail.Ea !== undefined) {
+      const t = elemText(detail.Ea);
+      if (t.length > 0) chatLang = t;
+    }
+    if (detail.roomId !== undefined) {
+      const t = elemText(detail.roomId);
+      if (t.length > 0) chatRoomId = t;
+    }
+    if (detail.voice_profile_id !== undefined) {
+      // Present-but-empty stays valid: the empty <voice_profile_id/> marker
+      // is the TAKTALK origination signal even when there's no UUID.
+      chatHasVoiceProfile = true;
+      chatVoiceProfileId = elemText(detail.voice_profile_id);
+    }
   }
 
   // Parse ICAO from remarks
@@ -762,12 +861,36 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   // mis-dispatch.
   if (isDeleteEvent) {
     pkt.pli = true;
+  } else if (hasRoomData && typeStr === "y-") {
+    // TAKTALK y- room/membership broadcast checked before chat so a y-
+    // event with a UUID <chatroom-id> can't be reinterpreted.
+    const roomPayload: TakTalkRoomData = {
+      senderCallsign: roomSender,
+      roomId: roomDataId,
+      roomName: roomName,
+      participants: roomParticipants,
+    };
+    pkt.taktalkRoom = roomPayload;
+  } else if (hasTakTalk && typeStr === "m-t-t") {
+    const ttPayload: TakTalkMessage = {
+      text: talkText,
+      chatroomId: talkChatroomId,
+      lang: talkLang,
+      fromVoice: fromVoice,
+    };
+    pkt.taktalk = ttPayload;
   } else if (hasChat) {
     const chatPayload: GeoChat = { message: remarksText };
     if (chatTo) chatPayload.to = chatTo;
     if (chatToCs) chatPayload.toCallsign = chatToCs;
     if (chatReceiptForUid) chatPayload.receiptForUid = chatReceiptForUid;
     if (chatReceiptType !== RECEIPT_TYPE_NONE) chatPayload.receiptType = chatReceiptType;
+    // TAKTALK sidecars — empty / absent on regular ATAK GeoChat. proto3-
+    // optional presence is encoded by setting the field at all (including
+    // to the empty string for the <voice_profile_id/> marker case).
+    if (chatLang) chatPayload.lang = chatLang;
+    if (chatRoomId) chatPayload.roomId = chatRoomId;
+    if (chatHasVoiceProfile) chatPayload.voiceProfileId = chatVoiceProfileId;
     pkt.chat = chatPayload;
   } else if (hasAircraft) {
     const aircraftPayload: AircraftTrack = {

@@ -58,6 +58,10 @@ public static class CotTypeMapper
         ["b-m-p-w-GOTO"] = 113, ["b-m-p-c-ip"] = 114, ["b-m-p-c-cp"] = 115, ["b-m-p-s-p-op"] = 116,
         ["u-d-v"] = 117, ["u-d-v-m"] = 118, ["u-d-c-e"] = 119,
         ["b-i-x-i"] = 120, ["b-t-f-d"] = 121, ["b-t-f-r"] = 122, ["b-a-o-c"] = 123, ["t-s"] = 124,
+        // TAKTALK plugin shapes. "y-" literally has a trailing dash and no
+        // second atom — that's the wire format ATAK + TAKTALK emit for room
+        // broadcasts. Not a typo.
+        ["m-t-t"] = 125, ["y-"] = 126,
     };
 
     private static readonly Dictionary<int, string> TypeToStr =

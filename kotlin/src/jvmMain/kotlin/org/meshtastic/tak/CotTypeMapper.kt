@@ -175,6 +175,12 @@ object CotTypeMapper {
     const val COTTYPE_B_A_O_C = 123        // Custom emergency beacon
     // Tasking (1)
     const val COTTYPE_T_S = 124            // Task / engage request
+    // TAKTALK plugin (2) — see TakTalkMessage / TakTalkRoomData in atak.proto.
+    // Note `m-t-t` and the literal `y-` (single-letter family with a dash and
+    // no second atom) are TAKTALK-specific CoT shapes that don't follow the
+    // a-/b-/u-/t- hierarchy used elsewhere. They aren't typos.
+    const val COTTYPE_M_T_T = 125          // TAKTALK voice/text chat message
+    const val COTTYPE_Y_DASH = 126         // TAKTALK room/membership broadcast
 
     // CotHow enum values from atak.proto
     const val COTHOW_UNSPECIFIED = 0
@@ -314,6 +320,11 @@ object CotTypeMapper {
         "b-t-f-r" to COTTYPE_B_T_F_R,
         "b-a-o-c" to COTTYPE_B_A_O_C,
         "t-s" to COTTYPE_T_S,
+        // TAKTALK plugin CoT shapes. `y-` literally has a trailing dash and no
+        // second atom — that's the wire format ATAK + TAKTALK emit for room
+        // broadcasts. Not a typo.
+        "m-t-t" to COTTYPE_M_T_T,
+        "y-" to COTTYPE_Y_DASH,
     )
 
     private val typeToString = stringToType.entries.associate { (k, v) -> v to k }

@@ -20,6 +20,11 @@
 export const COTTYPE_OTHER = 0;
 export const COTHOW_UNSPECIFIED = 0;
 
+// TAKTALK plugin CoT types — exported so callers can dispatch on them
+// without re-deriving the numeric value from typeToEnum().
+export const COTTYPE_M_T_T = 125;
+export const COTTYPE_Y_DASH = 126;
+
 const STRING_TO_TYPE: Record<string, number> = {
   "a-f-G-U-C": 1, "a-f-G-U-C-I": 2, "a-n-A-C-F": 3, "a-n-A-C-H": 4,
   "a-n-A-C": 5, "a-f-A-M-H": 6, "a-f-A-M": 7, "a-f-A-M-F-F": 8,
@@ -58,6 +63,10 @@ const STRING_TO_TYPE: Record<string, number> = {
   "b-m-p-w-GOTO": 113, "b-m-p-c-ip": 114, "b-m-p-c-cp": 115, "b-m-p-s-p-op": 116,
   "u-d-v": 117, "u-d-v-m": 118, "u-d-c-e": 119,
   "b-i-x-i": 120, "b-t-f-d": 121, "b-t-f-r": 122, "b-a-o-c": 123, "t-s": 124,
+  // TAKTALK plugin shapes. "y-" literally has a trailing dash and no
+  // second atom — that's the wire format ATAK + TAKTALK emit for room
+  // broadcasts. Not a typo.
+  "m-t-t": 125, "y-": 126,
 };
 
 const TYPE_TO_STRING: Record<number, string> = {};

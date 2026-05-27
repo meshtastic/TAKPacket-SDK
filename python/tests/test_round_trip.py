@@ -41,11 +41,43 @@ def test_full_round_trip_preserves_fields(fixture):
     if which_orig == "chat":
         assert packet.chat.message == decompressed.chat.message, f"chat.message mismatch in {fixture}"
         assert packet.chat.to == decompressed.chat.to, f"chat.to mismatch in {fixture}"
+        # TAKTALK sidecars must survive on chats that carry them
+        assert packet.chat.lang == decompressed.chat.lang, f"chat.lang mismatch in {fixture}"
+        assert packet.chat.room_id == decompressed.chat.room_id, f"chat.room_id mismatch in {fixture}"
+        assert packet.chat.HasField("voice_profile_id") == decompressed.chat.HasField("voice_profile_id"), (
+            f"chat.voice_profile_id presence mismatch in {fixture}"
+        )
+        if packet.chat.HasField("voice_profile_id"):
+            assert packet.chat.voice_profile_id == decompressed.chat.voice_profile_id, (
+                f"chat.voice_profile_id value mismatch in {fixture}"
+            )
     elif which_orig == "aircraft":
         assert packet.aircraft.icao == decompressed.aircraft.icao, f"aircraft.icao mismatch in {fixture}"
         assert packet.aircraft.registration == decompressed.aircraft.registration, f"aircraft.registration mismatch in {fixture}"
         assert packet.aircraft.flight == decompressed.aircraft.flight, f"aircraft.flight mismatch in {fixture}"
         assert packet.aircraft.squawk == decompressed.aircraft.squawk, f"aircraft.squawk mismatch in {fixture}"
+    elif which_orig == "taktalk":
+        assert packet.taktalk.text == decompressed.taktalk.text, f"taktalk.text mismatch in {fixture}"
+        assert packet.taktalk.chatroom_id == decompressed.taktalk.chatroom_id, (
+            f"taktalk.chatroom_id mismatch in {fixture}"
+        )
+        assert packet.taktalk.lang == decompressed.taktalk.lang, f"taktalk.lang mismatch in {fixture}"
+        assert packet.taktalk.from_voice == decompressed.taktalk.from_voice, (
+            f"taktalk.from_voice mismatch in {fixture}"
+        )
+    elif which_orig == "taktalk_room":
+        assert packet.taktalk_room.sender_callsign == decompressed.taktalk_room.sender_callsign, (
+            f"taktalk_room.sender_callsign mismatch in {fixture}"
+        )
+        assert packet.taktalk_room.room_id == decompressed.taktalk_room.room_id, (
+            f"taktalk_room.room_id mismatch in {fixture}"
+        )
+        assert packet.taktalk_room.room_name == decompressed.taktalk_room.room_name, (
+            f"taktalk_room.room_name mismatch in {fixture}"
+        )
+        assert list(packet.taktalk_room.participants) == list(decompressed.taktalk_room.participants), (
+            f"taktalk_room.participants mismatch in {fixture}"
+        )
 
     rebuilt_xml = builder.build(decompressed)
     assert "<event" in rebuilt_xml, f"Rebuilt XML missing <event> for {fixture}"

@@ -169,6 +169,72 @@ class CotXmlBuilder:
                     )
                 else:
                     lines.append(f'    <remarks>{escape(chat.message)}</remarks>')
+                # TAKTALK-flavored sidecars. proto3-optional means
+                # HasField() distinguishes "absent" from "explicit empty".
+                # voice_profile_id being present-with-empty-content
+                # re-emits as the self-closing <voice_profile_id/> marker.
+                has_voice_profile = chat.HasField("voice_profile_id")
+                is_taktalk = (
+                    has_voice_profile or chat.HasField("lang") or chat.HasField("room_id")
+                )
+                if is_taktalk:
+                    if has_voice_profile:
+                        if chat.voice_profile_id:
+                            lines.append(
+                                f'    <voice_profile_id>'
+                                f'{escape(chat.voice_profile_id)}'
+                                f'</voice_profile_id>'
+                            )
+                        else:
+                            lines.append('    <voice_profile_id/>')
+                    if packet.callsign:
+                        lines.append(
+                            f'    <callsign>{escape(packet.callsign)}</callsign>'
+                        )
+                    if chat.lang:
+                        lines.append(f'    <Ea>{escape(chat.lang)}</Ea>')
+                    if chat.room_id:
+                        lines.append(f'    <roomId>{escape(chat.room_id)}</roomId>')
+        elif which == "taktalk":
+            # TAKTALK m-t-t voice/text message. Element-body shape matches
+            # what ATAK + the TAKTALK plugin emit so the receiver's plugin
+            # parses it natively.
+            tt = packet.taktalk
+            if packet.callsign:
+                lines.append(f'    <callsign>{escape(packet.callsign)}</callsign>')
+            if tt.lang:
+                lines.append(f'    <lang>{escape(tt.lang)}</lang>')
+            lines.append(f'    <text>{escape(tt.text)}</text>')
+            if tt.chatroom_id:
+                lines.append(
+                    f'    <chatroom-id>{escape(tt.chatroom_id)}</chatroom-id>'
+                )
+            if tt.from_voice:
+                lines.append('    <voice/>')
+        elif which == "taktalk_room":
+            # TAKTALK y- room/membership broadcast.
+            room = packet.taktalk_room
+            if room.sender_callsign:
+                lines.append(
+                    f'    <sender-callsign>'
+                    f'{escape(room.sender_callsign)}'
+                    f'</sender-callsign>'
+                )
+            if room.room_id:
+                lines.append(
+                    f'    <chatroom-id>{escape(room.room_id)}</chatroom-id>'
+                )
+            if room.room_name:
+                lines.append(
+                    f'    <chatroom-name>{escape(room.room_name)}</chatroom-name>'
+                )
+            if room.participants:
+                joined = ",".join(room.participants)
+                lines.append(
+                    f'    <chatroom-participants>'
+                    f'{escape(joined)}'
+                    f'</chatroom-participants>'
+                )
         elif which == "aircraft":
             ac = packet.aircraft
             if ac.icao:
@@ -215,8 +281,11 @@ class CotXmlBuilder:
 
         # Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
         # Chat uses GeoChat.message; Aircraft synthesizes from ICAO fields; Route handles
-        # remarks in its own block above. All other types emit here.
-        if packet.remarks and which not in ("chat", "aircraft", "route"):
+        # remarks in its own block above. TAKTALK variants own their detail emission too —
+        # m-t-t and y- don't carry <remarks>. All other types emit here.
+        if packet.remarks and which not in (
+            "chat", "aircraft", "route", "taktalk", "taktalk_room",
+        ):
             lines.append(f'    <remarks>{escape(packet.remarks)}</remarks>')
 
         lines.append('  </detail>')

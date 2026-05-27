@@ -93,6 +93,36 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var staleStr = ""
     private var inRemarks = false
 
+    // --- TAKTALK m-t-t accumulators -----------------------------------
+    private var hasTakTalkData = false
+    private var talkText = ""
+    private var talkChatroomId = ""
+    private var talkLang = ""
+    private var fromVoice = false
+    private var inTaktalkText = false
+    private var inTaktalkChatroomId = false
+    private var inTaktalkLang = false
+
+    // --- TAKTALK b-t-f sidecar accumulators (decorate Chat) -----------
+    private var chatLang = ""
+    private var chatRoomId = ""
+    private var chatVoiceProfileId = ""
+    private var chatHasVoiceProfile = false
+    private var inChatEa = false
+    private var inChatRoomId = false
+    private var inChatVoiceProfileId = false
+
+    // --- TAKTALK y- room broadcast accumulators -----------------------
+    private var hasRoomData = false
+    private var roomSender = ""
+    private var roomDataId = ""
+    private var roomName = ""
+    private var roomParticipants: [String] = []
+    private var inRoomSender = false
+    private var inRoomDataId = false
+    private var inRoomName = false
+    private var inRoomParticipants = false
+
     // --- Drawn shape accumulators --------------------------------------
     private var hasShapeData = false
     private var inShape = false
@@ -227,6 +257,19 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         chatTo = nil; chatToCallsign = nil
         timeStr = ""; staleStr = ""
         inRemarks = false
+        // --- Reset TAKTALK accumulators ---
+        hasTakTalkData = false
+        talkText = ""; talkChatroomId = ""; talkLang = ""
+        fromVoice = false
+        inTaktalkText = false; inTaktalkChatroomId = false; inTaktalkLang = false
+        chatLang = ""; chatRoomId = ""; chatVoiceProfileId = ""
+        chatHasVoiceProfile = false
+        inChatEa = false; inChatRoomId = false; inChatVoiceProfileId = false
+        hasRoomData = false
+        roomSender = ""; roomDataId = ""; roomName = ""
+        roomParticipants = []
+        inRoomSender = false; inRoomDataId = false
+        inRoomName = false; inRoomParticipants = false
         // --- Reset typed geometry accumulators ---
         hasShapeData = false
         inShape = false
@@ -359,6 +402,22 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         // marker > casevac > emergency > task > pli.
         if isDeleteEvent {
             packet.pli = true
+        } else if hasRoomData && cotTypeStr == "y-" {
+            // TAKTALK y- room/membership broadcast checked before chat so a
+            // y- event with a UUID <chatroom-id> can't be reinterpreted.
+            var room = TakTalkRoomData()
+            room.senderCallsign = roomSender
+            room.roomID = roomDataId
+            room.roomName = roomName
+            room.participants = roomParticipants
+            packet.taktalkRoom = room
+        } else if hasTakTalkData && cotTypeStr == "m-t-t" {
+            var tt = TakTalkMessage()
+            tt.text = talkText
+            tt.chatroomID = talkChatroomId
+            tt.lang = talkLang
+            tt.fromVoice = fromVoice
+            packet.taktalk = tt
         } else if hasChatData {
             var chat = GeoChat()
             chat.message = remarksText
@@ -370,6 +429,13 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             if chatReceiptTypeValue != .none {
                 chat.receiptType = chatReceiptTypeValue
             }
+            // TAKTALK sidecars — empty / false on regular ATAK GeoChat.
+            // The empty `<voice_profile_id/>` marker maps to hasVoiceProfile
+            // = true with voiceProfileID = "" so the builder can re-emit the
+            // self-closing form.
+            if !chatLang.isEmpty { chat.lang = chatLang }
+            if !chatRoomId.isEmpty { chat.roomID = chatRoomId }
+            if chatHasVoiceProfile { chat.voiceProfileID = chatVoiceProfileId }
             packet.chat = chat
         } else if hasAircraftData {
             var aircraft = AircraftTrack()
@@ -732,6 +798,35 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             // so the field costs 0 bytes on the wire instead of 16.
             chatTo = (chatId == "All Chat Rooms") ? nil : chatId
 
+        // --- TAKTALK elements --------------------------------------------
+        // m-t-t carries bare children inside <detail>. Guard each on
+        // cotTypeStr so common element names like "text" / "lang" only
+        // trigger TAKTALK parsing for actual TAKTALK events.
+        case "text":
+            if cotTypeStr == "m-t-t" { hasTakTalkData = true; inTaktalkText = true }
+        case "chatroom-id":
+            if cotTypeStr == "m-t-t" { hasTakTalkData = true; inTaktalkChatroomId = true }
+            else if cotTypeStr == "y-" { hasRoomData = true; inRoomDataId = true }
+        case "lang":
+            if cotTypeStr == "m-t-t" { hasTakTalkData = true; inTaktalkLang = true }
+        case "voice":
+            // Empty marker — presence alone sets fromVoice.
+            if cotTypeStr == "m-t-t" { hasTakTalkData = true; fromVoice = true }
+        // b-t-f TAKTALK sidecars; only fire alongside <__chat>.
+        case "Ea":
+            if hasChatData { inChatEa = true }
+        case "roomId":
+            if hasChatData { inChatRoomId = true }
+        case "voice_profile_id":
+            if hasChatData { chatHasVoiceProfile = true; inChatVoiceProfileId = true }
+        // y- room broadcast children.
+        case "sender-callsign":
+            if cotTypeStr == "y-" { hasRoomData = true; inRoomSender = true }
+        case "chatroom-name":
+            if cotTypeStr == "y-" { hasRoomData = true; inRoomName = true }
+        case "chatroom-participants":
+            if cotTypeStr == "y-" { hasRoomData = true; inRoomParticipants = true }
+
         case "link":
             handleLink(attributes: attributes)
 
@@ -1026,18 +1121,96 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     }
 
     public func parser(_ parser: XMLParser, foundCharacters string: String) {
+        // Route element-body text. Multiple flags can never be true at once
+        // (the parser is in exactly one <element> at a time inside <detail>)
+        // so this is a clean dispatch. inRemarks stays first to match the
+        // pre-TAKTALK behavior and avoid surprise regressions.
         if inRemarks {
+            currentText += string
+        } else if inTaktalkText {
+            talkText += string
+        } else if inTaktalkChatroomId {
+            talkChatroomId += string
+        } else if inTaktalkLang {
+            talkLang += string
+        } else if inChatEa {
+            chatLang += string
+        } else if inChatRoomId {
+            chatRoomId += string
+        } else if inChatVoiceProfileId {
+            chatVoiceProfileId += string
+        } else if inRoomSender {
+            roomSender += string
+        } else if inRoomDataId {
+            roomDataId += string
+        } else if inRoomName {
+            roomName += string
+        } else if inRoomParticipants {
+            // Buffer raw text; split-on-comma happens at end-tag time so
+            // we can handle the case where SAX delivers participant text
+            // in multiple chunks.
             currentText += string
         }
     }
 
     public func parser(_ parser: XMLParser, didEndElement name: String,
                        namespaceURI: String?, qualifiedName: String?) {
-        if name == "remarks" {
+        switch name {
+        case "remarks":
             remarksText = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
             inRemarks = false
-        } else if name == "shape" {
+            currentText = ""
+        case "shape":
             inShape = false
+        // TAKTALK m-t-t children
+        case "text":
+            if inTaktalkText {
+                talkText = talkText.trimmingCharacters(in: .whitespacesAndNewlines)
+                inTaktalkText = false
+            }
+        case "chatroom-id":
+            if inTaktalkChatroomId {
+                talkChatroomId = talkChatroomId.trimmingCharacters(in: .whitespacesAndNewlines)
+                inTaktalkChatroomId = false
+            }
+            if inRoomDataId {
+                roomDataId = roomDataId.trimmingCharacters(in: .whitespacesAndNewlines)
+                inRoomDataId = false
+            }
+        case "lang":
+            if inTaktalkLang {
+                talkLang = talkLang.trimmingCharacters(in: .whitespacesAndNewlines)
+                inTaktalkLang = false
+            }
+        // TAKTALK b-t-f sidecars
+        case "Ea":
+            chatLang = chatLang.trimmingCharacters(in: .whitespacesAndNewlines)
+            inChatEa = false
+        case "roomId":
+            chatRoomId = chatRoomId.trimmingCharacters(in: .whitespacesAndNewlines)
+            inChatRoomId = false
+        case "voice_profile_id":
+            chatVoiceProfileId = chatVoiceProfileId.trimmingCharacters(in: .whitespacesAndNewlines)
+            inChatVoiceProfileId = false
+        // TAKTALK y- room children
+        case "sender-callsign":
+            roomSender = roomSender.trimmingCharacters(in: .whitespacesAndNewlines)
+            inRoomSender = false
+        case "chatroom-name":
+            roomName = roomName.trimmingCharacters(in: .whitespacesAndNewlines)
+            inRoomName = false
+        case "chatroom-participants":
+            // Split the buffered participant string on commas.
+            let joined = currentText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !joined.isEmpty {
+                roomParticipants = joined.split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+            }
+            currentText = ""
+            inRoomParticipants = false
+        default:
+            break
         }
     }
 

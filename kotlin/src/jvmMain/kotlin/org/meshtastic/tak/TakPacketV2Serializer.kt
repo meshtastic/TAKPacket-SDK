@@ -18,6 +18,8 @@ import org.meshtastic.proto.RangeAndBearing
 import org.meshtastic.proto.Route
 import org.meshtastic.proto.SensorFov
 import org.meshtastic.proto.TAKPacketV2
+import org.meshtastic.proto.TakTalkMessage
+import org.meshtastic.proto.TakTalkRoomData
 import org.meshtastic.proto.TaskRequest
 import org.meshtastic.proto.Team
 import org.meshtastic.proto.ZMistEntry
@@ -74,10 +76,17 @@ object TakPacketV2Serializer {
         var casevacField: CasevacReport? = null
         var emergencyField: EmergencyAlert? = null
         var taskField: TaskRequest? = null
+        var takTalkField: TakTalkMessage? = null
+        var takTalkRoomField: TakTalkRoomData? = null
 
         when (val payload = data.payload) {
             is TakPacketV2Data.Payload.Pli -> pliField = true
             is TakPacketV2Data.Payload.Chat -> {
+                // TAKTALK sidecars: voiceProfileId encodes the empty <voice_profile_id/>
+                // marker as an empty string (with hasVoiceProfile true on the data class
+                // side). On the wire we represent presence via the optional string field
+                // being non-null; an empty marker becomes an explicit empty string ("").
+                // Receiver parsers treat "present but empty" as the marker case.
                 chatField = GeoChat(
                     message = payload.message,
                     to = payload.to,
@@ -85,6 +94,27 @@ object TakPacketV2Serializer {
                     receipt_for_uid = payload.receiptForUid,
                     receipt_type = GeoChat.ReceiptType.fromValue(payload.receiptType)
                         ?: GeoChat.ReceiptType.ReceiptType_None,
+                    lang = payload.lang.ifEmpty { null },
+                    room_id = payload.roomId.ifEmpty { null },
+                    // Distinguish "present but empty" (marker) from "absent" — emit the
+                    // empty string only when hasVoiceProfile was explicitly set.
+                    voice_profile_id = if (payload.hasVoiceProfile) payload.voiceProfileId else null,
+                )
+            }
+            is TakPacketV2Data.Payload.TakTalk -> {
+                takTalkField = TakTalkMessage(
+                    text = payload.text,
+                    chatroom_id = payload.chatroomId,
+                    lang = payload.lang,
+                    from_voice = payload.fromVoice,
+                )
+            }
+            is TakPacketV2Data.Payload.TakTalkRoom -> {
+                takTalkRoomField = TakTalkRoomData(
+                    sender_callsign = payload.senderCallsign,
+                    room_id = payload.roomId,
+                    room_name = payload.roomName,
+                    participants = payload.participants,
                 )
             }
             is TakPacketV2Data.Payload.Aircraft -> {
@@ -314,6 +344,8 @@ object TakPacketV2Serializer {
             casevac = casevacField,
             emergency = emergencyField,
             task = taskField,
+            taktalk = takTalkField,
+            taktalk_room = takTalkRoomField,
         )
 
         return TAKPacketV2.ADAPTER.encode(packet)
@@ -327,6 +359,27 @@ object TakPacketV2Serializer {
         // all null for an empty packet). Preserve the same dispatch order as
         // the old protobuf-lite code.
         val payload = when {
+            // TAKTALK variants checked before chat so a y- broadcast with a
+            // chatroom-id can't get mis-deserialized as Chat if both fields
+            // somehow end up populated on an out-of-spec packet.
+            proto.taktalk_room != null -> {
+                val r = proto.taktalk_room!!
+                TakPacketV2Data.Payload.TakTalkRoom(
+                    senderCallsign = r.sender_callsign,
+                    roomId = r.room_id,
+                    roomName = r.room_name,
+                    participants = r.participants.toList(),
+                )
+            }
+            proto.taktalk != null -> {
+                val t = proto.taktalk!!
+                TakPacketV2Data.Payload.TakTalk(
+                    text = t.text,
+                    chatroomId = t.chatroom_id,
+                    lang = t.lang,
+                    fromVoice = t.from_voice,
+                )
+            }
             proto.chat != null -> {
                 val chat = proto.chat!!
                 TakPacketV2Data.Payload.Chat(
@@ -335,6 +388,14 @@ object TakPacketV2Serializer {
                     toCallsign = chat.to_callsign,
                     receiptForUid = chat.receipt_for_uid,
                     receiptType = chat.receipt_type.value,
+                    // TAKTALK sidecars; empty strings when the chat is regular ATAK GeoChat.
+                    lang = chat.lang ?: "",
+                    roomId = chat.room_id ?: "",
+                    voiceProfileId = chat.voice_profile_id ?: "",
+                    // Track marker-vs-absent — chat.voice_profile_id != null means the
+                    // sender included the field, even if it's an empty string (the
+                    // <voice_profile_id/> empty-marker case).
+                    hasVoiceProfile = chat.voice_profile_id != null,
                 )
             }
             proto.aircraft != null -> {
