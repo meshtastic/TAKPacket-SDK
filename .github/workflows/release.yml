@@ -29,12 +29,43 @@ jobs:
         id: version
         run: echo "version=$(cat VERSION | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
 
-      - name: Check tag doesn't already exist (manual dispatch only)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Verify version sources agree
+        # The repo has two version sources that MUST match:
+        #   * VERSION file        → workflow tag name, release title, artifact filenames
+        #   * kotlin/gradle.properties:VERSION_NAME → Maven Central artifact coordinate
+        # A mismatch silently ships a partial release: Maven Central gets the
+        # gradle.properties version while the tag/release/artifact-filenames
+        # use the VERSION-file version. That's exactly the v0.3.2 failure mode
+        # this hardening prevents. Fail loudly here so the workflow never gets
+        # to publish in a misaligned state.
         run: |
-          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
-            echo "Tag v${{ steps.version.outputs.version }} already exists!"
+          VERSION_FILE="${{ steps.version.outputs.version }}"
+          VERSION_GRADLE=$(grep -E "^VERSION_NAME=" kotlin/gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
+          echo "VERSION file:            $VERSION_FILE"
+          echo "kotlin/gradle.properties: $VERSION_GRADLE"
+          if [ "$VERSION_FILE" != "$VERSION_GRADLE" ]; then
+            echo "::error::Version mismatch — VERSION='$VERSION_FILE' but kotlin/gradle.properties VERSION_NAME='$VERSION_GRADLE'. Sync them before releasing."
             exit 1
+          fi
+          echo "✓ Version sources agree: $VERSION_FILE"
+
+      - name: Resolve tag state on origin
+        # Centralizes "does the v$VERSION tag exist on origin?" so the
+        # tag-push and Maven-Central-publish steps below can be idempotent.
+        # Run for both push:tags (where the tag is guaranteed to exist —
+        # it triggered the workflow) and workflow_dispatch (where the tag
+        # may or may not exist yet).
+        id: tag_state
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Pull the tag from origin into the local ref if it exists there.
+          # `|| true` because a missing tag is a normal case, not an error.
+          git fetch origin "refs/tags/v$VERSION:refs/tags/v$VERSION" 2>/dev/null || true
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Tag v$VERSION already on origin — tag-push step will no-op."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       # ── Setup all runtimes ──────────────────────────────────────────────
@@ -92,6 +123,21 @@ jobs:
 
       # ── Publish to Maven Central ─────────────────────────────────────────
 
+      - name: Push release tag to origin
+        # The tag is the canonical "release was attempted" marker — pushed
+        # AFTER tests pass (so we don't tag a broken commit) but BEFORE
+        # Maven Central publish (so Apple SPM consumers can always resolve
+        # the release even if the Maven step fails or anything else aborts).
+        # No-op if the tag already exists on origin (retry / push:tags trigger).
+        if: github.event_name == 'workflow_dispatch' && steps.tag_state.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+          echo "::notice::Pushed tag v$VERSION → SPM consumers can now resolve this release."
+
       - name: Stage signed artifacts locally
         working-directory: kotlin
         env:
@@ -112,7 +158,27 @@ jobs:
         with:
           subject-path: maven-attestation/*
 
+      - name: Check Maven Central state
+        # Probe whether v$VERSION is already on Maven Central. If yes, the
+        # publish step below skips — Sonatype rejects re-uploads with
+        # "component already exists" which is a fatal workflow error
+        # without this guard. Lets the workflow recover safely from any
+        # partial-publish state (e.g. tag pushed + publish failed + retry).
+        id: mc_check
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          HTTP=$(curl -sS -o /dev/null -w "%{http_code}" \
+            "https://repo1.maven.org/maven2/org/meshtastic/takpacket-sdk-jvm/$VERSION/takpacket-sdk-jvm-$VERSION.pom")
+          echo "Maven Central POM probe for v$VERSION: HTTP $HTTP"
+          if [ "$HTTP" = "200" ]; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::v$VERSION already on Maven Central — skipping publish step."
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to Maven Central
+        if: steps.mc_check.outputs.already_published == 'false'
         working-directory: kotlin
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
@@ -194,3 +260,56 @@ jobs:
             | **C#** | `.nupkg` | `dotnet add package Meshtastic.TAK` (or install local nupkg) |
           files: release-artifacts/*
           generate_release_notes: true
+
+      # ── Verify release consistency ──────────────────────────────────────
+      #
+      # Backstop against the failure mode that motivated this hardening: a
+      # successful Maven Central publish whose v$VERSION git tag never made
+      # it to origin (or vice versa), leaving Apple SPM consumers stuck on
+      # the previous release while Kotlin/Android Gradle consumers see the
+      # new one. Both halves MUST be present — fail the workflow loudly if
+      # either is missing so we never silently ship a partial release.
+
+      - name: Verify release consistency
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          FAIL=0
+
+          echo "=== Tag check ==="
+          # Re-fetch in case the tag landed via softprops/action-gh-release@v3.
+          git fetch origin "refs/tags/v$VERSION:refs/tags/v$VERSION" 2>/dev/null || true
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            SHA=$(git rev-parse "v$VERSION")
+            echo "✓ Tag v$VERSION on origin (points at $SHA)"
+          else
+            echo "✗ Tag v$VERSION MISSING on origin — Apple SPM consumers will not resolve this release"
+            FAIL=1
+          fi
+
+          echo ""
+          echo "=== Maven Central check (with retry — index lag is normal) ==="
+          # Up to 10 minutes of polling: Sonatype Central Portal validates
+          # the deployment async after publishAllPublicationsToMavenCentralRepository
+          # returns success, and Maven Central indexing adds another minute or two.
+          HTTP=000
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            HTTP=$(curl -sS -o /dev/null -w "%{http_code}" \
+              "https://repo1.maven.org/maven2/org/meshtastic/takpacket-sdk-jvm/$VERSION/takpacket-sdk-jvm-$VERSION.pom")
+            if [ "$HTTP" = "200" ]; then
+              echo "✓ Maven Central POM for v$VERSION reachable (attempt $i)"
+              break
+            fi
+            echo "  attempt $i: HTTP $HTTP — retrying in 60s"
+            sleep 60
+          done
+          if [ "$HTTP" != "200" ]; then
+            echo "✗ Maven Central POM for v$VERSION not reachable after 10 minutes — Kotlin/Android Gradle consumers will not resolve this release"
+            FAIL=1
+          fi
+
+          if [ $FAIL -ne 0 ]; then
+            echo "::error::Release v$VERSION is PARTIAL — see checks above. Investigate before downstream consumers (Meshtastic-Android, Meshtastic-Apple) bump."
+            exit 1
+          fi
+          echo ""
+          echo "✓ Release v$VERSION verified end-to-end: tag on origin + POM on Maven Central"
