@@ -77,11 +77,20 @@ public class CotXmlBuilder {
         s += "  <point lat=\"\(lat)\" lon=\"\(lon)\" hae=\"\(packet.altitude)\" ce=\"9999999\" le=\"9999999\"/>\n"
         s += "  <detail>\n"
 
-        // Contact — skip for routes (ATAK/iTAK expect <contact> after __routeinfo, no endpoint)
+        // Contact — skip for routes (ATAK/iTAK expect <contact> after __routeinfo, no endpoint).
+        // Also skip for TAKTALK m-t-t and y-: real ATAK never emits a top-level
+        // <contact> on those shapes (m-t-t uses <callsign>SENDER</callsign> inside
+        // <detail>; y- uses <sender-callsign>). Emitting a phantom <contact> bloats
+        // the wire ~35 bytes and produces XML that doesn't match captures.
         let isRoute: Bool
         if case .route = packet.payloadVariant { isRoute = true } else { isRoute = false }
+        let isTakTalkShape: Bool
+        switch packet.payloadVariant {
+        case .taktalk, .taktalkRoom: isTakTalkShape = true
+        default: isTakTalkShape = false
+        }
 
-        if !packet.callsign.isEmpty && !isRoute {
+        if !packet.callsign.isEmpty && !isRoute && !isTakTalkShape {
             let ep = packet.endpoint.isEmpty ? "0.0.0.0:4242:tcp" : packet.endpoint
             s += "    <contact callsign=\"\(esc(packet.callsign))\" endpoint=\"\(esc(ep))\""
             if !packet.phone.isEmpty { s += " phone=\"\(esc(packet.phone))\"" }
@@ -201,8 +210,13 @@ public class CotXmlBuilder {
             }
         case .taktalkRoom(let room):
             // TAKTALK y- room/membership broadcast.
-            if !room.senderCallsign.isEmpty {
-                s += "    <sender-callsign>\(esc(room.senderCallsign))</sender-callsign>\n"
+            // Reconstitute <sender-callsign> from envelope packet.callsign,
+            // not from room.senderCallsign (deprecated in v0.3.2 — always
+            // equals packet.callsign in valid packets, so the duplicate
+            // wire byte was redundant). The parser routes <sender-callsign>
+            // into packet.callsign on the way in; here we route it back out.
+            if !packet.callsign.isEmpty {
+                s += "    <sender-callsign>\(esc(packet.callsign))</sender-callsign>\n"
             }
             if !room.roomID.isEmpty {
                 s += "    <chatroom-id>\(esc(room.roomID))</chatroom-id>\n"
@@ -290,6 +304,19 @@ public class CotXmlBuilder {
             if !isChat && !isAircraft && !isRoute && !isTaktalk {
                 s += "    <remarks>\(esc(packet.remarks))</remarks>\n"
             }
+        }
+
+        // Directed-routing recipient list (<marti><dest callsign='X'/>…</marti>).
+        // Emitted last inside <detail> to match the element ordering ATAK
+        // produces in real captures. TAKTALK gates voice TTS on this list
+        // matching the receiver's callsign so a regression here silently
+        // breaks voice end-to-end.
+        if packet.hasMarti && !packet.marti.destCallsign.isEmpty {
+            s += "    <marti>"
+            for dest in packet.marti.destCallsign {
+                s += "<dest callsign=\"\(esc(dest))\"/>"
+            }
+            s += "</marti>\n"
         }
 
         s += "  </detail>\n"

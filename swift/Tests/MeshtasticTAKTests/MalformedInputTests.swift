@@ -124,10 +124,12 @@ final class MalformedInputTests: XCTestCase {
         let parser = CotXmlParser()
         let packet = try parser.parse(xml)
         XCTAssertEqual(packet.cotTypeID, .y)
+        // v0.3.2: <sender-callsign> routes into envelope packet.callsign,
+        // not payload.senderCallsign (which is now deprecated).
+        XCTAssertEqual(packet.callsign, "ASPEN")
         guard case .taktalkRoom(let room) = packet.payloadVariant else {
             XCTFail("Expected taktalkRoom payload"); return
         }
-        XCTAssertEqual(room.senderCallsign, "ASPEN")
         XCTAssertEqual(room.roomID, "30b2755c-c547-44ef-a0cc-cdbd8a15616f")
         XCTAssertEqual(room.roomName, "test-empty-room")
         XCTAssertTrue(room.participants.isEmpty, "missing <chatroom-participants> should yield empty list, not crash")

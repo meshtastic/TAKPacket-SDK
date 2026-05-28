@@ -255,10 +255,22 @@ class CotXmlParser:
 
         # --- TAKTALK y- room broadcast accumulators ---
         has_room_data = False
-        room_sender = ""
+        # <sender-callsign>X</sender-callsign> on a y- event routes into the
+        # top-level packet.callsign, not a payload-level field — the sender
+        # identity is independent of payload type. The deprecated proto
+        # field TakTalkRoomData.sender_callsign is no longer written by the
+        # builder; receivers reconstitute <sender-callsign> from envelope
+        # packet.callsign on emit.
         room_data_id = ""
         room_name = ""
         room_participants: list[str] = []
+
+        # --- Directed-routing recipients (<marti><dest callsign='X'/>…</marti>)
+        # Payload-agnostic; captured for any event type. Empty == broadcast,
+        # the common case for situational-awareness. TAKTALK gates voice
+        # TTS on this list matching the receiver's callsign so dropping it
+        # silently breaks voice end-to-end.
+        marti_dests: list[str] = []
 
         # --- Drawn shape accumulators ---
         has_shape_data = False
@@ -575,8 +587,12 @@ class CotXmlParser:
                 chat_voice_profile_id = (elem.text or "").strip()
             # --- TAKTALK y- room broadcast children ---
             elif tag == "sender-callsign" and cot_type_str == "y-":
+                # v0.3.2: route sender identity to envelope packet.callsign
+                # rather than the deprecated payload field. The builder
+                # reconstitutes <sender-callsign> from packet.callsign so
+                # the duplicate wire byte is reclaimed.
                 has_room_data = True
-                room_sender = (elem.text or "").strip()
+                pkt.callsign = (elem.text or "").strip()
             elif tag == "chatroom-name" and cot_type_str == "y-":
                 has_room_data = True
                 room_name = (elem.text or "").strip()
@@ -587,6 +603,15 @@ class CotXmlParser:
                     room_participants = [
                         p.strip() for p in raw.split(",") if p.strip()
                     ]
+            # --- Directed-routing (<marti><dest callsign='X'/>…</marti>) ---
+            elif tag == "marti":
+                # <dest> is a child of <marti>. We walk its children inline
+                # rather than gating on a parser state flag — Python's
+                # ElementTree gives us the full subtree at handler time.
+                for dest in elem.findall("dest"):
+                    cs = dest.get("callsign", "")
+                    if cs:
+                        marti_dests.append(cs)
             elif tag == "link":
                 handle_link(elem)
             elif tag == "shape":
@@ -846,8 +871,10 @@ class CotXmlParser:
         elif has_room_data and cot_type_str == "y-":
             # TAKTALK y- room/membership broadcast — checked before chat so a
             # y- event with a UUID <chatroom-id> can't be reinterpreted.
+            # v0.3.2: sender_callsign is deprecated — the sender's identity
+            # is at envelope level (pkt.callsign), routed from <sender-callsign>
+            # on parse and reconstituted on build.
             room = pkt.taktalk_room
-            room.sender_callsign = room_sender
             room.room_id = room_data_id
             room.room_name = room_name
             if room_participants:
@@ -1003,6 +1030,13 @@ class CotXmlParser:
         # Chat uses GeoChat.message for the text; remarks stays empty.
         if not has_chat and remarks_text:
             pkt.remarks = remarks_text
+
+        # Directed-routing recipients. Only set the optional Marti message
+        # when at least one <dest> was captured — an empty marti is the
+        # same as no marti (broadcast), and the wrapper costs wire bytes
+        # for no benefit.
+        if marti_dests:
+            pkt.marti.dest_callsign.extend(marti_dests)
 
         return pkt
 

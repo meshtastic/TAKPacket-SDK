@@ -45,6 +45,15 @@ struct RoundTripSuite {
         #expect(packet.takVersion == decompressed.takVersion, "takVersion mismatch in \(fixture)")
         #expect(packet.takPlatform == decompressed.takPlatform, "takPlatform mismatch in \(fixture)")
         #expect(packet.endpoint == decompressed.endpoint, "endpoint mismatch in \(fixture)")
+        // Directed-routing recipients (v0.3.2). Empty list = broadcast
+        // (default for PLI / situational-awareness); populated for TAKTALK
+        // m-t-t and directed b-t-f DMs. Dropping the list silently breaks
+        // TAKTALK voice TTS on the receiver, so this regression-guards
+        // the actual end-to-end behavior that motivated the v0.3.2 release.
+        #expect(
+            Array(packet.marti.destCallsign) == Array(decompressed.marti.destCallsign),
+            "marti mismatch in \(fixture)"
+        )
 
         // Payload-specific field assertions
         switch packet.payloadVariant {

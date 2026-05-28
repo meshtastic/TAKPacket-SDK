@@ -281,9 +281,22 @@ public class CotXmlParser
         bool chatHasVoiceProfile = false;
 
         // --- TAKTALK y- room broadcast accumulators ---
+        // <sender-callsign>X</sender-callsign> on a y- event populates the
+        // top-level pkt.Callsign, NOT a separate payload-level field — the
+        // sender callsign is the sender's identity regardless of payload
+        // type. The deprecated proto field TakTalkRoomData.SenderCallsign
+        // is no longer written by the builder; receivers reconstitute
+        // <sender-callsign> from envelope pkt.Callsign on emit.
         bool hasRoomData = false;
-        string roomSender = "", roomDataId = "", roomName = "";
+        string roomDataId = "", roomName = "";
         var roomParticipants = new List<string>();
+
+        // --- Directed-routing recipients (<marti><dest callsign='X'/>…</marti>) ---
+        // Payload-agnostic; captured for any event type. Empty list ==
+        // broadcast (the default for situational-awareness). TAKTALK
+        // gates voice TTS on this list matching the receiver's callsign,
+        // so dropping it silently breaks voice messaging end-to-end.
+        var martiDests = new List<string>();
 
         // --- Drawn shape accumulators ---
         bool hasShapeData = false;
@@ -588,8 +601,12 @@ public class CotXmlParser
                     break;
                 // --- TAKTALK y- room broadcast children ---
                 case "sender-callsign" when typeStr == "y-":
+                    // v0.3.2: route sender identity to envelope pkt.Callsign
+                    // rather than the deprecated payload field. The builder
+                    // reconstitutes <sender-callsign> from pkt.Callsign so
+                    // the duplicate wire byte is reclaimed.
                     hasRoomData = true;
-                    roomSender = el.Value.Trim();
+                    pkt.Callsign = el.Value.Trim();
                     break;
                 case "chatroom-name" when typeStr == "y-":
                     hasRoomData = true;
@@ -604,6 +621,20 @@ public class CotXmlParser
                             .Select(p => p.Trim())
                             .Where(p => p.Length > 0)
                             .ToList();
+                    }
+                    break;
+                // <marti><dest callsign='X'/><dest callsign='Y'/>…</marti>
+                // ATAK directed-routing element — payload-agnostic. Captured
+                // for any event type with named recipients. TAKTALK gates
+                // voice TTS on the dest list matching the receiver's
+                // callsign so dropping this on round-trip silently breaks
+                // voice end-to-end.
+                case "marti":
+                    foreach (var dest in el.Elements("dest"))
+                    {
+                        var cs = dest.Attribute("callsign")?.Value;
+                        if (!string.IsNullOrEmpty(cs))
+                            martiDests.Add(cs);
                     }
                     break;
                 case "link":
@@ -872,9 +903,11 @@ public class CotXmlParser
         {
             // TAKTALK y- room/membership broadcast checked before chat so a
             // y- event with a UUID <chatroom-id> can't be reinterpreted.
+            // v0.3.2: SenderCallsign is deprecated — sender identity lives
+            // on envelope pkt.Callsign, routed from <sender-callsign> on
+            // parse and reconstituted on build.
             var room = new TakTalkRoomData
             {
-                SenderCallsign = roomSender,
                 RoomId = roomDataId,
                 RoomName = roomName,
             };
@@ -1073,6 +1106,17 @@ public class CotXmlParser
         // Chat uses GeoChat.Message for the text; remarks stays empty.
         if (!hasChat && !string.IsNullOrEmpty(remarksText))
             pkt.Remarks = remarksText;
+
+        // Directed-routing recipients. Only attach the Marti message when
+        // there is at least one destination; an empty marti is the same
+        // as no marti (broadcast), and the wrapper costs wire bytes for
+        // no benefit.
+        if (martiDests.Count > 0)
+        {
+            var marti = new Marti();
+            marti.DestCallsign.AddRange(martiDests);
+            pkt.Marti = marti;
+        }
 
         return pkt;
     }

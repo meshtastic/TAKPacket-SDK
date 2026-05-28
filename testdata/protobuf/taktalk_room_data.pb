@@ -1,2 +1,1 @@
-~@þÙÄ	r.ROOM-DATA-5eac9336-2698-4dbb-9fa2-62b100e469feÒA
-ASPEN$30b2755c-c547-44ef-a0cc-cdbd8a15616ftest"ETHEL"ASPEN
+~ASPEN@þÙÄ	r.ROOM-DATA-5eac9336-2698-4dbb-9fa2-62b100e469feÒ:$30b2755c-c547-44ef-a0cc-cdbd8a15616ftest"ETHEL"ASPEN

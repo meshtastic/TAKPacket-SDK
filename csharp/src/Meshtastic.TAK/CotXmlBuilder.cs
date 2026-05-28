@@ -149,7 +149,15 @@ public class CotXmlBuilder
         sb.AppendLine("  <detail>");
 
         var isRoute = pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route;
-        if (!string.IsNullOrEmpty(pkt.Callsign) && !isRoute)
+        // v0.3.2: skip <contact> for TAKTALK m-t-t and y- — real ATAK never
+        // emits a top-level <contact> on those shapes (m-t-t carries the
+        // sender via <callsign>SENDER</callsign> inside <detail>; y- uses
+        // <sender-callsign>). Emitting a phantom <contact> bloats the
+        // wire ~35 bytes and produces XML that doesn't match captures.
+        var isTakTalkShape =
+            pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Taktalk
+            || pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.TaktalkRoom;
+        if (!string.IsNullOrEmpty(pkt.Callsign) && !isRoute && !isTakTalkShape)
         {
             var ep = string.IsNullOrEmpty(pkt.Endpoint) ? "0.0.0.0:4242:tcp" : pkt.Endpoint;
             var tag = $"    <contact callsign=\"{Esc(pkt.Callsign)}\" endpoint=\"{Esc(ep)}\"";
@@ -265,8 +273,13 @@ public class CotXmlBuilder
                 break;
             case TAKPacketV2.PayloadVariantOneofCase.TaktalkRoom:
                 // TAKTALK y- room/membership broadcast.
-                if (!string.IsNullOrEmpty(pkt.TaktalkRoom.SenderCallsign))
-                    sb.AppendLine($"    <sender-callsign>{Esc(pkt.TaktalkRoom.SenderCallsign)}</sender-callsign>");
+                // v0.3.2: reconstitute <sender-callsign> from envelope
+                // pkt.Callsign rather than the deprecated payload field
+                // (always equals pkt.Callsign in valid packets). Parser
+                // routes <sender-callsign> into pkt.Callsign on the way in;
+                // here we route it back out.
+                if (!string.IsNullOrEmpty(pkt.Callsign))
+                    sb.AppendLine($"    <sender-callsign>{Esc(pkt.Callsign)}</sender-callsign>");
                 if (!string.IsNullOrEmpty(pkt.TaktalkRoom.RoomId))
                     sb.AppendLine($"    <chatroom-id>{Esc(pkt.TaktalkRoom.RoomId)}</chatroom-id>");
                 if (!string.IsNullOrEmpty(pkt.TaktalkRoom.RoomName))
@@ -353,6 +366,19 @@ public class CotXmlBuilder
             && pkt.PayloadVariantCase != TAKPacketV2.PayloadVariantOneofCase.TaktalkRoom)
         {
             sb.AppendLine($"    <remarks>{Esc(pkt.Remarks)}</remarks>");
+        }
+
+        // Directed-routing recipient list (<marti><dest callsign='X'/>…</marti>).
+        // Emit last among <detail> children to match the element ordering ATAK
+        // produces in real captures. TAKTALK gates voice TTS playback on this
+        // list matching the receiver's callsign, so dropping it silently
+        // breaks voice messaging end-to-end.
+        if (pkt.Marti != null && pkt.Marti.DestCallsign.Count > 0)
+        {
+            sb.Append("    <marti>");
+            foreach (var dest in pkt.Marti.DestCallsign)
+                sb.Append($"<dest callsign=\"{Esc(dest)}\"/>");
+            sb.AppendLine("</marti>");
         }
 
         sb.AppendLine("  </detail>");

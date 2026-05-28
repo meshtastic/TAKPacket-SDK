@@ -441,7 +441,13 @@ class CotXmlParser {
 
         // --- TAKTALK y- room broadcast accumulators ---------------------
         var hasRoomData = false
-        var roomSender = ""
+        // <sender-callsign>X</sender-callsign> on a y- event populates the
+        // top-level `callsign` var (and ultimately packet.callsign), NOT a
+        // separate payload-level field — the sender callsign is the sender's
+        // identity regardless of payload type. The deprecated proto field
+        // TakTalkRoomData.sender_callsign is no longer written by the
+        // builder; receivers reconstruct <sender-callsign> from
+        // packet.callsign on emit.
         var roomDataId = ""
         var roomName = ""
         val roomParticipants = mutableListOf<String>()
@@ -449,6 +455,16 @@ class CotXmlParser {
         var inRoomDataId = false
         var inRoomName = false
         var inRoomParticipants = false
+
+        // --- Directed-routing recipient list (<marti><dest callsign='X'/>…</marti>)
+        // Captured for any event type — TAKTALK m-t-t voice/text, directed
+        // b-t-f DMs, alerts with named recipients, etc. Empty list ==
+        // broadcast, the default for situational-awareness events. Note we
+        // capture <dest callsign> as an attribute on the START_TAG; there is
+        // no text body to route, so the only state we need beyond the flag
+        // is the destination list itself.
+        var inMarti = false
+        val martiDests = mutableListOf<String>()
 
         // Tracks whether we are directly inside <remarks>. Previously the
         // TEXT handler would write *any* detail-level element body to
@@ -709,6 +725,17 @@ class CotXmlParser {
                         }
                         "chatroom-participants" -> if (cotTypeStr == "y-") {
                             hasRoomData = true; inRoomParticipants = true
+                        }
+                        // <marti><dest callsign='X'/><dest callsign='Y'/>…</marti>
+                        // ATAK directed-routing element. Sibling of the chat/
+                        // taktalk children — applies to any payload type.
+                        // We capture callsigns from <dest> attributes; the
+                        // <marti> element itself just brackets the destinations.
+                        "marti" -> inMarti = true
+                        "dest" -> if (inMarti) {
+                            parser.getAttributeValue(null, "callsign")
+                                ?.takeIf { it.isNotEmpty() }
+                                ?.let { martiDests.add(it) }
                         }
                         // --- Drawn shape elements --------------------------
                         "shape" -> {
@@ -1106,6 +1133,8 @@ class CotXmlParser {
                         "chatroom-name" -> inRoomName = false
                         "chatroom-participants" -> inRoomParticipants = false
                         "remarks" -> inRemarks = false
+                        // Marti directed-routing bracket
+                        "marti" -> inMarti = false
                     }
                 }
                 XmlPullParser.TEXT -> {
@@ -1131,7 +1160,15 @@ class CotXmlParser {
                                 inChatEa -> chatLang = text
                                 inChatRoomId -> chatRoomId = text
                                 inChatVoiceProfileId -> chatVoiceProfileId = text
-                                inRoomSender -> roomSender = text
+                                // y-'s <sender-callsign> is the sender — same
+                                // identity that <contact callsign=...> carries
+                                // on PLI/chat. Route it to the top-level
+                                // `callsign` so the builder reconstitutes the
+                                // element from packet.callsign on emit. No
+                                // separate payload-level storage; the proto
+                                // field TakTalkRoomData.sender_callsign is
+                                // deprecated and the builder stops writing it.
+                                inRoomSender -> callsign = text
                                 inRoomDataId -> roomDataId = text
                                 inRoomName -> roomName = text
                                 inRoomParticipants -> roomParticipants.addAll(
@@ -1222,8 +1259,12 @@ class CotXmlParser {
             // as a chat. We also guard on cotTypeStr to avoid false
             // positives from other shapes that might use the same child
             // element names.
-            hasRoomData && cotTypeStr == "y-" -> TakPacketV2Data.Payload.TakTalkRoom(
-                senderCallsign = roomSender,
+            hasRoomData && cotTypeStr == "y-" -> @Suppress("DEPRECATION") TakPacketV2Data.Payload.TakTalkRoom(
+                // senderCallsign deprecated in v0.3.2 — the sender's
+                // callsign is now stored at envelope level (packet.callsign)
+                // and reconstituted by the builder on emit. Leave the
+                // payload field at its default "" so the deprecated proto
+                // field encodes as empty on the wire.
                 roomId = roomDataId,
                 roomName = roomName,
                 participants = roomParticipants.toList(),
@@ -1389,6 +1430,7 @@ class CotXmlParser {
             remarks = if (hasChatData) "" else remarksText,
             environment = environmentData,
             sensorFov = sensorFovData,
+            marti = martiDests.toList(),
             payload = payload,
         )
     }

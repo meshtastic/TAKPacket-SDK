@@ -140,7 +140,9 @@ public class TakMalformedTests
         var pkt = parser.Parse(xml);
         Assert.Equal(Meshtastic.Protobufs.CotType.Y, pkt.CotTypeId);
         Assert.Equal(Meshtastic.Protobufs.TAKPacketV2.PayloadVariantOneofCase.TaktalkRoom, pkt.PayloadVariantCase);
-        Assert.Equal("ASPEN", pkt.TaktalkRoom.SenderCallsign);
+        // v0.3.2: <sender-callsign> routes into envelope pkt.Callsign,
+        // not the deprecated TaktalkRoom.SenderCallsign field.
+        Assert.Equal("ASPEN", pkt.Callsign);
         Assert.Equal("30b2755c-c547-44ef-a0cc-cdbd8a15616f", pkt.TaktalkRoom.RoomId);
         Assert.Equal("test-empty-room", pkt.TaktalkRoom.RoomName);
         Assert.Empty(pkt.TaktalkRoom.Participants);

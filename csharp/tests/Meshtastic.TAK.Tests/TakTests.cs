@@ -138,6 +138,14 @@ public class TakTests
         Assert.Equal(pkt.TakVersion, dec.TakVersion);
         Assert.Equal(pkt.TakPlatform, dec.TakPlatform);
         Assert.Equal(pkt.Endpoint, dec.Endpoint);
+        // v0.3.2 directed-routing recipients. Empty list = broadcast
+        // (default for PLI / situational-awareness); populated for TAKTALK
+        // m-t-t and directed b-t-f DMs. TAKTALK gates voice TTS on this
+        // list matching the receiver's callsign so a regression here
+        // silently breaks voice messaging end-to-end.
+        Assert.Equal(
+            pkt.Marti?.DestCallsign?.ToArray() ?? Array.Empty<string>(),
+            dec.Marti?.DestCallsign?.ToArray() ?? Array.Empty<string>());
 
         // Payload-specific field assertions
         Assert.Equal(pkt.PayloadVariantCase, dec.PayloadVariantCase);

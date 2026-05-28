@@ -49,6 +49,12 @@ class RoundTripTest {
         assertEquals(packet.takVersion, decompressed.takVersion, "takVersion mismatch in $fixture")
         assertEquals(packet.takPlatform, decompressed.takPlatform, "takPlatform mismatch in $fixture")
         assertEquals(packet.endpoint, decompressed.endpoint, "endpoint mismatch in $fixture")
+        // Directed-routing recipients. Empty list = broadcast (the common
+        // case); a populated list means the event was addressed via
+        // <marti><dest callsign='X'/>…</marti>. TAKTALK gates voice TTS on
+        // this list matching the receiver's callsign so a regression here
+        // silently breaks voice messaging end-to-end.
+        assertEquals(packet.marti, decompressed.marti, "marti mismatch in $fixture")
 
         // Verify payload type matches
         assertEquals(packet.payload::class, decompressed.payload::class,
@@ -76,7 +82,11 @@ class RoundTripTest {
             }
             is TakPacketV2Data.Payload.TakTalkRoom -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.TakTalkRoom
-                assertEquals(p.senderCallsign, d.senderCallsign, "room senderCallsign mismatch in $fixture")
+                // senderCallsign deprecated in v0.3.2 — always equals
+                // envelope packet.callsign; that envelope-level assertion
+                // already runs above. Skip the redundant payload-level
+                // comparison so we don't keep encouraging callers to read
+                // the deprecated field.
                 assertEquals(p.roomId, d.roomId, "room roomId mismatch in $fixture")
                 assertEquals(p.roomName, d.roomName, "room roomName mismatch in $fixture")
                 assertEquals(p.participants, d.participants, "room participants mismatch in $fixture")
@@ -643,12 +653,29 @@ class RoundTripTest {
         assertEquals("ASPEN", packet.callsign,
             "TAKTALK m-t-t carries sender in <callsign>X</callsign> direct child; parser must capture it")
 
+        // v0.3.2: m-t-t includes <marti><dest callsign='ETHEL'/></marti> in the
+        // source XML (real ATAK uses directed routing). The parser must capture
+        // it into envelope packet.marti so the receiver's TAKTALK can resolve
+        // "addressed to me?" and play TTS audio.
+        assertEquals(listOf("ETHEL"), packet.marti,
+            "m-t-t source includes <marti><dest callsign='ETHEL'/>; must round-trip via packet.marti")
+
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
         assertTrue(rebuilt.contains("<voice/>"),
             "rebuilt XML must re-emit the <voice/> push-to-talk marker")
         assertTrue(rebuilt.contains("<text>Testing 123</text>"))
         assertTrue(rebuilt.contains("<callsign>ASPEN</callsign>"),
             "rebuilt XML must re-emit <callsign>SENDER</callsign> so TAKTALK can attribute and TTS-play it")
+        assertTrue(rebuilt.contains("""<marti><dest callsign="ETHEL"/></marti>"""),
+            "rebuilt XML must re-emit <marti><dest callsign='ETHEL'/></marti> — TAKTALK gates TTS on it")
+        // v0.3.2: m-t-t builder must NOT synthesize the spurious
+        // <contact endpoint='0.0.0.0:4242:tcp' callsign='ASPEN'/> element.
+        // Real ATAK never emits <contact> on m-t-t events, and emitting one
+        // wastes ~35 bytes plus produces XML that doesn't match captures.
+        assertFalse(
+            rebuilt.contains("""<contact callsign="ASPEN" endpoint="""),
+            "m-t-t builder must NOT emit a top-level <contact> element — real ATAK never does",
+        )
     }
 
     @Test
@@ -656,14 +683,22 @@ class RoundTripTest {
         val xml = loadFixture("taktalk_room_data.xml")
         val packet = parser.parse(xml)
         assertEquals(CotTypeMapper.COTTYPE_Y_DASH, packet.cotTypeId)
+        // v0.3.2 routes <sender-callsign> into the envelope packet.callsign,
+        // not payload.senderCallsign. The proto field
+        // TakTalkRoomData.sender_callsign is deprecated and no longer
+        // written by the builder — it's reconstituted from envelope callsign
+        // on emit, eliminating the duplicate wire byte.
+        assertEquals("ASPEN", packet.callsign,
+            "y- carries sender in <sender-callsign>; parser must route it to envelope callsign")
         val room = packet.payload as TakPacketV2Data.Payload.TakTalkRoom
-        assertEquals("ASPEN", room.senderCallsign)
         assertEquals("30b2755c-c547-44ef-a0cc-cdbd8a15616f", room.roomId)
         assertEquals("test", room.roomName)
         assertEquals(listOf("ETHEL", "ASPEN"), room.participants,
             "participants must round-trip as ordered list, not just a joined string")
 
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
+        assertTrue(rebuilt.contains("<sender-callsign>ASPEN</sender-callsign>"),
+            "builder must reconstitute <sender-callsign> from envelope packet.callsign")
         assertTrue(rebuilt.contains("<chatroom-name>test</chatroom-name>"))
         assertTrue(rebuilt.contains("<chatroom-participants>ETHEL,ASPEN</chatroom-participants>"),
             "participants must be joined with ',' on the wire-side XML")
@@ -703,5 +738,41 @@ class RoundTripTest {
         assertTrue(rebuilt.contains(
             "<voice_profile_id>profile-uuid-9f8e7d6c-5b4a-3210-fedc-ba9876543210</voice_profile_id>"),
             "non-empty value emits as <voice_profile_id>X</voice_profile_id>, not as marker")
+    }
+
+    // ── Directed-routing (<marti>) — v0.3.2 ──────────────────────────────
+    // ATAK m-t-t and directed b-t-f events carry <marti><dest callsign='X'/>
+    // …</marti> to address specific recipients. TAKTALK gates voice TTS
+    // playback on this list matching the receiver's callsign; dropping it
+    // silently breaks voice end-to-end (the bug v0.3.2 fixes).
+
+    @Test
+    fun `m-t-t with multi-recipient marti round-trips all dest callsigns in order`() {
+        val xml = loadFixture("taktalk_voice_marti.xml")
+        val packet = parser.parse(xml)
+        assertEquals(CotTypeMapper.COTTYPE_M_T_T, packet.cotTypeId)
+        // Order matters — ATAK distinguishes primary recipient from cc list
+        // by position, so receivers must see the same ordering as the sender.
+        assertEquals(listOf("ETHEL", "FOXTROT"), packet.marti,
+            "multi-recipient <marti> must preserve dest order across compression")
+
+        val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
+        assertTrue(
+            rebuilt.contains("""<marti><dest callsign="ETHEL"/><dest callsign="FOXTROT"/></marti>"""),
+            "rebuilt XML must re-emit both <dest> children in order under a single <marti> wrapper",
+        )
+    }
+
+    @Test
+    fun `non-marti events round-trip with empty marti list and no marti element`() {
+        // taktalk_room_data is a broadcast (y-) — no directed routing.
+        val xml = loadFixture("taktalk_room_data.xml")
+        val packet = parser.parse(xml)
+        assertTrue(packet.marti.isEmpty(),
+            "broadcast events parse with empty marti list")
+
+        val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
+        assertFalse(rebuilt.contains("<marti>"),
+            "broadcast events must NOT emit a <marti> element — even an empty one wastes wire bytes")
     }
 }

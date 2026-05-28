@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="TAKTALK-MESSAGE-92c33e5b-9c4a-4b1f-bd72-9e1077bff3a4" type="m-t-t" how="null" time="2026-05-27T01:41:12.500Z" start="2026-05-27T01:41:12.500Z" stale="2026-05-27T01:17:13.700Z">
+  <point lat="0.0" lon="0.0" hae="9999999.0" ce="9999999.0" le="9999999.0"/>
+  <detail>
+    <callsign>ASPEN</callsign>
+    <lang>English</lang>
+    <text>Group push-to-talk to two recipients</text>
+    <chatroom-id>1</chatroom-id>
+    <voice/>
+    <marti><dest callsign="ETHEL"/><dest callsign="FOXTROT"/></marti>
+  </detail>
+</event>

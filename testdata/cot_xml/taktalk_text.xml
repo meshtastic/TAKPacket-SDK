@@ -6,5 +6,6 @@
     <lang>English</lang>
     <text>Testing 123, testing 123.</text>
     <chatroom-id>1</chatroom-id>
+    <marti><dest callsign="ETHEL"/></marti>
   </detail>
 </event>

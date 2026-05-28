@@ -118,7 +118,13 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
     // --- TAKTALK y- room broadcast accumulators -----------------------
     private var hasRoomData = false
-    private var roomSender = ""
+    // <sender-callsign>X</sender-callsign> on a y- event populates the
+    // top-level packet.callsign, NOT a separate payload-level field — the
+    // sender callsign is the sender's identity regardless of payload type.
+    // The deprecated proto field TakTalkRoomData.sender_callsign is no
+    // longer written by the builder. The buffer below accumulates SAX
+    // text chunks before being committed to packet.callsign at end-tag.
+    private var roomSenderBuffer = ""
     private var roomDataId = ""
     private var roomName = ""
     private var roomParticipants: [String] = []
@@ -126,6 +132,14 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var inRoomDataId = false
     private var inRoomName = false
     private var inRoomParticipants = false
+
+    // --- Directed-routing recipient list (<marti><dest callsign='X'/>…</marti>)
+    // Captured for any event type — TAKTALK m-t-t voice/text, directed
+    // b-t-f DMs, alerts with named recipients, etc. Empty list ==
+    // broadcast, the default for situational-awareness events. <dest> has
+    // a `callsign` attribute on START_TAG; there's no text body to route.
+    private var inMarti = false
+    private var martiDests: [String] = []
 
     // --- Drawn shape accumulators --------------------------------------
     private var hasShapeData = false
@@ -271,8 +285,12 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         chatHasVoiceProfile = false
         inChatEa = false; inChatRoomId = false; inChatVoiceProfileId = false
         hasRoomData = false
-        roomSender = ""; roomDataId = ""; roomName = ""
+        roomSenderBuffer = ""
+        roomDataId = ""; roomName = ""
         roomParticipants = []
+        // Directed-routing
+        inMarti = false
+        martiDests = []
         inRoomSender = false; inRoomDataId = false
         inRoomName = false; inRoomParticipants = false
         // --- Reset typed geometry accumulators ---
@@ -410,8 +428,10 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         } else if hasRoomData && cotTypeStr == "y-" {
             // TAKTALK y- room/membership broadcast checked before chat so a
             // y- event with a UUID <chatroom-id> can't be reinterpreted.
+            // v0.3.2: sender_callsign is deprecated — the sender's identity
+            // lives at envelope level (packet.callsign), routed from
+            // <sender-callsign> on parse and reconstituted on build.
             var room = TakTalkRoomData()
-            room.senderCallsign = roomSender
             room.roomID = roomDataId
             room.roomName = roomName
             room.participants = roomParticipants
@@ -584,6 +604,16 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         // Populate top-level remarks for non-chat types
         if !hasChatData && !remarksText.isEmpty {
             packet.remarks = remarksText
+        }
+
+        // Directed-routing recipients. Encode an explicit Marti message only
+        // when at least one <dest callsign> child was captured — an empty
+        // marti is semantically identical to no marti (broadcast), and
+        // emitting an empty wrapper costs wire bytes for no benefit.
+        if !martiDests.isEmpty {
+            var marti = Marti()
+            marti.destCallsign = martiDests
+            packet.marti = marti
         }
 
         return packet
@@ -838,6 +868,18 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             if cotTypeStr == "y-" { hasRoomData = true; inRoomName = true }
         case "chatroom-participants":
             if cotTypeStr == "y-" { hasRoomData = true; inRoomParticipants = true }
+
+        // <marti><dest callsign='X'/><dest callsign='Y'/>…</marti>
+        // ATAK directed-routing element — payload-agnostic. Captured for
+        // any event type that has named recipients. TAKTALK gates voice TTS
+        // on the dest list matching the receiver's callsign, so dropping
+        // this on round-trip silently breaks voice messaging.
+        case "marti":
+            inMarti = true
+        case "dest":
+            if inMarti, let cs = attributes["callsign"], !cs.isEmpty {
+                martiDests.append(cs)
+            }
 
         case "link":
             handleLink(attributes: attributes)
@@ -1154,7 +1196,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         } else if inChatVoiceProfileId {
             chatVoiceProfileId += string
         } else if inRoomSender {
-            roomSender += string
+            roomSenderBuffer += string
         } else if inRoomDataId {
             roomDataId += string
         } else if inRoomName {
@@ -1214,8 +1256,16 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             inChatVoiceProfileId = false
         // TAKTALK y- room children
         case "sender-callsign":
-            roomSender = roomSender.trimmingCharacters(in: .whitespacesAndNewlines)
-            inRoomSender = false
+            // Route into the envelope packet.callsign — the sender's
+            // identity is independent of payload type, so the deprecated
+            // TakTalkRoomData.sender_callsign field can stay empty on the
+            // wire. The builder reconstitutes <sender-callsign> from
+            // packet.callsign on emit.
+            if inRoomSender {
+                packet.callsign = roomSenderBuffer.trimmingCharacters(in: .whitespacesAndNewlines)
+                roomSenderBuffer = ""
+                inRoomSender = false
+            }
         case "chatroom-name":
             roomName = roomName.trimmingCharacters(in: .whitespacesAndNewlines)
             inRoomName = false
@@ -1229,6 +1279,8 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             }
             currentText = ""
             inRoomParticipants = false
+        case "marti":
+            inMarti = false
         default:
             break
         }

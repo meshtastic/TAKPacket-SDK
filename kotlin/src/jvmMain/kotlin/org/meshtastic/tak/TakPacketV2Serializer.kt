@@ -13,6 +13,7 @@ import org.meshtastic.proto.TAKEnvironment
 import org.meshtastic.proto.GeoChat
 import org.meshtastic.proto.GeoPointSource
 import org.meshtastic.proto.Marker
+import org.meshtastic.proto.Marti
 import org.meshtastic.proto.MemberRole
 import org.meshtastic.proto.RangeAndBearing
 import org.meshtastic.proto.Route
@@ -110,8 +111,13 @@ object TakPacketV2Serializer {
                 )
             }
             is TakPacketV2Data.Payload.TakTalkRoom -> {
+                // sender_callsign is deprecated in v0.3.2 — receivers
+                // reconstitute <sender-callsign> from TAKPacketV2.callsign
+                // on emit, so we stop writing the duplicate to save a few
+                // wire bytes per y- packet. The proto field remains for one
+                // release to keep v0.3.1-encoded packets decodable.
                 takTalkRoomField = TakTalkRoomData(
-                    sender_callsign = payload.senderCallsign,
+                    sender_callsign = "",
                     room_id = payload.roomId,
                     room_name = payload.roomName,
                     participants = payload.participants,
@@ -298,6 +304,13 @@ object TakPacketV2Serializer {
         // colliding with SwiftUI's `@Environment` in iOS consumers.
         val environmentField: TAKEnvironment? = data.environment?.toWire()
         val sensorFovField: SensorFov? = data.sensorFov?.toWire()
+        // Directed-routing recipient list. Encode as a present-but-empty
+        // Marti message only when there is at least one recipient — an
+        // empty marti is the same as no marti (broadcast), so don't pay
+        // the 2-byte wrapper cost on broadcast packets.
+        val martiField: Marti? = data.marti
+            .takeIf { it.isNotEmpty() }
+            ?.let { Marti(dest_callsign = it) }
 
         // Enum .fromValue() returns null for out-of-range values — fall back
         // to the "unspecified" sentinel for each enum. See the class KDoc.
@@ -332,6 +345,9 @@ object TakPacketV2Serializer {
             // the source packet had no <environment> / <sensor> element).
             environment = environmentField,
             sensor_fov = sensorFovField,
+            // Directed-routing recipients (<marti><dest callsign='X'/>…</marti>).
+            // null = broadcast; non-null Marti carries 1+ dest callsigns.
+            marti = martiField,
             // Oneof payload_variant — exactly one non-null (or all null for None)
             pli = pliField,
             chat = chatField,
@@ -364,7 +380,14 @@ object TakPacketV2Serializer {
             // somehow end up populated on an out-of-spec packet.
             proto.taktalk_room != null -> {
                 val r = proto.taktalk_room!!
+                @Suppress("DEPRECATION")
                 TakPacketV2Data.Payload.TakTalkRoom(
+                    // r.sender_callsign is the deprecated v0.3.1 field. v0.3.2
+                    // packets encode it as "" (builder stops writing it) and
+                    // carry the sender in proto.callsign instead. v0.3.1 packets
+                    // populate it with the sender; we forward to the data class
+                    // for source-compat readers, but the builder ignores this
+                    // field and reconstitutes from packet.callsign on emit.
                     senderCallsign = r.sender_callsign,
                     roomId = r.room_id,
                     roomName = r.room_name,
@@ -587,6 +610,9 @@ object TakPacketV2Serializer {
             remarks = proto.remarks,
             environment = proto.environment?.toData(),
             sensorFov = proto.sensor_fov?.toData(),
+            // Directed-routing recipients; empty list when proto.marti is null
+            // (broadcast packet) or when it has no dest_callsign entries.
+            marti = proto.marti?.dest_callsign?.toList() ?: emptyList(),
             payload = payload,
         )
     }

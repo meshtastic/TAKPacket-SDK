@@ -31,6 +31,11 @@ describe("RoundTrip", () => {
     expect(decompressed.takVersion).toBe(packet.takVersion);
     expect(decompressed.takPlatform).toBe(packet.takPlatform);
     expect(decompressed.endpoint).toBe(packet.endpoint);
+    // v0.3.2 directed-routing recipients. Empty list = broadcast (default
+    // for PLI / situational-awareness); populated for TAKTALK m-t-t and
+    // directed b-t-f DMs. TAKTALK gates voice TTS on this list matching
+    // the receiver's callsign — regressions silently break voice.
+    expect(decompressed.marti?.destCallsign ?? []).toEqual(packet.marti?.destCallsign ?? []);
 
     // Payload-specific field assertions
     if (packet.chat) {

@@ -43,6 +43,18 @@ data class TakPacketV2Data(
      * `<sensor>` element.
      */
     val sensorFov: SensorFovData? = null,
+    /**
+     * Directed-routing recipient callsigns from `<marti><dest callsign='…'/>…</marti>`.
+     *
+     * Empty (proto3 default) = broadcast to all peers, the common case for
+     * PLI / situational-awareness. Populated when ATAK addresses the event to
+     * specific recipients — TAKTALK m-t-t voice / text, directed b-t-f DMs,
+     * and any other CoT shape that should reach a named subset of peers.
+     *
+     * TAKTALK gates voice TTS playback on this list containing the receiver's
+     * callsign; dropping `<marti>` on the wire breaks voice messaging end-to-end.
+     */
+    val marti: List<String> = emptyList(),
     val payload: Payload = Payload.None,
 ) {
     /**
@@ -169,8 +181,21 @@ data class TakPacketV2Data(
          * receivers cache these to resolve room UUIDs (used in
          * [TakTalk.chatroomId] and [Chat.roomId]) to a friendly name +
          * roster for display.
+         *
+         * Note: [senderCallsign] is DEPRECATED in v0.3.2. The sender's
+         * callsign is always equal to [TakPacketV2Data.callsign] (the
+         * envelope-level field), so the duplicate wire byte is redundant.
+         * The builder reconstitutes the `<sender-callsign>` XML element
+         * from the envelope callsign on emit; the parser still reads the
+         * element so v0.3.1-encoded packets decode cleanly. To be removed
+         * outright in v0.4.x.
          */
         data class TakTalkRoom(
+            @Deprecated(
+                "Always equals TakPacketV2Data.callsign in valid packets; the builder " +
+                    "reconstitutes <sender-callsign> from the envelope callsign. " +
+                    "Field will be removed in v0.4.x.",
+            )
             val senderCallsign: String = "",
             val roomId: String = "",
             val roomName: String = "",

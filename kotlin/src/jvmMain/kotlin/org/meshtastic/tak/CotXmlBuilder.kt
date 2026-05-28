@@ -164,9 +164,17 @@ class CotXmlBuilder {
         sb.append("\n")
         sb.append("  <detail>\n")
 
-        // Contact — skip for routes (ATAK expects <contact> after __routeinfo, no endpoint)
+        // Contact — skip for routes (ATAK expects <contact> after __routeinfo, no endpoint).
+        // Also skip for TAKTALK m-t-t and y- events: real ATAK never emits a top-level
+        // <contact> element on those shapes. m-t-t carries the sender inside <detail> as
+        // <callsign>SENDER</callsign>; y- uses <sender-callsign>SENDER</sender-callsign>.
+        // Emitting a phantom <contact endpoint="0.0.0.0:4242:tcp" callsign="…"/> here
+        // bloats the wire ~35 bytes (compressed by zstd, but still) and produces XML
+        // that doesn't match captures from real ATAK + TAKTALK.
         val isRoute = packet.payload is TakPacketV2Data.Payload.Route
-        if (packet.callsign.isNotEmpty() && !isRoute) {
+        val isTakTalkShape = packet.payload is TakPacketV2Data.Payload.TakTalk
+            || packet.payload is TakPacketV2Data.Payload.TakTalkRoom
+        if (packet.callsign.isNotEmpty() && !isRoute && !isTakTalkShape) {
             val ep = packet.endpoint.ifEmpty { DEFAULT_ENDPOINT }
             sb.append("""    <contact callsign="${esc(packet.callsign)}" endpoint="$ep"""")
             if (packet.phone.isNotEmpty()) sb.append(""" phone="${esc(packet.phone)}"""")
@@ -338,9 +346,15 @@ class CotXmlBuilder {
             }
             // TAKTALK room/membership broadcast (CoT type y-).
             is TakPacketV2Data.Payload.TakTalkRoom -> {
-                if (payload.senderCallsign.isNotEmpty()) {
+                // Reconstitute <sender-callsign> from the envelope callsign,
+                // not from payload.senderCallsign (deprecated in v0.3.2 —
+                // always equals packet.callsign in valid packets, so the
+                // duplicate wire byte was redundant). The parser now routes
+                // <sender-callsign>'s body into packet.callsign on the way in;
+                // here we route it back out.
+                if (packet.callsign.isNotEmpty()) {
                     sb.append("    <sender-callsign>")
-                        .append(esc(payload.senderCallsign))
+                        .append(esc(packet.callsign))
                         .append("</sender-callsign>\n")
                 }
                 if (payload.roomId.isNotEmpty()) {
@@ -749,6 +763,20 @@ class CotXmlBuilder {
             && packet.payload !is TakPacketV2Data.Payload.TakTalkRoom
         ) {
             sb.append("    <remarks>${esc(packet.remarks)}</remarks>\n")
+        }
+
+        // Directed-routing recipient list. Emit last among <detail> children so
+        // the element order matches what ATAK produces (marti is always near
+        // the end of the detail block in real captures). A non-empty marti list
+        // means the event is addressed to specific TAK callsigns; TAKTALK gates
+        // voice TTS on this list matching the receiver's callsign, so dropping
+        // it silently breaks voice messaging end-to-end.
+        if (packet.marti.isNotEmpty()) {
+            sb.append("    <marti>")
+            for (dest in packet.marti) {
+                sb.append("""<dest callsign="${esc(dest)}"/>""")
+            }
+            sb.append("</marti>\n")
         }
 
         sb.append("  </detail>\n")

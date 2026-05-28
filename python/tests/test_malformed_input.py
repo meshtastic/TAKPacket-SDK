@@ -152,8 +152,10 @@ def test_y_dash_with_no_participants_parses_with_empty_participants_list():
     pkt = parser.parse(xml)
     assert pkt.cot_type_id == COTTYPE_Y_DASH
     assert pkt.WhichOneof("payload_variant") == "taktalk_room"
+    # v0.3.2: <sender-callsign> routes into envelope packet.callsign,
+    # not payload.sender_callsign (now deprecated).
+    assert pkt.callsign == "ASPEN"
     room = pkt.taktalk_room
-    assert room.sender_callsign == "ASPEN"
     assert room.room_id == "30b2755c-c547-44ef-a0cc-cdbd8a15616f"
     assert room.room_name == "test-empty-room"
     assert len(room.participants) == 0, (

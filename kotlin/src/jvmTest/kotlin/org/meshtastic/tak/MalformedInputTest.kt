@@ -200,8 +200,11 @@ class MalformedInputTest {
         val parser = CotXmlParser()
         val packet = parser.parse(xml)
         assertEquals(CotTypeMapper.COTTYPE_Y_DASH, packet.cotTypeId)
+        // v0.3.2: <sender-callsign> routes into envelope packet.callsign,
+        // not payload.senderCallsign (which is now deprecated and always
+        // empty in newly-parsed packets).
+        assertEquals("ASPEN", packet.callsign)
         val room = packet.payload as TakPacketV2Data.Payload.TakTalkRoom
-        assertEquals("ASPEN", room.senderCallsign)
         assertEquals("30b2755c-c547-44ef-a0cc-cdbd8a15616f", room.roomId)
         assertEquals("test-empty-room", room.roomName)
         assertTrue(room.participants.isEmpty(), "missing <chatroom-participants> should yield empty list, not crash")

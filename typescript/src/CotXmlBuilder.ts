@@ -120,7 +120,13 @@ export function buildCotXml(packet: TAKPacketV2): string {
 
   const callsign = packet.callsign ?? "";
   const isRoute = packet.route != null;
-  if (callsign && !isRoute) {
+  // v0.3.2: skip <contact> for TAKTALK m-t-t and y- — real ATAK never
+  // emits a top-level <contact> on those shapes (m-t-t carries the sender
+  // via <callsign>SENDER</callsign> inside <detail>; y- uses
+  // <sender-callsign>). Emitting a phantom <contact> bloats the wire ~35
+  // bytes and produces XML that doesn't match captures.
+  const isTakTalkShape = packet.taktalk != null || packet.taktalkRoom != null;
+  if (callsign && !isRoute && !isTakTalkShape) {
     const ep = packet.endpoint || "0.0.0.0:4242:tcp";
     let tag = `    <contact callsign="${esc(callsign)}" endpoint="${esc(ep)}"`;
     if (packet.phone) tag += ` phone="${esc(packet.phone)}"`;
@@ -184,8 +190,12 @@ export function buildCotXml(packet: TAKPacketV2): string {
   // misclassified into the chat branch.
   if (taktalkRoom) {
     // TAKTALK y- room/membership broadcast.
-    const senderCs = taktalkRoom.senderCallsign ?? "";
-    if (senderCs) lines.push(`    <sender-callsign>${esc(senderCs)}</sender-callsign>`);
+    // v0.3.2: reconstitute <sender-callsign> from envelope packet.callsign
+    // rather than the deprecated taktalkRoom.senderCallsign field — they
+    // always match in valid packets, so the duplicate wire byte was
+    // redundant. Parser routes <sender-callsign> into packet.callsign on
+    // parse; here we route it back out.
+    if (callsign) lines.push(`    <sender-callsign>${esc(callsign)}</sender-callsign>`);
     const roomId = taktalkRoom.roomId ?? "";
     if (roomId) lines.push(`    <chatroom-id>${esc(roomId)}</chatroom-id>`);
     const roomName = taktalkRoom.roomName ?? "";
@@ -320,6 +330,17 @@ export function buildCotXml(packet: TAKPacketV2): string {
   const remarksStr = packet.remarks ?? "";
   if (remarksStr && !chat && !aircraft && !route && !taktalk && !taktalkRoom) {
     lines.push(`    <remarks>${esc(remarksStr)}</remarks>`);
+  }
+
+  // Directed-routing recipient list (<marti><dest callsign='X'/>…</marti>).
+  // Emit last among <detail> children to match the element ordering ATAK
+  // produces in real captures. TAKTALK gates voice TTS playback on this
+  // list matching the receiver's callsign so a regression here silently
+  // breaks voice messaging end-to-end.
+  const martiDests = packet.marti?.destCallsign ?? [];
+  if (martiDests.length > 0) {
+    const destTags = martiDests.map((d) => `<dest callsign="${esc(d)}"/>`).join("");
+    lines.push(`    <marti>${destTags}</marti>`);
   }
 
   lines.push("  </detail>");

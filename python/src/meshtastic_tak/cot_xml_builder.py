@@ -95,8 +95,15 @@ class CotXmlBuilder:
             '  <detail>',
         ]
 
-        is_route = packet.WhichOneof("payload_variant") == "route"
-        if packet.callsign and not is_route:
+        variant = packet.WhichOneof("payload_variant")
+        is_route = variant == "route"
+        # v0.3.2: skip <contact> for TAKTALK m-t-t and y- — real ATAK never
+        # emits a top-level <contact> on those shapes. m-t-t carries sender
+        # via <callsign>SENDER</callsign> inside <detail>; y- uses
+        # <sender-callsign>. Synthesizing a phantom <contact> bloats the
+        # wire ~35 bytes and produces XML that doesn't match captures.
+        is_taktalk_shape = variant in ("taktalk", "taktalk_room")
+        if packet.callsign and not is_route and not is_taktalk_shape:
             ep = packet.endpoint or "0.0.0.0:4242:tcp"
             parts = [f'callsign="{escape(packet.callsign)}"', f'endpoint="{escape(ep)}"']
             if packet.phone: parts.append(f'phone="{escape(packet.phone)}"')
@@ -220,11 +227,17 @@ class CotXmlBuilder:
                 lines.append('    <voice/>')
         elif which == "taktalk_room":
             # TAKTALK y- room/membership broadcast.
+            # v0.3.2: reconstitute <sender-callsign> from envelope
+            # packet.callsign rather than the deprecated payload field —
+            # the sender identity is always equal to packet.callsign in
+            # valid packets, so the duplicate wire byte was redundant. The
+            # parser routes <sender-callsign> into packet.callsign on the
+            # way in; here we route it back out.
             room = packet.taktalk_room
-            if room.sender_callsign:
+            if packet.callsign:
                 lines.append(
                     f'    <sender-callsign>'
-                    f'{escape(room.sender_callsign)}'
+                    f'{escape(packet.callsign)}'
                     f'</sender-callsign>'
                 )
             if room.room_id:
@@ -294,6 +307,16 @@ class CotXmlBuilder:
             "chat", "aircraft", "route", "taktalk", "taktalk_room",
         ):
             lines.append(f'    <remarks>{escape(packet.remarks)}</remarks>')
+
+        # Directed-routing recipient list (<marti><dest callsign='X'/>…</marti>).
+        # Emit last among <detail> children to match ATAK's element ordering.
+        # TAKTALK gates voice TTS playback on this list matching the receiver's
+        # callsign, so dropping it silently breaks voice messaging end-to-end.
+        if packet.HasField("marti") and packet.marti.dest_callsign:
+            dest_tags = "".join(
+                f'<dest callsign="{escape(d)}"/>' for d in packet.marti.dest_callsign
+            )
+            lines.append(f'    <marti>{dest_tags}</marti>')
 
         lines.append('  </detail>')
         lines.append('</event>')

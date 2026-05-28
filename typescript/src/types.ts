@@ -72,10 +72,29 @@ export interface TakTalkMessage {
 
 /** TAKTALK room/membership broadcast (CoT type y-). */
 export interface TakTalkRoomData {
+  /**
+   * DEPRECATED in v0.3.2 — always equals envelope TAKPacketV2.callsign in
+   * valid packets, so the duplicate wire byte was redundant. Builders stop
+   * writing this field; parsers still read it for one release so v0.3.1-
+   * encoded packets decode cleanly. To be removed entirely in v0.4.x.
+   */
   senderCallsign?: string;
   roomId?: string;
   roomName?: string;
   participants?: string[];
+}
+
+/**
+ * ATAK directed-routing recipient list (CoT <marti><dest callsign='X'/>…</marti>).
+ *
+ * Present when an event is addressed to specific TAK users rather than the
+ * broadcast group. TAKTALK gates voice TTS on this element matching the
+ * receiver's callsign; directed b-t-f chats use it the same way. A missing
+ * Marti means "broadcast to all peers" (the default for PLI / situational-
+ * awareness events).
+ */
+export interface Marti {
+  destCallsign?: string[];
 }
 
 /** ADS-B / military air track data. */
@@ -293,6 +312,14 @@ export interface TAKPacketV2 {
   // --- Optional annotations ---
   environment?: TAKEnvironment;
   sensorFov?: SensorFov;
+  /**
+   * Directed-routing recipient list (CoT <marti><dest callsign='X'/>…</marti>).
+   * Absent / undefined = broadcast (default for situational-awareness);
+   * populated for TAKTALK m-t-t and directed b-t-f DMs. TAKTALK gates voice
+   * TTS playback on this list matching the receiver's callsign, so dropping
+   * it silently breaks voice messaging end-to-end.
+   */
+  marti?: Marti;
 
   // --- payload_variant oneof (exactly one should be set) ---
   pli?: boolean;

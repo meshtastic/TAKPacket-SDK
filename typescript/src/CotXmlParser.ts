@@ -287,9 +287,22 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   let chatHasVoiceProfile = false;
 
   // --- TAKTALK y- room broadcast accumulators ---
+  // <sender-callsign>X</sender-callsign> on a y- event routes into the
+  // envelope pkt.callsign, NOT a separate payload-level field — the sender
+  // identity is independent of payload type. The buffer below accumulates
+  // the value before being merged into the callsign precedence chain
+  // alongside m-t-t's mttCallsign and <contact callsign=> for PLI/chat.
+  let yDashSender = "";
   let hasRoomData = false;
-  let roomSender = "", roomDataId = "", roomName = "";
+  let roomDataId = "", roomName = "";
   const roomParticipants: string[] = [];
+
+  // --- Directed-routing recipients (<marti><dest callsign='X'/>…</marti>) ---
+  // Payload-agnostic; captured for any event type. Empty list ==
+  // broadcast (default for situational-awareness). TAKTALK gates voice
+  // TTS on this list matching the receiver's callsign, so dropping it
+  // silently breaks voice messaging end-to-end.
+  const martiDests: string[] = [];
 
   // fast-xml-parser stores element body content as a string (or as a `#text`
   // property if attributes are also present). The default config also
@@ -340,7 +353,11 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   if (typeStr === "y-") {
     if (detail["sender-callsign"] !== undefined) {
       const t = elemText(detail["sender-callsign"]);
-      if (t.length > 0) { hasRoomData = true; roomSender = t; }
+      // v0.3.2: route into envelope pkt.callsign via yDashSender (added to
+      // the precedence chain below). The deprecated proto field
+      // TakTalkRoomData.sender_callsign stays empty; the builder
+      // reconstitutes <sender-callsign> from pkt.callsign on emit.
+      if (t.length > 0) { hasRoomData = true; yDashSender = t; }
     }
     if (detail["chatroom-id"] !== undefined) {
       const t = elemText(detail["chatroom-id"]);
@@ -357,6 +374,24 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
         for (const p of t.split(",")) {
           const trimmed = p.trim();
           if (trimmed.length > 0) roomParticipants.push(trimmed);
+        }
+      }
+    }
+  }
+
+  // --- Directed-routing (<marti><dest callsign='X'/>…</marti>) ---
+  // Payload-agnostic; ATAK addresses events to specific TAK callsigns via
+  // this element. fast-xml-parser returns <marti> as either a single
+  // object or an array depending on element count; normalize to a list.
+  if (detail.marti !== undefined) {
+    const martiNode = detail.marti as Record<string, unknown>;
+    const destNode = martiNode.dest;
+    const destArr = Array.isArray(destNode) ? destNode : destNode ? [destNode] : [];
+    for (const d of destArr) {
+      if (d && typeof d === "object" && "@_callsign" in (d as Record<string, unknown>)) {
+        const cs = (d as Record<string, unknown>)["@_callsign"];
+        if (typeof cs === "string" && cs.length > 0) {
+          martiDests.push(cs);
         }
       }
     }
@@ -439,12 +474,15 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   const pkt: TAKPacketV2 = {
     cotTypeId,
     how: howToEnum(event["@_how"] ?? ""),
-    // For TAKTALK m-t-t the sender callsign lives in <callsign>SENDER</callsign>
-    // directly under <detail>, not in <contact callsign=...>.  Prefer the
-    // m-t-t value when present so TAKTALK plugins can attribute the message
-    // and TTS-play it; fall back to the <contact> attribute for everything
-    // else.
-    callsign: mttCallsign || contact["@_callsign"] || "",
+    // Sender-callsign precedence: TAKTALK shapes carry it in <detail>
+    // rather than as a <contact callsign=...> attribute.
+    //   m-t-t  → <callsign>SENDER</callsign>  (mttCallsign)
+    //   y-     → <sender-callsign>SENDER</sender-callsign>  (yDashSender, v0.3.2)
+    //   else   → <contact callsign='SENDER' .../>  attribute
+    // The deprecated proto field TakTalkRoomData.sender_callsign is no
+    // longer populated; receivers reconstitute <sender-callsign> from
+    // envelope pkt.callsign on emit.
+    callsign: mttCallsign || yDashSender || contact["@_callsign"] || "",
     team: TEAM_NAME_TO_ENUM[group["@_name"]] ?? 0,
     role: ROLE_NAME_TO_ENUM[group["@_role"]] ?? 0,
     latitudeI,
@@ -881,8 +919,12 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   } else if (hasRoomData && typeStr === "y-") {
     // TAKTALK y- room/membership broadcast checked before chat so a y-
     // event with a UUID <chatroom-id> can't be reinterpreted.
+    // v0.3.2: sender_callsign is deprecated — sender identity lives on
+    // envelope pkt.callsign (routed from <sender-callsign> via the
+    // yDashSender precedence above). The builder reconstitutes the
+    // <sender-callsign> element from pkt.callsign on emit.
     const roomPayload: TakTalkRoomData = {
-      senderCallsign: roomSender,
+      senderCallsign: "",
       roomId: roomDataId,
       roomName: roomName,
       participants: roomParticipants,
@@ -1031,6 +1073,13 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   // Chat uses GeoChat.message for the text; remarks stays empty.
   if (!hasChat && remarksText) {
     pkt.remarks = remarksText;
+  }
+
+  // Directed-routing recipients. Only attach the Marti message when there
+  // is at least one destination — an empty marti is the same as no marti
+  // (broadcast), and the wrapper costs wire bytes for no benefit.
+  if (martiDests.length > 0) {
+    pkt.marti = { destCallsign: martiDests };
   }
 
   return stripZeros(pkt);

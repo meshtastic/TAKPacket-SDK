@@ -33,6 +33,14 @@ def test_full_round_trip_preserves_fields(fixture):
     assert packet.tak_version == decompressed.tak_version, f"takVersion mismatch in {fixture}"
     assert packet.tak_platform == decompressed.tak_platform, f"takPlatform mismatch in {fixture}"
     assert packet.endpoint == decompressed.endpoint, f"endpoint mismatch in {fixture}"
+    # Directed-routing recipients (v0.3.2). Empty list = broadcast (default
+    # for PLI / situational-awareness); populated for TAKTALK m-t-t and
+    # directed b-t-f DMs. TAKTALK gates voice TTS on this list matching
+    # the receiver's callsign so a regression here silently breaks voice
+    # messaging end-to-end.
+    assert list(packet.marti.dest_callsign) == list(decompressed.marti.dest_callsign), (
+        f"marti mismatch in {fixture}"
+    )
 
     # Payload-specific field assertions
     which_orig = packet.WhichOneof("payload_variant")
@@ -66,9 +74,9 @@ def test_full_round_trip_preserves_fields(fixture):
             f"taktalk.from_voice mismatch in {fixture}"
         )
     elif which_orig == "taktalk_room":
-        assert packet.taktalk_room.sender_callsign == decompressed.taktalk_room.sender_callsign, (
-            f"taktalk_room.sender_callsign mismatch in {fixture}"
-        )
+        # sender_callsign deprecated in v0.3.2 — always equals envelope
+        # packet.callsign; envelope-level assertion above covers it. Skip
+        # the redundant payload-level comparison.
         assert packet.taktalk_room.room_id == decompressed.taktalk_room.room_id, (
             f"taktalk_room.room_id mismatch in {fixture}"
         )

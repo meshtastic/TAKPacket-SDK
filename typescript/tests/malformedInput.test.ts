@@ -153,7 +153,9 @@ describe("Malformed Input", () => {
     const pkt = parseCotXml(xml);
     expect(pkt.cotTypeId).toBe(COTTYPE_Y_DASH);
     expect(pkt.taktalkRoom).toBeDefined();
-    expect(pkt.taktalkRoom?.senderCallsign).toBe("ASPEN");
+    // v0.3.2: <sender-callsign> routes into envelope packet.callsign, not
+    // the deprecated taktalkRoom.senderCallsign field.
+    expect(pkt.callsign).toBe("ASPEN");
     expect(pkt.taktalkRoom?.roomId).toBe("30b2755c-c547-44ef-a0cc-cdbd8a15616f");
     expect(pkt.taktalkRoom?.roomName).toBe("test-empty-room");
     expect(pkt.taktalkRoom?.participants ?? []).toEqual([]);
