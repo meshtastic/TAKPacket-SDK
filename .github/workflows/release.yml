@@ -30,24 +30,47 @@ jobs:
         run: echo "version=$(cat VERSION | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
 
       - name: Verify version sources agree
-        # The repo has two version sources that MUST match:
-        #   * VERSION file        → workflow tag name, release title, artifact filenames
-        #   * kotlin/gradle.properties:VERSION_NAME → Maven Central artifact coordinate
-        # A mismatch silently ships a partial release: Maven Central gets the
-        # gradle.properties version while the tag/release/artifact-filenames
-        # use the VERSION-file version. That's exactly the v0.3.2 failure mode
-        # this hardening prevents. Fail loudly here so the workflow never gets
-        # to publish in a misaligned state.
+        # The repo has FIVE per-language package coordinates plus the
+        # top-level VERSION file that MUST all match:
+        #   * VERSION                                       → workflow tag, release title, artifact filenames
+        #   * kotlin/gradle.properties:VERSION_NAME         → Maven Central artifact coordinate
+        #   * python/pyproject.toml:version                 → wheel + sdist filename, PyPI coordinate
+        #   * typescript/package.json:version               → npm tarball filename, npm coordinate
+        #   * csharp/.../Meshtastic.TAK.csproj:<Version>    → NuGet package filename, NuGet coordinate
+        # A mismatch silently ships a partial release (e.g. Kotlin 0.3.3 jar
+        # alongside a TypeScript 0.1.0 tarball). Fail loudly here so the
+        # workflow never gets to publish in a misaligned state.
         run: |
           VERSION_FILE="${{ steps.version.outputs.version }}"
           VERSION_GRADLE=$(grep -E "^VERSION_NAME=" kotlin/gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
-          echo "VERSION file:            $VERSION_FILE"
-          echo "kotlin/gradle.properties: $VERSION_GRADLE"
-          if [ "$VERSION_FILE" != "$VERSION_GRADLE" ]; then
-            echo "::error::Version mismatch — VERSION='$VERSION_FILE' but kotlin/gradle.properties VERSION_NAME='$VERSION_GRADLE'. Sync them before releasing."
+          VERSION_PYTHON=$(grep -E '^version\s*=' python/pyproject.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          VERSION_NPM=$(grep -E '^\s*"version"\s*:' typescript/package.json | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          VERSION_CSHARP=$(grep -oE '<Version>[^<]+</Version>' csharp/src/Meshtastic.TAK/Meshtastic.TAK.csproj | head -1 | sed -E 's|<Version>([^<]+)</Version>|\1|')
+
+          echo "VERSION file:                 $VERSION_FILE"
+          echo "kotlin/gradle.properties:     $VERSION_GRADLE"
+          echo "python/pyproject.toml:        $VERSION_PYTHON"
+          echo "typescript/package.json:      $VERSION_NPM"
+          echo "csharp/Meshtastic.TAK.csproj: $VERSION_CSHARP"
+
+          FAIL=0
+          for SOURCE in "VERSION:$VERSION_FILE" \
+                        "kotlin/gradle.properties:$VERSION_GRADLE" \
+                        "python/pyproject.toml:$VERSION_PYTHON" \
+                        "typescript/package.json:$VERSION_NPM" \
+                        "csharp/Meshtastic.TAK.csproj:$VERSION_CSHARP"; do
+            FILE="${SOURCE%%:*}"
+            VER="${SOURCE##*:}"
+            if [ "$VER" != "$VERSION_FILE" ]; then
+              echo "::error::Version mismatch — $FILE is '$VER' but VERSION file is '$VERSION_FILE'"
+              FAIL=1
+            fi
+          done
+          if [ $FAIL -ne 0 ]; then
+            echo "::error::Sync all five version sources before releasing."
             exit 1
           fi
-          echo "✓ Version sources agree: $VERSION_FILE"
+          echo "✓ All five version sources agree: $VERSION_FILE"
 
       - name: Resolve tag state on origin
         # Centralizes "does the v$VERSION tag exist on origin?" so the
