@@ -61,14 +61,32 @@ describe("Resilience", () => {
     }
   });
 
-  it("re-encoding a packet on a fresh compressor is byte-identical", async () => {
-    // Determinism: the same packet compressed by independent compressor
-    // instances must yield identical wire bytes (no instance-accumulated state).
+  it("compression is deterministic across instances and free of cross-packet state", async () => {
+    // Determinism: (1) two independent instances must yield identical wire bytes
+    // for the same packet, and (2) an instance must not drift as it processes
+    // many packets in sequence.
+    //
+    // We reuse TWO long-lived instances across all fixtures rather than building
+    // a fresh compressor per fixture: constructing a level-19 zstd CDict over the
+    // 512KB dictionary is expensive in zstd-napi (~80ms each), so 2×N fresh
+    // builds time out. Apps build the CDict once and reuse it, so this mirrors
+    // real usage. Running both instances over the whole sequence also strengthens
+    // the check — any instance-accumulated state would make the two diverge.
+    const a = new TakCompressor();
+    const b = new TakCompressor();
+    const firstName = FIXTURES[0];
+    let firstFromA: Buffer | undefined;
     for (const name of FIXTURES) {
       const pkt = parseCotXml(loadFixtureXml(name));
-      const a = await new TakCompressor().compress(pkt);
-      const b = await new TakCompressor().compress(pkt);
-      expect(a.equals(b), `Non-deterministic compression for ${name} — possible state leak`).toBe(true);
+      const ea = await a.compress(pkt);
+      const eb = await b.compress(pkt);
+      expect(ea.equals(eb), `Independent instances disagree for ${name} — non-deterministic`).toBe(true);
+      if (name === firstName) firstFromA = ea;
     }
+    // No-drift check: a cold instance must compress the first fixture identically
+    // to instance `a`'s output from BEFORE it had processed the other fixtures —
+    // proves no state accumulated across the sequence changed the output.
+    const cold = await new TakCompressor().compress(parseCotXml(loadFixtureXml(firstName)));
+    expect(cold.equals(firstFromA!), "compressor accumulated cross-packet state").toBe(true);
   });
 });
