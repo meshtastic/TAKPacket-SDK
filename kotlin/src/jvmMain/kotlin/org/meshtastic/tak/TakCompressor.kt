@@ -1,6 +1,7 @@
 package org.meshtastic.tak
 
 import com.github.luben.zstd.Zstd
+import com.github.luben.zstd.ZstdCompressCtx
 import com.github.luben.zstd.ZstdDictCompress
 import com.github.luben.zstd.ZstdDictDecompress
 
@@ -18,6 +19,21 @@ class TakCompressor(
     companion object {
         /** Maximum allowed decompressed payload size (bytes). Prevents decompression bombs. */
         const val MAX_DECOMPRESSED_SIZE = 4096
+
+        /**
+         * The 4-byte zstd frame magic number (little-endian 0xFD2FB528).
+         *
+         * We strip this on compress and prepend it on decompress: the SDK is
+         * both ends of the link and identifies the frame from its own 1-byte
+         * flags prefix, so the magic is pure overhead (4 B/packet). Done in
+         * application code rather than via a binding's native "magicless"
+         * format flag because TypeScript's zstd-napi cannot set that
+         * experimental parameter — manual strip keeps the wire bytes
+         * byte-identical across all 5 language bindings. The magic is a fixed
+         * constant, so this stays fully stateless: every frame is independently
+         * reconstructable.
+         */
+        private val ZSTD_MAGIC = byteArrayOf(0x28, 0xB5.toByte(), 0x2F, 0xFD.toByte())
     }
     private val compressors = mutableMapOf<Int, ZstdDictCompress>()
     private val decompressors = mutableMapOf<Int, ZstdDictDecompress>()
@@ -44,14 +60,46 @@ class TakCompressor(
         val compressor = compressors[dictId]
             ?: throw IllegalStateException("No compressor for dictionary ID $dictId")
 
-        val compressed = Zstd.compress(protobufBytes, compressor)
+        // Compress exactly one independent frame per packet via the one-shot
+        // context API (NEVER the streaming API) so every packet decodes in
+        // isolation — LoRa is lossy and a dropped packet must never affect any
+        // other. Strip redundant frame fields: the dict ID already travels in
+        // our flags byte, and content-size / checksum are dead weight on these
+        // tiny dict-compressed payloads.
+        val framed = ZstdCompressCtx().use { ctx ->
+            ctx.setDictID(false)
+            ctx.setContentSize(false)
+            ctx.setChecksum(false)
+            ctx.loadDict(compressor)
+            ctx.compress(protobufBytes)
+        }
+        // Strip the 4-byte zstd magic (see ZSTD_MAGIC doc). Defensive check: the
+        // frame must start with the known magic, or our strip/prepend contract
+        // is broken and we'd ship undecodable bytes.
+        require(
+            framed.size >= ZSTD_MAGIC.size &&
+                framed[0] == ZSTD_MAGIC[0] && framed[1] == ZSTD_MAGIC[1] &&
+                framed[2] == ZSTD_MAGIC[2] && framed[3] == ZSTD_MAGIC[3],
+        ) { "Unexpected zstd frame header (magic mismatch)" }
+        val body = framed.copyOfRange(ZSTD_MAGIC.size, framed.size)
 
-        // Build wire payload: [flags][compressed bytes]
-        val flagsByte = (dictId and 0x3F).toByte()
-        val wirePayload = ByteArray(1 + compressed.size)
-        wirePayload[0] = flagsByte
-        System.arraycopy(compressed, 0, wirePayload, 1, compressed.size)
-        return wirePayload
+        // Skip compression when it doesn't pay. For tiny payloads the frame +
+        // dict-reference overhead can exceed the entropy saved, so the
+        // "compressed" form is actually larger than raw. The 0xFF uncompressed
+        // path is already understood by every decoder. Both wire forms carry
+        // the same 1-byte flags prefix, so compare payload sizes directly and
+        // emit whichever is smaller (ties → raw: cheaper to decode, no zstd pass).
+        return if (protobufBytes.size <= body.size) {
+            ByteArray(1 + protobufBytes.size).also {
+                it[0] = DictionaryProvider.DICT_ID_UNCOMPRESSED.toByte()
+                System.arraycopy(protobufBytes, 0, it, 1, protobufBytes.size)
+            }
+        } else {
+            ByteArray(1 + body.size).also {
+                it[0] = (dictId and 0x3F).toByte()
+                System.arraycopy(body, 0, it, 1, body.size)
+            }
+        }
     }
 
     /**
@@ -84,9 +132,15 @@ class TakCompressor(
                 ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
 
             try {
+                // Re-attach the 4-byte magic stripped on compress (see ZSTD_MAGIC),
+                // yielding a standard frame the stock decoder accepts. The supplied
+                // dict (not a frame-embedded dict ID) selects the dictionary.
+                val restored = ByteArray(ZSTD_MAGIC.size + compressedBytes.size)
+                System.arraycopy(ZSTD_MAGIC, 0, restored, 0, ZSTD_MAGIC.size)
+                System.arraycopy(compressedBytes, 0, restored, ZSTD_MAGIC.size, compressedBytes.size)
                 // Zstd.decompress with a size limit already guards the 4096B cap —
                 // a bomb that expands past the limit throws inside the zstd library.
-                Zstd.decompress(compressedBytes, decompressor, MAX_DECOMPRESSED_SIZE)
+                Zstd.decompress(restored, decompressor, MAX_DECOMPRESSED_SIZE)
             } catch (e: Exception) {
                 throw RuntimeException(
                     "Zstd decompression failed " +
@@ -200,7 +254,11 @@ class TakCompressor(
     fun compressWithStats(packet: TakPacketV2Data): CompressionResult {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val wirePayload = compress(packet)
-        val dictId = DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
+        // Report the ACTUAL emitted mode from the flags byte, not the intended
+        // dict — the skip-compress path may have emitted 0xFF (uncompressed)
+        // when compression didn't pay.
+        val flags = wirePayload[0].toInt() and 0xFF
+        val dictId = if (flags == DictionaryProvider.DICT_ID_UNCOMPRESSED) flags else (flags and 0x3F)
 
         return CompressionResult(
             protobufSize = protobufBytes.size,
@@ -219,6 +277,7 @@ class TakCompressor(
         val dictName: String get() = when (dictId) {
             DictionaryProvider.DICT_ID_NON_AIRCRAFT -> "non-aircraft"
             DictionaryProvider.DICT_ID_AIRCRAFT -> "aircraft"
+            DictionaryProvider.DICT_ID_UNCOMPRESSED -> "uncompressed"
             else -> "unknown"
         }
 

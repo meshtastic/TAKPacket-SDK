@@ -265,7 +265,9 @@ public class CotXmlParser
         }
 
         var detail = evt.Element("detail");
-        if (detail == null) { pkt.Pli = true; return pkt; }
+        // No <detail> → bare position report. PLI is the implicit payload
+        // (no payload_variant set) since v0.4.0; nothing to assign.
+        if (detail == null) { return pkt; }
 
         bool hasAircraft = false, hasChat = false;
         string icao = "", reg = "", flight = "", acType = "", category = "", cotHostId = "", remarksText = "";
@@ -897,7 +899,7 @@ public class CotXmlParser
         // fields populated.
         if (isDeleteEvent)
         {
-            pkt.Pli = true;
+            // delete events carry no payload variant — implicit PLI
         }
         else if (hasRoomData && typeStr == "y-")
         {
@@ -1012,13 +1014,11 @@ public class CotXmlParser
                 BullseyeFlags = bullseyeFlags,
                 BullseyeUidRef = bullseyeUidRef,
             };
+            // Vertices as two PACKED parallel delta columns (see atak.proto).
             foreach (var (lat, lon) in verticesAbs)
             {
-                shape.Vertices.Add(new CotGeoPoint
-                {
-                    LatDeltaI = lat - pkt.LatitudeI,
-                    LonDeltaI = lon - pkt.LongitudeI,
-                });
+                shape.VertexLatDeltas.Add(lat - pkt.LatitudeI);
+                shape.VertexLonDeltas.Add(lon - pkt.LongitudeI);
             }
             pkt.Shape = shape;
         }
@@ -1100,7 +1100,7 @@ public class CotXmlParser
                 Note = taskNote,
             };
         }
-        else pkt.Pli = true;
+        // else: implicit PLI — no payload variant set
 
         // For non-chat types, propagate remarksText as the top-level remarks field.
         // Chat uses GeoChat.Message for the text; remarks stays empty.

@@ -327,7 +327,8 @@ public class TakTests
         Assert.Equal(0u, pkt.Speed);
         Assert.Equal(0u, pkt.Course);
         Assert.Equal("iPadTAKAware", pkt.Callsign);
-        Assert.True(pkt.Pli);
+        // PLI is the implicit payload since v0.4.0 — no payload_variant is set.
+        Assert.Equal(TAKPacketV2.PayloadVariantOneofCase.None, pkt.PayloadVariantCase);
     }
 
     // === Rebuilt XML ===
@@ -403,7 +404,7 @@ public class TakTests
             LatitudeI = 340522000,
             LongitudeI = -1182437000,
             Altitude = 100,
-            Pli = true,
+            // PLI is the implicit payload since v0.4.0 — no payload_variant set.
         };
         var proto = pkt.ToByteArray();
         var wire = new byte[1 + proto.Length];

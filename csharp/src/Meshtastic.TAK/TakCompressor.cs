@@ -1,6 +1,7 @@
 using Google.Protobuf;
 using Meshtastic.Protobufs;
 using ZstdSharp;
+using ZstdSharp.Unsafe;
 
 namespace Meshtastic.TAK;
 
@@ -10,6 +11,7 @@ public record CompressionResult(int ProtobufSize, int CompressedSize, int DictId
     {
         DictionaryProvider.DictIdNonAircraft => "non-aircraft",
         DictionaryProvider.DictIdAircraft => "aircraft",
+        DictionaryProvider.DictIdUncompressed => "uncompressed",
         _ => "unknown",
     };
 }
@@ -42,6 +44,18 @@ public class TakCompressor
     /// <summary>Maximum allowed decompressed payload size (bytes). Prevents decompression bombs.</summary>
     public const int MaxDecompressedSize = 4096;
 
+    /// <summary>
+    /// The 4-byte zstd frame magic (little-endian 0xFD2FB528). Stripped on
+    /// compress and prepended on decompress: the SDK is both ends and identifies
+    /// the frame from its own 1-byte flags prefix, so the magic is pure overhead.
+    /// Done in app code (not a native magicless flag) so the wire bytes stay
+    /// byte-identical across all 5 language bindings — TypeScript's zstd-napi
+    /// cannot set the experimental magicless parameter. The magic is a fixed
+    /// constant, so this stays fully stateless: every frame is independently
+    /// reconstructable.
+    /// </summary>
+    private static readonly byte[] ZstdMagic = { 0x28, 0xB5, 0x2F, 0xFD };
+
     private readonly int _level;
 
     public TakCompressor(int level = 19) => _level = level;
@@ -54,13 +68,38 @@ public class TakCompressor
         var dict = DictionaryProvider.GetDictionary(dictId)
             ?? throw new InvalidOperationException($"No dictionary for ID {dictId}");
 
+        // Strip redundant frame fields: dict ID lives in our flags byte;
+        // content-size / checksum are dead weight on tiny dict-compressed payloads.
         using var compressor = new ZstdSharp.Compressor(_level);
+        compressor.SetParameter(ZSTD_cParameter.ZSTD_c_contentSizeFlag, 0);
+        compressor.SetParameter(ZSTD_cParameter.ZSTD_c_checksumFlag, 0);
+        compressor.SetParameter(ZSTD_cParameter.ZSTD_c_dictIDFlag, 0);
         compressor.LoadDictionary(dict);
-        var compressed = compressor.Wrap(protoBytes);
+        var framed = compressor.Wrap(protoBytes).ToArray();
 
-        var wire = new byte[1 + compressed.Length];
+        // Strip the 4-byte magic (see ZstdMagic). Defensive: the frame must start
+        // with the known magic or our strip/prepend contract is broken.
+        if (framed.Length < 4 || framed[0] != ZstdMagic[0] || framed[1] != ZstdMagic[1]
+            || framed[2] != ZstdMagic[2] || framed[3] != ZstdMagic[3])
+        {
+            throw new InvalidOperationException("Unexpected zstd frame header (magic mismatch)");
+        }
+        var body = framed.AsSpan(4).ToArray();
+
+        // Skip compression when it doesn't pay (tiny payloads where frame +
+        // dict-reference overhead exceeds entropy saved). The 0xFF uncompressed
+        // path is already understood by every decoder. Ties -> raw (cheaper decode).
+        if (protoBytes.Length <= body.Length)
+        {
+            var raw = new byte[1 + protoBytes.Length];
+            raw[0] = unchecked((byte)DictionaryProvider.DictIdUncompressed);
+            protoBytes.CopyTo(raw.AsSpan(1));
+            return raw;
+        }
+
+        var wire = new byte[1 + body.Length];
         wire[0] = (byte)(dictId & 0x3F);
-        compressed.CopyTo(wire.AsSpan(1));
+        body.CopyTo(wire.AsSpan(1));
         return wire;
     }
 
@@ -87,7 +126,13 @@ public class TakCompressor
             {
                 using var decompressor = new ZstdSharp.Decompressor();
                 decompressor.LoadDictionary(dict);
-                protoBytes = decompressor.Unwrap(compressedBytes).ToArray();
+                // Re-attach the 4-byte magic stripped on compress (see ZstdMagic),
+                // yielding a standard frame the stock decoder accepts. The supplied
+                // dict (not a frame-embedded dict ID) selects the dictionary.
+                var restored = new byte[ZstdMagic.Length + compressedBytes.Length];
+                ZstdMagic.CopyTo(restored.AsSpan(0));
+                compressedBytes.CopyTo(restored.AsSpan(ZstdMagic.Length));
+                protoBytes = decompressor.Unwrap(restored).ToArray();
             }
             catch (Exception ex)
             {
@@ -166,8 +211,10 @@ public class TakCompressor
     {
         var protoBytes = packet.ToByteArray();
         var wire = Compress(packet);
-        var dictId = DictionaryProvider.SelectDictId(packet.CotTypeId != 0 ? (int)packet.CotTypeId : 0,
-            string.IsNullOrEmpty(packet.CotTypeStr) ? null : packet.CotTypeStr);
+        // Report the ACTUAL emitted mode from the flags byte — skip-compress may
+        // have emitted 0xFF (uncompressed) when compression didn't pay.
+        int flags = wire[0];
+        var dictId = flags == DictionaryProvider.DictIdUncompressed ? flags : (flags & 0x3F);
         return new CompressionResult(protoBytes.Length, wire.Length, dictId, wire);
     }
 }

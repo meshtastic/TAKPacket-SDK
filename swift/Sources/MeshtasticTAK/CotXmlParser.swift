@@ -424,7 +424,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         // Payload priority: delete > chat > aircraft > route > rab > shape >
         // marker > casevac > emergency > task > pli.
         if isDeleteEvent {
-            packet.pli = true
+            // delete events carry no payload variant — implicit PLI
         } else if hasRoomData && cotTypeStr == "y-" {
             // TAKTALK y- room/membership broadcast checked before chat so a
             // y- event with a UUID <chatroom-id> can't be reinterpreted.
@@ -519,13 +519,10 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             shape.fillColor = AtakPalette.argbToTeam(fillColorArgb)
             shape.fillArgb = fillColorArgb
             shape.labelsOn = labelsOn
-            // Apply delta encoding relative to the event anchor.
-            shape.vertices = verticesAbs.map { (lat, lon) in
-                var gp = CotGeoPoint()
-                gp.latDeltaI = lat - packet.latitudeI
-                gp.lonDeltaI = lon - packet.longitudeI
-                return gp
-            }
+            // Vertices as two PACKED parallel delta columns (see atak.proto),
+            // delta-encoded relative to the event anchor.
+            shape.vertexLatDeltas = verticesAbs.map { $0.0 - packet.latitudeI }
+            shape.vertexLonDeltas = verticesAbs.map { $0.1 - packet.longitudeI }
             shape.truncated = verticesTruncated
             shape.bullseyeDistanceDm = bullseyeDistanceDm
             shape.bullseyeBearingRef = bullseyeBearingRef
@@ -598,7 +595,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             t.note = taskNote
             packet.task = t
         } else {
-            packet.pli = true
+            // implicit PLI — no payload variant set
         }
 
         // Populate top-level remarks for non-chat types

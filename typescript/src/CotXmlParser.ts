@@ -915,7 +915,7 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   // drawing that happens to carry stray medevac attributes doesn't
   // mis-dispatch.
   if (isDeleteEvent) {
-    pkt.pli = true;
+    // delete events carry no payload variant — implicit PLI
   } else if (hasRoomData && typeStr === "y-") {
     // TAKTALK y- room/membership broadcast checked before chat so a y-
     // event with a UUID <chatroom-id> can't be reinterpreted.
@@ -994,7 +994,9 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
       fillColor: argbToTeam(fillColorArgb),
       fillArgb: fillColorArgb,
       labelsOn,
-      vertices: verticesAbs.map(v => makeGeoPoint(v.lat - latitudeI, v.lon - longitudeI)),
+      // Vertices as two PACKED parallel delta columns (see atak.proto).
+      vertexLatDeltas: verticesAbs.map(v => v.lat - latitudeI),
+      vertexLonDeltas: verticesAbs.map(v => v.lon - longitudeI),
       truncated: verticesTruncated,
       bullseyeDistanceDm,
       bullseyeBearingRef,
@@ -1066,7 +1068,7 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
       note: taskNote,
     });
   } else {
-    pkt.pli = true;
+    // implicit PLI — no payload variant set
   }
 
   // For non-chat types, propagate remarksText as the top-level remarks field.

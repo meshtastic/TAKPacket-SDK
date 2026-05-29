@@ -161,7 +161,8 @@ def test_pli_stationary_clamps_negative_speed_and_course():
     assert pkt.speed == 0, "Negative speed must clamp to 0"
     assert pkt.course == 0, "Negative course must clamp to 0"
     assert pkt.callsign == "iPadTAKAware"
-    assert pkt.WhichOneof("payload_variant") == "pli"
+    # PLI is the implicit payload since v0.4.0 — no payload_variant is set.
+    assert pkt.WhichOneof("payload_variant") is None
 
 
 def test_uncompressed_payload_round_trips():
@@ -175,7 +176,7 @@ def test_uncompressed_payload_round_trips():
     pkt.latitude_i = 340522000
     pkt.longitude_i = -1182437000
     pkt.altitude = 100
-    pkt.pli = True
+    # PLI is the implicit payload (no payload_variant set) since v0.4.0.
 
     proto_bytes = pkt.SerializeToString()
     wire = bytes([0xFF]) + proto_bytes

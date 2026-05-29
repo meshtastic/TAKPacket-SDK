@@ -228,7 +228,8 @@ class CotXmlParser:
         # Detail elements
         detail = root.find("detail")
         if detail is None:
-            pkt.pli = True
+            # No <detail> → bare position report. PLI is the implicit payload
+            # (no payload_variant set); nothing to assign.
             return pkt
 
         has_aircraft = False
@@ -867,7 +868,7 @@ class CotXmlParser:
         # Payload priority: delete > chat > aircraft > route > rab > shape >
         # marker > casevac > emergency > task > pli.
         if is_delete_event:
-            pkt.pli = True
+            pass  # delete events carry no payload variant — implicit PLI
         elif has_room_data and cot_type_str == "y-":
             # TAKTALK y- room/membership broadcast — checked before chat so a
             # y- event with a UUID <chatroom-id> can't be reinterpreted.
@@ -948,10 +949,10 @@ class CotXmlParser:
             shape.fill_color = atak_palette.argb_to_team(fill_color_argb)
             shape.fill_argb = fill_color_argb
             shape.labels_on = labels_on
+            # Vertices as two PACKED parallel delta columns (see atak.proto).
             for (abs_lat, abs_lon) in vertices_abs:
-                v = shape.vertices.add()
-                v.lat_delta_i = abs_lat - pkt.latitude_i
-                v.lon_delta_i = abs_lon - pkt.longitude_i
+                shape.vertex_lat_deltas.append(abs_lat - pkt.latitude_i)
+                shape.vertex_lon_deltas.append(abs_lon - pkt.longitude_i)
             shape.truncated = vertices_truncated
             shape.bullseye_distance_dm = bullseye_distance_dm
             shape.bullseye_bearing_ref = bullseye_bearing_ref
@@ -1024,7 +1025,7 @@ class CotXmlParser:
             t.status = task_status
             t.note = task_note
         else:
-            pkt.pli = True
+            pass  # implicit PLI — no payload variant set
 
         # For non-chat types, propagate remarks_text as the top-level remarks field.
         # Chat uses GeoChat.message for the text; remarks stays empty.

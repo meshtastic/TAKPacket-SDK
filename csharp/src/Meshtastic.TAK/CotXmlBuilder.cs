@@ -426,10 +426,13 @@ public class CotXmlBuilder
         }
         else
         {
-            foreach (var v in shape.Vertices)
+            // Vertices are two PACKED parallel delta columns (see atak.proto);
+            // zip them back into pairs (same length by construction).
+            var n = System.Math.Min(shape.VertexLatDeltas.Count, shape.VertexLonDeltas.Count);
+            for (var i = 0; i < n; i++)
             {
-                var vlat = (eventLatI + v.LatDeltaI) / 1e7;
-                var vlon = (eventLonI + v.LonDeltaI) / 1e7;
+                var vlat = (eventLatI + shape.VertexLatDeltas[i]) / 1e7;
+                var vlon = (eventLonI + shape.VertexLonDeltas[i]) / 1e7;
                 sb.AppendLine($"    <link point=\"{F(vlat)},{F(vlon)}\"/>");
             }
         }

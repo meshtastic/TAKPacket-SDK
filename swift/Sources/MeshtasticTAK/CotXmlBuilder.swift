@@ -361,9 +361,12 @@ public class CotXmlBuilder {
                 s += "    </shape>\n"
             }
         } else {
-            for v in shape.vertices {
-                let vlat = Double(eventLatI + v.latDeltaI) / 1e7
-                let vlon = Double(eventLonI + v.lonDeltaI) / 1e7
+            // Vertices are two PACKED parallel delta columns (see atak.proto);
+            // zip them back into pairs (same length by construction).
+            let n = min(shape.vertexLatDeltas.count, shape.vertexLonDeltas.count)
+            for i in 0..<n {
+                let vlat = Double(eventLatI + shape.vertexLatDeltas[i]) / 1e7
+                let vlon = Double(eventLonI + shape.vertexLonDeltas[i]) / 1e7
                 s += "    <link point=\"\(vlat),\(vlon)\"/>\n"
             }
         }

@@ -360,10 +360,12 @@ class CotXmlBuilder:
                 lines.append(kml)
                 lines.append("    </shape>")
         else:
-            # Rectangle, polygon, freeform, telestration: vertices as <link point>
-            for v in shape.vertices:
-                vlat = (event_lat_i + v.lat_delta_i) / 1e7
-                vlon = (event_lon_i + v.lon_delta_i) / 1e7
+            # Rectangle, polygon, freeform, telestration: vertices as <link point>.
+            # Vertices are two PACKED parallel delta columns (see atak.proto);
+            # zip them back into pairs (same length by construction).
+            for lat_d, lon_d in zip(shape.vertex_lat_deltas, shape.vertex_lon_deltas):
+                vlat = (event_lat_i + lat_d) / 1e7
+                vlon = (event_lon_i + lon_d) / 1e7
                 lines.append(f'    <link point="{vlat},{vlon}"/>')
 
         if kind == _SHAPE_KIND_BULLSEYE:

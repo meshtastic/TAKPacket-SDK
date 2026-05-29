@@ -11,6 +11,16 @@ public class TakCompressor {
     /// Maximum allowed decompressed payload size (bytes). Prevents decompression bombs.
     private let maxDecompressedSize = 4096
 
+    /// The 4-byte zstd frame magic (little-endian 0xFD2FB528). Stripped on
+    /// compress and prepended on decompress: the SDK is both ends and identifies
+    /// the frame from its own 1-byte flags prefix, so the magic is pure overhead.
+    /// Done in app code (not a native magicless flag) so the wire bytes stay
+    /// byte-identical across all 5 language bindings — TypeScript's zstd-napi
+    /// cannot set the experimental magicless parameter. The magic is a fixed
+    /// constant, so this stays fully stateless: every frame is independently
+    /// reconstructable.
+    private let zstdMagic = Data([0x28, 0xB5, 0x2F, 0xFD])
+
     private let compressionLevel: Int32
 
     public init(compressionLevel: Int32 = 19) {
@@ -28,10 +38,21 @@ public class TakCompressor {
             throw TakCompressorError.noDictionary(dictId)
         }
 
-        let compressed = try compressWithDict(protobufBytes, dict: dictData)
-        var wirePayload = Data(capacity: 1 + compressed.count)
+        // Magic-stripped compressed body (frame slimming applied inside).
+        let body = try compressWithDict(protobufBytes, dict: dictData)
+
+        // Skip compression when it doesn't pay (tiny payloads where frame +
+        // dict-reference overhead exceeds entropy saved). The 0xFF uncompressed
+        // path is already understood by every decoder. Ties -> raw (cheaper decode).
+        if protobufBytes.count <= body.count {
+            var raw = Data(capacity: 1 + protobufBytes.count)
+            raw.append(UInt8(DictionaryProvider.DICT_ID_UNCOMPRESSED))
+            raw.append(protobufBytes)
+            return raw
+        }
+        var wirePayload = Data(capacity: 1 + body.count)
         wirePayload.append(UInt8(dictId & 0x3F))
-        wirePayload.append(compressed)
+        wirePayload.append(body)
         return wirePayload
     }
 
@@ -132,10 +153,10 @@ public class TakCompressor {
     public func compressWithStats(_ packet: TAKPacketV2) throws -> CompressionResult {
         let protobufBytes = try packet.serializedData()
         let wirePayload = try compress(packet)
-        let dictId = DictionaryProvider.selectDictId(
-            cotTypeId: packet.cotTypeID,
-            cotTypeStr: packet.cotTypeStr.isEmpty ? nil : packet.cotTypeStr
-        )
+        // Report the ACTUAL emitted mode from the flags byte — skip-compress may
+        // have emitted 0xFF (uncompressed) when compression didn't pay.
+        let flags = Int(wirePayload[0])
+        let dictId = flags == DictionaryProvider.DICT_ID_UNCOMPRESSED ? flags : (flags & 0x3F)
         return CompressionResult(
             protobufSize: protobufBytes.count,
             compressedSize: wirePayload.count,
@@ -150,19 +171,27 @@ public class TakCompressor {
         let cctx = ZSTD_createCCtx()
         defer { ZSTD_freeCCtx(cctx) }
 
-        let cdict = dict.withUnsafeBytes { dictPtr -> OpaquePointer? in
-            ZSTD_createCDict(dictPtr.baseAddress, dictPtr.count, compressionLevel)
+        // Advanced API so we can strip redundant frame fields: dict ID lives in
+        // our flags byte; content-size / checksum are dead weight on tiny
+        // dict-compressed payloads. One independent frame per packet (ZSTD_compress2
+        // is one-shot, never the streaming API).
+        _ = ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, compressionLevel)
+        _ = ZSTD_CCtx_setParameter(cctx, ZSTD_c_contentSizeFlag, 0)
+        _ = ZSTD_CCtx_setParameter(cctx, ZSTD_c_checksumFlag, 0)
+        _ = ZSTD_CCtx_setParameter(cctx, ZSTD_c_dictIDFlag, 0)
+
+        let loadResult = dict.withUnsafeBytes { dictPtr in
+            ZSTD_CCtx_loadDictionary(cctx, dictPtr.baseAddress, dictPtr.count)
         }
-        defer { if let cdict { ZSTD_freeCDict(cdict) } }
-        guard let cdict else { throw TakCompressorError.dictCreationFailed }
+        if ZSTD_isError(loadResult) != 0 { throw TakCompressorError.dictCreationFailed }
 
         let bound = ZSTD_compressBound(input.count)
         var output = Data(count: bound)
 
         let compressedSize = output.withUnsafeMutableBytes { outPtr in
             input.withUnsafeBytes { inPtr in
-                ZSTD_compress_usingCDict(cctx, outPtr.baseAddress, outPtr.count,
-                                          inPtr.baseAddress, inPtr.count, cdict)
+                ZSTD_compress2(cctx, outPtr.baseAddress, outPtr.count,
+                               inPtr.baseAddress, inPtr.count)
             }
         }
 
@@ -171,10 +200,16 @@ public class TakCompressor {
             throw TakCompressorError.compressionFailed(msg)
         }
 
-        return output.prefix(compressedSize)
+        let framed = Data(output.prefix(compressedSize))
+        // Strip the 4-byte magic (see zstdMagic). Defensive: the frame must start
+        // with the known magic or our strip/prepend contract is broken.
+        guard framed.count >= 4, framed.prefix(4) == zstdMagic else {
+            throw TakCompressorError.compressionFailed("Unexpected zstd frame header (magic mismatch)")
+        }
+        return framed.subdata(in: 4..<framed.count)
     }
 
-    private func decompressWithDict(_ input: Data, dict: Data) throws -> Data {
+    private func decompressWithDict(_ rawInput: Data, dict: Data) throws -> Data {
         let dctx = ZSTD_createDCtx()
         defer { ZSTD_freeDCtx(dctx) }
 
@@ -183,6 +218,12 @@ public class TakCompressor {
         }
         defer { if let ddict { ZSTD_freeDDict(ddict) } }
         guard let ddict else { throw TakCompressorError.dictCreationFailed }
+
+        // Re-attach the 4-byte magic stripped on compress (see zstdMagic),
+        // yielding a standard frame the stock decoder accepts. The supplied
+        // dict (not a frame-embedded dict ID) selects the dictionary.
+        var input = zstdMagic
+        input.append(rawInput)
 
         let frameSize = input.withUnsafeBytes { ZSTD_getFrameContentSize($0.baseAddress, $0.count) }
         let maxSize: Int
@@ -219,6 +260,7 @@ public struct CompressionResult {
         switch dictId {
         case DictionaryProvider.DICT_ID_NON_AIRCRAFT: return "non-aircraft"
         case DictionaryProvider.DICT_ID_AIRCRAFT: return "aircraft"
+        case DictionaryProvider.DICT_ID_UNCOMPRESSED: return "uncompressed"
         default: return "unknown"
         }
     }

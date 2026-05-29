@@ -388,10 +388,14 @@ function emitShape(lines: string[], shape: DrawnShape, eventLatI: number, eventL
       lines.push("    </shape>");
     }
   } else {
-    const vertices = shape.vertices ?? [];
-    for (const v of vertices) {
-      const vlat = (eventLatI + (v.latDeltaI ?? 0)) / 1e7;
-      const vlon = (eventLonI + (v.lonDeltaI ?? 0)) / 1e7;
+    // Vertices are two PACKED parallel delta columns (see atak.proto); zip
+    // them back into pairs (same length by construction).
+    const latDeltas = shape.vertexLatDeltas ?? [];
+    const lonDeltas = shape.vertexLonDeltas ?? [];
+    const n = Math.min(latDeltas.length, lonDeltas.length);
+    for (let i = 0; i < n; i++) {
+      const vlat = (eventLatI + latDeltas[i]) / 1e7;
+      const vlon = (eventLonI + lonDeltas[i]) / 1e7;
       lines.push(`    <link point="${vlat},${vlon}"/>`);
     }
   }

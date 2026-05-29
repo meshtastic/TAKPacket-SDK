@@ -9,6 +9,17 @@ import type { TAKPacketV2 } from "./types.js";
 /** Maximum allowed decompressed payload size (bytes). Prevents decompression bombs. */
 const MAX_DECOMPRESSED_SIZE = 4096;
 
+/**
+ * The 4-byte zstd frame magic (little-endian 0xFD2FB528). Stripped on compress
+ * and prepended on decompress: the SDK is both ends and identifies the frame
+ * from its own 1-byte flags prefix, so the magic is pure overhead. Done in app
+ * code because zstd-napi cannot set the experimental "magicless" format — and
+ * doing it manually keeps the wire bytes byte-identical across all 5 language
+ * bindings. The magic is a fixed constant, so this stays fully stateless: every
+ * frame is independently reconstructable.
+ */
+const ZSTD_MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
+
 export interface CompressionResult {
   protobufSize: number;
   compressedSize: number;
@@ -46,21 +57,45 @@ export class TakCompressor {
   private init(): void {
     if (this.initialized) return;
 
+    // IMPORTANT: set parameters BEFORE loadDictionary. zstd digests the dict
+    // using the current compression parameters, and `windowLog` is a
+    // compression parameter (unlike the frame-only contentSize/checksum/dictID
+    // flags, which can be toggled after loading). Setting windowLog AFTER the
+    // dict is loaded resets the digested dictionary -> worse ratios and
+    // "Data corruption" on decode. Params-first is the zstd-recommended order.
+    //
+    // windowLog must cover the (large) dictionary so the compressor can
+    // reference matches anywhere in it. Unlike zstd-jni/zstandard/ZstdSharp,
+    // zstd-napi does NOT auto-size the window from the loaded dict, so for a
+    // tiny input it would otherwise use a tiny window and miss deep dict
+    // matches (observed: marker_icon_set compressed 2.6x worse). 2^21 = 2MB
+    // covers any dict we ship. The frame still encodes only the minimal window
+    // actually used, so decoders just need windowLogMax >= that (set below).
     const cNonAc = new Compressor();
+    cNonAc.setParameters({ compressionLevel: 19, contentSizeFlag: false, checksumFlag: false, dictIDFlag: false, windowLog: 21 });
     cNonAc.loadDictionary(nonAircraftDict());
-    cNonAc.setParameters({ compressionLevel: 19 });
     this.compressors.set(DICT_ID_NON_AIRCRAFT, cNonAc);
 
+    // windowLog set here too for parity; the aircraft dict is small so the
+    // default window already covers it, but keeping both compressors identical
+    // avoids a latent regression if the aircraft dict ever grows.
     const cAc = new Compressor();
+    cAc.setParameters({ compressionLevel: 19, contentSizeFlag: false, checksumFlag: false, dictIDFlag: false, windowLog: 21 });
     cAc.loadDictionary(aircraftDict());
-    cAc.setParameters({ compressionLevel: 19 });
     this.compressors.set(DICT_ID_AIRCRAFT, cAc);
 
+    // windowLogMax must be >= the window any peer binding encodes with. The
+    // other four bindings auto-size their window to the (large) dict, so their
+    // frames can carry windowLog ~20; raise the decoder ceiling so TS can
+    // decode every binding's frames. Set BEFORE loadDictionary (same dict-reset
+    // hazard as the compressor). Constant => still fully stateless.
     const dNonAc = new Decompressor();
+    dNonAc.setParameters({ windowLogMax: 27 });
     dNonAc.loadDictionary(nonAircraftDict());
     this.decompressors.set(DICT_ID_NON_AIRCRAFT, dNonAc);
 
     const dAc = new Decompressor();
+    dAc.setParameters({ windowLogMax: 27 });
     dAc.loadDictionary(aircraftDict());
     this.decompressors.set(DICT_ID_AIRCRAFT, dAc);
 
@@ -83,10 +118,29 @@ export class TakCompressor {
     const compressor = this.compressors.get(dictId);
     if (!compressor) throw new Error(`No compressor for dict ${dictId}`);
 
-    const compressed = compressor.compress(protobufBytes);
-    const wire = Buffer.alloc(1 + compressed.length);
+    // One independent frame per packet (one-shot, never streaming).
+    const framed = compressor.compress(protobufBytes);
+    // Strip the 4-byte magic (see ZSTD_MAGIC). Defensive: the frame must start
+    // with the known magic or our strip/prepend contract is broken.
+    if (framed.length < 4 || framed[0] !== ZSTD_MAGIC[0] || framed[1] !== ZSTD_MAGIC[1]
+      || framed[2] !== ZSTD_MAGIC[2] || framed[3] !== ZSTD_MAGIC[3]) {
+      throw new Error("Unexpected zstd frame header (magic mismatch)");
+    }
+    const body = framed.subarray(4);
+
+    // Skip compression when it doesn't pay (tiny payloads where frame +
+    // dict-reference overhead exceeds entropy saved). The 0xFF uncompressed path
+    // is already understood by every decoder. Ties -> raw (cheaper decode).
+    if (protobufBytes.length <= body.length) {
+      const raw = Buffer.alloc(1 + protobufBytes.length);
+      raw[0] = DICT_ID_UNCOMPRESSED;
+      protobufBytes.copy(raw, 1);
+      return raw;
+    }
+
+    const wire = Buffer.alloc(1 + body.length);
     wire[0] = dictId & 0x3f;
-    compressed.copy(wire, 1);
+    body.copy(wire, 1);
     return wire;
   }
 
@@ -106,7 +160,11 @@ export class TakCompressor {
       const decompressor = this.decompressors.get(dictId);
       if (!decompressor) throw new Error(`Unknown dict ID: ${dictId}`);
       try {
-        protobufBytes = decompressor.decompress(Buffer.from(compressedBytes));
+        // Re-attach the 4-byte magic stripped on compress (see ZSTD_MAGIC),
+        // yielding a standard frame the stock decoder accepts. The supplied
+        // dict (not a frame-embedded dict ID) selects the dictionary.
+        const restored = Buffer.concat([ZSTD_MAGIC, compressedBytes]);
+        protobufBytes = decompressor.decompress(restored);
       } catch (e) {
         throw new Error(`Zstd decompression failed: ${e}`);
       }
@@ -186,15 +244,18 @@ export class TakCompressor {
     const protobufBytes = TAKPacketV2Type.encode(msg).finish();
 
     const wirePayload = await this.compress(packet);
-    const cotTypeId = packet.cotTypeId ?? 0;
-    const cotTypeStr = packet.cotTypeStr ?? undefined;
-    const dictId = selectDictId(cotTypeId, cotTypeStr);
+    // Report the ACTUAL emitted mode from the flags byte — skip-compress may
+    // have emitted 0xFF (uncompressed) when compression didn't pay.
+    const flags = wirePayload[0];
+    const dictId = flags === DICT_ID_UNCOMPRESSED ? flags : (flags & 0x3f);
 
     return {
       protobufSize: protobufBytes.length,
       compressedSize: wirePayload.length,
       dictId,
-      dictName: dictId === DICT_ID_NON_AIRCRAFT ? "non-aircraft" : dictId === DICT_ID_AIRCRAFT ? "aircraft" : "unknown",
+      dictName: dictId === DICT_ID_NON_AIRCRAFT ? "non-aircraft"
+        : dictId === DICT_ID_AIRCRAFT ? "aircraft"
+        : dictId === DICT_ID_UNCOMPRESSED ? "uncompressed" : "unknown",
       wirePayload,
     };
   }

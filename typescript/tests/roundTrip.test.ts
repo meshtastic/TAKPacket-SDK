@@ -237,7 +237,9 @@ describe("RoundTrip", () => {
     expect((pkt.speed as number | undefined) ?? 0).toBe(0);
     expect((pkt.course as number | undefined) ?? 0).toBe(0);
     expect(pkt.callsign).toBe("iPadTAKAware");
-    expect(pkt.pli).toBe(true);
+    // PLI is the implicit payload since v0.4.0 — no payload variant is set.
+    expect(pkt.pli).toBeUndefined();
+    expect(pkt.chat).toBeUndefined();
   });
 
   it("handles uncompressed 0xFF payload", async () => {
@@ -245,7 +247,8 @@ describe("RoundTrip", () => {
     const TAKPacketV2 = await getTAKPacketV2Type();
     const msg = TAKPacketV2.create({
       cotTypeId: 1, how: 2, callsign: "TEST",
-      latitudeI: 340522000, longitudeI: -1182437000, altitude: 100, pli: true,
+      latitudeI: 340522000, longitudeI: -1182437000, altitude: 100,
+      // PLI implicit since v0.4.0 — no payload variant.
     });
     const proto = Buffer.from(TAKPacketV2.encode(msg).finish());
     const wire = Buffer.concat([Buffer.from([0xff]), proto]);

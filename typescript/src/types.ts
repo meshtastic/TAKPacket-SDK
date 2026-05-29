@@ -125,7 +125,14 @@ export interface DrawnShape {
   fillColor?: Team;
   fillArgb?: number;
   labelsOn?: boolean;
-  vertices?: CotGeoPoint[];
+  /**
+   * Vertex deltas as two PACKED parallel columns (lat, lon) of signed 1e-7°
+   * deltas from the event anchor. vertex N is (vertexLatDeltas[N],
+   * vertexLonDeltas[N]); the columns are the same length. Packed encoding pays
+   * the field framing once per column instead of once per vertex. See atak.proto.
+   */
+  vertexLatDeltas?: number[];
+  vertexLonDeltas?: number[];
   truncated?: boolean;
   bullseyeDistanceDm?: number;
   bullseyeBearingRef?: number;
@@ -321,8 +328,9 @@ export interface TAKPacketV2 {
    */
   marti?: Marti;
 
-  // --- payload_variant oneof (exactly one should be set) ---
-  pli?: boolean;
+  // --- payload_variant oneof (at most one set; PLI is implicit = none set) ---
+  // Tag 30 (former `bool pli`) was dropped in v0.4.0 — a position report sets
+  // no payload variant. See atak.proto.
   chat?: GeoChat;
   aircraft?: AircraftTrack;
   rawDetail?: Uint8Array | Buffer;

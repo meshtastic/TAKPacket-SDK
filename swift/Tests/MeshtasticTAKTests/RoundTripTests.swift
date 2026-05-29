@@ -151,9 +151,8 @@ final class RoundTripTests: XCTestCase {
         XCTAssertFalse(packet.takVersion.isEmpty, "takVersion should not be empty")
         XCTAssertFalse(packet.takPlatform.isEmpty, "takPlatform should not be empty")
         XCTAssertGreaterThan(packet.battery, 0, "Battery should be > 0")
-        guard case .pli = packet.payloadVariant else {
-            XCTFail("Expected PLI payload"); return
-        }
+        // PLI is the implicit payload since v0.4.0 — no payload variant is set.
+        XCTAssertNil(packet.payloadVariant, "Expected implicit PLI (no payload variant)")
     }
 
     func testPliStationaryClampsNegativeSpeedAndCourse() throws {
@@ -167,9 +166,8 @@ final class RoundTripTests: XCTestCase {
         XCTAssertEqual(packet.speed, 0, "Negative speed must clamp to 0")
         XCTAssertEqual(packet.course, 0, "Negative course must clamp to 0")
         XCTAssertEqual(packet.callsign, "iPadTAKAware")
-        guard case .pli = packet.payloadVariant else {
-            XCTFail("Expected PLI payload"); return
-        }
+        // PLI is the implicit payload since v0.4.0 — no payload variant is set.
+        XCTAssertNil(packet.payloadVariant, "Expected implicit PLI (no payload variant)")
     }
 
     func testUncompressed0xFFRoundTrip() throws {
@@ -180,7 +178,7 @@ final class RoundTripTests: XCTestCase {
         packet.latitudeI = 340522000
         packet.longitudeI = -1182437000
         packet.altitude = 100
-        packet.pli = true
+        // PLI is the implicit payload since v0.4.0 — no payload variant set.
 
         let proto = try packet.serializedData()
         var wire = Data([0xFF])

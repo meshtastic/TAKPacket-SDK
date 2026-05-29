@@ -66,7 +66,6 @@ object TakPacketV2Serializer {
         // class constructor at the bottom. Unused fields stay null, matching
         // the semantics of the flattened oneof Wire generates when
         // boxOneOfsMinSize = 5000.
-        var pliField: Boolean? = null
         var chatField: GeoChat? = null
         var aircraftField: AircraftTrack? = null
         var rawDetailField: okio.ByteString? = null
@@ -81,7 +80,11 @@ object TakPacketV2Serializer {
         var takTalkRoomField: TakTalkRoomData? = null
 
         when (val payload = data.payload) {
-            is TakPacketV2Data.Payload.Pli -> pliField = true
+            // PLI is the implicit payload — no oneof variant is set (saves ~3
+            // bytes/beacon vs the former bool pli). Decoded back to Pli when no
+            // variant is present. None also emits no variant (builder treats
+            // None/Pli identically: envelope-only output).
+            is TakPacketV2Data.Payload.Pli -> { /* no payload_variant on the wire */ }
             is TakPacketV2Data.Payload.Chat -> {
                 // TAKTALK sidecars: voiceProfileId encodes the empty <voice_profile_id/>
                 // marker as an empty string (with hasVoiceProfile true on the data class
@@ -156,15 +159,13 @@ object TakPacketV2Serializer {
                         ?: Team.Unspecifed_Color,
                     fill_argb = payload.fillArgb,
                     labels_on = payload.labelsOn,
-                    // CotGeoPoint is delta-encoded from the event anchor — see
-                    // atak.proto. The parser stores absolutes in the payload, so
-                    // we subtract here to get the wire-form deltas.
-                    vertices = payload.vertices.map { v ->
-                        CotGeoPoint(
-                            lat_delta_i = v.latI - data.latitudeI,
-                            lon_delta_i = v.lonI - data.longitudeI,
-                        )
-                    },
+                    // Vertices are delta-encoded from the event anchor (see
+                    // atak.proto) into two PACKED parallel sint32 columns. The
+                    // parser stores absolutes in the payload, so we subtract the
+                    // anchor here to get the wire-form deltas. Packing pays the
+                    // field framing once per column instead of once per vertex.
+                    vertex_lat_deltas = payload.vertices.map { it.latI - data.latitudeI },
+                    vertex_lon_deltas = payload.vertices.map { it.lonI - data.longitudeI },
                     truncated = payload.truncated,
                     bullseye_distance_dm = payload.bullseyeDistanceDm,
                     bullseye_bearing_ref = payload.bullseyeBearingRef,
@@ -348,8 +349,8 @@ object TakPacketV2Serializer {
             // Directed-routing recipients (<marti><dest callsign='X'/>…</marti>).
             // null = broadcast; non-null Marti carries 1+ dest callsigns.
             marti = martiField,
-            // Oneof payload_variant — exactly one non-null (or all null for None)
-            pli = pliField,
+            // Oneof payload_variant — at most one non-null. PLI sets NONE of
+            // them (implicit position payload); decoded back to Pli below.
             chat = chatField,
             aircraft = aircraftField,
             raw_detail = rawDetailField,
@@ -483,10 +484,14 @@ object TakPacketV2Serializer {
                     fillColor = s.fill_color.value,
                     fillArgb = s.fill_argb,
                     labelsOn = s.labels_on,
-                    vertices = s.vertices.map { v ->
+                    // Zip the two packed delta columns back into absolute
+                    // vertex pairs. The columns are the same length by
+                    // construction; zip() truncates to the shorter if a
+                    // malformed packet sends mismatched lengths (defensive).
+                    vertices = s.vertex_lat_deltas.zip(s.vertex_lon_deltas) { latD, lonD ->
                         TakPacketV2Data.Payload.Vertex(
-                            latI = proto.latitude_i + v.lat_delta_i,
-                            lonI = proto.longitude_i + v.lon_delta_i,
+                            latI = proto.latitude_i + latD,
+                            lonI = proto.longitude_i + lonD,
                         )
                     },
                     truncated = s.truncated,
@@ -579,8 +584,12 @@ object TakPacketV2Serializer {
             proto.raw_detail != null -> TakPacketV2Data.Payload.RawDetail(
                 proto.raw_detail!!.toByteArray(),
             )
-            proto.pli != null -> TakPacketV2Data.Payload.Pli(proto.pli!!)
-            else -> TakPacketV2Data.Payload.None
+            // No payload_variant set → implicit PLI (position report). The
+            // former `bool pli` field was dropped; a position beacon now carries
+            // zero payload bytes. None is never produced on decode (the parser
+            // never emits it, and the builder renders None/Pli identically), so
+            // collapsing no-variant to Pli is lossless for real traffic.
+            else -> TakPacketV2Data.Payload.Pli(true)
         }
 
         return TakPacketV2Data(
