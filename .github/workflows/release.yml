@@ -310,29 +310,44 @@ jobs:
           fi
 
           echo ""
-          echo "=== Maven Central check (with retry — index lag is normal) ==="
-          # Up to 10 minutes of polling: Sonatype Central Portal validates
-          # the deployment async after publishAllPublicationsToMavenCentralRepository
-          # returns success, and Maven Central indexing adds another minute or two.
+          echo "=== Maven Central check (with retry — Sonatype→repo1 sync lag is normal) ==="
+          # By the time this step runs, the "Publish to Maven Central" step above
+          # ALREADY succeeded (it's an earlier step in this same job; a failed
+          # Gradle publish fails the job before we get here). So a 404 below means
+          # the deployment is still propagating from the Sonatype Central Portal
+          # to repo1.maven.org — NOT that the publish failed. With
+          # automaticRelease=true that propagation is guaranteed; it just routinely
+          # takes 10–25 min (occasionally more). So we poll generously and, on
+          # timeout, emit a WARNING rather than fail the release red — a false
+          # "PARTIAL" here (v0.5.0 synced at ~14 min, past the old 10-min window)
+          # blocks downstream consumers from a release that is actually complete.
+          # A genuinely partial release (publish failed, or tag missing) is caught
+          # by the publish step itself / the tag check above.
           HTTP=000
-          for i in 1 2 3 4 5 6 7 8 9 10; do
+          for i in $(seq 1 25); do
             HTTP=$(curl -sS -o /dev/null -w "%{http_code}" \
               "https://repo1.maven.org/maven2/org/meshtastic/takpacket-sdk-jvm/$VERSION/takpacket-sdk-jvm-$VERSION.pom")
             if [ "$HTTP" = "200" ]; then
               echo "✓ Maven Central POM for v$VERSION reachable (attempt $i)"
               break
             fi
-            echo "  attempt $i: HTTP $HTTP — retrying in 60s"
+            echo "  attempt $i/25: HTTP $HTTP — retrying in 60s"
             sleep 60
           done
           if [ "$HTTP" != "200" ]; then
-            echo "✗ Maven Central POM for v$VERSION not reachable after 10 minutes — Kotlin/Android Gradle consumers will not resolve this release"
-            FAIL=1
+            echo "::warning::Maven Central POM for v$VERSION not yet synced after 25 min. The publish step succeeded and the tag is on origin, so this is Sonatype→repo1.maven.org propagation lag, not a failed publish. Verify https://repo1.maven.org/maven2/org/meshtastic/takpacket-sdk-jvm/$VERSION/ resolves within ~30–60 min before Gradle/Android consumers bump; if it never does, check the Sonatype Central Portal deployment status."
           fi
 
+          # Only a MISSING TAG is a hard partial-release failure (Apple SPM can't
+          # resolve it, and tags are pushed before publish so a missing tag means
+          # something is badly wrong). Maven sync lag is a warning (see above).
           if [ $FAIL -ne 0 ]; then
-            echo "::error::Release v$VERSION is PARTIAL — see checks above. Investigate before downstream consumers (Meshtastic-Android, Meshtastic-Apple) bump."
+            echo "::error::Release v$VERSION is PARTIAL — the git tag is missing on origin, so Apple SPM consumers cannot resolve it. Investigate before downstream consumers (Meshtastic-Android, Meshtastic-Apple) bump."
             exit 1
           fi
           echo ""
-          echo "✓ Release v$VERSION verified end-to-end: tag on origin + POM on Maven Central"
+          if [ "$HTTP" = "200" ]; then
+            echo "✓ Release v$VERSION verified end-to-end: tag on origin + POM on Maven Central"
+          else
+            echo "✓ Release v$VERSION: tag on origin + GitHub release published. Maven Central sync still pending (see warning) — expected to resolve shortly."
+          fi
