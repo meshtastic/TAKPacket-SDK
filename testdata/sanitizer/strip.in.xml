@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="SANITIZER-TEST" type="b-m-r" how="m-g" time="2026-05-29T00:00:00Z" start="2026-05-29T00:00:00Z" stale="2026-05-29T00:02:00Z" access="Undefined">
+  <point lat="33.1284" lon="-107.2528" hae="0" ce="9999999" le="9999999"/>
+  <detail>
+    <takv os="36" version="5.7.0" device="DEVICE-X" platform="ATAK-CIV"/>
+    <contact callsign="ASPEN" endpoint="192.0.2.1:4242:tcp"/>
+    <__group role="Team Member" name="Cyan"/>
+    <precisionlocation altsrc="NETD" geopointsrc="NETD"/>
+    <creator uid="creator-uuid" callsign="ASPEN" time="2026-05-29T00:00:00Z" type="a-f-G-U-C"/>
+    <archive/>
+    <tog enabled="1"/>
+    <__geofence monitor="true" trigger="Entry"/>
+    <__shapeExtras cpvis="true" editable="true"/>
+    <strokeStyle pattern="solid"/>
+    <remarks></remarks>
+    <status battery="64" readiness="???"/>
+    <voice/>
+    <marti><dest callsign="ETHEL"/></marti>
+    <link uid="LINK-UUID-1" point="33.1300,-107.2500" routetype="On Road" order="Ascending Check Points"/>
+    <link uid="LINK-UUID-2" point="33.1400,-107.2600" color="-1" access="Undefined" callsign="" phone=""/>
+  </detail>
+</event>

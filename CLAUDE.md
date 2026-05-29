@@ -36,6 +36,7 @@ csharp/              .NET 9 library (Google.Protobuf + ZstdSharp)
 | `TakCompressor` | Data model -> `[flags][zstd protobuf]` wire payload, and reverse |
 | `CotTypeMapper` | Bidirectional CoT type string <-> enum, aircraft classification |
 | `AtakPalette` | ARGB <-> Team enum bidirectional lookup for the 14 ATAK colors |
+| `CotMeshSanitizer` | CoT-XML hygiene for mesh: `stripNonEssentialForMesh` (drop display-only detail, **preserve voice/marti**) + `normalizeCotXml` (drop `<?xml?>`, collapse inter-tag whitespace). Pure regex; **Kotlin lives in `commonMain`** (so KMP consumers can call it on iOS too). Hoisted from the app strip pipelines so the rules live in one golden-tested place (`testdata/sanitizer/`) and can't drift. |
 
 Plus per-platform: `DictionaryProvider` (loads zstd dicts from resources) and `TakPacketV2Serializer` (Kotlin only — bridges `TakPacketV2Data` <-> Wire-generated proto types).
 

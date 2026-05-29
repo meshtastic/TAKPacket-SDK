@@ -5,3 +5,8 @@ from .cot_xml_parser import CotXmlParser
 from .cot_xml_builder import CotXmlBuilder
 from .tak_compressor import TakCompressor
 from .dictionary_provider import DictionaryProvider
+from .cot_mesh_sanitizer import (
+    CotMeshSanitizer,
+    normalize_cot_xml,
+    strip_non_essential_for_mesh,
+)

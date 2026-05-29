@@ -15,6 +15,7 @@ Every platform implements the same 5 core classes with identical behavior:
 - **`TakCompressor`** — compresses data model to `[flags][zstd protobuf]` wire payload, and decompresses back
 - **`CotTypeMapper`** — bidirectional CoT type string <-> enum, plus aircraft classification
 - **`AtakPalette`** — ARGB <-> Team enum color palette lookup
+- **`CotMeshSanitizer`** — CoT-XML mesh hygiene: `stripNonEssentialForMesh` (drop display-only detail; **preserves TAK-Talk `<voice>`/`<marti>`**) + `normalizeCotXml` (drop `<?xml?>` + collapse inter-tag whitespace). Pure regex using `[\s\S]` (not DOTALL) for cross-binding parity; Kotlin lives in `commonMain` (callable on iOS). Goldens: `testdata/sanitizer/`. Consumers (Android/Apple) delegate here instead of keeping their own strip lists.
 
 Kotlin is the canonical implementation. It generates the golden test artifacts (`.pb` and `.bin` files in `testdata/`) consumed by the other 4 platforms.
 
