@@ -159,7 +159,9 @@ public class CotXmlBuilder
             || pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.TaktalkRoom;
         if (!string.IsNullOrEmpty(pkt.Callsign) && !isRoute && !isTakTalkShape)
         {
-            var ep = string.IsNullOrEmpty(pkt.Endpoint) ? "0.0.0.0:4242:tcp" : pkt.Endpoint;
+            // "*:-1:stcp" = TAK "reply via this server" — required so ATAK routes directed
+            // GeoChat / TAK-Talk back down the server stream. A concrete host breaks it.
+            var ep = string.IsNullOrEmpty(pkt.Endpoint) ? "*:-1:stcp" : pkt.Endpoint;
             var tag = $"    <contact callsign=\"{Esc(pkt.Callsign)}\" endpoint=\"{Esc(ep)}\"";
             if (!string.IsNullOrEmpty(pkt.Phone)) tag += $" phone=\"{Esc(pkt.Phone)}\"";
             sb.AppendLine(tag + "/>");

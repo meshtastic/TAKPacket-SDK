@@ -12,7 +12,7 @@ flowchart TD
         A["CoT XML<br/>(~400-2300 B)"]
         B["TAKPacketV2<br/>Protobuf"]
         C["Wire Payload<br/>(median 87B,<br/>max 184B)"]
-        A -->|CotXmlParser| B
+        A -->|"CotMeshSanitizer<br/>→ CotXmlParser"| B
         B -->|TakCompressor| C
     end
     C -->|"LoRa / Meshtastic<br/>(≤237 B MTU)"| D
@@ -106,6 +106,25 @@ for the full specification including error handling requirements and annotated e
 ### 4. CoT XML Reconstruction
 
 `CotXmlBuilder` reconstructs a standards-compliant CoT XML event from a `TAKPacketV2` protobuf, preserving every structured field extracted during parsing — including geometry vertices, stroke/fill colors, marker iconsets, and route waypoints.
+
+## Mesh Hygiene (`CotMeshSanitizer`)
+
+ATAK and its plugins emit CoT XML that carries display-only `<detail>` children (map-rendering hints, geofences, archive flags, creator metadata, stroke styling, …) and is often pretty-printed with an `<?xml?>` prologue. None of that is needed by a receiver, and every byte competes for the 237-byte LoRa MTU. `CotMeshSanitizer` is the SDK's shared, golden-tested pre-processing pass that consumers run on raw CoT XML **before** handing it to `CotXmlParser`:
+
+| Method | What it does |
+|--------|--------------|
+| `stripNonEssentialForMesh(xml)` | Removes display-only `<detail>` content (e.g. `takv`, `__geofence`, `archive`, `creator`, stroke/precision-location styling, route-link UIDs, unknown `="???"` attributes) while **preserving everything the receiver needs to render or route — including TAK-Talk `<voice>` and `<marti>` directed routing**. Safe on any CoT XML; a no-op when there's nothing to strip. |
+| `normalizeCotXml(xml)` | Drops the `<?xml …?>` declaration and collapses inter-tag whitespace (`>   <` → `><`) so the event matches the single-line stream TAK TCP clients expect. Whitespace inside text nodes is left intact. |
+
+Both are pure string transforms with no protobuf, compression, or platform dependencies. In Kotlin the object lives in `commonMain`, so KMP consumers (e.g. Meshtastic-Android's `core:takserver`) can call it from their own `commonMain` and reuse it on iOS. These rules previously lived as ad-hoc regex lists duplicated inside Meshtastic-Android and Meshtastic-Apple — they drifted and silently broke features (most recently TAK-Talk voice/marti stopped surfacing end-to-end). Centralizing them here, with byte-for-byte cross-binding fixtures under [`testdata/sanitizer/`](testdata/sanitizer/), keeps every consumer in lockstep. Regexes use `[\s\S]` (not the DOTALL flag) for identical behavior across all five bindings.
+
+| Binding | Entry point |
+|---------|-------------|
+| Kotlin | `CotMeshSanitizer.stripNonEssentialForMesh(xml)` / `.normalizeCotXml(xml)` — `object`, `commonMain` |
+| Swift | `CotMeshSanitizer.stripNonEssentialForMesh(_:)` / `.normalizeCotXml(_:)` — `enum` |
+| Python | `strip_non_essential_for_mesh(xml)` / `normalize_cot_xml(xml)` — module fns (also a `CotMeshSanitizer` static facade) |
+| TypeScript | `stripNonEssentialForMesh(xml)` / `normalizeCotXml(xml)` — exported fns |
+| C# | `CotMeshSanitizer.StripNonEssentialForMesh(xml)` / `.NormalizeCotXml(xml)` — `static class` |
 
 ## Structured Payload Types
 
@@ -819,11 +838,13 @@ Route rendered in ATAK Route Manager
 
 | Platform | Language | Directory | Tests |
 |----------|----------|-----------|-------|
-| Android / ATAK Plugin | Kotlin | `kotlin/` | ✅ 211 |
-| iOS / macOS | Swift | `swift/` | ✅ 152 |
-| Windows / .NET | C# | `csharp/` | ✅ 191 |
-| Web / Node.js | TypeScript | `typescript/` | ✅ 161 |
-| CLI / Scripting | Python | `python/` | ✅ 153 |
+| Android / ATAK Plugin | Kotlin | `kotlin/` | ✅ 80 |
+| iOS / macOS | Swift | `swift/` | ✅ 43 |
+| Windows / .NET | C# | `csharp/` | ✅ 52 |
+| Web / Node.js | TypeScript | `typescript/` | ✅ 57 |
+| CLI / Scripting | Python | `python/` | ✅ 45 |
+
+Counts are source-declared test methods (current as of v0.5.1, including the new `CotMeshSanitizer` suites). Parametrized methods expand to more individual cases at run time — e.g. the Kotlin JVM suite executes 315 tests and Python's `pytest` 229.
 
 Every platform is byte-interoperable: `.pb` and `.bin` golden files written by Kotlin's `CompressionTest.generate compression report` are consumed by the other four platforms for exact-match validation (within protobuf field-order tolerance) and full round-trip equivalence.
 
@@ -835,7 +856,11 @@ val parser = CotXmlParser()
 val compressor = TakCompressor()
 
 // Compress a CoT message for LoRa
-val packet = parser.parse(cotXmlString)
+// Pre-process raw ATAK CoT XML before parsing (see "Mesh Hygiene" above —
+// the same helper exists in all five bindings)
+var clean = CotMeshSanitizer.normalizeCotXml(cotXmlString)
+clean = CotMeshSanitizer.stripNonEssentialForMesh(clean)
+val packet = parser.parse(clean)
 val wirePayload = compressor.compress(packet)
 
 // Decompress a received payload
@@ -916,6 +941,7 @@ Each platform implements the same components with identical behavior:
 | **TakCompressor** | Compresses/decompresses `TAKPacketV2` using zstd dictionaries, with `compress()`, `compressWithRemarksFallback()`, and `compressWithStats()` entry points |
 | **CotTypeMapper** | Maps CoT type strings to/from `CotType` enum values; classifies aircraft types for dictionary selection |
 | **AtakPalette** | Bidirectional lookup between ATAK's 14-color palette and `Team` enum values, for color round-trip preservation |
+| **CotMeshSanitizer** | CoT-XML mesh hygiene applied *before* parsing: `stripNonEssentialForMesh` (drop display-only `<detail>`, **preserving TAK-Talk `<voice>`/`<marti>`**) + `normalizeCotXml` (strip `<?xml?>`, collapse inter-tag whitespace). Pure regex, no protobuf/compression deps — see [Mesh Hygiene](#mesh-hygiene-cotmeshsanitizer) |
 
 ## Dictionary Management
 
@@ -931,6 +957,7 @@ All five language implementations share the same test vectors in `testdata/`:
 - **`cot_xml/`** — 47 input CoT XML fixtures captured from real ATAK-CIV, iTAK, and WebTAK clients (coordinates scrubbed to synthetic test ranges so no real user locations leak), covering 7 PLI variants (incl. iTAK, WebTAK, TAK Aware, stationary, sensor), 3 GeoChat bodies + delivered/read receipts + 2 TAKTALK-flavored chats, 2 aircraft tracks, CASEVAC (bare + full 9-line), delete events, 8 drawings (circle, circle large, ellipse, freeform, polygon, rectangle, rectangle iTAK, telestration), 6 markers (2525, GoTo, GoTo iTAK, icon set, spot, tank), 3 ranging (bullseye, circle, line), 2 routes (3-waypoint canonical + iTAK variant), emergency alerts (911 + cancel), tasking, 4 TAKTALK payloads (room data, text, voice, voice+marti), and the alert_tic / waypoint envelopes.
 - **`protobuf/`** — Expected `TAKPacketV2` protobuf bytes (pre-compression), written by Kotlin's `CompressionTest`, consumed by every other platform for exact-match validation.
 - **`golden/`** — Expected compressed wire payloads, byte-for-byte identical across platforms.
+- **`sanitizer/`** — `CotMeshSanitizer` input/expected XML pairs (`strip.{in,out}.xml`, `normalize.{in,out}.xml`) that lock the mesh-hygiene transforms to byte-for-byte parity across all five bindings.
 
 Run tests for each platform:
 ```bash

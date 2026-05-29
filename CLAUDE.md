@@ -27,7 +27,7 @@ typescript/          npm package (protobufjs + fzstd)
 csharp/              .NET 9 library (Google.Protobuf + ZstdSharp)
 ```
 
-## Architecture — every platform implements these 5 classes
+## Architecture — every platform implements these 6 classes
 
 | Class | Responsibility |
 |-------|---------------|

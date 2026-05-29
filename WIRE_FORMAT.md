@@ -1,6 +1,6 @@
 # TAKPacket v2 Wire Format Specification
 
-**Version:** 1.2 (SDK v0.4.0)
+**Version:** 1.2 (current as of SDK v0.5.1 — wire format unchanged since v0.4.0; v0.5.0 added the `CotMeshSanitizer` pre-parse helper and v0.5.1 corrected the reconstructed contact endpoint, neither of which affects the wire)
 **Status:** Stable
 **Date:** May 2026
 

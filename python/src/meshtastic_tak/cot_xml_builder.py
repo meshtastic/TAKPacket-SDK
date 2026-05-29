@@ -104,7 +104,9 @@ class CotXmlBuilder:
         # wire ~35 bytes and produces XML that doesn't match captures.
         is_taktalk_shape = variant in ("taktalk", "taktalk_room")
         if packet.callsign and not is_route and not is_taktalk_shape:
-            ep = packet.endpoint or "0.0.0.0:4242:tcp"
+            # "*:-1:stcp" = TAK "reply via this server" — required so ATAK routes directed
+            # GeoChat / TAK-Talk back down the server stream. A concrete host breaks it.
+            ep = packet.endpoint or "*:-1:stcp"
             parts = [f'callsign="{escape(packet.callsign)}"', f'endpoint="{escape(ep)}"']
             if packet.phone: parts.append(f'phone="{escape(packet.phone)}"')
             lines.append(f'    <contact {" ".join(parts)}/>')

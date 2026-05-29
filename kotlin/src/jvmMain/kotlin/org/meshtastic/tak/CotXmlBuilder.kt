@@ -78,8 +78,16 @@ class CotXmlBuilder {
         private const val RECEIPT_TYPE_DELIVERED = 1
         private const val RECEIPT_TYPE_READ = 2
 
-        /** Default endpoint emitted when the proto field is empty (normalized at parse time). */
-        private const val DEFAULT_ENDPOINT = "0.0.0.0:4242:tcp"
+        /**
+         * Default contact endpoint emitted when the proto field is empty (the endpoint is
+         * never carried over the mesh). MUST be the TAK "reply via this server" form
+         * `*:-1:stcp`: real ATAK presents server-relayed contacts this way, and it is what
+         * makes ATAK route directed GeoChat / TAK-Talk (`<marti>`) back down the server
+         * stream to the bridge. A concrete host (e.g. `0.0.0.0:4242:tcp`) makes ATAK attempt
+         * a dead direct connection instead, so directed messages never reach the mesh.
+         * Parsers normalize both forms back to empty, so this stays round-trip safe.
+         */
+        private const val DEFAULT_ENDPOINT = "*:-1:stcp"
 
         // --- DrawnShape StyleMode values (mirror atak.proto) -------------
         private const val STYLE_UNSPECIFIED = 0

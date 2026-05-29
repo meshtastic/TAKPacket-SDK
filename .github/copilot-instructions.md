@@ -8,7 +8,7 @@ This is a cross-platform SDK for converting ATAK Cursor-on-Target (CoT) XML to M
 
 ## Code organization
 
-Every platform implements the same 5 core classes with identical behavior:
+Every platform implements the same 6 core classes with identical behavior:
 
 - **`CotXmlParser`** — parses CoT XML event string into the internal data model
 - **`CotXmlBuilder`** — reconstructs CoT XML from the data model

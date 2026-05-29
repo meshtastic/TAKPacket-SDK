@@ -127,7 +127,9 @@ export function buildCotXml(packet: TAKPacketV2): string {
   // bytes and produces XML that doesn't match captures.
   const isTakTalkShape = packet.taktalk != null || packet.taktalkRoom != null;
   if (callsign && !isRoute && !isTakTalkShape) {
-    const ep = packet.endpoint || "0.0.0.0:4242:tcp";
+    // "*:-1:stcp" = TAK "reply via this server" — required so ATAK routes directed
+    // GeoChat / TAK-Talk back down the server stream. A concrete host breaks it.
+    const ep = packet.endpoint || "*:-1:stcp";
     let tag = `    <contact callsign="${esc(callsign)}" endpoint="${esc(ep)}"`;
     if (packet.phone) tag += ` phone="${esc(packet.phone)}"`;
     lines.push(tag + "/>");

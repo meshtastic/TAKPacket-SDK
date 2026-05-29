@@ -91,7 +91,9 @@ public class CotXmlBuilder {
         }
 
         if !packet.callsign.isEmpty && !isRoute && !isTakTalkShape {
-            let ep = packet.endpoint.isEmpty ? "0.0.0.0:4242:tcp" : packet.endpoint
+            // "*:-1:stcp" = TAK "reply via this server" — required so ATAK routes directed
+            // GeoChat / TAK-Talk back down the server stream. A concrete host breaks it.
+            let ep = packet.endpoint.isEmpty ? "*:-1:stcp" : packet.endpoint
             s += "    <contact callsign=\"\(esc(packet.callsign))\" endpoint=\"\(esc(ep))\""
             if !packet.phone.isEmpty { s += " phone=\"\(esc(packet.phone))\"" }
             s += "/>\n"
