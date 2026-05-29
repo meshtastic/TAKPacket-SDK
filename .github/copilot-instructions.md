@@ -2,7 +2,9 @@
 
 ## Project context
 
-This is a cross-platform SDK for converting ATAK Cursor-on-Target (CoT) XML to Meshtastic's TAKPacketV2 protobuf wire format with zstd dictionary compression. Five parallel implementations (Kotlin, Swift, Python, TypeScript, C#) produce byte-interoperable payloads for LoRa mesh transport on port 78 with a 237-byte MTU.
+This is a cross-platform SDK for converting ATAK Cursor-on-Target (CoT) XML to Meshtastic's TAKPacketV2 protobuf wire format with zstd dictionary compression. Five parallel implementations (Kotlin, Swift, Python, TypeScript, C#) produce cross-decodable payloads for LoRa mesh transport on port 78 with a 237-byte MTU.
+
+> The intermediate protobuf goldens (`.pb`) are byte-identical across bindings, but the *compressed* bytes (`.bin`) may differ slightly per binding (zstd encoders differ). Cross-language tests assert decodability + a size tolerance, NOT compressed-byte-identity.
 
 ## Code organization
 
@@ -20,31 +22,46 @@ Kotlin is the canonical implementation. It generates the golden test artifacts (
 
 The protobuf schema lives in the `protobufs` git submodule (branch `takv2_geometry`). The key file is `protobufs/meshtastic/atak.proto`. Kotlin uses Wire 6.2.0 for codegen; other platforms use pre-generated bindings that are checked in.
 
-**`TAKPacketV2`** has 26 top-level fields (tags 1-26) plus a `payload_variant` oneof at tags 30-40 with 11 typed payload cases: PLI, GeoChat, AircraftTrack, raw_detail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest.
+**`TAKPacketV2`** has 26 top-level fields (tags 1-26) plus a `payload_variant` oneof at tags 31-42 with 13 typed payload cases: GeoChat, AircraftTrack, raw_detail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest, TakTalkMessage, TakTalkRoomData. **PLI is implicit (v0.4.0):** the former `bool pli = 30` oneof arm was removed — a packet with NO payload variant + an `a-f-*` cot type IS a PLI.
 
-Tags 25-26 are payload-agnostic annotations: `optional TAKEnvironment environment = 25` and `optional SensorFov sensor_fov = 26`. Tags 27-29 are reserved.
+`DrawnShape` geometry (v0.4.0) is two PACKED `repeated sint32` columns — `vertex_lat_deltas = 18` and `vertex_lon_deltas = 19` (zigzag deltas from envelope lat/lon); old `repeated CotGeoPoint vertices = 12` is reserved.
+
+Tags 25-26 are payload-agnostic annotations: `optional TAKEnvironment environment = 25` and `optional SensorFov sensor_fov = 26`. Tag 29 = `marti` (directed-routing recipients). Tags 27, 28, 30 are reserved (30 was the removed `bool pli` — reserve dropped oneof tags at the MESSAGE level, never inside the oneof; that's invalid proto3).
 
 ## Critical constants
 
 ```
 LoRa MTU = 237 bytes
 Port = 78 (ATAK_PLUGIN_V2)
-Dict 0 = non-aircraft (16KB), Dict 1 = aircraft (4KB), 0xFF = uncompressed
+Wire = [1 flags byte][zstd body];  flags bits 0-5 = dict ID, bits 6-7 reserved, 0xFF = uncompressed
+Dict 0 = non-aircraft (512KB proto-trained), Dict 1 = aircraft (4KB)
+Frame slimming (v0.4.0, -8B): compress with dictID/contentSize/checksum OFF, then strip the
+  4-byte zstd magic (28 B5 2F FD) on encode + re-prepend on decode. Manual + uniform across
+  all 5 bindings (NOT zstd native magicless — zstd-napi can't). On-wire body has no magic.
+Skip-compress (v0.4.0): if raw protobuf <= zstd body, emit [0xFF][raw protobuf]
 Max decompressed size = 4096 bytes
 Compression level = 19
 Coordinates: degrees * 1e7 (sfixed32)
-Speed: cm/s (uint32), Course: degrees * 100 (uint32)
+Speed: cm/s (uint32), Course: degrees * 100 (uint32)   # course UNCHANGED in v0.4.0
 ```
+
+> **Resilience invariant (HARD):** one-shot compress/decompress only (NEVER the zstd streaming API), static shipped dict (never adapted from traffic), zero cross-packet state. Every packet decodes independently — LoRa is lossy. `ResilienceTest` in all 5 bindings guards it.
 
 ## Build and test
 
 ```bash
-cd kotlin && gradle jvmTest          # NOT `gradle test` — KMP has no root test task
-cd swift && swift test
-cd python && python -m pytest tests/
-cd typescript && npx vitest run
+# Kotlin needs JDK 21: export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
+cd kotlin && ./gradlew jvmTest       # NOT `gradle test` — KMP has no root test task
+cd swift && swift test               # needs Xcode Testing module; `swift build` still compiles in CLI-only envs
+cd python && .venv/bin/python -m pytest -q   # venv has protobuf + zstandard
+cd typescript && npm run build && npm test
 cd csharp && dotnet test
 ./build.sh test                      # all platforms
+
+# Regenerate goldens + report after ANY wire/schema/dict change, then re-run the other 4 suites:
+cd kotlin && ./gradlew jvmTest --tests "*CompressionTest*generate compression report*"
+# Publish for local Android consumer testing (consume in Android with -PuseMavenLocal):
+cd kotlin && ./gradlew publishToMavenLocal
 ```
 
 ## When modifying code
@@ -78,7 +95,7 @@ Do NOT use bare names that collide with framework types in target languages:
 
 ## Patterns to follow
 
-- **Delta encoding**: shape vertices and route waypoints are delta-encoded from the event anchor point to save wire bytes
+- **Delta encoding**: route waypoints + R&B anchor use `CotGeoPoint` lat/lon deltas; **DrawnShape vertices (v0.4.0) are two packed `repeated sint32` columns** (`vertex_lat_deltas`/`vertex_lon_deltas`), zigzag deltas from the envelope point — pays the tag/length frame once instead of per-vertex
 - **Dual color fields**: every color carries both a Team palette enum (2 bytes) and an _argb int32 fallback (5 bytes)
 - **Remarks fallback**: `compressWithRemarksFallback()` tries with remarks first, strips them if over MTU
 - **Forward compatibility**: unknown CoT types use `COTTYPE_OTHER (0)` + `cot_type_str` string. Unknown dict IDs must be rejected.
@@ -102,6 +119,10 @@ Kotlin `TakPacketV2Data` uses camelCase field names. Wire-generated proto types 
 - Don't change the `Team.Unspecifed_Color` typo — it's the canonical Wire-generated name
 - Don't retrain dictionaries without coordinating a version bump — new dicts break wire compatibility with old receivers
 - Don't use `toInt()` for `(longitude * 1e7)` comparisons — IEEE 754 rounding requires `roundToInt()`
+- **TypeScript zstd-napi: set `windowLog` BEFORE `loadDictionary`.** It's a compression param (unlike the frame-only `contentSize`/`checksum`/`dictID` flags); setting it after resets the digested dict → "Data corruption" on decode + worse ratios. zstd-napi also doesn't auto-size its window to a large dict, so set `windowLog` ≥ enough to cover it (21 for 512 KB) and `windowLogMax` on the decompressor. Only TS needs this — the other 4 bindings auto-size.
+- **Don't glob dicts in `TAKPacket-ZTSD/deploy.sh`** — copy the two canonical filenames by name. A `cp output/*.zstd` glob leaks sweep candidates (`dict_non_aircraft_<size>.zstd`) into every shipped package.
+- **Don't re-introduce phantom optimizations** — these were evaluated and deliberately NOT shipped: `course` whole-degrees (stays ×100), `uid` as bytes (stays string — UUID case-sensitivity would break ATAK object correlation), `stale_seconds` renumber (stays tag 16), `altitude` optional-omit (regressed; dict already crushes the 9999999 sentinel). Field-level micro-opts are ≈0 after the dictionary for constant/sentinel values.
+- **Don't train dicts on XML** — train on serialized proto via `TAKPacket-ZTSD/train_proto.py` (the SDK compresses proto, not XML). 512 KB non-aircraft is the measured knee; 1 MB overfits.
 
 ## PII and test-fixture sanitization (CRITICAL)
 

@@ -2,7 +2,7 @@
 
 Shared libraries for converting ATAK Cursor-on-Target (CoT) XML to Meshtastic's TAKPacketV2 protobuf format and compressing it for LoRa transport using zstd dictionary compression.
 
-This SDK is the single source of truth for CoT conversion and compression across all Meshtastic client platforms. Each language implementation produces interoperable compressed payloads, validated by 40 shared test fixtures and 1,000+ cross-platform tests.
+This SDK is the single source of truth for CoT conversion and compression across all Meshtastic client platforms. Each language implementation produces interoperable compressed payloads, validated by 47 shared test fixtures and 1,000+ cross-platform tests.
 
 ## Architecture
 
@@ -11,7 +11,7 @@ flowchart TD
     subgraph send ["Sending App"]
         A["CoT XML<br/>(~400-2300 B)"]
         B["TAKPacketV2<br/>Protobuf"]
-        C["Wire Payload<br/>(median 95B,<br/>max 212B)"]
+        C["Wire Payload<br/>(median 87B,<br/>max 184B)"]
         A -->|CotXmlParser| B
         B -->|TakCompressor| C
     end
@@ -49,22 +49,26 @@ flowchart TD
 flowchart TD
     A[TAKPacketV2 protobuf bytes] --> B{Classify CoT type}
     B -->|"Air domain\n(3rd atom = 'A')"| C["Aircraft dictionary\n(4KB) — dict ID 0x01"]
-    B -->|"Ground / chat / shapes /\nmarkers / routes / alerts"| D["Non-aircraft dictionary\n(16KB) — dict ID 0x00"]
-    C --> E[zstd compress with dictionary]
+    B -->|"Ground / chat / shapes /\nmarkers / routes / alerts"| D["Non-aircraft dictionary\n(512KB) — dict ID 0x00"]
+    C --> E["zstd compress with dictionary\n(dictID / contentSize / checksum off)"]
     D --> E
-    E --> F["Prepend 1-byte flags\n(dict ID in bits 0-5)"]
-    F --> G["Wire payload"]
+    E --> S["Strip 4-byte zstd magic\n(re-prepended on decode)"]
+    S --> H{"Raw proto ≤\ncompressed body?"}
+    H -->|"yes (tiny packet)"| I["Emit 0xFF flags\n+ raw protobuf"]
+    H -->|no| F["Prepend 1-byte flags\n(dict ID in bits 0-5)"]
+    I --> G["Wire payload"]
+    F --> G
 ```
 
 Two pre-trained zstd dictionaries are used because aircraft and non-aircraft CoT messages have fundamentally different structural patterns. Using the wrong dictionary degrades compression past the LoRa MTU on the worst-case fixtures. The classification result is encoded into the flags byte on the wire so the receiver knows which dictionary to use for decompression — see [Wire Format](#3-wire-format) below. On the bundled test set the pipeline achieves:
 
 | Metric | Value |
 |---|---|
-| Total test messages | 40 |
+| Total test messages | 47 |
 | 100% under 237B LoRa MTU | ✅ YES |
-| Median compressed size | **95B** |
-| Median compression ratio | **6.8×** |
-| Worst case | 212B (89% of LoRa MTU — `drawing_telestration`) |
+| Median compressed size | **87B** |
+| Median compression ratio | **7.2×** |
+| Worst case | 184B (77% of LoRa MTU — `route_itak_3wp`) |
 
 See [`testdata/compression-report.md`](testdata/compression-report.md) for the per-fixture breakdown, regenerated on every Kotlin test run.
 
@@ -74,8 +78,8 @@ The sender's dictionary selection (step 2 above) is encoded into the flags byte 
 
 ```
 +----------+---------------------------------------------+
-| Flags    | zstd-compressed TAKPacketV2 protobuf        |
-| (1 byte) | (N bytes)                                   |
+| Flags    | zstd-compressed TAKPacketV2 protobuf body    |
+| (1 byte) | (N bytes, zstd magic number stripped)        |
 +----------+---------------------------------------------+
 
 Flags byte:
@@ -88,10 +92,16 @@ Flags byte:
   bits 6-7: Reserved / version
 
   Special value:
-    0xFF = Uncompressed raw protobuf (sent by TAK_TRACKER firmware)
+    0xFF = Uncompressed raw protobuf (sent by TAK_TRACKER firmware, and
+           emitted by the encoder's skip-compress path when the raw protobuf
+           is no larger than the compressed body — so tiny packets never expand)
 ```
 
-See [`WIRE_FORMAT.md`](WIRE_FORMAT.md) for the full specification including error handling requirements and annotated examples.
+The compressed body carries **no zstd magic number**: the encoder compresses each
+frame with `dictID` / `contentSize` / `checksum` disabled and then strips the 4-byte
+zstd magic (`28 B5 2F FD`), re-prepending it on decode. This is done uniformly in all
+five language bindings and saves ~8 bytes per packet. See [`WIRE_FORMAT.md`](WIRE_FORMAT.md)
+for the full specification including error handling requirements and annotated examples.
 
 ### 4. CoT XML Reconstruction
 
@@ -99,15 +109,15 @@ See [`WIRE_FORMAT.md`](WIRE_FORMAT.md) for the full specification including erro
 
 ## Structured Payload Types
 
-`TAKPacketV2.payload_variant` is a proto `oneof` with eleven strongly-typed cases rather than a single opaque bytes field. Decomposing the `<detail>` element into structured messages gives three concrete benefits:
+`TAKPacketV2.payload_variant` is a proto `oneof` with twelve strongly-typed cases (tags 31–42) rather than a single opaque bytes field — plus an implicit thirteenth: a packet with **no** `payload_variant` set is a PLI position report (the old `bool pli` arm at tag 30 was removed because the boolean was pure overhead on the highest-frequency packet; tag 30 is now reserved). Decomposing the `<detail>` element into structured messages gives three concrete benefits:
 
-1. **Tighter compression** — repeated field names collapse to varint tags. A circle that takes 930B of XML fits in 128B on the wire (7.3× ratio); a 9-line MEDEVAC goes from 808B of XML to 99B (8.2× ratio).
+1. **Tighter compression** — repeated field names collapse to varint tags. A circle that takes 933B of XML fits in 72B on the wire (13.0× ratio); a full 9-line MEDEVAC goes from 1045B of XML to 160B (6.5× ratio).
 2. **Schema evolution** — adding a field to `DrawnShape` doesn't break older receivers, they just see an unknown varint and skip it.
 3. **Parse-side validation** — geometry is a structured object, not a regex over XML text.
 
 | Tag | Variant | Proto message | CoT type atoms | Contents |
 |---|---|---|---|---|
-| 30 | `pli` | `bool` | `a-f-G-U-C`, `a-f-G-U-C-I`, … | Default ground-unit position |
+| *(none)* | *(implicit PLI)* | — | `a-f-G-U-C`, `a-f-G-U-C-I`, … | Default ground-unit position — no `payload_variant` set |
 | 31 | `chat` | `GeoChat` | `b-t-f`, `b-t-f-d`, `b-t-f-r` | Team chat message (plus delivered/read receipts via new fields) |
 | 32 | `aircraft` | `AircraftTrack` | `a-n-A-C-F`, `a-h-A-M-F-F`, … | ADS-B / military air track |
 | 33 | `raw_detail` | `bytes` | *any* | Raw `<detail>` fallback for callers that build a packet directly (no public compressor path) |
@@ -118,12 +128,14 @@ See [`WIRE_FORMAT.md`](WIRE_FORMAT.md) for the full specification including erro
 | 38 | `casevac` | `CasevacReport` | `b-r-f-h-c` | 9-line MEDEVAC request |
 | 39 | `emergency` | `EmergencyAlert` | `b-a-o-tbl`, `b-a-o-pan`, `b-a-o-opn`, `b-a-g`, `b-a-o-c`, `b-a-o-can` | Emergency / 911 alert |
 | 40 | `task` | `TaskRequest` | `t-s` | Tasking / engagement request |
+| 41 | `taktalk` | `TakTalkMessage` | `m-t-t` | TAKTALK chat message (text envelope; voice rides UDP/RTP off-mesh) |
+| 42 | `taktalk_room` | `TakTalkRoomData` | `y-` | TAKTALK room/membership broadcast (resolves room UUIDs to name + roster) |
 
-Every geometry variant uses **delta-encoded** `CotGeoPoint` vertices (`sint32` offsets from the event anchor) so a 32-vertex telestration clustered inside 100m encodes in ~60 bytes of vertex data instead of ~320 bytes with absolute coordinates. Color fields use a two-field encoding: a `Team` palette enum for the 14 ATAK-standard colors (2 bytes on the wire) plus a `fixed32 _argb` fallback for custom user-picked colors (5 bytes). Round-trip is byte-exact — custom colors are never quantized to the nearest palette entry.
+Every geometry variant delta-encodes vertices as `sint32` offsets from the event anchor so a 32-vertex telestration clustered inside 100m encodes in ~60 bytes of vertex data instead of ~320 bytes with absolute coordinates. `DrawnShape` stores its vertices as two packed `repeated sint32` columns (`vertex_lat_deltas` / `vertex_lon_deltas`); single-endpoint geometry (`RangeAndBearing.anchor`, `Route.Link.point`) uses a `CotGeoPoint` delta sub-message. Color fields use a two-field encoding: a `Team` palette enum for the 14 ATAK-standard colors (2 bytes on the wire) plus a `fixed32 _argb` fallback for custom user-picked colors (5 bytes). Round-trip is byte-exact — custom colors are never quantized to the nearest palette entry.
 
 ### DrawnShape
 
-Covers ten tactical graphic kinds. The shape's anchor point lives on `TAKPacketV2.latitude_i`/`longitude_i`; geometry vertices are in a repeated `CotGeoPoint` field delta-encoded from that anchor.
+Covers ten tactical graphic kinds. The shape's anchor point lives on `TAKPacketV2.latitude_i`/`longitude_i`; geometry vertices are stored as two packed `repeated sint32` columns (`vertex_lat_deltas` / `vertex_lon_deltas`), zigzag deltas from that anchor.
 
 | Kind value | Name | Wire fields used |
 |---|---|---|
@@ -166,10 +178,10 @@ println("Labels on: ${shape.labelsOn}")
 let packet = parser.parse(drawingPolygonXml)
 if case .shape(let shape) = packet.payloadVariant,
    shape.kind == .polygon {
-    for vertex in shape.vertices {
-        // CotGeoPoint is delta-encoded from the event anchor.
-        let lat = Double(packet.latitudeI + vertex.latDeltaI) / 1e7
-        let lon = Double(packet.longitudeI + vertex.lonDeltaI) / 1e7
+    // Vertices are two packed columns of zigzag deltas from the event anchor.
+    for (latDelta, lonDelta) in zip(shape.vertexLatDeltas, shape.vertexLonDeltas) {
+        let lat = Double(packet.latitudeI + latDelta) / 1e7
+        let lon = Double(packet.longitudeI + lonDelta) / 1e7
         print("  (\(lat), \(lon))")
     }
 }
@@ -268,7 +280,7 @@ if (packet.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route)
 | `equipment_flags` | 0=none, 1=hoist, 2=extraction, 3=ventilator, 4=blood |
 | `terrain_flags` | 0=slope, 1=rough, 2=loose, 3=trees, 4=wires, 5=other |
 
-Typical wire size is ~65B of proto + envelope, compressing to ~99B — well under the 237B LoRa MTU even with all 9 lines populated.
+A bare CASEVAC compresses to ~134B and a full 9-line MEDEVAC to ~160B — well under the 237B LoRa MTU even with all 9 lines populated.
 
 **Kotlin — build a CASEVAC request:**
 ```kotlin
@@ -290,7 +302,7 @@ val packet = TakPacketV2Data(
         frequency = "38.90",
     ),
 )
-val wire = TakCompressor().compress(packet)  // ~99B, well under LoRa MTU
+val wire = TakCompressor().compress(packet)  // well under LoRa MTU
 ```
 
 ### EmergencyAlert
@@ -306,7 +318,7 @@ Small, high-priority structured record for emergency CoT types (`b-a-o-*`, `b-a-
 | `Type_Custom` | 5 | `b-a-o-c` |
 | `Type_Cancel` | 6 | `b-a-o-can` |
 
-Typical self-authored alert compresses to ~87B on the wire. Cancel events reference the original alert UID via `cancel_reference_uid`.
+Typical self-authored alert compresses to ~72B on the wire (911) / ~79B (cancel). Cancel events reference the original alert UID via `cancel_reference_uid`.
 
 **Swift — read an emergency alert:**
 ```swift
@@ -397,6 +409,8 @@ val wire = compressor.compressWithRemarksFallback(packet, maxWireBytes = 225)
 
 End-to-end walkthroughs showing actual CoT XML from ATAK/iTAK being compressed for LoRa mesh transmission. Each example shows the raw XML, what gets stripped before compression, the resulting proto structure, and the final compressed wire payload. The LoRa MTU is **237 bytes**.
 
+> **Note:** The per-example compressed byte sizes in this section are **illustrative** — they predate the v0.4.0 wire changes (512KB proto-trained dictionary, magic-number strip, skip-compress) and are kept here only to show the *shape* of the reduction. For exact, regenerated per-fixture sizes see [`testdata/compression-report.md`](testdata/compression-report.md).
+
 > **Two-phase optimization:** The examples below show two reduction stages. First, the app strips non-essential XML *elements* (`<takv>`, `<voice>`, `<precisionLocation>`, etc.) before the SDK sees the XML. Second, the SDK parser eliminates further redundancy at parse time: `version="2.0"` is not stored (hardcoded on rebuild), `time` and `start` are discarded (rebuilt from receiver clock), `stale` becomes a compact `staleSeconds` varint (delta from time), and `ce`/`le` sentinels are dropped (hardcoded `9999999` on rebuild). The "After stripping" blocks below show the XML after phase 1 only — the event-envelope attributes visible there are **NOT on the wire**.
 
 ### PLI — Position Report (`a-f-G-U-C`)
@@ -444,14 +458,14 @@ altitude: -30                  speed: 120 (cm/s)      course: 14275 (deg×100)
 battery: 88                    team: 5 (Cyan)          role: 1 (TeamMember)
 geo_src: 1 (GPS)               alt_src: 1 (GPS)
 endpoint: "" (normalized)       phone: "+15550000001"
-pli: true
+(no payload_variant set → implicit PLI)
 ```
 
 | Stage | Size | Reduction |
 |-------|------|-----------|
 | Raw XML | 754 B | — |
 | Stripped | ~400 B | -47% |
-| Compressed | **151 B** | **80% total** |
+| Compressed | **98 B** | **87% total** |
 
 ---
 
@@ -541,19 +555,17 @@ chat {
 
 **TAKPacketV2 proto fields** — vertices delta-encoded from anchor point
 ```
-cot_type_id: 40 (u-d-f/u-d-r)  how: 1 (h-e)
+cot_type_id: 41 (u-d-r)        how: 1 (h-e)
 callsign: "Rectangle 2"
 latitude_i: 348044064          longitude_i: -924361140
 shape {
   kind: 2 (Rectangle)          style: 3 (StrokeAndFill)
   stroke_argb: 0xFF0000FF      fill_argb: 0x960000FF
   stroke_weight_x10: 30        labels_on: false
-  vertices: [                  # delta-encoded from anchor
-    { lat_delta_i: +1245, lon_delta_i: -7219 }
-    { lat_delta_i: -1835, lon_delta_i: +1655 }
-    { lat_delta_i: -2737, lon_delta_i: +719  }
-    { lat_delta_i: -1527, lon_delta_i: -1559 }
-  ]
+  # two packed columns of zigzag deltas from the anchor (vertex N =
+  # vertex_lat_deltas[N], vertex_lon_deltas[N])
+  vertex_lat_deltas: [ +1245, -1835, -2737, -1527 ]
+  vertex_lon_deltas: [ -7219, +1655,  +719, -1559 ]
 }
 ```
 
@@ -747,14 +759,14 @@ marker {
 
 | Payload Type | Raw XML | Compressed | Ratio | Fits LoRa? |
 |-------------|---------|------------|-------|------------|
-| PLI (position) | 754 B | 151 B | 5.0x | ✅ |
+| PLI (position) | 754 B | 98 B | 7.7x | ✅ |
 | GeoChat (text) | 1,031 B | 80 B | 12.9x | ✅ |
 | Rectangle (4 vertices) | 945 B | 101 B | 9.4x | ✅ |
 | Circle (ellipse) | 851 B | 90 B | 9.5x | ✅ |
 | Route (3 waypoints) | 890 B | ~80 B | 11.1x | ✅ |
 | Marker (spot) | 721 B | 81 B | 8.9x | ✅ |
 
-Median compression ratio across all 40 fixture types: **6.8×** (400-2300 bytes XML → 56-212 bytes wire).
+Median compression ratio across all 47 fixture types: **7.2×** (400-2300 bytes XML → 42-184 bytes wire).
 
 ### Wire Optimizations
 
@@ -768,9 +780,11 @@ The SDK applies several optimizations to minimize wire payload size:
 | **Attribute stripping** | ~30-80 B/msg | Display-only attributes stripped: `routetype`, `order`, `color` (from `<link_attr>`), `access`, empty `callsign`/`phone`, and all `"???"` placeholder values |
 | **Route waypoint UID stripping** | ~40 B/waypoint | UUID `uid` attributes stripped from route `<link>` elements before compression. Builder generates deterministic UIDs (`{eventUid}-{index}`) on reconstruction. Saves ~120 bytes proto for a 3-waypoint route |
 | **Stale time extension** | 0 B (metadata) | Static CoT types (routes `b-m-r`, shapes `u-d-*`, markers `b-m-p-*`) get a minimum 15-minute stale TTL before mesh transmission. Prevents iTAK's 2-min stale from expiring during multi-hop LoRa delivery |
-| **Delta vertex encoding** | ~50% vs abs | Shape/route vertices stored as deltas from the event anchor point |
+| **Delta vertex encoding** | ~50% vs abs | Shape/route vertices stored as deltas from the event anchor point. `DrawnShape` packs them into two `repeated sint32` columns (`vertex_lat_deltas` / `vertex_lon_deltas`) so field framing is paid once per column, not once per vertex |
 | **Remarks preservation** | variable | Non-empty `<remarks>` text preserved for shapes, markers, routes, casevac, emergency, and task types via top-level `string remarks = 24` proto field. `compressWithRemarksFallback()` strips remarks automatically if the compressed packet exceeds the LoRa MTU, so annotations survive when there's room |
-| **zstd dictionary v2** | ~5-8x | Dictionaries trained on 760 protobuf samples covering all 11 payload types including remarks |
+| **zstd dictionaries (proto-trained)** | ~5-14x | Two pre-trained dictionaries — non-aircraft **512 KB** + aircraft **4 KB** — trained on serialized `TAKPacketV2` protobuf bytes (not raw CoT XML), at zstd level 19 |
+| **zstd magic-number strip** | ~8 B/msg | The 4-byte zstd frame magic (`28 B5 2F FD`) is stripped on encode and re-prepended on decode; frames are compressed with `dictID` / `contentSize` / `checksum` disabled. Done identically in all five language bindings |
+| **Skip-compress for tiny packets** | prevents expansion | When the raw protobuf is no larger than the compressed body, the encoder emits the `0xFF` uncompressed sentinel + raw protobuf instead, so small packets never expand on the wire |
 
 **Stripped elements and attributes are not needed for rendering** — the SDK extracts all structurally meaningful data (coordinates, waypoints, colors, stroke weight, method, direction, prefix) into typed proto fields. The stripped metadata is display-only, UI-state, or redundant with proto fields.
 
@@ -788,7 +802,7 @@ The Meshtastic Android app works around this by converting mesh-received routes 
 6. ATAK auto-imports the data package and renders the route in Route Manager
 
 ```
-Route over LoRa mesh (135 bytes)
+Route over LoRa mesh (~122 bytes)
     ↓ TakCompressor.decompress()
 Route CoT XML (waypoints, method, direction)
     ↓ RouteDataPackageGenerator.generateDataPackage()
@@ -905,16 +919,16 @@ Each platform implements the same components with identical behavior:
 
 ## Dictionary Management
 
-- **Training** — Dictionaries are trained in the [TAKPacket-ZTSD](https://github.com/meshtastic/TAKPacket-ZTSD) repository using real CoT XML corpora from TAK Server databases, augmented with synthetic shape/marker/route/casevac/emergency/task samples for the typed-payload extensions.
-- **Shipping** — Each platform embeds the dictionaries as binary resources: **16 KB** non-aircraft + **4 KB** aircraft = 20 KB total.
-- **Versioning** — The flags byte supports up to 62 dictionary IDs, allowing new dictionaries to be added without breaking backward compatibility. The current dictionaries are **v2** — retrained on the expanded corpus for the CasevacReport / EmergencyAlert / TaskRequest / GeoChat-receipts rollout. Dictionary IDs stay at 0 (non-aircraft) / 1 (aircraft), so a pre-v2 receiver can still decode post-v2 wire payloads at the cost of a slightly worse ratio.
+- **Training** — Dictionaries are trained in the [TAKPacket-ZTSD](https://github.com/meshtastic/TAKPacket-ZTSD) repository on **serialized `TAKPacketV2` protobuf bytes** (not raw CoT XML), derived from real CoT corpora from TAK Server databases and augmented with synthetic shape/marker/route/casevac/emergency/task samples for the typed-payload extensions. Training the dictionary on the exact bytes that go over the wire — the post-parse protobuf, not the source XML — is what lets a 512 KB dictionary pay off.
+- **Shipping** — Each platform embeds the dictionaries as binary resources: **512 KB** non-aircraft + **4 KB** aircraft.
+- **Versioning** — The flags byte supports up to 62 dictionary IDs, allowing new dictionaries to be added without breaking backward compatibility. The current dictionaries are proto-trained at zstd level 19 and cover the CasevacReport / EmergencyAlert / TaskRequest / GeoChat-receipts / TAKTALK payloads. Dictionary IDs stay at 0 (non-aircraft) / 1 (aircraft), so a receiver with an older dictionary can still decode wire payloads at the cost of a slightly worse ratio.
 - **Updates** — Retrained dictionaries are deployed via `TAKPacket-ZTSD/deploy.sh` and ship with SDK releases; old dictionary IDs remain valid on the wire.
 
 ## Testing
 
 All five language implementations share the same test vectors in `testdata/`:
 
-- **`cot_xml/`** — 40 input CoT XML fixtures captured from real ATAK-CIV, iTAK, and WebTAK clients (coordinates scrubbed to synthetic test ranges so no real user locations leak), covering 6 PLI variants, 3 GeoChat bodies + delivered/read receipts, 2 aircraft tracks, CASEVAC (bare + full 9-line), delete events, 8 drawings (circle, circle large, ellipse, freeform, polygon, rectangle, rectangle iTAK, telestration), 6 markers (2525, GoTo, GoTo iTAK, icon set, spot, tank), 3 ranging (bullseye, circle, line), 2 routes (3-waypoint canonical + iTAK variant), emergency alerts (911 + cancel), tasking, and the alert_tic / waypoint envelopes.
+- **`cot_xml/`** — 47 input CoT XML fixtures captured from real ATAK-CIV, iTAK, and WebTAK clients (coordinates scrubbed to synthetic test ranges so no real user locations leak), covering 7 PLI variants (incl. iTAK, WebTAK, TAK Aware, stationary, sensor), 3 GeoChat bodies + delivered/read receipts + 2 TAKTALK-flavored chats, 2 aircraft tracks, CASEVAC (bare + full 9-line), delete events, 8 drawings (circle, circle large, ellipse, freeform, polygon, rectangle, rectangle iTAK, telestration), 6 markers (2525, GoTo, GoTo iTAK, icon set, spot, tank), 3 ranging (bullseye, circle, line), 2 routes (3-waypoint canonical + iTAK variant), emergency alerts (911 + cancel), tasking, 4 TAKTALK payloads (room data, text, voice, voice+marti), and the alert_tic / waypoint envelopes.
 - **`protobuf/`** — Expected `TAKPacketV2` protobuf bytes (pre-compression), written by Kotlin's `CompressionTest`, consumed by every other platform for exact-match validation.
 - **`golden/`** — Expected compressed wire payloads, byte-for-byte identical across platforms.
 

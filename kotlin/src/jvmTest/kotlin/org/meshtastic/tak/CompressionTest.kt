@@ -173,7 +173,7 @@ class CompressionTest {
     fun `generate compression report`() {
         val report = StringBuilder()
         report.appendLine("# TAKPacket-SDK Compression Report")
-        report.appendLine("Generated: ${java.time.LocalDate.now()} | Dictionary: v2 (non-aircraft 16KB + aircraft 4KB)")
+        report.appendLine("Generated: ${java.time.LocalDate.now()} | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)")
         report.appendLine()
 
         data class Row(

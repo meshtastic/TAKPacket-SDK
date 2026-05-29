@@ -1,6 +1,6 @@
 {
   "name": "@meshtastic/takpacket-sdk",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic",
   "type": "module",
   "main": "dist/index.js",
