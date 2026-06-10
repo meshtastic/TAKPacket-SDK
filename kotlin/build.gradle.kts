@@ -25,7 +25,7 @@ kotlin {
                 // protobufs SDK. Using `implementation` ensures we do NOT re-export
                 // them to consumers — they bring their own protobufs SDK dependency
                 // and there is exactly one source of truth on the classpath.
-                implementation("org.meshtastic:protobufs:2.7.25-SNAPSHOT")
+                implementation("org.meshtastic:protobufs:2.7.25")
             }
         }
         val jvmMain by getting {
