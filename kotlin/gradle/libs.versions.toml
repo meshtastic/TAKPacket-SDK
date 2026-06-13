@@ -1,0 +1,26 @@
+[versions]
+kotlin = "2.4.0"
+protobufs = "2.7.25"
+xmlutil = "0.91.3"
+kotlinx-datetime = "0.8.0"
+zstd-jni = "1.5.7-11"
+dokka = "2.0.0"
+binary-compat = "0.18.1"
+vanniktech-publish = "0.36.0"
+junit-jupiter = "6.1.0"
+junit-platform = "1.14.0"
+
+[libraries]
+protobufs = { module = "org.meshtastic:protobufs", version.ref = "protobufs" }
+xmlutil-core = { module = "io.github.pdvrieze.xmlutil:core", version.ref = "xmlutil" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+
+[plugins]
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-publish" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
+binary-compat = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binary-compat" }

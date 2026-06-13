@@ -20,7 +20,7 @@ package org.meshtastic.tak
  * `RegexOption.DOT_MATCHES_ALL`). The cross-binding fixtures under
  * `testdata/sanitizer/` lock byte-for-byte parity.
  */
-object CotMeshSanitizer {
+public object CotMeshSanitizer {
 
     // Display-only / receiver-rederivable elements that add ~100–200 wire bytes.
     //
@@ -82,7 +82,7 @@ object CotMeshSanitizer {
      * `<voice>` and `<marti>`. Safe to run on any CoT XML; a no-op when there is
      * nothing to strip.
      */
-    fun stripNonEssentialForMesh(xml: String): String {
+    public fun stripNonEssentialForMesh(xml: String): String {
         var result = xml
         for (re in STRIP_ELEMENTS) result = re.replace(result, "")
         result = UNKNOWN_ATTR.replace(result, "")
@@ -98,7 +98,7 @@ object CotMeshSanitizer {
      * multi-line document with a prologue. Whitespace inside text nodes is left
      * intact (only `>`-whitespace-`<` runs collapse).
      */
-    fun normalizeCotXml(xml: String): String {
+    public fun normalizeCotXml(xml: String): String {
         var result = XML_DECL.replace(xml, "")
         result = INTER_TAG_WS.replace(result, "><")
         return result.trim()

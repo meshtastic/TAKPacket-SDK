@@ -1,17 +1,16 @@
 package org.meshtastic.tak
 
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Builds a CoT XML event string from a TakPacketV2Data.
  * Reconstructs a standards-compliant CoT XML event that can be consumed by ATAK
  * and other CoT-compatible systems.
  */
-class CotXmlBuilder {
+public class CotXmlBuilder {
 
-    companion object {
+    private companion object {
         private val teamEnumToName = mapOf(
             1 to "White", 2 to "Yellow", 3 to "Orange", 4 to "Magenta",
             5 to "Red", 6 to "Maroon", 7 to "Purple", 8 to "Dark Blue",
@@ -108,7 +107,12 @@ class CotXmlBuilder {
             else -> throw IllegalArgumentException("Unknown GeoPointSource value: $src")
         }
 
-        private val isoFormatter = DateTimeFormatter.ISO_INSTANT
+        /** Lowercase two-hex-digit rendering of a byte value (0..255), no `String.format`. */
+        private fun hex2(value: Int): String {
+            val digits = "0123456789abcdef"
+            val v = value and 0xFF
+            return "${digits[v ushr 4]}${digits[v and 0xF]}"
+        }
 
         /** Convert an ARGB int to ABGR hex string (KML color format). */
         private fun argbToAbgrHex(argb: Int): String {
@@ -116,7 +120,7 @@ class CotXmlBuilder {
             val r = (argb ushr 16) and 0xFF
             val g = (argb ushr 8) and 0xFF
             val b = argb and 0xFF
-            return "%02x%02x%02x%02x".format(a, b, g, r)
+            return hex2(a) + hex2(b) + hex2(g) + hex2(r)
         }
     }
 
@@ -132,12 +136,16 @@ class CotXmlBuilder {
     /**
      * Build a CoT XML event string from a TakPacketV2Data.
      */
-    fun build(packet: TakPacketV2Data): String {
+    public fun build(packet: TakPacketV2Data): String {
         val sb = StringBuilder()
-        val now = Instant.now()
-        val timeStr = isoFormatter.format(now)
-        val stale = now.plusSeconds(packet.staleSeconds.toLong().coerceAtLeast(45))
-        val staleStr = isoFormatter.format(stale)
+        // kotlin.time.Instant.toString() emits the ISO-8601 instant form ATAK
+        // expects (e.g. 2026-06-13T19:00:00.123456789Z), matching the old
+        // DateTimeFormatter.ISO_INSTANT output and re-parseable by the parser's
+        // Instant.parse on the receive side.
+        val now = Clock.System.now()
+        val timeStr = now.toString()
+        val stale = now + packet.staleSeconds.toLong().coerceAtLeast(45).seconds
+        val staleStr = stale.toString()
 
         val cotType = packet.cotTypeString()
         // For most CoT types, missing/Unspecified how falls back to "m-g"
@@ -555,7 +563,7 @@ class CotXmlBuilder {
                 // the receiver's round trip preserves attribute order and
                 // whitespace identically to the source.
                 if (payload.bytes.isNotEmpty()) {
-                    sb.append(String(payload.bytes, Charsets.UTF_8))
+                    sb.append(payload.bytes.decodeToString())
                     if (!sb.endsWith("\n")) sb.append("\n")
                 }
             }

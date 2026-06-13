@@ -1,10 +1,5 @@
 package org.meshtastic.tak
 
-import com.github.luben.zstd.Zstd
-import com.github.luben.zstd.ZstdCompressCtx
-import com.github.luben.zstd.ZstdDictCompress
-import com.github.luben.zstd.ZstdDictDecompress
-
 /**
  * Compresses TAKPacketV2 protobuf bytes using zstd with pre-trained dictionaries,
  * and decompresses received wire payloads back to protobuf bytes.
@@ -12,13 +7,19 @@ import com.github.luben.zstd.ZstdDictDecompress
  * Wire format: [1 byte flags][zstd-compressed protobuf bytes]
  * Flags byte bits 0-5 = dictionary ID, bits 6-7 = reserved.
  * Special value 0xFF = uncompressed raw protobuf.
+ *
+ * Multiplatform: the zstd codec itself is reached through the internal
+ * [ZstdCodec] SPI (JVM = zstd-jni, other targets land in later stages). The
+ * wire framing — the 4-byte magic strip/re-prepend, the `0xFF` skip-compress
+ * path, the dict-ID flags masking, and the [MAX_DECOMPRESSED_SIZE] guard — all
+ * live HERE, above the SPI, so every target shares one framing implementation.
  */
-class TakCompressor(
+public class TakCompressor(
     private val compressionLevel: Int = 19,
 ) {
-    companion object {
+    public companion object {
         /** Maximum allowed decompressed payload size (bytes). Prevents decompression bombs. */
-        const val MAX_DECOMPRESSED_SIZE = 4096
+        public const val MAX_DECOMPRESSED_SIZE: Int = 4096
 
         /**
          * The 4-byte zstd frame magic number (little-endian 0xFD2FB528).
@@ -34,19 +35,12 @@ class TakCompressor(
          * reconstructable.
          */
         private val ZSTD_MAGIC = byteArrayOf(0x28, 0xB5.toByte(), 0x2F, 0xFD.toByte())
-    }
-    private val compressors = mutableMapOf<Int, ZstdDictCompress>()
-    private val decompressors = mutableMapOf<Int, ZstdDictDecompress>()
 
-    init {
-        // Pre-load dictionaries
-        DictionaryProvider.nonAircraftDict.let { dict ->
-            compressors[DictionaryProvider.DICT_ID_NON_AIRCRAFT] = ZstdDictCompress(dict, compressionLevel)
-            decompressors[DictionaryProvider.DICT_ID_NON_AIRCRAFT] = ZstdDictDecompress(dict)
-        }
-        DictionaryProvider.aircraftDict.let { dict ->
-            compressors[DictionaryProvider.DICT_ID_AIRCRAFT] = ZstdDictCompress(dict, compressionLevel)
-            decompressors[DictionaryProvider.DICT_ID_AIRCRAFT] = ZstdDictDecompress(dict)
+        /** Uppercase two-hex-digit rendering of a byte value (0..255); common-safe replacement for `"%02X".format`. */
+        private fun hex2Upper(value: Int): String {
+            val digits = "0123456789ABCDEF"
+            val v = value and 0xFF
+            return "${digits[v ushr 4]}${digits[v and 0xF]}"
         }
     }
 
@@ -54,25 +48,18 @@ class TakCompressor(
      * Compress a TakPacketV2Data into a wire payload:
      * [flags byte][zstd-compressed protobuf]
      */
-    fun compress(packet: TakPacketV2Data): ByteArray {
+    public fun compress(packet: TakPacketV2Data): ByteArray {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val dictId = DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
-        val compressor = compressors[dictId]
-            ?: throw IllegalStateException("No compressor for dictionary ID $dictId")
 
-        // Compress exactly one independent frame per packet via the one-shot
-        // context API (NEVER the streaming API) so every packet decodes in
+        // Compress exactly one independent frame per packet through the codec
+        // SPI's one-shot API (NEVER a streaming API) so every packet decodes in
         // isolation — LoRa is lossy and a dropped packet must never affect any
-        // other. Strip redundant frame fields: the dict ID already travels in
-        // our flags byte, and content-size / checksum are dead weight on these
-        // tiny dict-compressed payloads.
-        val framed = ZstdCompressCtx().use { ctx ->
-            ctx.setDictID(false)
-            ctx.setContentSize(false)
-            ctx.setChecksum(false)
-            ctx.loadDict(compressor)
-            ctx.compress(protobufBytes)
-        }
+        // other. The codec emits a full standard frame with dictID / content-
+        // size / checksum all OFF (set inside the actual); we strip its magic
+        // here. The dict ID already travels in our flags byte, so content-size /
+        // checksum are dead weight on these tiny dict-compressed payloads.
+        val framed = ZstdCodec.compressWithDict(protobufBytes, dictId, compressionLevel)
         // Strip the 4-byte zstd magic (see ZSTD_MAGIC doc). Defensive check: the
         // frame must start with the known magic, or our strip/prepend contract
         // is broken and we'd ship undecodable bytes.
@@ -90,14 +77,16 @@ class TakCompressor(
         // the same 1-byte flags prefix, so compare payload sizes directly and
         // emit whichever is smaller (ties → raw: cheaper to decode, no zstd pass).
         return if (protobufBytes.size <= body.size) {
+            trace { "TakCompressor: skip-compress (raw ${protobufBytes.size}B <= body ${body.size}B), emitting 0xFF" }
             ByteArray(1 + protobufBytes.size).also {
                 it[0] = DictionaryProvider.DICT_ID_UNCOMPRESSED.toByte()
-                System.arraycopy(protobufBytes, 0, it, 1, protobufBytes.size)
+                protobufBytes.copyInto(it, destinationOffset = 1)
             }
         } else {
+            trace { "TakCompressor: compressed dictId=$dictId ${protobufBytes.size}B -> ${body.size}B" }
             ByteArray(1 + body.size).also {
                 it[0] = (dictId and 0x3F).toByte()
-                System.arraycopy(body, 0, it, 1, body.size)
+                body.copyInto(it, destinationOffset = 1)
             }
         }
     }
@@ -111,7 +100,7 @@ class TakCompressor(
      * and [RuntimeException] wrapping the underlying cause for zstd / protobuf
      * failures (so callers can still inspect the original exception via `cause`).
      */
-    fun decompress(wirePayload: ByteArray): TakPacketV2Data {
+    public fun decompress(wirePayload: ByteArray): TakPacketV2Data {
         require(wirePayload.size >= 2) { "Wire payload too short: ${wirePayload.size} bytes" }
 
         val flagsByte = wirePayload[0].toInt() and 0xFF
@@ -128,19 +117,22 @@ class TakCompressor(
             compressedBytes
         } else {
             val dictId = flagsByte and 0x3F
-            val decompressor = decompressors[dictId]
-                ?: throw IllegalArgumentException("Unknown dictionary ID: $dictId")
+            // Reject unknown dictionary IDs up front with IllegalArgumentException
+            // (the codec would only learn this once it tried to load a dict).
+            if (DictionaryProvider.getDictionary(dictId) == null) {
+                throw IllegalArgumentException("Unknown dictionary ID: $dictId")
+            }
 
             try {
                 // Re-attach the 4-byte magic stripped on compress (see ZSTD_MAGIC),
                 // yielding a standard frame the stock decoder accepts. The supplied
                 // dict (not a frame-embedded dict ID) selects the dictionary.
                 val restored = ByteArray(ZSTD_MAGIC.size + compressedBytes.size)
-                System.arraycopy(ZSTD_MAGIC, 0, restored, 0, ZSTD_MAGIC.size)
-                System.arraycopy(compressedBytes, 0, restored, ZSTD_MAGIC.size, compressedBytes.size)
-                // Zstd.decompress with a size limit already guards the 4096B cap —
-                // a bomb that expands past the limit throws inside the zstd library.
-                Zstd.decompress(restored, decompressor, MAX_DECOMPRESSED_SIZE)
+                ZSTD_MAGIC.copyInto(restored, destinationOffset = 0)
+                compressedBytes.copyInto(restored, destinationOffset = ZSTD_MAGIC.size)
+                // The codec's size-limited decompress guards the 4096B cap — a bomb
+                // that expands past the limit throws inside the zstd library.
+                ZstdCodec.decompressWithDict(restored, dictId, MAX_DECOMPRESSED_SIZE)
             } catch (e: Exception) {
                 throw RuntimeException(
                     "Zstd decompression failed " +
@@ -156,7 +148,7 @@ class TakCompressor(
         } catch (e: Exception) {
             throw RuntimeException(
                 "Protobuf parsing failed " +
-                    "(flagsByte=0x${"%02X".format(flagsByte)}, protobufSize=${protobufBytes.size}): " +
+                    "(flagsByte=0x${hex2Upper(flagsByte)}, protobufSize=${protobufBytes.size}): " +
                     (e.message ?: e::class.simpleName ?: "unknown"),
                 e,
             )
@@ -181,7 +173,7 @@ class TakCompressor(
      * @return The wire payload, or null if the packet is too large even
      *         without remarks.
      */
-    fun compressWithRemarksFallback(
+    public fun compressWithRemarksFallback(
         packet: TakPacketV2Data,
         maxWireBytes: Int,
     ): ByteArray? = compressWithRemarksFallbackDetailed(packet, maxWireBytes).wirePayload
@@ -201,7 +193,7 @@ class TakCompressor(
      * packet" or "how often do we drop oversized packets" should use this
      * variant; [compressWithRemarksFallback] loses the distinction.
      */
-    fun compressWithRemarksFallbackDetailed(
+    public fun compressWithRemarksFallbackDetailed(
         packet: TakPacketV2Data,
         maxWireBytes: Int,
     ): RemarksFallbackResult {
@@ -232,12 +224,12 @@ class TakCompressor(
      *        before compressing — either successfully ([wirePayload] is
      *        non-null) or unsuccessfully ([wirePayload] is null).
      */
-    data class RemarksFallbackResult(
+    public data class RemarksFallbackResult(
         val wirePayload: ByteArray?,
         val remarksStripped: Boolean,
     ) {
         /** Convenience: did this call produce a sendable wire payload? */
-        val fits: Boolean get() = wirePayload != null
+        public val fits: Boolean get() = wirePayload != null
 
         override fun equals(other: Any?): Boolean =
             other is RemarksFallbackResult &&
@@ -251,7 +243,7 @@ class TakCompressor(
     /**
      * Compress and return both the wire payload and intermediate sizes for reporting.
      */
-    fun compressWithStats(packet: TakPacketV2Data): CompressionResult {
+    public fun compressWithStats(packet: TakPacketV2Data): CompressionResult {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val wirePayload = compress(packet)
         // Report the ACTUAL emitted mode from the flags byte, not the intended
@@ -268,13 +260,13 @@ class TakCompressor(
         )
     }
 
-    data class CompressionResult(
+    public data class CompressionResult(
         val protobufSize: Int,
         val compressedSize: Int,
         val dictId: Int,
         val wirePayload: ByteArray,
     ) {
-        val dictName: String get() = when (dictId) {
+        public val dictName: String get() = when (dictId) {
             DictionaryProvider.DICT_ID_NON_AIRCRAFT -> "non-aircraft"
             DictionaryProvider.DICT_ID_AIRCRAFT -> "aircraft"
             DictionaryProvider.DICT_ID_UNCOMPRESSED -> "uncompressed"

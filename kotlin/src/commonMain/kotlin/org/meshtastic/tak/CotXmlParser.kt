@@ -6,33 +6,20 @@ import nl.adaptivity.xmlutil.EventType
 import nl.adaptivity.xmlutil.xmlStreaming
 
 /**
- * STAGE 0 SPIKE — JVM-only, additive, temporary.
+ * Parses a CoT (Cursor-on-Target) XML event string into a [TakPacketV2Data].
  *
- * A faithful re-port of [CotXmlParser] from xpp3 (`org.xmlpull`) +
- * `java.io.StringReader` + `java.time` to the multiplatform
- * `io.github.pdvrieze.xmlutil:core` streaming reader + `kotlin.time.Instant`
- * (kotlinx-datetime). It exists ONLY to de-risk the KMP migration: it must
- * produce the SAME [TakPacketV2Data] (and therefore byte-identical serialized
- * `.pb`) as [CotXmlParser] for every fixture.
+ * Multiplatform: built on the `io.github.pdvrieze.xmlutil:core` streaming reader
+ * and `kotlin.time.Instant` (kotlinx-datetime), so it runs on every KMP target.
  *
- * The field-extraction logic mirrors the current [CotXmlParser] EXACTLY —
- * attribute handling, empty-vs-absent semantics, endpoint normalization,
- * number parsing/clamping, delta-encoding inputs, TAKTALK, and every payload
- * variant. Only the XML mechanics and the time parsing differ.
- *
- * Text-handling note (xmlutil vs xpp3): xpp3 typically delivers an element's
- * text body as a single TEXT event, whereas xmlutil may split a text run across
- * several TEXT/CDSECT events (e.g. around entity references). The current parser
- * ASSIGNS (`= text`) on each TEXT event, which would lose all but the last
- * fragment under such splitting. To stay faithful AND robust, this port
- * ACCUMULATES the raw text run per active flag into a buffer and assigns the
- * coalesced+trimmed value when the element closes — which is byte-identical to
- * xpp3's single-fragment behavior for the current fixtures and correct for
- * future split-fragment inputs.
+ * Text-handling note: xmlutil may split an element's text body across several
+ * `TEXT`/`CDSECT` events (e.g. around entity references). Rather than assign on
+ * each event (which would keep only the last fragment), this parser ACCUMULATES
+ * the raw text run per active element into a buffer and commits the
+ * coalesced + trimmed value on `END_ELEMENT`.
  */
-class CotXmlParserXmlUtil {
+public class CotXmlParser {
 
-    fun parse(cotXml: String): TakPacketV2Data {
+    public fun parse(cotXml: String): TakPacketV2Data {
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
         if (cotXml.contains("<!DOCTYPE", ignoreCase = true) || cotXml.contains("<!ENTITY", ignoreCase = true)) {
             throw IllegalArgumentException("XML contains prohibited DOCTYPE or ENTITY declaration")
@@ -942,7 +929,7 @@ class CotXmlParserXmlUtil {
      * Extract the inner bytes of the `<detail>` element. Pure regex in the
      * original (no xpp3), so this is a verbatim port.
      */
-    fun extractRawDetailBytes(cotXml: String): ByteArray {
+    public fun extractRawDetailBytes(cotXml: String): ByteArray {
         val match = Regex(
             """<detail\b[^>]*>(.*?)</detail\s*>""",
             setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
@@ -951,90 +938,90 @@ class CotXmlParserXmlUtil {
         return inner.encodeToByteArray()
     }
 
-    companion object {
-        const val GEOSRC_UNSPECIFIED = 0
-        const val GEOSRC_GPS = 1
-        const val GEOSRC_USER = 2
-        const val GEOSRC_NETWORK = 3
+    public companion object {
+        public const val GEOSRC_UNSPECIFIED: Int = 0
+        public const val GEOSRC_GPS: Int = 1
+        public const val GEOSRC_USER: Int = 2
+        public const val GEOSRC_NETWORK: Int = 3
 
-        const val MAX_VERTICES = 32
-        const val MAX_ROUTE_LINKS = 16
+        public const val MAX_VERTICES: Int = 32
+        public const val MAX_ROUTE_LINKS: Int = 16
 
-        const val SHAPE_KIND_UNSPECIFIED = 0
-        const val SHAPE_KIND_CIRCLE = 1
-        const val SHAPE_KIND_RECTANGLE = 2
-        const val SHAPE_KIND_FREEFORM = 3
-        const val SHAPE_KIND_TELESTRATION = 4
-        const val SHAPE_KIND_POLYGON = 5
-        const val SHAPE_KIND_RANGING_CIRCLE = 6
-        const val SHAPE_KIND_BULLSEYE = 7
-        const val SHAPE_KIND_ELLIPSE = 8
-        const val SHAPE_KIND_VEHICLE_2D = 9
-        const val SHAPE_KIND_VEHICLE_3D = 10
+        public const val SHAPE_KIND_UNSPECIFIED: Int = 0
+        public const val SHAPE_KIND_CIRCLE: Int = 1
+        public const val SHAPE_KIND_RECTANGLE: Int = 2
+        public const val SHAPE_KIND_FREEFORM: Int = 3
+        public const val SHAPE_KIND_TELESTRATION: Int = 4
+        public const val SHAPE_KIND_POLYGON: Int = 5
+        public const val SHAPE_KIND_RANGING_CIRCLE: Int = 6
+        public const val SHAPE_KIND_BULLSEYE: Int = 7
+        public const val SHAPE_KIND_ELLIPSE: Int = 8
+        public const val SHAPE_KIND_VEHICLE_2D: Int = 9
+        public const val SHAPE_KIND_VEHICLE_3D: Int = 10
 
-        const val STYLE_UNSPECIFIED = 0
-        const val STYLE_STROKE_ONLY = 1
-        const val STYLE_FILL_ONLY = 2
-        const val STYLE_STROKE_AND_FILL = 3
+        public const val STYLE_UNSPECIFIED: Int = 0
+        public const val STYLE_STROKE_ONLY: Int = 1
+        public const val STYLE_FILL_ONLY: Int = 2
+        public const val STYLE_STROKE_AND_FILL: Int = 3
 
-        const val MARKER_KIND_UNSPECIFIED = 0
-        const val MARKER_KIND_SPOT = 1
-        const val MARKER_KIND_WAYPOINT = 2
-        const val MARKER_KIND_CHECKPOINT = 3
-        const val MARKER_KIND_SELF_POSITION = 4
-        const val MARKER_KIND_SYMBOL_2525 = 5
-        const val MARKER_KIND_SPOT_MAP = 6
-        const val MARKER_KIND_CUSTOM_ICON = 7
-        const val MARKER_KIND_GO_TO_POINT = 8
-        const val MARKER_KIND_INITIAL_POINT = 9
-        const val MARKER_KIND_CONTACT_POINT = 10
-        const val MARKER_KIND_OBSERVATION_POST = 11
-        const val MARKER_KIND_IMAGE_MARKER = 12
+        public const val MARKER_KIND_UNSPECIFIED: Int = 0
+        public const val MARKER_KIND_SPOT: Int = 1
+        public const val MARKER_KIND_WAYPOINT: Int = 2
+        public const val MARKER_KIND_CHECKPOINT: Int = 3
+        public const val MARKER_KIND_SELF_POSITION: Int = 4
+        public const val MARKER_KIND_SYMBOL_2525: Int = 5
+        public const val MARKER_KIND_SPOT_MAP: Int = 6
+        public const val MARKER_KIND_CUSTOM_ICON: Int = 7
+        public const val MARKER_KIND_GO_TO_POINT: Int = 8
+        public const val MARKER_KIND_INITIAL_POINT: Int = 9
+        public const val MARKER_KIND_CONTACT_POINT: Int = 10
+        public const val MARKER_KIND_OBSERVATION_POST: Int = 11
+        public const val MARKER_KIND_IMAGE_MARKER: Int = 12
 
-        const val PRECEDENCE_UNSPECIFIED = 0
-        const val PRECEDENCE_URGENT = 1
-        const val PRECEDENCE_URGENT_SURGICAL = 2
-        const val PRECEDENCE_PRIORITY = 3
-        const val PRECEDENCE_ROUTINE = 4
-        const val PRECEDENCE_CONVENIENCE = 5
+        public const val PRECEDENCE_UNSPECIFIED: Int = 0
+        public const val PRECEDENCE_URGENT: Int = 1
+        public const val PRECEDENCE_URGENT_SURGICAL: Int = 2
+        public const val PRECEDENCE_PRIORITY: Int = 3
+        public const val PRECEDENCE_ROUTINE: Int = 4
+        public const val PRECEDENCE_CONVENIENCE: Int = 5
 
-        const val HLZ_MARKING_UNSPECIFIED = 0
-        const val HLZ_MARKING_PANELS = 1
-        const val HLZ_MARKING_PYRO_SIGNAL = 2
-        const val HLZ_MARKING_SMOKE = 3
-        const val HLZ_MARKING_NONE = 4
-        const val HLZ_MARKING_OTHER = 5
+        public const val HLZ_MARKING_UNSPECIFIED: Int = 0
+        public const val HLZ_MARKING_PANELS: Int = 1
+        public const val HLZ_MARKING_PYRO_SIGNAL: Int = 2
+        public const val HLZ_MARKING_SMOKE: Int = 3
+        public const val HLZ_MARKING_NONE: Int = 4
+        public const val HLZ_MARKING_OTHER: Int = 5
 
-        const val SECURITY_UNSPECIFIED = 0
-        const val SECURITY_NO_ENEMY = 1
-        const val SECURITY_POSSIBLE_ENEMY = 2
-        const val SECURITY_ENEMY_IN_AREA = 3
-        const val SECURITY_ENEMY_IN_ARMED_CONTACT = 4
+        public const val SECURITY_UNSPECIFIED: Int = 0
+        public const val SECURITY_NO_ENEMY: Int = 1
+        public const val SECURITY_POSSIBLE_ENEMY: Int = 2
+        public const val SECURITY_ENEMY_IN_AREA: Int = 3
+        public const val SECURITY_ENEMY_IN_ARMED_CONTACT: Int = 4
 
-        const val EMERGENCY_TYPE_UNSPECIFIED = 0
-        const val EMERGENCY_TYPE_ALERT_911 = 1
-        const val EMERGENCY_TYPE_RING_THE_BELL = 2
-        const val EMERGENCY_TYPE_IN_CONTACT = 3
-        const val EMERGENCY_TYPE_GEO_FENCE_BREACHED = 4
-        const val EMERGENCY_TYPE_CUSTOM = 5
-        const val EMERGENCY_TYPE_CANCEL = 6
+        public const val EMERGENCY_TYPE_UNSPECIFIED: Int = 0
+        public const val EMERGENCY_TYPE_ALERT_911: Int = 1
+        public const val EMERGENCY_TYPE_RING_THE_BELL: Int = 2
+        public const val EMERGENCY_TYPE_IN_CONTACT: Int = 3
+        public const val EMERGENCY_TYPE_GEO_FENCE_BREACHED: Int = 4
+        public const val EMERGENCY_TYPE_CUSTOM: Int = 5
+        public const val EMERGENCY_TYPE_CANCEL: Int = 6
 
-        const val TASK_PRIORITY_UNSPECIFIED = 0
-        const val TASK_PRIORITY_LOW = 1
-        const val TASK_PRIORITY_NORMAL = 2
-        const val TASK_PRIORITY_HIGH = 3
-        const val TASK_PRIORITY_CRITICAL = 4
+        public const val TASK_PRIORITY_UNSPECIFIED: Int = 0
+        public const val TASK_PRIORITY_LOW: Int = 1
+        public const val TASK_PRIORITY_NORMAL: Int = 2
+        public const val TASK_PRIORITY_HIGH: Int = 3
+        public const val TASK_PRIORITY_CRITICAL: Int = 4
 
-        const val TASK_STATUS_UNSPECIFIED = 0
-        const val TASK_STATUS_PENDING = 1
-        const val TASK_STATUS_ACKNOWLEDGED = 2
-        const val TASK_STATUS_IN_PROGRESS = 3
-        const val TASK_STATUS_COMPLETED = 4
-        const val TASK_STATUS_CANCELLED = 5
+        public const val TASK_STATUS_UNSPECIFIED: Int = 0
+        public const val TASK_STATUS_PENDING: Int = 1
+        public const val TASK_STATUS_ACKNOWLEDGED: Int = 2
+        public const val TASK_STATUS_IN_PROGRESS: Int = 3
+        public const val TASK_STATUS_COMPLETED: Int = 4
+        public const val TASK_STATUS_CANCELLED: Int = 5
 
-        const val RECEIPT_TYPE_NONE = 0
-        const val RECEIPT_TYPE_DELIVERED = 1
-        const val RECEIPT_TYPE_READ = 2
+        public const val RECEIPT_TYPE_NONE: Int = 0
+        public const val RECEIPT_TYPE_DELIVERED: Int = 1
+        public const val RECEIPT_TYPE_READ: Int = 2
 
         private val routeMethodMap = mapOf(
             "Driving" to 1, "Walking" to 2, "Flying" to 3,

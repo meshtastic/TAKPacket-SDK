@@ -1,6 +1,10 @@
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+
 plugins {
-    kotlin("multiplatform") version "2.4.0"
-    id("com.vanniktech.maven.publish") version "0.36.0"
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.vanniktech.publish)
+    alias(libs.plugins.dokka)
+    alias(libs.plugins.binary.compat)
 }
 
 group = "org.meshtastic"
@@ -15,48 +19,60 @@ repositories {
 
 kotlin {
     jvmToolchain(21)
+    explicitApi()
 
+    compilerOptions {
+        // The 8 core classes live in commonMain behind expect/actual SPIs with
+        // per-target actual objects (ZstdCodec, DictionaryLoader). Kotlin still
+        // treats expect/actual *classes* as a Beta feature and warns unless this
+        // flag opts in. (allWarningsAsErrors / progressiveMode are intentionally
+        // deferred to a later stage so the port isn't fighting the linter.)
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
+    // STAGE 1+2 scope: jvm() only. Native/JS/Wasm targets land in later stages
+    // WITH their actuals so the build stays green at every stage.
     jvm()
 
     sourceSets {
-        val jvmMain by getting {
-            dependencies {
-                // Proto types (TAKPacketV2, GeoChat, etc.) come from the published
-                // protobufs KMP SDK. They are an internal implementation detail —
-                // no public SDK signature exposes an org.meshtastic.proto.* type
-                // (TakCompressor/TakPacketV2Serializer traffic only in
-                // TakPacketV2Data + ByteArray). `compileOnly` therefore keeps the
-                // protobufs SDK OFF consumers' classpaths entirely: it is omitted
-                // from the published POM (neither compile nor runtime scope), so we
-                // never re-export it and never dictate its version. Every consumer
-                // (e.g. Meshtastic-Android) already depends on the same
-                // org.meshtastic:protobufs KMP artifact directly and owns its
-                // version — that dependency satisfies our runtime requirement, and
-                // there is exactly one source of truth on the classpath.
-                compileOnly("org.meshtastic:protobufs:2.7.25")
-                implementation("com.github.luben:zstd-jni:1.5.7-11")
-                implementation("org.ogce:xpp3:1.1.6")
-                // STAGE 0 SPIKE (temporary, JVM-only): xmlutil + kotlinx-datetime
-                // back the side-by-side CotXmlParserXmlUtil re-port that proves the
-                // xpp3 -> multiplatform parser swap is .pb byte-identical before any
-                // KMP scaffolding. Plain implementation lines; no version catalog yet.
-                implementation("io.github.pdvrieze.xmlutil:core:0.91.3")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.8.0")
-            }
+        commonMain.dependencies {
+            // Proto types (TAKPacketV2, GeoChat, …) come from the published
+            // protobufs KMP SDK and carry wire-runtime + okio transitively on
+            // every target. `implementation` (not the old jvm-only compileOnly)
+            // is required because Native/JS/Wasm cannot link a compileOnly dep.
+            implementation(libs.protobufs)
+            implementation(libs.xmlutil.core)
+            implementation(libs.kotlinx.datetime)
         }
-        val jvmTest by getting {
-            dependencies {
-                // jvmTest no longer inherits the proto SDK transitively (jvmMain
-                // declares it compileOnly), so the test classpath needs it directly
-                // to run the serializer.
-                implementation("org.meshtastic:protobufs:2.7.25")
-                implementation(kotlin("test"))
-                implementation("org.junit.jupiter:junit-jupiter:6.1.0")
-                implementation("org.junit.jupiter:junit-jupiter-params:6.1.0")
-                runtimeOnly("org.junit.platform:junit-platform-launcher:6.1.0")
-            }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
+        jvmMain.dependencies {
+            // zstd-jni backs the JVM ZstdCodec actual. xpp3 is gone — the parser
+            // moved to commonMain on xmlutil.
+            implementation(libs.zstd.jni)
+        }
+        jvmTest.dependencies {
+            implementation(libs.junit.jupiter)
+            implementation(libs.junit.jupiter.params)
+            runtimeOnly(libs.junit.platform.launcher)
+            // protobufs is inherited from commonMain (implementation), so it is
+            // no longer declared here explicitly.
         }
     }
+}
+
+// Binary-compatibility-validator: the generated org.meshtastic.proto.* types are
+// an implementation detail, not part of this SDK's public API surface.
+apiValidation {
+    ignoredPackages.add("org.meshtastic.proto")
+}
+
+// Reproducible archives: stable file order + zeroed timestamps so published
+// artifacts are byte-deterministic across builds.
+tasks.withType<AbstractArchiveTask>().configureEach {
+    isReproducibleFileOrder = true
+    isPreserveFileTimestamps = false
 }
 
 tasks.withType<Test>().configureEach {
