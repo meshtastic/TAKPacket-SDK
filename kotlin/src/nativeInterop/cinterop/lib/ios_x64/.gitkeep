@@ -1,0 +1,2 @@
+Placeholder so the target dir is tracked.
+libzstd.a for ios_x64 is produced by CI (fetchZstdStatic); see ../README.md.

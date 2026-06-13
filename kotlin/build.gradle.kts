@@ -1,3 +1,4 @@
+import java.util.Base64
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 
 plugins {
@@ -30,9 +31,43 @@ kotlin {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
-    // STAGE 1+2 scope: jvm() only. Native/JS/Wasm targets land in later stages
-    // WITH their actuals so the build stays green at every stage.
     jvm()
+
+    // STAGE 3 scope: declare the nine proven-path native targets (R1/R2). JS/Wasm
+    // (Stage 4/5) are intentionally NOT here yet. applyDefaultHierarchyTemplate()
+    // gives a shared `nativeMain` source set under which all nine share ONE
+    // cinterop-backed ZstdCodec/DictionaryLoader actual.
+    val nativeTargets = listOf(
+        iosArm64(),
+        iosSimulatorArm64(),
+        iosX64(),
+        macosArm64(),
+        tvosArm64(),
+        tvosSimulatorArm64(),
+        linuxX64(),
+        linuxArm64(),
+        mingwX64(),
+    )
+
+    applyDefaultHierarchyTemplate()
+
+    // Register the `zstd` cinterop on each native target's main compilation.
+    // The .def is shared; the header (-I) and per-konan-target static-lib search
+    // path (-L lib/<konanTarget>) are injected here because they resolve against
+    // $projectDir and the target name — see src/nativeInterop/cinterop/zstd.def.
+    val cinteropDir = projectDir.resolve("src/nativeInterop/cinterop")
+    val zstdIncludeDir = cinteropDir.resolve("include")
+    nativeTargets.forEach { target ->
+        val konanName = target.konanTarget.name
+        target.compilations.getByName("main").cinterops.create("zstd") {
+            definitionFile.set(cinteropDir.resolve("zstd.def"))
+            // Header search path for the vendored zstd.h.
+            includeDirs(zstdIncludeDir)
+            // Per-target static libzstd.a search path. `staticLibraries=libzstd.a`
+            // in the .def is resolved against this directory at klib link time.
+            extraOpts("-libraryPath", cinteropDir.resolve("lib/$konanName").absolutePath)
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {
@@ -59,6 +94,13 @@ kotlin {
             // protobufs is inherited from commonMain (implementation), so it is
             // no longer declared here explicitly.
         }
+        // Shared native source set: ZstdCodec (cinterop) + DictionaryLoader
+        // (embedded dicts) actuals for all nine native targets. The atomicfu
+        // library (plain runtime, NO bytecode-transform plugin) provides the
+        // multiplatform SynchronizedObject lock the codec uses.
+        nativeMain.dependencies {
+            implementation(libs.kotlinx.atomicfu)
+        }
     }
 }
 
@@ -66,6 +108,22 @@ kotlin {
 // an implementation detail, not part of this SDK's public API surface.
 apiValidation {
     ignoredPackages.add("org.meshtastic.proto")
+}
+
+// Declaring the native targets makes BCV add `klibApiCheck` (and its
+// `*MainKlibrary` builds) as a dependency of `apiCheck`. Building those klibs
+// requires every target's cinterop — i.e. all nine vendored libzstd.a archives.
+// Only the host archive (macos_arm64) is committed in this worktree, so the
+// non-host klib builds can't run here, and there is no klib `.api` baseline yet.
+//
+// Detach klib validation from `apiCheck` so the established JVM `apiCheck` gate
+// stays green. The public Kotlin API is identical across targets and the JVM
+// baseline (api/takpacket-sdk.api) already guards the surface; every native
+// addition (ZstdCodecNative / DictionaryLoaderNative / EmbeddedDictionaries) is
+// `internal`. CI re-attaches klib validation once all nine archives are present
+// (fetchZstdStatic) and a klib baseline is dumped (`klibApiDump`). [CI-PENDING]
+tasks.matching { it.name == "apiCheck" }.configureEach {
+    setDependsOn(dependsOn.filterNot { it is TaskProvider<*> && it.name == "klibApiCheck" })
 }
 
 // Reproducible archives: stable file order + zeroed timestamps so published
@@ -77,6 +135,143 @@ tasks.withType<AbstractArchiveTask>().configureEach {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Codegen: embed the canonical zstd dictionaries for Kotlin/Native (R11).
+//
+// Kotlin/Native has no classpath resources, so DictionaryLoaderNative reads the
+// dict bytes from a generated `EmbeddedDictionaries` object. This task reads the
+// two canonical dicts (the same files the JVM loads as classpath resources) and
+// emits `EmbeddedDictionaries.kt` into a generated source dir wired onto
+// nativeMain. The non-aircraft dict is 512 KB, so the bytes are emitted as
+// CHUNKED Base64 string constants (each well under any platform constant-size
+// limit) joined + Base64-decoded once at first use.
+abstract class GenerateEmbeddedDictionaries : DefaultTask() {
+    @get:InputFiles
+    abstract val dictionaries: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @TaskAction
+    fun generate() {
+        val nonAircraft = dictionaries.files.single { it.name == "dict_non_aircraft.zstd" }.readBytes()
+        val aircraft = dictionaries.files.single { it.name == "dict_aircraft.zstd" }.readBytes()
+
+        // Base64 chunk length: a multiple of 4 keeps each chunk independently
+        // valid Base64 so they concatenate losslessly. 48_000 chars ≈ 36 KB of
+        // bytes per chunk — comfortably small for every Native backend.
+        val chunkChars = 48_000
+        // Standard (padded) Base64; matches kotlin.io.encoding.Base64.decode on
+        // the Native side. Concatenating chunks each of length % 4 == 0 keeps
+        // any interior padding from appearing mid-string.
+        val encoder = Base64.getEncoder()
+
+        fun emitChunks(propName: String, bytes: ByteArray): String {
+            val b64 = encoder.encodeToString(bytes)
+            val chunks = b64.chunked(chunkChars)
+            val sb = StringBuilder()
+            sb.append("    private val ${propName}_CHUNKS: Array<String> = arrayOf(\n")
+            chunks.forEach { sb.append("        \"").append(it).append("\",\n") }
+            sb.append("    )\n")
+            return sb.toString()
+        }
+
+        val pkgDir = outputDir.get().asFile.resolve("org/meshtastic/tak")
+        pkgDir.mkdirs()
+        val out = pkgDir.resolve("EmbeddedDictionaries.kt")
+        out.writeText(
+            buildString {
+                append("// GENERATED by the `generateEmbeddedDictionaries` Gradle task. DO NOT EDIT.\n")
+                append("// Source: kotlin/src/jvmMain/resources/dict_*.zstd (canonical dictionaries).\n")
+                append("package org.meshtastic.tak\n\n")
+                append("import kotlin.io.encoding.Base64\n")
+                append("import kotlin.io.encoding.ExperimentalEncodingApi\n\n")
+                append("/**\n")
+                append(" * Canonical zstd dictionaries embedded for Kotlin/Native (no classpath\n")
+                append(" * resources). Stored as chunked Base64 and decoded lazily on first use.\n")
+                append(" */\n")
+                append("@OptIn(ExperimentalEncodingApi::class)\n")
+                append("internal object EmbeddedDictionaries {\n")
+                append(emitChunks("NON_AIRCRAFT", nonAircraft))
+                append("\n")
+                append(emitChunks("AIRCRAFT", aircraft))
+                append("\n")
+                append("    private val nonAircraftBytes: ByteArray by lazy { Base64.decode(NON_AIRCRAFT_CHUNKS.joinToString(\"\")) }\n")
+                append("    private val aircraftBytes: ByteArray by lazy { Base64.decode(AIRCRAFT_CHUNKS.joinToString(\"\")) }\n\n")
+                append("    fun nonAircraft(): ByteArray = nonAircraftBytes\n")
+                append("    fun aircraft(): ByteArray = aircraftBytes\n")
+                append("}\n")
+            },
+        )
+    }
+}
+
+val embeddedDictsOutputDir = layout.buildDirectory.dir("generated/embeddedDictionaries/kotlin")
+
+val generateEmbeddedDictionaries by tasks.registering(GenerateEmbeddedDictionaries::class) {
+    dictionaries.from(
+        projectDir.resolve("src/jvmMain/resources/dict_non_aircraft.zstd"),
+        projectDir.resolve("src/jvmMain/resources/dict_aircraft.zstd"),
+    )
+    outputDir.set(embeddedDictsOutputDir)
+}
+
+// Wire the generated source onto nativeMain and make every native compile (and
+// the source-jar) depend on the generator so it always runs first.
+kotlin.sourceSets.named("nativeMain") {
+    kotlin.srcDir(embeddedDictsOutputDir)
+}
+tasks.matching {
+    it.name.startsWith("compileKotlin") &&
+        it.name != "compileKotlinJvm" &&
+        it.name != "compileKotlinMetadata"
+}.configureEach {
+    dependsOn(generateEmbeddedDictionaries)
+}
+// metadata + source-jar tasks also consume nativeMain sources.
+tasks.matching { it.name == "compileNativeMainKotlinMetadata" || it.name.endsWith("SourcesJar") }
+    .configureEach { dependsOn(generateEmbeddedDictionaries) }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// fetchZstdStatic: provenance helper for the per-konanTarget libzstd.a (R6).
+//
+// A single macOS dev box cannot cross-build a static libzstd for every target's
+// sysroot, so this task documents+checks the vendored archives and prints the
+// exact build/fetch commands for any that are missing. CI wires the real
+// per-target builds/downloads in here (see src/nativeInterop/cinterop/lib/README.md).
+tasks.register("fetchZstdStatic") {
+    group = "build setup"
+    description = "Report/verify the per-konanTarget vendored static libzstd.a archives (see lib/README.md)."
+    val libRoot = projectDir.resolve("src/nativeInterop/cinterop/lib")
+    val konanTargets = listOf(
+        "ios_arm64", "ios_simulator_arm64", "ios_x64", "macos_arm64",
+        "tvos_arm64", "tvos_simulator_arm64", "linux_x64", "linux_arm64", "mingw_x64",
+    )
+    doLast {
+        val readme = libRoot.resolve("README.md").absolutePath
+        logger.lifecycle("Vendored static libzstd.a status (expected v1.5.7, matching include/zstd.h):")
+        val missing = mutableListOf<String>()
+        konanTargets.forEach { t ->
+            val archive = libRoot.resolve("$t/libzstd.a")
+            if (archive.isFile) {
+                logger.lifecycle("  [present] $t  (${archive.length()} bytes)")
+            } else {
+                logger.lifecycle("  [MISSING] $t")
+                missing += t
+            }
+        }
+        if (missing.isEmpty()) {
+            logger.lifecycle("All nine archives present.")
+        } else {
+            logger.lifecycle("")
+            logger.lifecycle("Missing archives for: ${missing.joinToString(", ")}")
+            logger.lifecycle("Build/fetch each per the per-target commands in: $readme")
+            logger.lifecycle("(Only the host target, macos_arm64, is committed; the rest are produced in CI.)")
+        }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

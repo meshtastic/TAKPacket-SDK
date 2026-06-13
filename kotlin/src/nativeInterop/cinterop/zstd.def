@@ -1,0 +1,16 @@
+# Kotlin/Native cinterop definition for libzstd.
+#
+# STATIC linking (R6): consumer klibs must be self-contained — no system
+# `-lzstd` and no consumer link-time setup. We bind a vendored, per-konan-target
+# `libzstd.a` rather than relying on a shared library on the host/consumer.
+#
+# `headers` is the vendored zstd public header (v1.5.7), shared across all
+# targets. `staticLibraries` names the archive; the per-target search path
+# (`libraryPaths`) and the header `compilerOpts -I…` are injected from
+# build.gradle.kts because they resolve against `$projectDir` and the konan
+# target name (e.g. lib/macos_arm64/libzstd.a), which a static .def cannot
+# express portably. See src/nativeInterop/cinterop/lib/README.md for how each
+# target's libzstd.a is produced/obtained.
+language = C
+headers = zstd.h
+staticLibraries = libzstd.a

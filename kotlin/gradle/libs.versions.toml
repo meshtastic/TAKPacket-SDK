@@ -4,6 +4,7 @@ protobufs = "2.7.25"
 xmlutil = "0.91.3"
 kotlinx-datetime = "0.8.0"
 zstd-jni = "1.5.7-11"
+atomicfu = "0.27.0"
 dokka = "2.0.0"
 binary-compat = "0.18.1"
 vanniktech-publish = "0.36.0"
@@ -14,6 +15,10 @@ junit-platform = "1.14.0"
 protobufs = { module = "org.meshtastic:protobufs", version.ref = "protobufs" }
 xmlutil-core = { module = "io.github.pdvrieze.xmlutil:core", version.ref = "xmlutil" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+# atomicfu library (NOT the Gradle plugin / bytecode transform): the native
+# ZstdCodec uses kotlinx.atomicfu.locks.SynchronizedObject + synchronized {} for
+# a multiplatform lock that compiles on linux/mingw too (NSLock is Apple-only).
+kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "atomicfu" }
 zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit-jupiter" }
