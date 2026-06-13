@@ -19,23 +19,37 @@ kotlin {
     jvm()
 
     sourceSets {
-        val commonMain by getting {
-            dependencies {
-                // Proto types (TAKPacketV2, GeoChat, etc.) come from the published
-                // protobufs SDK. Using `implementation` ensures we do NOT re-export
-                // them to consumers — they bring their own protobufs SDK dependency
-                // and there is exactly one source of truth on the classpath.
-                implementation("org.meshtastic:protobufs:2.7.25")
-            }
-        }
         val jvmMain by getting {
             dependencies {
+                // Proto types (TAKPacketV2, GeoChat, etc.) come from the published
+                // protobufs KMP SDK. They are an internal implementation detail —
+                // no public SDK signature exposes an org.meshtastic.proto.* type
+                // (TakCompressor/TakPacketV2Serializer traffic only in
+                // TakPacketV2Data + ByteArray). `compileOnly` therefore keeps the
+                // protobufs SDK OFF consumers' classpaths entirely: it is omitted
+                // from the published POM (neither compile nor runtime scope), so we
+                // never re-export it and never dictate its version. Every consumer
+                // (e.g. Meshtastic-Android) already depends on the same
+                // org.meshtastic:protobufs KMP artifact directly and owns its
+                // version — that dependency satisfies our runtime requirement, and
+                // there is exactly one source of truth on the classpath.
+                compileOnly("org.meshtastic:protobufs:2.7.25")
                 implementation("com.github.luben:zstd-jni:1.5.7-11")
                 implementation("org.ogce:xpp3:1.1.6")
+                // STAGE 0 SPIKE (temporary, JVM-only): xmlutil + kotlinx-datetime
+                // back the side-by-side CotXmlParserXmlUtil re-port that proves the
+                // xpp3 -> multiplatform parser swap is .pb byte-identical before any
+                // KMP scaffolding. Plain implementation lines; no version catalog yet.
+                implementation("io.github.pdvrieze.xmlutil:core:0.91.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.8.0")
             }
         }
         val jvmTest by getting {
             dependencies {
+                // jvmTest no longer inherits the proto SDK transitively (jvmMain
+                // declares it compileOnly), so the test classpath needs it directly
+                // to run the serializer.
+                implementation("org.meshtastic:protobufs:2.7.25")
                 implementation(kotlin("test"))
                 implementation("org.junit.jupiter:junit-jupiter:6.1.0")
                 implementation("org.junit.jupiter:junit-jupiter-params:6.1.0")
