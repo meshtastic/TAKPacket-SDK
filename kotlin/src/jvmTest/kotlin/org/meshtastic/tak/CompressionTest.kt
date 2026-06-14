@@ -86,7 +86,7 @@ class CompressionTest {
         // Backward-compat wrapper must agree with the detailed variant.
         val legacy = compressor.compressWithRemarksFallback(packet, limit)
         assertNotNull(legacy)
-        assertTrue(legacy!!.contentEquals(result.wirePayload!!))
+        assertTrue(legacy!!.contentEquals(result.wirePayload))
     }
 
     @Test
