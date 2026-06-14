@@ -1,38 +1,45 @@
 package org.meshtastic.tak
 
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 /**
  * wasmWasi-specific codec contract (`kotlin.test`).
  *
- * wasmWasi is the one target with no compress path (no JS host, no cinterop, no
- * pure-Kotlin encoder), but it IS decode-capable via the pure-Kotlin decoder.
- * This pins both halves of that contract:
+ * wasmWasi has no JS host, no cinterop, and no native libzstd, yet it is a
+ * FULLY capable target via the pure-Kotlin codec: it compresses through
+ * [org.meshtastic.tak.internal.zstd.PureZstdEncoder] (R14b) and decompresses
+ * through the pure-Kotlin decoder. This pins both halves of that contract:
  *
- *  - [TakCompressor.compress] surfaces the documented [ZstdException] (wrapped by
- *    the compressor as a RuntimeException is NOT the case here — compress calls
- *    the codec directly and the codec throws ZstdException up front before any
- *    framing). We assert at the codec level AND that the parse/serialize/decode
- *    pipeline still works end-to-end.
- *  - Decompress of a real golden frame produces the expected packet.
+ *  - [TakCompressor.compress] produces a wire payload that [TakCompressor.decompress]
+ *    round-trips back to the same packet (codec on this target = pure Kotlin).
+ *  - The codec-level frame is a standard zstd frame (with magic), decodable by
+ *    the pure-Kotlin decoder.
+ *  - A golden frame produced by another binding still decodes here.
  *
- * The shared common suites (RoundTrip / Resilience / Decode) already run on
- * wasmWasi too — this just locks the wasmWasi-only throw-on-compress behavior.
+ * The shared common suites (RoundTrip / Resilience / Decode) also run on
+ * wasmWasi (with `zstdCanCompress = true` now) — this locks the wasmWasi-only
+ * specifics.
  */
 class WasmWasiCodecTest {
 
     @Test
-    fun compressThrowsZstdException() {
-        // The codec's compress actual throws unconditionally on wasmWasi.
-        assertFailsWith<ZstdException> {
-            ZstdCodec.compressWithDict(byteArrayOf(1, 2, 3), DictionaryProvider.DICT_ID_NON_AIRCRAFT, 19)
-        }
+    fun codecCompressRoundTrips() {
+        // The codec's compress actual now uses the pure-Kotlin encoder; the
+        // pure-Kotlin decoder must reproduce the input exactly.
+        val input = byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5)
+        val frame = ZstdCodec.compressWithDict(input, DictionaryProvider.DICT_ID_NON_AIRCRAFT, 19)
+        val back = ZstdCodec.decompressWithDict(
+            frame, DictionaryProvider.DICT_ID_NON_AIRCRAFT, TakCompressor.MAX_DECOMPRESSED_SIZE,
+        )
+        assertContentEquals(input, back)
     }
 
     @Test
-    fun takCompressorCompressThrowsButParseAndDecodeWork() {
+    fun takCompressorParseCompressDecompressRoundTrips() {
         val parser = CotXmlParser()
         val compressor = TakCompressor()
 
@@ -40,15 +47,20 @@ class WasmWasiCodecTest {
         val packet = parser.parse(InlinedFixtures.xml.getValue("pli_basic"))
         assertEquals("testnode", packet.uid)
 
-        // Compress propagates the codec's ZstdException (no encoder on wasmWasi).
-        assertFailsWith<ZstdException> { compressor.compress(packet) }
+        // Compress now works on wasmWasi (pure-Kotlin encoder), under the MTU.
+        val wire = compressor.compress(packet)
+        assertTrue(wire.size <= 237, "wire payload ${wire.size}B exceeds MTU 237")
 
-        // But decompress of the golden frame works — wasmWasi is decode-capable.
-        val golden = InlinedFixtures.goldenWire.getValue("pli_basic")
-        val decoded = compressor.decompress(golden)
+        // And decompress round-trips the key fields.
+        val decoded = compressor.decompress(wire)
         assertEquals(packet.cotTypeId, decoded.cotTypeId)
         assertEquals(packet.uid, decoded.uid)
         assertEquals(packet.callsign, decoded.callsign)
+
+        // A golden frame from another binding still decodes here too.
+        val golden = InlinedFixtures.goldenWire.getValue("pli_basic")
+        val fromGolden = compressor.decompress(golden)
+        assertEquals(packet.uid, fromGolden.uid)
     }
 
     @Test

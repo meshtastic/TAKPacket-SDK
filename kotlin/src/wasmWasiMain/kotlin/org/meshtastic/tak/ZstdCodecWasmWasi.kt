@@ -1,22 +1,23 @@
 package org.meshtastic.tak
 
 import org.meshtastic.tak.internal.zstd.PureZstdDecoder
+import org.meshtastic.tak.internal.zstd.PureZstdEncoder
 
 /**
  * Kotlin/Wasm-WASI [ZstdCodec] actual.
  *
  * WASI has no JavaScript host, Kotlin/Wasm has no cinterop, and there is no
  * native libzstd to link, so the usual codec backends are all unavailable here.
- * BUT the SDK ships a proven, pure-Kotlin, dictionary-aware zstd DECODER in
- * `commonMain` ([PureZstdDecoder]), which makes wasmWasi a real,
- * **decode-capable** target:
+ * BUT the SDK ships a proven, pure-Kotlin, dictionary-aware zstd codec in
+ * `commonMain` ([PureZstdDecoder] + [PureZstdEncoder]), which makes wasmWasi a
+ * fully **compress- AND decode-capable** target with zero native/JS deps:
  *
+ *  - [compressWithDict] delegates to [PureZstdEncoder.encode] (R14b Phase 1).
+ *    Its frames are decodable by real libzstd (and therefore by every other
+ *    binding) and stay within the cross-binding size tolerance / 237 B MTU.
  *  - [decompressWithDict] delegates to [PureZstdDecoder.decode], loading the
  *    embedded dictionary for [dictId]. No JS dependency, no cinterop.
- *  - [compressWithDict] throws [ZstdException] — there is no pure-Kotlin encoder
- *    yet (R14b is deferred) and no libzstd to call. wasmWasi consumers can parse,
- *    build, serialize, and DECOMPRESS, but not compress.
- *  - [release] is a no-op: the decoder holds no native handles or caches.
+ *  - [release] is a no-op: the codec holds no native handles or caches.
  *
  * The codec exchanges FULL standard zstd frames (magic included); [TakCompressor]
  * owns the magic strip/re-prepend and the `0xFF` skip-compress path above this
@@ -25,11 +26,22 @@ import org.meshtastic.tak.internal.zstd.PureZstdDecoder
 internal actual object ZstdCodec {
 
     /**
-     * Compression is unavailable on wasmWasi (no JS host, no cinterop, no
-     * pure-Kotlin encoder). Always throws [ZstdException].
+     * Compress a standard zstd frame (magic included) from [data] with the
+     * dictionary identified by [dictId], via the pure-Kotlin [PureZstdEncoder].
      */
-    actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray =
-        throw ZstdException("zstd compression unavailable on wasmWasi")
+    actual fun compressWithDict(data: ByteArray, dictId: Int, level: Int): ByteArray {
+        val dict = DictionaryProvider.getDictionary(dictId)
+            ?: throw ZstdException("No dictionary for ID $dictId")
+        return try {
+            PureZstdEncoder.encode(data, dict, level)
+        } catch (e: Exception) {
+            throw ZstdException(
+                "Zstd compression failed (dictId=$dictId, inputSize=${data.size}): " +
+                    (e.message ?: e::class.simpleName ?: "unknown"),
+                e,
+            )
+        }
+    }
 
     /**
      * Decompress a standard zstd frame [data] (magic included) with the

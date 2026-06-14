@@ -1,5 +1,6 @@
 package org.meshtastic.tak
 
-/** Compression throws [ZstdException] on wasmWasi (no encoder), so the compress
- *  half of the pipeline is skipped here; decompress (pure-Kotlin decoder) runs. */
-internal actual val zstdCanCompress: Boolean = false
+/** wasmWasi compresses via the pure-Kotlin [org.meshtastic.tak.internal.zstd.PureZstdEncoder]
+ *  (R14b) and decompresses via the pure-Kotlin decoder, so the full
+ *  compress→decompress pipeline runs here. */
+internal actual val zstdCanCompress: Boolean = true
