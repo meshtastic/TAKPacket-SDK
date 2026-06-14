@@ -4,6 +4,60 @@ All notable changes to the TAKPacket-SDK Kotlin module are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.0] — pure-Kotlin zstd codec unification
+
+The pure-Kotlin zstd codec is now **THE** codec on every target. The
+per-platform compression backends are gone: no `zstd-jni` (JVM), no cinterop
+`libzstd` (the 9 native targets), no `@bokuweb/zstd-wasm` (js / wasmJs). Every
+binding — jvm, the 9 native targets, js, wasmJs, and wasmWasi — compresses AND
+decompresses through the same `commonMain` `PureZstdEncoder` / `PureZstdDecoder`.
+
+This is a **compression-engine swap, not a breaking wire change.** Old and new
+nodes stay fully interoperable in BOTH directions, because the engines speak the
+same on-wire format: our decoder reads real libzstd frames (proven by decoding
+every golden), and our encoder's frames are read by real libzstd (proven by the
+zstd-jni cross-decode oracle and by the Python/Swift/C#/TypeScript bindings,
+which all use libzstd). The flags byte, the 4-byte magic strip, the `0xFF`
+skip-compress path, the `0x3F` dict-ID masking, and the
+`MAX_DECOMPRESSED_SIZE = 4096` guard are all unchanged.
+
+### Changed
+
+- **One codec on all targets.** `ZstdCodec` and `DictionaryLoader` collapsed
+  from `expect`/`actual` (one per target) to a single plain `commonMain object`
+  each, delegating to `PureZstdEncoder.encode` / `PureZstdDecoder.decode` and the
+  generated `EmbeddedDictionaries`. The internal codec signatures are unchanged,
+  so `TakCompressor` and the public API surface are untouched.
+- **`.bin` goldens regenerated** with the pure-Kotlin encoder. The intermediate
+  `.pb` protobuf goldens are **byte-for-byte unchanged** (only the compression
+  engine changed, not the proto). All 47 frames stay under the 237 B LoRa MTU;
+  the pure encoder's slightly simpler strategy nudges the median ~87→89 B and the
+  worst case 184→220 B (still 92% of MTU), well within the cross-binding size
+  tolerance the other bindings assert against.
+- The codec's parsed-dictionary and match-index caches (shared by the now-common
+  `ZstdCodec` singleton) are guarded by an atomicfu `SynchronizedObject` lock.
+
+### Removed
+
+- **`zstd-jni`** as a runtime dependency (retained only as a jvmTest oracle).
+- **The entire native cinterop**: `zstd.def`, the vendored `zstd.h` /
+  `zstd_errors.h`, the per-konanTarget `lib/<target>/libzstd.a` vendoring, the
+  `fetchZstdStatic` task, and `kotlin.mpp.enableCInteropCommonization`. The 9
+  native targets remain declared — they now compile pure Kotlin. This also
+  ELIMINATES the 8 CI-pending `libzstd.a` archives entirely.
+- **`@bokuweb/zstd-wasm`** from js / wasmJs (and its npm lockfile entries). js,
+  wasmJs, and wasmWasi are now fully dependency-free. The public
+  `ensureZstdWasmInitialized()` web entry point is gone (no async wasm init to
+  await), and the per-leaf web compress bridge / `jsCommonMain` split is removed.
+- The `zstdCanCompress` test capability flag and its per-leaf actuals — compress
+  now runs on every target, so the common round-trip / resilience suites are
+  ungated.
+
+### Fixed
+
+- BCV `klibApiCheck` is **re-attached** to `apiCheck` (it was detached only
+  because the non-host native archives were missing — now there are none).
+
 ## [Unreleased] — Kotlin Multiplatform migration
 
 Migrated the module from a `jvm()`-only Kotlin Multiplatform project to **full
@@ -105,16 +159,17 @@ The module now declares 13 targets (13 of the 14 protobufs-supported targets;
 
 ### CI-pending
 
-These are wired but require the CI cross-toolchain to complete; they do not
+> Superseded by 0.6.0: the codec is now pure Kotlin on every target, so the
+> native `libzstd.a` archives no longer exist and `klibApiCheck` is re-attached.
+> The notes below describe the interim (cinterop) state and are kept for history.
+
+These were wired but required the CI cross-toolchain to complete; they did not
 affect the JVM gate or the wire format:
 
 - **8 of 9 native `libzstd.a` archives.** Only the host archive (`macos_arm64`)
-  is committed in this worktree, so only `macosArm64` links + tests locally; the
-  other 8 native targets cross-compile/link in CI once `fetchZstdStatic`
-  provisions their archives. The shared `nativeMain` codec + the common test
-  code are identical across all 9, and `macosArm64Test` runs the full common
-  suite green locally with the real cinterop codec.
-- **klib binary-compatibility baseline.** BCV's `klibApiCheck` is detached from
-  `apiCheck` until all 9 archives are present and a klib `.api` baseline is
-  dumped; the JVM `apiCheck` gate (`api/takpacket-sdk.api`) guards the public
-  surface in the meantime (every native/web addition is `internal`).
+  was committed in this worktree, so only `macosArm64` linked + tested locally;
+  the other 8 native targets cross-compiled/linked in CI once `fetchZstdStatic`
+  provisioned their archives.
+- **klib binary-compatibility baseline.** BCV's `klibApiCheck` was detached from
+  `apiCheck` until all 9 archives were present; the JVM `apiCheck` gate
+  (`api/takpacket-sdk.api`) guarded the public surface in the meantime.
