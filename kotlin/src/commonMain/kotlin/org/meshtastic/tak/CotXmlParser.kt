@@ -930,9 +930,13 @@ public class CotXmlParser {
      * original (no xpp3), so this is a verbatim port.
      */
     public fun extractRawDetailBytes(cotXml: String): ByteArray {
+        // `([\s\S]*?)` matches any char INCLUDING newlines on every Kotlin
+        // target. RegexOption.DOT_MATCHES_ALL is JVM/Native-only (absent on
+        // Kotlin/JS + Wasm), so we encode "dot-all" in the pattern itself to
+        // keep this commonMain regex portable across all targets.
         val match = Regex(
-            """<detail\b[^>]*>(.*?)</detail\s*>""",
-            setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE),
+            """<detail\b[^>]*>([\s\S]*?)</detail\s*>""",
+            RegexOption.IGNORE_CASE,
         ).find(cotXml)
         val inner = match?.groupValues?.get(1) ?: return ByteArray(0)
         return inner.encodeToByteArray()

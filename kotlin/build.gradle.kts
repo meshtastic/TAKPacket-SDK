@@ -1,5 +1,6 @@
 import java.util.Base64
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -33,9 +34,36 @@ kotlin {
 
     jvm()
 
+    // STAGE 4 scope: the js / wasmJs / wasmWasi targets (R1/R3/R4). All three
+    // get DECOMPRESS for free via the proven pure-Kotlin PureZstdDecoder (no JS
+    // dependency). COMPRESS on js + wasmJs goes through @bokuweb/zstd-wasm (the
+    // R3-gated path); COMPRESS on wasmWasi throws (no JS host, no cinterop).
+    //
+    //  - js + wasmJs share a `jsCommonMain` source set (the web ZstdCodec /
+    //    DictionaryLoader actuals) so the shared logic lives once. The narrow
+    //    `external` interop to @bokuweb is split into js / wasmJs leaves because
+    //    js(IR) and wasmJs do NOT share `external` declaration ABIs.
+    //  - wasmWasi has its own `wasmWasiMain` (decoder-backed decompress,
+    //    throwing compress).
+    js(IR) {
+        browser()
+        nodejs()
+    }
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        nodejs()
+    }
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmWasi {
+        nodejs()
+    }
+
     // STAGE 3 scope: declare the nine proven-path native targets (R1/R2). JS/Wasm
-    // (Stage 4/5) are intentionally NOT here yet. applyDefaultHierarchyTemplate()
-    // gives a shared `nativeMain` source set under which all nine share ONE
+    // (Stage 4) are declared above. applyDefaultHierarchyTemplate() gives a
+    // shared `nativeMain` source set under which all nine share ONE
     // cinterop-backed ZstdCodec/DictionaryLoader actual.
     val nativeTargets = listOf(
         iosArm64(),
@@ -101,6 +129,33 @@ kotlin {
         nativeMain.dependencies {
             implementation(libs.kotlinx.atomicfu)
         }
+
+        // ── Stage 4: js / wasmJs / wasmWasi ──────────────────────────────────
+        // jsCommonMain holds the web codec logic shared by js + wasmJs:
+        //  - decompress → PureZstdDecoder.decode (no JS lib),
+        //  - compress   → a leaf `external` call into @bokuweb/zstd-wasm.
+        // The `external` interop ABI differs between js(IR) and wasmJs, so the
+        // declaration is split into the js / wasmJs leaves (jsMain / wasmJsMain)
+        // and only the shared, target-agnostic logic lives in jsCommonMain.
+        val jsCommonMain by creating {
+            dependsOn(commonMain.get())
+        }
+        jsMain {
+            dependsOn(jsCommonMain)
+            dependencies {
+                // The wasm-compiled libzstd backing js compress (R5). Gated on
+                // the R3 byte-compat spike. Decompress needs NO JS dep.
+                implementation(npm("@bokuweb/zstd-wasm", libs.versions.bokuweb.zstd.wasm.get()))
+            }
+        }
+        named("wasmJsMain") {
+            dependsOn(jsCommonMain)
+            dependencies {
+                implementation(npm("@bokuweb/zstd-wasm", libs.versions.bokuweb.zstd.wasm.get()))
+            }
+        }
+        // wasmWasiMain: decode-capable via PureZstdDecoder; compress throws.
+        // No npm dep (WASI has no JS host).
     }
 }
 
@@ -219,10 +274,17 @@ val generateEmbeddedDictionaries by tasks.registering(GenerateEmbeddedDictionari
     outputDir.set(embeddedDictsOutputDir)
 }
 
-// Wire the generated source onto nativeMain and make every native compile (and
-// the source-jar) depend on the generator so it always runs first.
-kotlin.sourceSets.named("nativeMain") {
-    kotlin.srcDir(embeddedDictsOutputDir)
+// Wire the generated source onto the source sets whose DictionaryLoader actuals
+// read EmbeddedDictionaries (no classpath resources on these targets):
+//   - nativeMain   (all nine native targets, Stage 3)
+//   - jsCommonMain (js + wasmJs, Stage 4)
+//   - wasmWasiMain (Stage 4)
+// and make every non-JVM compile (and the source-jar) depend on the generator
+// so it always runs first.
+listOf("nativeMain", "jsCommonMain", "wasmWasiMain").forEach { setName ->
+    kotlin.sourceSets.named(setName) {
+        kotlin.srcDir(embeddedDictsOutputDir)
+    }
 }
 tasks.matching {
     it.name.startsWith("compileKotlin") &&
@@ -231,9 +293,12 @@ tasks.matching {
 }.configureEach {
     dependsOn(generateEmbeddedDictionaries)
 }
-// metadata + source-jar tasks also consume nativeMain sources.
-tasks.matching { it.name == "compileNativeMainKotlinMetadata" || it.name.endsWith("SourcesJar") }
-    .configureEach { dependsOn(generateEmbeddedDictionaries) }
+// metadata + source-jar tasks also consume the generated sources.
+tasks.matching {
+    it.name == "compileNativeMainKotlinMetadata" ||
+        it.name == "compileJsCommonMainKotlinMetadata" ||
+        it.name.endsWith("SourcesJar")
+}.configureEach { dependsOn(generateEmbeddedDictionaries) }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // fetchZstdStatic: provenance helper for the per-konanTarget libzstd.a (R6).

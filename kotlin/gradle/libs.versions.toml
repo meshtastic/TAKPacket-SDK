@@ -4,6 +4,10 @@ protobufs = "2.7.25"
 xmlutil = "0.91.3"
 kotlinx-datetime = "0.8.0"
 zstd-jni = "1.5.7-11"
+# @bokuweb/zstd-wasm: wasm-compiled libzstd for the js + wasmJs compress path
+# (R5). Decompress on js/wasmJs/wasmWasi goes through the pure-Kotlin decoder, so
+# this npm dep is ONLY the gated compress path. Pinned for reproducible builds.
+bokuweb-zstd-wasm = "0.0.22"
 atomicfu = "0.27.0"
 dokka = "2.0.0"
 binary-compat = "0.18.1"
