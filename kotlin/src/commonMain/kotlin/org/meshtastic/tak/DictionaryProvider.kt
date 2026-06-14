@@ -4,9 +4,10 @@ package org.meshtastic.tak
  * Loads and provides zstd compression dictionaries.
  *
  * The raw dictionary bytes are fetched through the internal [DictionaryLoader]
- * SPI (JVM = classpath resources; other targets embed the bytes in a later
- * stage). This provider owns the canonical resource names, the dictionary-ID
- * constants, and the aircraft-vs-non-aircraft selection rule.
+ * (a single commonMain object backed by the generated `EmbeddedDictionaries`,
+ * uniform across every target as of v0.6.0). This provider owns the canonical
+ * resource names, the dictionary-ID constants, and the aircraft-vs-non-aircraft
+ * selection rule.
  */
 public object DictionaryProvider {
 

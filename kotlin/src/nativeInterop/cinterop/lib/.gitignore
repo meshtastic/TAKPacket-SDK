@@ -1,5 +1,0 @@
-# Vendored static libzstd archives are obtained per Kotlin/Native target via the
-# `fetchZstdStatic` Gradle task (see README.md for provenance/build commands).
-# They are NOT committed: binary, multi-hundred-KB each, and security-patched
-# out of band. CI (or a local native build) populates lib/<konanTarget>/libzstd.a.
-*.a

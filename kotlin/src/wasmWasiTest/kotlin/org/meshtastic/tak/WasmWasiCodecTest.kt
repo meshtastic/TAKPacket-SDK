@@ -21,8 +21,7 @@ import kotlin.test.assertTrue
  *  - A golden frame produced by another binding still decodes here.
  *
  * The shared common suites (RoundTrip / Resilience / Decode) also run on
- * wasmWasi (with `zstdCanCompress = true` now) — this locks the wasmWasi-only
- * specifics.
+ * wasmWasi — this locks the wasmWasi-only specifics.
  */
 class WasmWasiCodecTest {
 

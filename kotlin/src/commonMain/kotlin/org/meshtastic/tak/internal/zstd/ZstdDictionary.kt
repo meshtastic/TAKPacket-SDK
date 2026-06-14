@@ -1,5 +1,8 @@
 package org.meshtastic.tak.internal.zstd
 
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+
 /**
  * A parsed zstd trained dictionary (RFC 8878 §5, "Dictionary Format").
  *
@@ -49,9 +52,14 @@ internal class ZstdDictionary private constructor(
          *
          * This caches the STATIC shipped dictionary only; it holds zero
          * cross-packet decoded state, so it does not affect the resilience
-         * invariant. The web/wasm/wasi production decode paths are
-         * single-threaded; on the JVM the cache is touched only by tests.
+         * invariant. As of v0.6.0 the pure-Kotlin codec backs EVERY target
+         * (including the JVM production path), where multiple threads may share
+         * the [ZstdCodec] singleton, so the cache is guarded by [cacheLock]
+         * (atomicfu's multiplatform [SynchronizedObject], which compiles on
+         * every target). Reads/writes are tiny and infrequent (one entry per
+         * shipped dictionary), so a coarse lock is ample.
          */
+        private val cacheLock = SynchronizedObject()
         private val parseCache = HashMap<ByteArray, ZstdDictionary>()
 
         /**
@@ -59,8 +67,12 @@ internal class ZstdDictionary private constructor(
          * reference. See [parseCache]. This is the entry point the decoder uses
          * on its per-packet hot path so the static dictionary is parsed once.
          */
-        fun parseCached(bytes: ByteArray): ZstdDictionary =
+        fun parseCached(bytes: ByteArray): ZstdDictionary = synchronized(cacheLock) {
             parseCache.getOrPut(bytes) { parse(bytes) }
+        }
+
+        /** Drop the parsed-dictionary cache (used by [ZstdCodec.release]). */
+        fun clearCache(): Unit = synchronized(cacheLock) { parseCache.clear() }
 
         /**
          * Parse [bytes]. A "raw content" dictionary (anything that does NOT

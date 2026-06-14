@@ -9,10 +9,10 @@ package org.meshtastic.tak
  * Special value 0xFF = uncompressed raw protobuf.
  *
  * Multiplatform: the zstd codec itself is reached through the internal
- * [ZstdCodec] SPI (JVM = zstd-jni, other targets land in later stages). The
+ * [ZstdCodec], a single pure-Kotlin implementation used on every target. The
  * wire framing — the 4-byte magic strip/re-prepend, the `0xFF` skip-compress
  * path, the dict-ID flags masking, and the [MAX_DECOMPRESSED_SIZE] guard — all
- * live HERE, above the SPI, so every target shares one framing implementation.
+ * live HERE, above the codec, so every target shares one framing implementation.
  */
 public class TakCompressor(
     private val compressionLevel: Int = 19,

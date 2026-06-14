@@ -1,5 +1,8 @@
 package org.meshtastic.tak.internal.zstd
 
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
+
 /**
  * A reusable hash-chain index over a dictionary's CONTENT, so the encoder can
  * back-reference the dictionary cheaply.
@@ -62,11 +65,20 @@ internal class MatchIndex private constructor(
         internal fun hash(v: Int): Int =
             ((v * -1640531527) ushr (32 - HASH_LOG)) and (HASH_SIZE - 1)
 
+        // As of v0.6.0 the pure-Kotlin encoder backs every target's compress
+        // path (including the JVM, where threads may share the ZstdCodec
+        // singleton), so the reference-keyed cache is guarded by an atomicfu
+        // SynchronizedObject (multiplatform; compiles on every target).
+        private val cacheLock = SynchronizedObject()
         private val cache = HashMap<ByteArray, MatchIndex>()
 
         /** Build (or reuse a cached) index over [content]. */
-        fun forDict(content: ByteArray): MatchIndex =
+        fun forDict(content: ByteArray): MatchIndex = synchronized(cacheLock) {
             cache.getOrPut(content) { build(content) }
+        }
+
+        /** Drop the match-index cache (used by [ZstdCodec.release]). */
+        fun clearCache(): Unit = synchronized(cacheLock) { cache.clear() }
 
         private fun build(content: ByteArray): MatchIndex {
             val head = IntArray(HASH_SIZE) { -1 }

@@ -16,12 +16,12 @@ import kotlin.test.assertTrue
  *    1400-line common parser) and the part most likely to diverge per platform
  *    (regex flavor, entity decoding, number parsing), so it is asserted
  *    unconditionally.
- *  - **Compress → decompress** runs where [zstdCanCompress] is true (jvm + the 9
- *    native targets). It proves the round trip preserves the key fields.
- *  - **Decode of the golden wire frame** runs on EVERY target (the pure-Kotlin
- *    decoder backs js / wasmJs / wasmWasi), so the decode + dictionary-load +
- *    deserialize path is covered even where compress is unavailable. The decoded
- *    packet must match the freshly parsed packet's key fields.
+ *  - **Compress → decompress** runs on EVERY target too. As of v0.6.0 the codec
+ *    is the pure-Kotlin encoder/decoder everywhere, so the full round trip is
+ *    exercised uniformly (no per-target capability gate).
+ *  - **Decode of the golden wire frame** runs on EVERY target, covering the
+ *    decode + dictionary-load + deserialize path. The decoded packet must match
+ *    the freshly parsed packet's key fields.
  *
  * The JVM file-based [RoundTripTest] remains the comprehensive golden oracle;
  * this is ADDITIVE cross-platform coverage of the same pipeline.
@@ -73,19 +73,17 @@ class RoundTripCommonTest {
             val rebuilt = builder.build(packet)
             assertTrue(rebuilt.contains("<event"), "rebuilt XML must contain <event> for $name")
 
-            // ── compress → decompress (only where the codec can compress) ──
-            if (zstdCanCompress) {
-                val wire = compressor.compress(packet)
-                assertTrue(wire.size >= 2, "wire payload too short for $name")
-                val rt = compressor.decompress(wire)
-                assertKeyFields(packet, rt, "$name [compress→decompress]")
-                compressed++
-            }
+            // ── compress → decompress (runs on EVERY target) ──
+            // The pure-Kotlin codec compresses on every target as of v0.6.0.
+            val wire = compressor.compress(packet)
+            assertTrue(wire.size >= 2, "wire payload too short for $name")
+            val rt = compressor.decompress(wire)
+            assertKeyFields(packet, rt, "$name [compress→decompress]")
+            compressed++
 
             // ── decode the golden wire frame (runs on EVERY target) ──
-            // The pure-Kotlin decoder backs js/wasmJs/wasmWasi, so this covers
-            // the decode + dictionary-load + deserialize path even where compress
-            // is unavailable. 0xFF (uncompressed) frames decode via the raw path.
+            // Covers the decode + dictionary-load + deserialize path against the
+            // canonical goldens. 0xFF (uncompressed) frames decode via the raw path.
             val golden = InlinedFixtures.goldenWire[name]
             if (golden != null) {
                 val decoded = compressor.decompress(golden)
@@ -98,8 +96,6 @@ class RoundTripCommonTest {
         // ran on every target.
         assertEquals(InlinedFixtures.names.size, parsed, "every fixture must parse")
         assertEquals(InlinedFixtures.names.size, decodedGolden, "every fixture's golden frame must decode")
-        if (zstdCanCompress) {
-            assertEquals(InlinedFixtures.names.size, compressed, "every fixture must compress where supported")
-        }
+        assertEquals(InlinedFixtures.names.size, compressed, "every fixture must compress")
     }
 }

@@ -1,2 +1,0 @@
-Placeholder so the target dir is tracked.
-libzstd.a for tvos_arm64 is produced by CI (fetchZstdStatic); see ../README.md.

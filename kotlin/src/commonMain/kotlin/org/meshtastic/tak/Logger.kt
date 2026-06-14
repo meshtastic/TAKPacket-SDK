@@ -41,14 +41,14 @@ public object TakPacketSdk {
     public var logger: Logger = NoOpLogger
 
     /**
-     * Release the codec's cached native/dictionary resources.
+     * Release the codec's cached dictionary state.
      *
-     * The [ZstdCodec] caches per-dictionary digested handles (on the JVM these
-     * wrap native `ZstdDictCompress`/`ZstdDictDecompress` digest memory; native
-     * targets cache cinterop CDict/DDict). They are freed automatically when the
-     * process exits, so calling this is **optional**. A long-running consumer
-     * that wants to drop the handles early (e.g. before going idle) can call it;
-     * the caches simply rebuild lazily on the next compress/decompress.
+     * As of v0.6.0 the codec is pure-Kotlin on every target, so there are no
+     * native handles to free — the [ZstdCodec] caches only the parsed entropy
+     * tables and match index derived from the static shipped dictionary (an
+     * optimization, not required state). Calling this is **optional**; a
+     * long-running consumer that wants to reclaim that memory while idle can,
+     * and the caches simply rebuild lazily on the next compress/decompress.
      */
     public fun releaseCodecResources() {
         ZstdCodec.release()

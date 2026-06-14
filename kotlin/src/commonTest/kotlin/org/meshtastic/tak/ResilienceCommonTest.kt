@@ -13,10 +13,9 @@ import kotlin.test.assertTrue
  * dictionary, with ZERO cross-packet state. LoRa is lossy — losing any packet
  * must never affect the decode of any other.
  *
- * The DECODE invariants use the inlined golden wire frames, so they run on EVERY
- * target (the pure-Kotlin decoder backs js / wasmJs / wasmWasi). The COMPRESS
- * determinism invariant runs only where [zstdCanCompress] is true (jvm + the 9
- * native targets).
+ * The DECODE invariants use the inlined golden wire frames, and the COMPRESS
+ * determinism invariant runs unconditionally: as of v0.6.0 the pure-Kotlin codec
+ * compresses AND decompresses on EVERY target, so both halves run everywhere.
  */
 class ResilienceCommonTest {
 
@@ -94,7 +93,6 @@ class ResilienceCommonTest {
 
     @Test
     fun reEncodingOnAFreshCompressorIsByteIdentical() {
-        if (!zstdCanCompress) return // compress not available on this target
         // Determinism: the same packet compressed by independent instances must
         // yield identical wire bytes (no instance-accumulated state).
         for (name in InlinedFixtures.names) {
