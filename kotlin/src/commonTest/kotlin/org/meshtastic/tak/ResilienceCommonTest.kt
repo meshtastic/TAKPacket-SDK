@@ -73,6 +73,26 @@ class ResilienceCommonTest {
     }
 
     @Test
+    fun releasingCodecResourcesIsSafeAndCachesRebuild() {
+        // Decode a frame to warm the codec caches, drop them via the public
+        // TakPacketSdk.releaseCodecResources(), then decode again: release must be
+        // safe to call and the caches must transparently rebuild (the resources
+        // are an optional optimization, not required state). On web/wasi release is
+        // a no-op, but the decode-after-release invariant still holds.
+        val (name, frame) = wireFrames().first()
+        val before = serialize(compressor.decompress(frame))
+
+        TakPacketSdk.releaseCodecResources()
+
+        val afterRelease = serialize(TakCompressor().decompress(frame))
+        assertEquals(before, afterRelease, "decode of $name changed after releaseCodecResources()")
+
+        // Calling release with nothing cached must also be harmless.
+        TakPacketSdk.releaseCodecResources()
+        TakPacketSdk.releaseCodecResources()
+    }
+
+    @Test
     fun reEncodingOnAFreshCompressorIsByteIdentical() {
         if (!zstdCanCompress) return // compress not available on this target
         // Determinism: the same packet compressed by independent instances must

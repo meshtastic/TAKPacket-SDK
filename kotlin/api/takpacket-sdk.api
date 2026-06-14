@@ -319,6 +319,7 @@ public final class org/meshtastic/tak/TakCompressor$RemarksFallbackResult {
 public final class org/meshtastic/tak/TakPacketSdk {
 	public static final field INSTANCE Lorg/meshtastic/tak/TakPacketSdk;
 	public final fun getLogger ()Lorg/meshtastic/tak/Logger;
+	public final fun releaseCodecResources ()V
 	public final fun setLogger (Lorg/meshtastic/tak/Logger;)V
 }
 

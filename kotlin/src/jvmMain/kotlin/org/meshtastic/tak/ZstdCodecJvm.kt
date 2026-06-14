@@ -85,6 +85,13 @@ internal actual object ZstdCodec {
     }
 
     actual fun release() {
+        // Close each digested dictionary before dropping it. ZstdDictCompress /
+        // ZstdDictDecompress wrap native digest memory that is otherwise freed
+        // only when the GC eventually finalizes them; close() frees it
+        // deterministically. Swallow close failures so one bad handle can't leave
+        // the rest of the caches un-cleared.
+        for (c in compressors.values) runCatching { c.close() }
+        for (d in decompressors.values) runCatching { d.close() }
         compressors.clear()
         decompressors.clear()
     }

@@ -39,6 +39,20 @@ public object NoOpLogger : Logger {
 public object TakPacketSdk {
     @Volatile
     public var logger: Logger = NoOpLogger
+
+    /**
+     * Release the codec's cached native/dictionary resources.
+     *
+     * The [ZstdCodec] caches per-dictionary digested handles (on the JVM these
+     * wrap native `ZstdDictCompress`/`ZstdDictDecompress` digest memory; native
+     * targets cache cinterop CDict/DDict). They are freed automatically when the
+     * process exits, so calling this is **optional**. A long-running consumer
+     * that wants to drop the handles early (e.g. before going idle) can call it;
+     * the caches simply rebuild lazily on the next compress/decompress.
+     */
+    public fun releaseCodecResources() {
+        ZstdCodec.release()
+    }
 }
 
 /**
