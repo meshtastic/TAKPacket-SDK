@@ -27,7 +27,10 @@ internal actual object ZstdCodec {
 
     private fun compressDict(dictId: Int, level: Int): ZstdDictCompress {
         val key = (dictId.toLong() shl 32) or (level.toLong() and 0xFFFFFFFFL)
-        return compressors.getOrPut(key) {
+        // computeIfAbsent is atomic on a ConcurrentHashMap; Kotlin's getOrPut is
+        // a non-atomic get-then-put, which under a cold-start race lets two
+        // threads each build a digested dictionary (a wasteful native digest).
+        return compressors.computeIfAbsent(key) {
             val dict = DictionaryProvider.getDictionary(dictId)
                 ?: throw ZstdException("No dictionary for ID $dictId")
             ZstdDictCompress(dict, level)
@@ -35,7 +38,7 @@ internal actual object ZstdCodec {
     }
 
     private fun decompressDict(dictId: Int): ZstdDictDecompress =
-        decompressors.getOrPut(dictId) {
+        decompressors.computeIfAbsent(dictId) {
             val dict = DictionaryProvider.getDictionary(dictId)
                 ?: throw ZstdException("No dictionary for ID $dictId")
             ZstdDictDecompress(dict)
