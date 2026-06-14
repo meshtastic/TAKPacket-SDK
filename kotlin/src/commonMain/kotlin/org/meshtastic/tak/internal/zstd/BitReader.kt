@@ -81,6 +81,13 @@ internal class ReverseBitReader(private val buf: ByteArray, private val start: I
 
     init {
         if (endExclusive <= start) throw ZstdFormatException("empty bitstream")
+        // A corrupt/truncated frame can declare a stream window (block size,
+        // Huffman compressed size, jump-table offsets) that runs past the actual
+        // input. Reject it here so the cursor can never index outside `buf`
+        // (which would otherwise leak an untyped IndexOutOfBoundsException).
+        if (start < 0 || endExclusive > buf.size) {
+            throw ZstdFormatException("bitstream window [$start,$endExclusive) outside input ${buf.size}")
+        }
         val lastIdx = endExclusive - 1
         val lastByte = buf[lastIdx].toInt() and 0xFF
         if (lastByte == 0) throw ZstdFormatException("bitstream last byte is zero (no stop bit)")
