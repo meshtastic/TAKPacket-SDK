@@ -13,11 +13,14 @@
 # TypeScript, C#, and Python modules have their own distribution channels
 # (SwiftPM, npm, NuGet, PyPI) so JitPack doesn't need to touch them.
 #
-# The SDK is a kotlin("multiplatform") project with a single jvm() target.
-# Gradle metadata lets consumers resolve the right variant automatically —
-# Android and desktop JVM pull the `-jvm` classifier. (iOS consumers use the
-# MeshtasticTAK Swift package, not Kotlin/Native klibs, so no iOS targets are
-# declared or published here.)
+# The SDK is a full kotlin("multiplatform") project: it declares jvm, js,
+# wasmJs, wasmWasi, and 9 native targets (ios x3, macosArm64, tvos x2, linux x2,
+# mingwX64). Gradle metadata lets consumers resolve the right variant
+# automatically. JitPack only serves the JVM variant as the fallback channel —
+# `publishToMavenLocal` here runs on a JVM-only CI host, so Android and desktop
+# JVM consumers pull the `-jvm` classifier from JitPack while the native/JS/Wasm
+# klibs are published via Maven Central. (iOS consumers use the MeshtasticTAK
+# Swift package rather than the Kotlin/Native klibs.)
 
 jdk:
   - openjdk17

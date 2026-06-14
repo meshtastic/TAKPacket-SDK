@@ -7,8 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased] — Kotlin Multiplatform migration
 
 Migrated the module from a `jvm()`-only Kotlin Multiplatform project to **full
-KMP across all 14 targets** that the published `org.meshtastic:protobufs`
-artifact supports. The eight core classes now live in `commonMain` behind two
+KMP across 13 declared targets** — 13 of the 14 targets the published
+`org.meshtastic:protobufs` artifact supports (the 14th, `android`, is
+intentionally not declared; Android is served via the `-jvm` artifact, R8). The
+eight core classes now live in `commonMain` behind two
 narrow internal SPIs (`ZstdCodec`, `DictionaryLoader`) satisfied by per-target
 `actual` objects. The same parser, serializer, compressor, and pure-Kotlin zstd
 decoder now run on the JVM, every Apple/Linux/Windows native target, and the
@@ -30,7 +32,8 @@ verbatim:
 
 ### Targets
 
-The module now declares all 14 protobufs-supported targets:
+The module now declares 13 targets (13 of the 14 protobufs-supported targets;
+`android` is not declared — see `jvm` below):
 
 - **`jvm`** — full compress + decompress via `zstd-jni`. Android consumers keep
   consuming the `-jvm` artifact (no `androidTarget()` / AGP is added).

@@ -12,7 +12,7 @@ lib/
   ios_arm64/libzstd.a
   ios_simulator_arm64/libzstd.a
   ios_x64/libzstd.a
-  macos_arm64/libzstd.a              <- host; present (Homebrew zstd 1.5.7)
+  macos_arm64/libzstd.a              <- host; obtained locally (Homebrew zstd 1.5.7), NOT committed
   tvos_arm64/libzstd.a
   tvos_simulator_arm64/libzstd.a
   linux_x64/libzstd.a
@@ -25,11 +25,15 @@ directory and the header search path at `../include`. The archive **must** match
 the vendored header version (`../include/zstd.h`, currently **v1.5.7**) so the
 ABI matches.
 
-> Only `macos_arm64/libzstd.a` is committed in this worktree (the build host —
-> Homebrew `zstd` 1.5.7, a real arm64 macOS archive), enabling a genuine host
-> `cinteropZstdMacosArm64` + `compileKotlinMacosArm64` proof. The other eight
-> archives are produced in CI by `fetchZstdStatic` (see below) because a single
-> macOS dev box cannot cross-build every sysroot's static lib.
+> **No `libzstd.a` archive is committed** — `*.a` is gitignored (see
+> `.gitignore` in this directory), and each target dir holds only a `.gitkeep`
+> placeholder. On a macOS dev host the `macos_arm64/libzstd.a` is obtained
+> locally (Homebrew `zstd` 1.5.7, a real arm64 macOS archive — `fetchZstdStatic`
+> reports its presence) so a genuine host `cinteropZstdMacosArm64` +
+> `compileKotlinMacosArm64` build runs. The archives for all targets — including
+> the host — are provisioned at build time by `fetchZstdStatic` (see below)
+> rather than checked in, because a single macOS dev box cannot cross-build
+> every sysroot's static lib and binaries do not belong in git.
 
 ## How each archive is produced
 
@@ -62,8 +66,9 @@ build_apple tvos_arm64            appletvos       arm64  "-mtvos-version-min=14.
 build_apple tvos_simulator_arm64  appletvsimulator arm64 "-mtvos-simulator-version-min=14.0"
 ```
 
-(The committed `macos_arm64/libzstd.a` is Homebrew's `$(brew --prefix zstd)/lib/libzstd.a`,
-which is equivalent to the `build_apple macos_arm64 …` output for the host arch.)
+(On a macOS host the local `macos_arm64/libzstd.a` can just be copied from
+Homebrew's `$(brew --prefix zstd)/lib/libzstd.a`, which is equivalent to the
+`build_apple macos_arm64 …` output for the host arch. It is not committed.)
 
 ### Linux targets
 

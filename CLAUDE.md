@@ -20,7 +20,7 @@ testdata/
   protobuf/          47 .pb intermediate protobuf bytes (Kotlin-generated)
   malformed/         malformed input test files
   compression-report.md   Auto-generated size report
-kotlin/              Canonical implementation (KMP, jvm() target — consumes published org.meshtastic:protobufs)
+kotlin/              Canonical implementation (full KMP: jvm + js + wasmJs + wasmWasi + 9 native — consumes published org.meshtastic:protobufs)
 swift/               Swift Package (SwiftProtobuf + CZstd)
 python/              Python package (protobuf + zstandard)
 typescript/          npm package (protobufjs + fzstd)
@@ -45,7 +45,7 @@ Plus per-platform: `DictionaryProvider` (loads zstd dicts from resources) and `T
 - Kotlin generates all golden `.pb` and `.bin` files via `CompressionTest.generate compression report`
 - Other platforms validate AGAINST those goldens; they don't generate them
 - When adding a new fixture: drop `.xml` in `testdata/cot_xml/`, run `gradle jvmTest` (auto-discovers via `TestFixtures.kt`), commit the generated goldens
-- Proto types come from the published `org.meshtastic:protobufs` KMP artifact (version pinned in `kotlin/build.gradle.kts`, declared `compileOnly` so it is NOT re-exported to consumers) — they are not generated in this repo. That artifact is Wire-generated upstream with `boxOneOfsMinSize = 5000` (flattens oneofs to nullable fields), which is why the serializer sees nullable oneof arms.
+- Proto types come from the published `org.meshtastic:protobufs` KMP artifact (version pinned in `kotlin/build.gradle.kts`, declared as a `commonMain implementation` dependency) — they are not generated in this repo. (It used to be `compileOnly` while the module was jvm-only; the full-KMP migration switched it to `implementation` because Native/JS/Wasm cannot link a `compileOnly` dep, so protobufs now ships transitively in the published POM/metadata. Android consumers already bring the same artifact and own its version.) That artifact is Wire-generated upstream with `boxOneOfsMinSize = 5000` (flattens oneofs to nullable fields), which is why the serializer sees nullable oneof arms.
 - Published to **Maven Central** (primary) via the vanniktech maven-publish plugin: `org.meshtastic:takpacket-sdk-jvm:<version>`. **JitPack** remains a fallback: `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm:<tag>`.
 
 **Environment prerequisites (these cost real time when missed):**
@@ -150,7 +150,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 1. **Running `gradle test` instead of `gradle jvmTest`** — KMP has no root `test` task; use `jvmTest` for the JVM target
 2. **Forgetting `git submodule update --init --recursive`** — proto codegen fails without the protobufs submodule
 3. **Stale golden files after fixture changes** — first `gradle jvmTest` run regenerates goldens but `CompatibilityTest.all golden files exist` may fail; second run is steady state
-4. **Depend on the `-jvm` artifact, not the KMP parent** — Android consumers must depend on the JVM artifact directly (`org.meshtastic:takpacket-sdk-jvm` on Maven Central, or `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm` on the JitPack fallback), NOT the parent `takpacket-sdk` / `TAKPacket-SDK` coordinate, and exclude `zstd-jni` (Android needs the @aar variant). The Kotlin module is `jvm()`-only now — iOS consumers use the `MeshtasticTAK` Swift package, not Kotlin/Native klibs.
+4. **Depend on the `-jvm` artifact, not the KMP parent** — Android consumers must depend on the JVM artifact directly (`org.meshtastic:takpacket-sdk-jvm` on Maven Central, or `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm` on the JitPack fallback), NOT the parent `takpacket-sdk` / `TAKPacket-SDK` coordinate, and exclude `zstd-jni` (Android needs the @aar variant). The Kotlin module is now full KMP (jvm + js + wasmJs + wasmWasi + 9 native), but Android still consumes the JVM variant — iOS consumers use the `MeshtasticTAK` Swift package rather than the Kotlin/Native klibs.
 5. **Swift protoc visibility** — always pass `--swift_opt=Visibility=Public` or the generated types are internal and break downstream consumers
 6. **Negative speed/course from ATAK** — ATAK sends `speed="-1.0"` for stationary; the parser clamps negatives to 0 (uint32 field)
 7. **IEEE 754 rounding on longitude assertions** — use `roundToInt()` not `toInt()` when comparing `(lon * 1e7)` to `longitudeI`
@@ -174,7 +174,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 
 ## Downstream consumers
 
-- **Meshtastic-Android** (`core/takserver`): depends on `org.meshtastic:takpacket-sdk-jvm` via Maven Central (JitPack fallback), proto submodule at `core/proto/src/main/proto`. It also depends on the **same `org.meshtastic:protobufs` KMP artifact** directly — which is why the SDK declares protobufs `compileOnly`: the SDK doesn't re-export the proto types and the consumer owns their version.
+- **Meshtastic-Android** (`core/takserver`): depends on `org.meshtastic:takpacket-sdk-jvm` via Maven Central (JitPack fallback), proto submodule at `core/proto/src/main/proto`. It also depends on the **same `org.meshtastic:protobufs` KMP artifact** directly. The SDK declares protobufs as a `commonMain implementation` dependency (the full-KMP migration could no longer use `compileOnly`, which Native/JS/Wasm can't link), so protobufs is now a transitive dependency in the SDK's POM; the consumer still owns/aligns its own protobufs version.
 - **Meshtastic-Apple**: depends on `MeshtasticTAK` Swift package via remote SPM URL, proto submodule at `protobufs/`, regenerated `atak.pb.swift` at `MeshtasticProtobufs/Sources/meshtastic/`
 
 ## PII / sensitive-data handling — read before adding any fixture

@@ -190,8 +190,9 @@ apiValidation {
 // Declaring the native targets makes BCV add `klibApiCheck` (and its
 // `*MainKlibrary` builds) as a dependency of `apiCheck`. Building those klibs
 // requires every target's cinterop — i.e. all nine vendored libzstd.a archives.
-// Only the host archive (macos_arm64) is committed in this worktree, so the
-// non-host klib builds can't run here, and there is no klib `.api` baseline yet.
+// No archive is committed (`*.a` is gitignored — see the lib/ .gitignore); only
+// the host archive (macos_arm64) is provisioned locally via fetchZstdStatic, so
+// the non-host klib builds can't run here, and there is no klib `.api` baseline yet.
 //
 // Detach klib validation from `apiCheck` so the established JVM `apiCheck` gate
 // stays green. The public Kotlin API is identical across targets and the JVM
@@ -468,7 +469,7 @@ tasks.register("fetchZstdStatic") {
             logger.lifecycle("")
             logger.lifecycle("Missing archives for: ${missing.joinToString(", ")}")
             logger.lifecycle("Build/fetch each per the per-target commands in: $readme")
-            logger.lifecycle("(Only the host target, macos_arm64, is committed; the rest are produced in CI.)")
+            logger.lifecycle("(No archive is committed — *.a is gitignored. The host macos_arm64 is provisioned locally; the rest are produced in CI.)")
         }
     }
 }
