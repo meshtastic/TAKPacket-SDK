@@ -9,7 +9,7 @@ import nl.adaptivity.xmlutil.xmlStreaming
  * Parses a CoT (Cursor-on-Target) XML event string into a [TakPacketV2Data].
  *
  * Multiplatform: built on the `io.github.pdvrieze.xmlutil:core` streaming reader
- * and `kotlin.time.Instant` (kotlinx-datetime), so it runs on every KMP target.
+ * and `kotlin.time.Instant` (kotlin.time stdlib), so it runs on every KMP target.
  *
  * Text-handling note: xmlutil may split an element's text body across several
  * `TEXT`/`CDSECT` events (e.g. around entity references). Rather than assign on
@@ -74,9 +74,9 @@ public class CotXmlParser {
         var hasChatData = false
         var isDeleteEvent = false
         var remarksText = ""
-        var rawDetailXml = StringBuilder()
+        // True once the <detail> element opens; gates element-body text
+        // accumulation (everything we consume lives inside <detail>).
         var inDetail = false
-        var detailDepth = 0
 
         // --- TAKTALK m-t-t accumulators ---------------------------------
         var hasTakTalkData = false
@@ -251,7 +251,6 @@ public class CotXmlParser {
                             }
                             "detail" -> {
                                 inDetail = true
-                                detailDepth = 1
                             }
                             "contact" -> {
                                 callsign = reader.getAttributeValue(null, "callsign") ?: ""
@@ -916,7 +915,7 @@ public class CotXmlParser {
      * Compute stale-seconds from the event `time`/`stale` attributes.
      *
      * Ported from the xpp3 implementation's `java.time` path to
-     * `kotlin.time.Instant` (kotlinx-datetime). `Instant.parse` accepts the
+     * `kotlin.time.Instant` (kotlin.time stdlib). `Instant.parse` accepts the
      * ISO-8601 instant strings ATAK emits (`2026-03-15T19:00:00Z`, with or
      * without fractional seconds), matching `DateTimeFormatter.ISO_INSTANT`.
      * Any parse failure returns 0, identical to the original try/catch.
@@ -938,14 +937,7 @@ public class CotXmlParser {
      * original (no xpp3), so this is a verbatim port.
      */
     public fun extractRawDetailBytes(cotXml: String): ByteArray {
-        // `([\s\S]*?)` matches any char INCLUDING newlines on every Kotlin
-        // target. RegexOption.DOT_MATCHES_ALL is JVM/Native-only (absent on
-        // Kotlin/JS + Wasm), so we encode "dot-all" in the pattern itself to
-        // keep this commonMain regex portable across all targets.
-        val match = Regex(
-            """<detail\b[^>]*>([\s\S]*?)</detail\s*>""",
-            RegexOption.IGNORE_CASE,
-        ).find(cotXml)
+        val match = DETAIL_REGEX.find(cotXml)
         val inner = match?.groupValues?.get(1) ?: return ByteArray(0)
         return inner.encodeToByteArray()
     }
@@ -1066,6 +1058,14 @@ public class CotXmlParser {
             else -> GEOSRC_UNSPECIFIED
         }
 
+        // Inner bytes of the `<detail>` element. `([\s\S]*?)` matches any char
+        // INCLUDING newlines on every Kotlin target; RegexOption.DOT_MATCHES_ALL
+        // is JVM/Native-only (absent on Kotlin/JS + Wasm), so "dot-all" is encoded
+        // in the pattern itself. Hoisted to a companion val so it compiles once.
+        private val DETAIL_REGEX = Regex(
+            """<detail\b[^>]*>([\s\S]*?)</detail\s*>""",
+            RegexOption.IGNORE_CASE,
+        )
         private val AIRCRAFT_ICAO_REGEX = Regex("""ICAO:\s*([A-Fa-f0-9]{6})""")
         private val AIRCRAFT_REG_REGEX = Regex("""REG:\s*(\S+)""")
         private val AIRCRAFT_FLIGHT_REGEX = Regex("""Flight:\s*(\S+)""")

@@ -2,7 +2,6 @@
 kotlin = "2.4.0"
 protobufs = "2.7.25"
 xmlutil = "0.91.3"
-kotlinx-datetime = "0.8.0"
 zstd-jni = "1.5.7-11"
 # @bokuweb/zstd-wasm: wasm-compiled libzstd for the js + wasmJs compress path
 # (R5). Decompress on js/wasmJs/wasmWasi goes through the pure-Kotlin decoder, so
@@ -18,7 +17,6 @@ junit-platform = "1.14.0"
 [libraries]
 protobufs = { module = "org.meshtastic:protobufs", version.ref = "protobufs" }
 xmlutil-core = { module = "io.github.pdvrieze.xmlutil:core", version.ref = "xmlutil" }
-kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 # atomicfu library (NOT the Gradle plugin / bytecode transform): the native
 # ZstdCodec uses kotlinx.atomicfu.locks.SynchronizedObject + synchronized {} for
 # a multiplatform lock that compiles on linux/mingw too (NSLock is Apple-only).

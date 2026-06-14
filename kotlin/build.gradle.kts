@@ -112,7 +112,8 @@ kotlin {
             // is required because Native/JS/Wasm cannot link a compileOnly dep.
             implementation(libs.protobufs)
             implementation(libs.xmlutil.core)
-            implementation(libs.kotlinx.datetime)
+            // Date/time uses the kotlin.time stdlib (Instant/Clock/Duration), so
+            // there is NO kotlinx-datetime dependency.
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

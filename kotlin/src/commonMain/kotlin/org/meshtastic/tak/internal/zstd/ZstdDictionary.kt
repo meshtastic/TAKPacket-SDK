@@ -21,7 +21,6 @@ package org.meshtastic.tak.internal.zstd
  * offsets. All of that lives here so the decoder can reference it.
  */
 internal class ZstdDictionary private constructor(
-    val dictId: Int,
     val literalsHuffman: HuffmanTable?,
     val offsetFse: FseTable?,
     val matchLengthFse: FseTable?,
@@ -46,7 +45,6 @@ internal class ZstdDictionary private constructor(
         fun parse(bytes: ByteArray): ZstdDictionary {
             if (bytes.size < 8 || leInt(bytes, 0) != DICT_MAGIC) {
                 return ZstdDictionary(
-                    dictId = 0,
                     literalsHuffman = null,
                     offsetFse = null,
                     matchLengthFse = null,
@@ -56,7 +54,9 @@ internal class ZstdDictionary private constructor(
                 )
             }
 
-            val dictId = leInt(bytes, 4)
+            // Skip the 4-byte Magic_Number + 4-byte Dictionary_ID (offset 8): the
+            // SDK selects the dictionary out-of-band via the wire flags byte, so
+            // the frame-embedded Dictionary_ID is not needed here.
             val reader = ForwardByteReader(bytes, 8, bytes.size)
 
             // Entropy tables, in the dictionary's defined order.
@@ -73,7 +73,6 @@ internal class ZstdDictionary private constructor(
             val content = bytes.copyOfRange(contentStart, bytes.size)
 
             return ZstdDictionary(
-                dictId = dictId,
                 literalsHuffman = huffman,
                 offsetFse = offsetFse,
                 matchLengthFse = matchFse,

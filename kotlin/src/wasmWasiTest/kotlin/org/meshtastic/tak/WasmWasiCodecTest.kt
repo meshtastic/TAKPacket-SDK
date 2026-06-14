@@ -3,7 +3,6 @@ package org.meshtastic.tak
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 /**
  * wasmWasi-specific codec contract (`kotlin.test`).
@@ -54,10 +53,13 @@ class WasmWasiCodecTest {
 
     @Test
     fun decompressionGuardsTheMaxSize() {
-        // A frame that decompresses fine stays under the cap; this just confirms
-        // the decode path is wired (a fuller bomb test lives in the JVM suite).
-        val golden = InlinedFixtures.goldenWire.getValue("pli_basic")
-        val decoded = TakCompressor().decompress(golden)
-        assertTrue(TakPacketV2Serializer.serialize(decoded).size <= TakCompressor.MAX_DECOMPRESSED_SIZE)
+        // A real over-cap guard: an uncompressed (0xFF) payload whose body
+        // exceeds MAX_DECOMPRESSED_SIZE must be REJECTED, not returned. The 0xFF
+        // path enforces the cap itself (no zstd pass to do it), so this confirms
+        // the size guard actually trips on oversized input rather than just
+        // asserting a small valid frame stays small.
+        val tooBig = ByteArray(1 + TakCompressor.MAX_DECOMPRESSED_SIZE + 1)
+        tooBig[0] = DictionaryProvider.DICT_ID_UNCOMPRESSED.toByte()
+        assertFailsWith<IllegalArgumentException> { TakCompressor().decompress(tooBig) }
     }
 }
