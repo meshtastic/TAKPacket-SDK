@@ -1,13 +1,13 @@
 # TAKPacket-SDK Compression Report
-Generated: 2026-05-29 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)
+Generated: 2026-06-14 | Dictionary: v1 (non-aircraft 8KB + aircraft 4KB)
 
 ## Summary
 | Metric | Value |
 |--------|-------|
 | Total test messages | 47 |
 | 100% under 237B | YES |
-| Median compressed size | 87B |
-| Median compression ratio | 7.2x |
+| Median compressed size | 80B |
+| Median compression ratio | 7.3x |
 | Worst case | 184B (77% of LoRa MTU) |
 
 ## Per-Message Results
@@ -48,7 +48,7 @@ Generated: 2026-05-29 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-tra
 | pli_stationary | a-f-G-U-C | 619B | 136B | 109B | 5.7x | non-aircraft |
 | pli_takaware | a-f-G-U-C | 539B | 97B | 87B | 6.2x | non-aircraft |
 | pli_webtak | a-f-G-U-C-I | 668B | 125B | 79B | 8.5x | non-aircraft |
-| pli_with_sensor | a-f-G-U-C | 772B | 162B | 118B | 6.5x | non-aircraft |
+| pli_with_sensor | a-f-G-U-C | 772B | 118B | 74B | 10.4x | non-aircraft |
 | ranging_bullseye | u-r-b-bullseye | 770B | 111B | 98B | 7.9x | non-aircraft |
 | ranging_circle | u-r-b-c-c | 672B | 109B | 80B | 8.4x | non-aircraft |
 | ranging_line | u-rb-a | 629B | 95B | 91B | 6.9x | non-aircraft |
@@ -78,6 +78,7 @@ emergency_911          72B |###############
 taktalk_text           72B |###############
 geochat_simple         73B |###############
 marker_spot            73B |###############
+pli_with_sensor        74B |###############
 marker_tank            75B |###############
 chat_receipt_delivered   77B |################
 chat_receipt_read      77B |################
@@ -101,7 +102,6 @@ marker_goto_itak      113B |#######################
 taktalk_voice_marti   113B |#######################
 drawing_rectangle_itak  114B |########################
 drawing_polygon       118B |########################
-pli_with_sensor       118B |########################
 route_3wp             122B |#########################
 aircraft_hostile      125B |##########################
 casevac               134B |############################
