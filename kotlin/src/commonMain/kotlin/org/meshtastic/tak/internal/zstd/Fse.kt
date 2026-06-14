@@ -60,6 +60,15 @@ internal class FseTable(
                 }
             }
 
+            // If more "less than 1" (-1) symbols were declared than the table
+            // has cells, highThreshold underflows below 0. The spread loop's
+            // `while (position > highThreshold)` would then never terminate
+            // (every position > a negative threshold). Reject the malformed
+            // distribution before spreading.
+            if (highThreshold < 0) {
+                throw ZstdFormatException("FSE: too many low-probability symbols (corrupt distribution)")
+            }
+
             // Spread the remaining (probability >= 1) symbols across the table.
             val step = (tableSize shr 1) + (tableSize shr 3) + 3
             var position = 0
@@ -115,10 +124,18 @@ internal class FseState(private val table: FseTable) {
     }
 
     /** The symbol the current state decodes to (read it BEFORE [update]). */
-    fun symbol(): Int = table.symbol[state]
+    fun symbol(): Int {
+        if (state !in table.symbol.indices) {
+            throw ZstdFormatException("FSE state $state out of range (corrupt frame)")
+        }
+        return table.symbol[state]
+    }
 
     /** Advance to the next state by consuming this state's `nbBits` bits. */
     fun update(br: ReverseBitReader) {
+        if (state !in table.nbBits.indices) {
+            throw ZstdFormatException("FSE state $state out of range (corrupt frame)")
+        }
         val nb = table.nbBits[state]
         val rest = br.readBits(nb)
         state = table.newState[state] + rest

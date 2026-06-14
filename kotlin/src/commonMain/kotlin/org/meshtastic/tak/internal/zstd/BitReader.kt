@@ -72,6 +72,13 @@ internal class ReverseBitReader(private val buf: ByteArray, private val start: I
     var overflowed: Boolean = false
         private set
 
+    /**
+     * Global index of the next bit to be consumed (decreases as bits are read).
+     * Exposed so interleaved decode loops can detect a transition that consumed
+     * no bits (a non-advancing, malformed self-loop).
+     */
+    val bitPosition: Int get() = bitPos
+
     init {
         if (endExclusive <= start) throw ZstdFormatException("empty bitstream")
         val lastIdx = endExclusive - 1

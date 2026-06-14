@@ -192,20 +192,35 @@ internal fun decodeWeightStream(fseTable: FseTable, br: ReverseBitReader): IntAr
     s2.init(br)
     var current = s1
     var other = s2
+    // Huffman descriptions cover at most MAX_SYMBOL+1 (256) weights. A crafted
+    // FSE weight table can encode a 0-bit self-loop transition that never sets
+    // `overflowed`, so the loop must be hard-bounded: without this cap a
+    // malicious frame spins forever and grows `collected` without limit
+    // (bypasses the 4096 decompressed-size bomb guard).
+    val maxWeights = HuffmanTable.MAX_SYMBOL + 1
     while (true) {
         // Emit the current state's symbol; it is always valid (the state was
         // produced by a previous in-range transition or by init).
         collected.add(current.symbol())
+        if (collected.size > maxWeights) {
+            throw ZstdFormatException("Huffman: weight stream exceeds $maxWeights symbols (malformed)")
+        }
         // Attempt the transition. zstd interleaves two states and the stream is
         // sized exactly to the weights, so once a transition reads past the
         // stream start (overflow) BOTH states have one final pending symbol: the
         // one just emitted, and the OTHER state's current symbol. Emit that
         // trailing symbol and stop. (Stopping without it drops the last weight
         // and makes the implied-symbol total come up short.)
+        val before = br.bitPosition
         current.update(br)
         if (br.overflowed) {
             collected.add(other.symbol())
             break
+        }
+        // A transition that consumed no bits and did not overflow is a
+        // non-terminating self-loop (nbBits==0) — malformed, would spin forever.
+        if (br.bitPosition == before) {
+            throw ZstdFormatException("Huffman: non-advancing weight transition (malformed)")
         }
         val t = current; current = other; other = t
     }

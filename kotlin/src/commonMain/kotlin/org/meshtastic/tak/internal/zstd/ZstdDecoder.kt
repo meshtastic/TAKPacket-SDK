@@ -73,7 +73,7 @@ internal object PureZstdDecoder {
                     for (i in 0 until blockSize) out.appendByte(b)
                 }
                 2 -> { // Compressed_Block.
-                    decodeCompressedBlock(reader, blockSize, out, state)
+                    decodeCompressedBlock(reader, blockSize, out, state, maxSize)
                 }
                 else -> throw ZstdFormatException("reserved block type")
             }
@@ -127,11 +127,12 @@ internal object PureZstdDecoder {
         blockSize: Int,
         out: OutputBuffer,
         state: DecodeState,
+        maxSize: Int,
     ) {
         val blockStart = reader.pos
         val blockEnd = blockStart + blockSize
 
-        val literals = decodeLiteralsSection(reader, blockEnd, state)
+        val literals = decodeLiteralsSection(reader, blockEnd, state, maxSize)
 
         // Sequences section occupies the rest of the block.
         decodeSequences(reader, blockEnd, literals, out, state)
@@ -143,14 +144,15 @@ internal object PureZstdDecoder {
         reader: ForwardByteReader,
         blockEnd: Int,
         state: DecodeState,
+        maxSize: Int,
     ): ByteArray {
         val first = reader.readByte()
         val litType = first and 0x3
         val sizeFormat = (first ushr 2) and 0x3
 
         return when (litType) {
-            0, 1 -> decodeRawOrRleLiterals(reader, first, litType, sizeFormat)
-            2, 3 -> decodeHuffmanLiterals(reader, first, litType, sizeFormat, blockEnd, state)
+            0, 1 -> decodeRawOrRleLiterals(reader, first, litType, sizeFormat, maxSize)
+            2, 3 -> decodeHuffmanLiterals(reader, first, litType, sizeFormat, blockEnd, state, maxSize)
             else -> throw ZstdFormatException("bad literals type")
         }
     }
@@ -160,12 +162,18 @@ internal object PureZstdDecoder {
         first: Int,
         litType: Int,
         sizeFormat: Int,
+        maxSize: Int,
     ): ByteArray {
         // Regenerated_Size width depends on size_format.
         val regenSize: Int = when (sizeFormat) {
             0, 2 -> first ushr 3 // 5-bit size, low form (sizeFormat bit0 == 0)
             1 -> (first ushr 4) or (reader.readByte() shl 4) // 12-bit
             else -> (first ushr 4) or (reader.readByte() shl 4) or (reader.readByte() shl 12) // 20-bit
+        }
+        // A 20-bit Regenerated_Size can request ~1 MB; reject before allocating
+        // so a crafted header can't force a large allocation past the cap.
+        if (regenSize > maxSize) {
+            throw ZstdFormatException("literals regen size $regenSize exceeds limit $maxSize")
         }
         return if (litType == 0) { // Raw
             ByteArray(regenSize) { reader.readByte().toByte() }
@@ -182,6 +190,7 @@ internal object PureZstdDecoder {
         sizeFormat: Int,
         blockEnd: Int,
         state: DecodeState,
+        maxSize: Int,
     ): ByteArray {
         // Regenerated_Size and Compressed_Size, plus the 4-stream flag, are
         // packed per size_format (RFC 8878 §3.1.1.3.1.1).
@@ -220,6 +229,13 @@ internal object PureZstdDecoder {
                 compressedSize = (b2 ushr 6) or (b3 shl 2) or (b4 shl 10)
                 fourStreams = true
             }
+        }
+
+        // An 18-bit Regenerated_Size can request ~256 KB; reject before
+        // huffmanDecodeStreams allocates ByteArray(regenSize), so a crafted
+        // header can't force a large allocation past the decompressed-size cap.
+        if (regenSize > maxSize) {
+            throw ZstdFormatException("literals regen size $regenSize exceeds limit $maxSize")
         }
 
         // Huffman table: fresh for type 2 (Compressed), reuse for type 3
@@ -351,6 +367,16 @@ internal object PureZstdDecoder {
             val mlCode = mlState.symbol()
             val llCode = llState.symbol()
 
+            // A corrupt FSE table can emit a symbol outside the baseline/extra
+            // tables' range; reject before indexing them (a bare
+            // IndexOutOfBoundsException would otherwise escape untyped).
+            if (llCode !in LL_BASELINE.indices) {
+                throw ZstdFormatException("literal-length code $llCode out of range")
+            }
+            if (mlCode !in ML_BASELINE.indices) {
+                throw ZstdFormatException("match-length code $mlCode out of range")
+            }
+
             // Extra bits are read in the order: offset (most), then match
             // length, then literal length (RFC 8878 §3.1.1.3.2.1.1, "the
             // bitstream ... offset, then match length, then literal length").
@@ -361,6 +387,13 @@ internal object PureZstdDecoder {
             val literalLength = LL_BASELINE[llCode] + llExtra
             val matchLength = ML_BASELINE[mlCode] + mlExtra
             val offsetValue = (1 shl ofCode) + offsetExtra
+
+            // The literal copy must stay within the decoded literals buffer; a
+            // corrupt literalLength would otherwise throw a bare
+            // IndexOutOfBoundsException inside appendBytes.
+            if (literalLength < 0 || litPos + literalLength > literals.size) {
+                throw ZstdFormatException("sequence literal length $literalLength overruns literals")
+            }
 
             val actualOffset = applyOffset(offsetValue, literalLength, state.repeatOffsets)
 
