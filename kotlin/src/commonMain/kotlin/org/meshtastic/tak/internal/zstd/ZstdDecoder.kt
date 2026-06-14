@@ -34,7 +34,10 @@ internal object PureZstdDecoder {
      * output larger than [maxSize].
      */
     fun decode(frame: ByteArray, dictionary: ByteArray, maxSize: Int): ByteArray {
-        val dict = ZstdDictionary.parse(dictionary)
+        // parseCached re-uses the parsed entropy tables + dict content for the
+        // same dictionary array reference, so the static shipped dictionary is
+        // parsed (and its ~512 KB content copied) once, not on every packet.
+        val dict = ZstdDictionary.parseCached(dictionary)
         val reader = ForwardByteReader(frame, 0, frame.size)
 
         val magic = reader.readLEInt(4)

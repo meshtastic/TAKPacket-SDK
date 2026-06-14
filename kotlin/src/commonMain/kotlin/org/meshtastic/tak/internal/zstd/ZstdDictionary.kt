@@ -35,6 +35,34 @@ internal class ZstdDictionary private constructor(
         val DEFAULT_REPEAT_OFFSETS = intArrayOf(1, 4, 8)
 
         /**
+         * Parsed-dictionary cache keyed by the source byte array's *reference*
+         * identity (a plain [HashMap] keys [ByteArray] by reference, not content).
+         *
+         * Parsing a trained dictionary re-reads its full entropy tables and
+         * copies its ~512 KB content into [content] — pure work that yields the
+         * same immutable result for the same bytes. On the web/wasi decode path
+         * this runs once per packet, so without a cache every received frame
+         * re-parsed the static shipped dictionary. The SDK always hands the same
+         * `lazy`-held dictionary array ([DictionaryProvider.getDictionary]) to
+         * the decoder, so the identity key hits on the second and every later
+         * decode.
+         *
+         * This caches the STATIC shipped dictionary only; it holds zero
+         * cross-packet decoded state, so it does not affect the resilience
+         * invariant. The web/wasm/wasi production decode paths are
+         * single-threaded; on the JVM the cache is touched only by tests.
+         */
+        private val parseCache = HashMap<ByteArray, ZstdDictionary>()
+
+        /**
+         * Parse [bytes], reusing a previously parsed result for the same array
+         * reference. See [parseCache]. This is the entry point the decoder uses
+         * on its per-packet hot path so the static dictionary is parsed once.
+         */
+        fun parseCached(bytes: ByteArray): ZstdDictionary =
+            parseCache.getOrPut(bytes) { parse(bytes) }
+
+        /**
          * Parse [bytes]. A "raw content" dictionary (anything that does NOT
          * start with the trained-dict magic, including the empty dictionary) is
          * treated as pure content with default entropy/offsets — the decoder
