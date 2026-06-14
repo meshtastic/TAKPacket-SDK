@@ -19,6 +19,14 @@ import nl.adaptivity.xmlutil.xmlStreaming
  */
 public class CotXmlParser {
 
+    /**
+     * Parse a CoT XML event string into a [TakPacketV2Data].
+     *
+     * @throws IllegalArgumentException if the XML contains a prohibited DOCTYPE
+     *         or ENTITY declaration (XXE / entity-expansion guard) or is
+     *         otherwise unparseable.
+     */
+    @Throws(IllegalArgumentException::class)
     public fun parse(cotXml: String): TakPacketV2Data {
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
         if (cotXml.contains("<!DOCTYPE", ignoreCase = true) || cotXml.contains("<!ENTITY", ignoreCase = true)) {

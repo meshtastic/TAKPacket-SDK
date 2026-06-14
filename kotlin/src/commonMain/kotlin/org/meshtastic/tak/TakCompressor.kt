@@ -47,7 +47,10 @@ public class TakCompressor(
     /**
      * Compress a TakPacketV2Data into a wire payload:
      * [flags byte][zstd-compressed protobuf]
+     *
+     * @throws ZstdException if the underlying zstd codec fails to compress.
      */
+    @Throws(ZstdException::class)
     public fun compress(packet: TakPacketV2Data): ByteArray {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val dictId = DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
@@ -95,11 +98,16 @@ public class TakCompressor(
      * Decompress a wire payload back to a TakPacketV2Data.
      * Handles both compressed (dict-based) and uncompressed (0xFF) payloads.
      *
-     * Throws [IllegalArgumentException] for input the spec says to reject
-     * (payload < 2 bytes, unknown dictionary ID, decompressed bytes > MAX_DECOMPRESSED_SIZE)
-     * and [RuntimeException] wrapping the underlying cause for zstd / protobuf
-     * failures (so callers can still inspect the original exception via `cause`).
+     * @throws IllegalArgumentException for input the spec says to reject
+     *         (payload < 2 bytes, unknown dictionary ID, uncompressed bytes >
+     *         MAX_DECOMPRESSED_SIZE).
+     * @throws ZstdException directly (unwrapped) when the underlying zstd codec
+     *         rejects the frame — e.g. a decompression bomb exceeding
+     *         MAX_DECOMPRESSED_SIZE — so callers can catch the typed exception.
+     *         Other zstd / protobuf failures are wrapped in [RuntimeException]
+     *         (the original cause is preserved via `cause`).
      */
+    @Throws(ZstdException::class, IllegalArgumentException::class)
     public fun decompress(wirePayload: ByteArray): TakPacketV2Data {
         require(wirePayload.size >= 2) { "Wire payload too short: ${wirePayload.size} bytes" }
 
@@ -133,6 +141,10 @@ public class TakCompressor(
                 // The codec's size-limited decompress guards the 4096B cap — a bomb
                 // that expands past the limit throws inside the zstd library.
                 ZstdCodec.decompressWithDict(restored, dictId, MAX_DECOMPRESSED_SIZE)
+            } catch (e: ZstdException) {
+                // Preserve the typed codec exception so callers can catch it
+                // (re-wrapping in RuntimeException would defeat the contract).
+                throw e
             } catch (e: Exception) {
                 throw RuntimeException(
                     "Zstd decompression failed " +
@@ -172,7 +184,9 @@ public class TakCompressor(
      * @param maxWireBytes Maximum allowed wire payload size (e.g. 225).
      * @return The wire payload, or null if the packet is too large even
      *         without remarks.
+     * @throws ZstdException if the underlying zstd codec fails to compress.
      */
+    @Throws(ZstdException::class)
     public fun compressWithRemarksFallback(
         packet: TakPacketV2Data,
         maxWireBytes: Int,
@@ -192,7 +206,10 @@ public class TakCompressor(
      * Callers that want to log/meter "how often does remarks-stripping save a
      * packet" or "how often do we drop oversized packets" should use this
      * variant; [compressWithRemarksFallback] loses the distinction.
+     *
+     * @throws ZstdException if the underlying zstd codec fails to compress.
      */
+    @Throws(ZstdException::class)
     public fun compressWithRemarksFallbackDetailed(
         packet: TakPacketV2Data,
         maxWireBytes: Int,
@@ -242,7 +259,10 @@ public class TakCompressor(
 
     /**
      * Compress and return both the wire payload and intermediate sizes for reporting.
+     *
+     * @throws ZstdException if the underlying zstd codec fails to compress.
      */
+    @Throws(ZstdException::class)
     public fun compressWithStats(packet: TakPacketV2Data): CompressionResult {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
         val wirePayload = compress(packet)
