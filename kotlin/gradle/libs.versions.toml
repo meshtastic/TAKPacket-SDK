@@ -12,7 +12,7 @@ dokka = "2.2.0"
 binary-compat = "0.18.1"
 vanniktech-publish = "0.36.0"
 junit-jupiter = "6.1.0"
-junit-platform = "1.14.4"
+junit-platform = "6.1.0"
 
 [libraries]
 protobufs = { module = "org.meshtastic:protobufs", version.ref = "protobufs" }
