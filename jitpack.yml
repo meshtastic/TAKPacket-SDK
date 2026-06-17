@@ -13,24 +13,31 @@
 # TypeScript, C#, and Python modules have their own distribution channels
 # (SwiftPM, npm, NuGet, PyPI) so JitPack doesn't need to touch them.
 #
-# The SDK is a kotlin("multiplatform") project with a jvm() target plus iOS
-# native targets. Gradle metadata lets consumers resolve the right variant
-# automatically — Android and desktop JVM pull the `-jvm` classifier,
-# Kotlin/Native consumers pull the `-iosarm64` / `-iossimulatorarm64` klibs.
+# The SDK is a full kotlin("multiplatform") project: it declares jvm, js,
+# wasmJs, wasmWasi, and 9 native targets (ios x3, macosArm64, tvos x2, linux x2,
+# mingwX64). Gradle metadata lets consumers resolve the right variant
+# automatically. JitPack only serves the JVM variant as the fallback channel —
+# `publishToMavenLocal` here runs on a JVM-only CI host, so Android and desktop
+# JVM consumers pull the `-jvm` classifier from JitPack while the native/JS/Wasm
+# klibs are published via Maven Central. (iOS consumers use the MeshtasticTAK
+# Swift package rather than the Kotlin/Native klibs.)
 
 jdk:
   - openjdk17
 
 before_install:
-  # Belt-and-suspenders: JitPack already clones with --recurse-submodules
-  # by default, but being explicit here protects against future default
-  # changes. Wire's `sourcePath` points at `../protobufs` relative to
-  # `kotlin/`, so the submodule MUST be initialized before build.
+  # The Kotlin build no longer needs the protobufs submodule — it gets its
+  # proto types from the published org.meshtastic:protobufs artifact, not from
+  # local Wire codegen (there is no Wire plugin / `sourcePath` anymore). The
+  # submodule is still the schema source for the Swift/Python/TS/C# bindings,
+  # but JitPack only builds the Kotlin module below, so it never reads it.
+  # This init is kept purely as harmless belt-and-suspenders (JitPack already
+  # clones with --recurse-submodules by default).
   - git submodule update --init --recursive
 
 install:
-  # `publishToMavenLocal` emits every KMP variant (metadata + jvm + ios*)
-  # under ~/.m2/repository/, which is where JitPack picks them up. The
-  # `--no-daemon` flag keeps the CI container from hanging on to Gradle
-  # workers after the build completes.
+  # `publishToMavenLocal` emits the KMP variants (metadata + jvm) under
+  # ~/.m2/repository/, which is where JitPack picks them up. The `--no-daemon`
+  # flag keeps the CI container from hanging on to Gradle workers after the
+  # build completes.
   - cd kotlin && ./gradlew publishToMavenLocal --no-daemon

@@ -285,18 +285,18 @@ class RoundTripTest {
 
         assertNotNull(rt.environment)
         assertEquals(22.5, rt.environment!!.temperatureCelsius)
-        assertEquals(270, rt.environment!!.windDirectionDeg)
-        assertEquals(12.0, rt.environment!!.windSpeedMetersPerSec)
+        assertEquals(270, rt.environment.windDirectionDeg)
+        assertEquals(12.0, rt.environment.windSpeedMetersPerSec)
 
         assertNotNull(rt.sensorFov)
         assertEquals(TakPacketV2Data.SensorFovData.SensorType.Thermal, rt.sensorFov!!.type)
-        assertEquals(45, rt.sensorFov!!.azimuthDeg)
-        assertEquals(2500, rt.sensorFov!!.rangeMeters)
-        assertEquals(45, rt.sensorFov!!.fovHorizontalDeg)
-        assertEquals(30, rt.sensorFov!!.fovVerticalDeg)
-        assertEquals(-5, rt.sensorFov!!.elevationDeg)
-        assertNull(rt.sensorFov!!.rollDeg)
-        assertEquals("FLIR-Boson-640", rt.sensorFov!!.model)
+        assertEquals(45, rt.sensorFov.azimuthDeg)
+        assertEquals(2500, rt.sensorFov.rangeMeters)
+        assertEquals(45, rt.sensorFov.fovHorizontalDeg)
+        assertEquals(30, rt.sensorFov.fovVerticalDeg)
+        assertEquals(-5, rt.sensorFov.elevationDeg)
+        assertNull(rt.sensorFov.rollDeg)
+        assertEquals("FLIR-Boson-640", rt.sensorFov.model)
 
         // The rebuilt CoT XML must carry both the <environment> and <sensor>
         // elements; downstream TAK clients rely on them to render weather

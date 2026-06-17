@@ -48,7 +48,7 @@ package org.meshtastic.tak
  *
  * This object is immutable and safe to share across threads.
  */
-object AtakPalette {
+public object AtakPalette {
 
     /**
      * Meshtastic `Team` enum value for "no palette match" / "use the exact
@@ -56,7 +56,7 @@ object AtakPalette {
      * Exposed here so parser/builder code can use a named constant instead
      * of a magic zero.
      */
-    const val UNSPECIFIED: Int = 0
+    public const val UNSPECIFIED: Int = 0
 
     /**
      * Team enum value → exact ARGB bit pattern.
@@ -94,7 +94,7 @@ object AtakPalette {
      * field in the proto message with the original bits so round-trip is
      * preserved for custom colors.
      */
-    fun argbToTeam(argb: Int): Int = ARGB_TO_TEAM[argb] ?: UNSPECIFIED
+    public fun argbToTeam(argb: Int): Int = ARGB_TO_TEAM[argb] ?: UNSPECIFIED
 
     /**
      * Look up an exact ARGB bit pattern by Team enum value.
@@ -104,11 +104,11 @@ object AtakPalette {
      * handle a `null` return by reading the `_argb` fallback field instead
      * of emitting a `<strokeColor>` element.
      */
-    fun teamToArgb(team: Int): Int? = TEAM_TO_ARGB[team]
+    public fun teamToArgb(team: Int): Int? = TEAM_TO_ARGB[team]
 
     /**
      * True if the given Team value refers to one of the 14 named palette
      * colors (i.e. not [UNSPECIFIED] and within the valid enum range).
      */
-    fun isPaletteTeam(team: Int): Boolean = team in 1..14
+    public fun isPaletteTeam(team: Int): Boolean = team in 1..14
 }

@@ -1,6 +1,12 @@
+import java.util.Base64
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
-    kotlin("multiplatform") version "2.4.0"
-    id("com.vanniktech.maven.publish") version "0.36.0"
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.vanniktech.publish)
+    alias(libs.plugins.dokka)
+    alias(libs.plugins.binary.compat)
 }
 
 group = "org.meshtastic"
@@ -15,38 +21,350 @@ repositories {
 
 kotlin {
     jvmToolchain(21)
+    explicitApi()
+
+    compilerOptions {
+        // The 8 core classes live in commonMain behind expect/actual SPIs with
+        // per-target actual objects (ZstdCodec, DictionaryLoader). Kotlin still
+        // treats expect/actual *classes* as a Beta feature and warns unless this
+        // flag opts in.
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+        // Treat compiler warnings as errors across all targets (main + test) and
+        // opt into progressive mode so deprecations/ambiguities surface early.
+        // The whole tree (commonMain + every actual + commonTest + every test
+        // leaf) compiles warning-clean under this.
+        allWarningsAsErrors.set(true)
+        progressiveMode.set(true)
+    }
 
     jvm()
 
+    // The codec is pure-Kotlin in commonMain on EVERY target (v0.6.0), so the
+    // js / wasmJs / wasmWasi targets need NO JS dependency: compress AND
+    // decompress both run through PureZstdEncoder / PureZstdDecoder. There is no
+    // jsCommonMain compress bridge, no @bokuweb, and no wasmWasi throwing path.
+    // IR is the only Kotlin/JS compiler in 2.4+, so plain `js {}` selects it.
+    js {
+        browser()
+        nodejs()
+    }
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        nodejs()
+    }
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmWasi {
+        nodejs()
+    }
+
+    // The nine native targets (R1/R2). They compile the SAME pure-Kotlin codec
+    // as every other target — no cinterop, no vendored libzstd. applyDefault-
+    // HierarchyTemplate() still gives a shared `nativeMain`/`nativeTest`, but the
+    // codec/dictionary loader now live entirely in commonMain.
+    iosArm64()
+    iosSimulatorArm64()
+    iosX64()
+    macosArm64()
+    tvosArm64()
+    tvosSimulatorArm64()
+    linuxX64()
+    linuxArm64()
+    mingwX64()
+
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
-        val commonMain by getting {
-            dependencies {
-                // Proto types (TAKPacketV2, GeoChat, etc.) come from the published
-                // protobufs SDK. Using `implementation` ensures we do NOT re-export
-                // them to consumers — they bring their own protobufs SDK dependency
-                // and there is exactly one source of truth on the classpath.
-                implementation("org.meshtastic:protobufs:2.7.25")
-            }
+        commonMain.dependencies {
+            // Proto types (TAKPacketV2, GeoChat, …) come from the published
+            // protobufs KMP SDK and carry wire-runtime + okio transitively on
+            // every target. `implementation` (not the old jvm-only compileOnly)
+            // is required because Native/JS/Wasm cannot link a compileOnly dep.
+            implementation(libs.protobufs)
+            implementation(libs.xmlutil.core)
+            // The pure-Kotlin codec's dictionary/match-index caches are shared
+            // mutable state touched by the (commonMain) ZstdCodec singleton, so
+            // they are guarded by atomicfu's multiplatform SynchronizedObject —
+            // the plain runtime library, NOT the bytecode-transform plugin. It
+            // compiles on every target (the lock is a no-op on single-threaded
+            // JS/Wasm). Date/time uses the kotlin.time stdlib (no
+            // kotlinx-datetime dependency).
+            implementation(libs.kotlinx.atomicfu)
         }
-        val jvmMain by getting {
-            dependencies {
-                implementation("com.github.luben:zstd-jni:1.5.7-11")
-                implementation("org.ogce:xpp3:1.1.6")
-            }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
-        val jvmTest by getting {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation("org.junit.jupiter:junit-jupiter:6.1.0")
-                implementation("org.junit.jupiter:junit-jupiter-params:6.1.0")
-                runtimeOnly("org.junit.platform:junit-platform-launcher:6.1.0")
-            }
+        jvmTest.dependencies {
+            implementation(libs.junit.jupiter)
+            implementation(libs.junit.jupiter.params)
+            runtimeOnly(libs.junit.platform.launcher)
+            // zstd-jni here is a TEST-ONLY oracle (not a runtime dep): the
+            // PureZstd encoder/decoder golden tests cross-check that our
+            // pure-Kotlin frames are decodable by real libzstd and vice versa —
+            // the both-directions interop gate. protobufs is inherited from
+            // commonMain (implementation), so it is not redeclared here.
+            implementation(libs.zstd.jni)
         }
     }
 }
 
+// Binary-compatibility-validator: the generated org.meshtastic.proto.* types are
+// an implementation detail, not part of this SDK's public API surface.
+apiValidation {
+    ignoredPackages.add("org.meshtastic.proto")
+}
+
+// klib API validation runs as part of `apiCheck`. With the cinterop gone the
+// nine native klibs build from pure Kotlin (no vendored libzstd.a was the only
+// blocker that forced detaching it before), so klib validation is fully
+// re-attached. The klib `.api` baseline lives in api/ alongside the JVM one
+// (run `./gradlew apiDump` to refresh both). The public Kotlin API is identical
+// across targets and every codec/dictionary internal is `internal`.
+
+// Reproducible archives: stable file order + zeroed timestamps so published
+// artifacts are byte-deterministic across builds.
+tasks.withType<AbstractArchiveTask>().configureEach {
+    isReproducibleFileOrder = true
+    isPreserveFileTimestamps = false
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Codegen: embed the canonical zstd dictionaries into commonMain (R11).
+//
+// As of v0.6.0 the single commonMain DictionaryLoader reads the dict bytes from
+// a generated `EmbeddedDictionaries` object on EVERY target (no classpath
+// resources anywhere). This task reads the two canonical dicts and emits
+// `EmbeddedDictionaries.kt` into a generated source dir wired onto commonMain.
+// The non-aircraft dict is 512 KB, so the bytes are emitted as CHUNKED Base64
+// string constants (each well under any platform constant-size limit) joined +
+// Base64-decoded once at first use.
+abstract class GenerateEmbeddedDictionaries : DefaultTask() {
+    @get:InputFiles
+    abstract val dictionaries: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @OptIn(ExperimentalStdlibApi::class)
+    @TaskAction
+    fun generate() {
+        val nonAircraft = dictionaries.files.single { it.name == "dict_non_aircraft.zstd" }.readBytes()
+        val aircraft = dictionaries.files.single { it.name == "dict_aircraft.zstd" }.readBytes()
+
+        // Base64 chunk length: a multiple of 4 keeps each chunk independently
+        // valid Base64 so they concatenate losslessly. 48_000 chars ≈ 36 KB of
+        // bytes per chunk — comfortably small for every Native backend.
+        val chunkChars = 48_000
+        // Standard (padded) Base64; matches kotlin.io.encoding.Base64.decode on
+        // the Native side. Concatenating chunks each of length % 4 == 0 keeps
+        // any interior padding from appearing mid-string.
+        val encoder = Base64.getEncoder()
+
+        fun emitChunks(propName: String, bytes: ByteArray): String {
+            val b64 = encoder.encodeToString(bytes)
+            val chunks = b64.chunked(chunkChars)
+            val sb = StringBuilder()
+            sb.append("    private val ${propName}_CHUNKS: Array<String> = arrayOf(\n")
+            chunks.forEach { sb.append("        \"").append(it).append("\",\n") }
+            sb.append("    )\n")
+            return sb.toString()
+        }
+
+        val pkgDir = outputDir.get().asFile.resolve("org/meshtastic/tak")
+        pkgDir.mkdirs()
+        val out = pkgDir.resolve("EmbeddedDictionaries.kt")
+        out.writeText(
+            buildString {
+                append("// GENERATED by the `generateEmbeddedDictionaries` Gradle task. DO NOT EDIT.\n")
+                append("// Source: kotlin/src/jvmMain/resources/dict_*.zstd (canonical dictionaries).\n")
+                append("package org.meshtastic.tak\n\n")
+                append("import kotlin.io.encoding.Base64\n")
+                append("import kotlin.io.encoding.ExperimentalEncodingApi\n\n")
+                append("/**\n")
+                append(" * Canonical zstd dictionaries embedded for Kotlin/Native (no classpath\n")
+                append(" * resources). Stored as chunked Base64 and decoded lazily on first use.\n")
+                append(" */\n")
+                append("@OptIn(ExperimentalEncodingApi::class)\n")
+                append("internal object EmbeddedDictionaries {\n")
+                append(emitChunks("NON_AIRCRAFT", nonAircraft))
+                append("\n")
+                append(emitChunks("AIRCRAFT", aircraft))
+                append("\n")
+                append("    private val nonAircraftBytes: ByteArray by lazy { Base64.decode(NON_AIRCRAFT_CHUNKS.joinToString(\"\")) }\n")
+                append("    private val aircraftBytes: ByteArray by lazy { Base64.decode(AIRCRAFT_CHUNKS.joinToString(\"\")) }\n\n")
+                append("    fun nonAircraft(): ByteArray = nonAircraftBytes\n")
+                append("    fun aircraft(): ByteArray = aircraftBytes\n")
+                append("}\n")
+            },
+        )
+    }
+}
+
+val embeddedDictsOutputDir = layout.buildDirectory.dir("generated/embeddedDictionaries/kotlin")
+
+val generateEmbeddedDictionaries by tasks.registering(GenerateEmbeddedDictionaries::class) {
+    dictionaries.from(
+        projectDir.resolve("src/jvmMain/resources/dict_non_aircraft.zstd"),
+        projectDir.resolve("src/jvmMain/resources/dict_aircraft.zstd"),
+    )
+    outputDir.set(embeddedDictsOutputDir)
+}
+
+// Wire the generated source onto commonMain — the single DictionaryLoader reads
+// EmbeddedDictionaries on every target — and make every main compile (and the
+// metadata + source-jar tasks) depend on the generator so it always runs first.
+kotlin.sourceSets.named("commonMain") {
+    kotlin.srcDir(embeddedDictsOutputDir)
+}
+tasks.matching {
+    (it.name.startsWith("compileKotlin") && !it.name.startsWith("compileTestKotlin")) ||
+        it.name == "compileCommonMainKotlinMetadata" ||
+        it.name.endsWith("MainKotlinMetadata") ||
+        it.name.endsWith("SourcesJar")
+}.configureEach { dependsOn(generateEmbeddedDictionaries) }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Codegen: inline the test fixtures for commonTest (R11).
+//
+// The common test suites (RoundTrip / Resilience / Logger / Decode) run on every
+// target — including Native / JS / Wasm, which cannot read `../testdata` off the
+// filesystem the way the JVM file-based suites do. This task reads the 47
+// `testdata/cot_xml/*.xml` inputs AND their `testdata/golden/*.bin` wire frames
+// and emits an internal `InlinedFixtures` object into a generated commonTest
+// source dir, so every target gets the inputs (for parse → compress where the
+// codec supports it) and the precompressed frames (for decode, which works on
+// ALL targets via the pure-Kotlin decoder).
+//
+// Incremental: @InputFiles + @OutputDirectory, so it only re-runs when a fixture
+// or golden changes. It is purely a TEST input generator — it NEVER writes to
+// `testdata/`.
+abstract class GenerateInlinedFixtures : DefaultTask() {
+    @get:InputFiles
+    abstract val cotXml: ConfigurableFileCollection
+
+    @get:InputFiles
+    abstract val golden: ConfigurableFileCollection
+
+    @get:InputFiles
+    abstract val protobuf: ConfigurableFileCollection
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        // fixtureName (no .xml) -> XML text, sorted for stable output.
+        val xmlByName = cotXml.files
+            .filter { it.name.endsWith(".xml") }
+            .associate { it.name.removeSuffix(".xml") to it.readText() }
+            .toSortedMap()
+        // fixtureName -> golden .bin wire frame (Base64), where present.
+        val goldenByName = golden.files
+            .filter { it.name.endsWith(".bin") }
+            .associate { it.name.removeSuffix(".bin") to Base64.getEncoder().encodeToString(it.readBytes()) }
+            .toSortedMap()
+        // fixtureName -> intermediate .pb protobuf bytes (Base64), where present.
+        val protobufByName = protobuf.files
+            .filter { it.name.endsWith(".pb") }
+            .associate { it.name.removeSuffix(".pb") to Base64.getEncoder().encodeToString(it.readBytes()) }
+            .toSortedMap()
+
+        fun kotlinString(s: String): String {
+            // Emit as a raw triple-quoted string. Fixtures are plain CoT XML with
+            // no `"""` runs and no `$` that needs to interpolate, but escape `$`
+            // defensively so a future fixture can't accidentally interpolate.
+            val escaped = s.replace("\$", "\${'$'}")
+            return "\"\"\"$escaped\"\"\""
+        }
+
+        val pkgDir = outputDir.get().asFile.resolve("org/meshtastic/tak")
+        pkgDir.mkdirs()
+        pkgDir.resolve("InlinedFixtures.kt").writeText(
+            buildString {
+                append("// GENERATED by the `generateInlinedFixtures` Gradle task. DO NOT EDIT.\n")
+                append(
+                    "// Source: testdata/cot_xml/*.xml (inputs) + testdata/golden/*.bin (wire frames)" +
+                        " + testdata/protobuf/*.pb (intermediate protobuf).\n",
+                )
+                append("package org.meshtastic.tak\n\n")
+                append("import kotlin.io.encoding.Base64\n")
+                append("import kotlin.io.encoding.ExperimentalEncodingApi\n\n")
+                append("/**\n")
+                append(" * The 47 CoT XML test fixtures with their golden wire frames AND their\n")
+                append(" * intermediate `.pb` protobuf bytes, inlined so the commonTest suites run\n")
+                append(" * on targets that can't read `../testdata` (Native / JS / Wasm). XML drives\n")
+                append(" * parse → compress; the golden frames drive decode (works on every target\n")
+                append(" * via the pure-Kotlin decoder); the `.pb` bytes are the byte-exact decoder\n")
+                append(" * oracle (decode of a golden frame must equal the matching `.pb`).\n")
+                append(" */\n")
+                append("@OptIn(ExperimentalEncodingApi::class)\n")
+                append("internal object InlinedFixtures {\n\n")
+
+                append("    /** fixtureName (no extension) -> CoT XML source text. */\n")
+                append("    val xml: Map<String, String> = mapOf(\n")
+                xmlByName.forEach { (name, text) ->
+                    append("        \"").append(name).append("\" to ").append(kotlinString(text)).append(",\n")
+                }
+                append("    )\n\n")
+
+                append("    /** fixtureName (no extension) -> golden `.bin` wire frame, Base64. */\n")
+                append("    private val goldenWireB64: Map<String, String> = mapOf(\n")
+                goldenByName.forEach { (name, b64) ->
+                    append("        \"").append(name).append("\" to \"").append(b64).append("\",\n")
+                }
+                append("    )\n\n")
+
+                append("    /** fixtureName (no extension) -> golden `.bin` wire frame bytes. */\n")
+                append("    val goldenWire: Map<String, ByteArray> by lazy {\n")
+                append("        goldenWireB64.mapValues { (_, b64) -> Base64.decode(b64) }\n")
+                append("    }\n\n")
+
+                append("    /** fixtureName (no extension) -> intermediate `.pb` protobuf, Base64. */\n")
+                append("    private val protobufB64: Map<String, String> = mapOf(\n")
+                protobufByName.forEach { (name, b64) ->
+                    append("        \"").append(name).append("\" to \"").append(b64).append("\",\n")
+                }
+                append("    )\n\n")
+
+                append("    /** fixtureName (no extension) -> intermediate `.pb` protobuf bytes. */\n")
+                append("    val protobuf: Map<String, ByteArray> by lazy {\n")
+                append("        protobufB64.mapValues { (_, b64) -> Base64.decode(b64) }\n")
+                append("    }\n\n")
+
+                append("    /** Sorted fixture names (every fixture has xml + golden + protobuf). */\n")
+                append("    val names: List<String> = xml.keys.sorted()\n")
+                append("}\n")
+            },
+        )
+    }
+}
+
+val inlinedFixturesOutputDir = layout.buildDirectory.dir("generated/inlinedFixtures/kotlin")
+
+val generateInlinedFixtures by tasks.registering(GenerateInlinedFixtures::class) {
+    cotXml.from(fileTree(projectDir.resolve("../testdata/cot_xml")) { include("*.xml") })
+    golden.from(fileTree(projectDir.resolve("../testdata/golden")) { include("*.bin") })
+    protobuf.from(fileTree(projectDir.resolve("../testdata/protobuf")) { include("*.pb") })
+    outputDir.set(inlinedFixturesOutputDir)
+}
+
+// Wire the generated fixtures onto commonTest (every target's test compile reads
+// them) and make all test compiles depend on the generator.
+kotlin.sourceSets.named("commonTest") {
+    kotlin.srcDir(inlinedFixturesOutputDir)
+}
+tasks.matching {
+    (it.name.startsWith("compileTestKotlin") || it.name == "compileTestKotlinMetadata") ||
+        (it.name.startsWith("compileTestDevelopmentExecutableKotlin")) ||
+        it.name.endsWith("TestKotlinMetadata")
+}.configureEach {
+    dependsOn(generateInlinedFixtures)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

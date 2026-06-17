@@ -58,9 +58,9 @@ import org.meshtastic.proto.ZMistEntry
  * `proto.chat != null` replaces the old `proto.hasChat()` check. The public
  * API of this class — `serialize(data)` / `deserialize(bytes)` — is unchanged.
  */
-object TakPacketV2Serializer {
+public object TakPacketV2Serializer {
 
-    fun serialize(data: TakPacketV2Data): ByteArray {
+    public fun serialize(data: TakPacketV2Data): ByteArray {
         // Build oneof payload fields as nullable locals. Exactly one will be
         // set (or none for Payload.None) and passed to the TAKPacketV2 data
         // class constructor at the bottom. Unused fields stay null, matching
@@ -368,7 +368,7 @@ object TakPacketV2Serializer {
         return TAKPacketV2.ADAPTER.encode(packet)
     }
 
-    fun deserialize(bytes: ByteArray): TakPacketV2Data {
+    public fun deserialize(bytes: ByteArray): TakPacketV2Data {
         val proto = TAKPacketV2.ADAPTER.decode(bytes)
 
         // Oneof payload_variant is flattened by boxOneOfsMinSize = 5000, so each

@@ -1,0 +1,5 @@
+# Local-only artifacts produced when running the spike (see README).
+node_modules/
+package.json
+package-lock.json
+spike_frames.json

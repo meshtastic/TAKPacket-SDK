@@ -11,7 +11,7 @@ TAKPacket-SDK is a cross-platform library that converts ATAK Cursor-on-Target (C
 ## Repository layout
 
 ```
-protobufs/           Git submodule (meshtastic/protobufs @ takv2_geometry)
+protobufs/           Git submodule (meshtastic/protobufs @ master)
                      Single source of truth: meshtastic/atak.proto
 dictionaries/        Canonical zstd dictionaries (non-aircraft 512KB proto-trained, aircraft 4KB)
 testdata/
@@ -20,7 +20,7 @@ testdata/
   protobuf/          47 .pb intermediate protobuf bytes (Kotlin-generated)
   malformed/         malformed input test files
   compression-report.md   Auto-generated size report
-kotlin/              Canonical implementation (Wire 6.2.0 KMP)
+kotlin/              Canonical implementation (full KMP: jvm + js + wasmJs + wasmWasi + 9 native — consumes published org.meshtastic:protobufs)
 swift/               Swift Package (SwiftProtobuf + CZstd)
 python/              Python package (protobuf + zstandard)
 typescript/          npm package (protobufjs + fzstd)
@@ -42,11 +42,12 @@ Plus per-platform: `DictionaryProvider` (loads zstd dicts from resources) and `T
 
 ## Kotlin is canonical
 
+- **The zstd codec is pure Kotlin in `commonMain` on EVERY target (v0.6.0).** There is ONE codec (`internal.zstd` `PureZstdEncoder` / `PureZstdDecoder`) used by jvm, all 9 native targets, js, wasmJs, and wasmWasi — no `zstd-jni`, no native `libzstd` cinterop, no `@bokuweb/zstd-wasm`. `ZstdCodec` / `DictionaryLoader` are plain `commonMain` objects (no more `expect`/`actual`); native targets need no `libzstd` at all. This is interoperable **in both directions**: our decoder reads real libzstd frames (proven by decoding every golden) and our encoder's frames are read by real libzstd (proven by the zstd-jni jvmTest oracle + the libzstd-based Swift/Python/TS/C# bindings). The `.bin` goldens are therefore **pure-Kotlin-generated** as of 0.6.0; the swap regenerated `.bin` but left `.pb` byte-identical. `zstd-jni` survives only as a jvmTest cross-check oracle.
 - Kotlin generates all golden `.pb` and `.bin` files via `CompressionTest.generate compression report`
 - Other platforms validate AGAINST those goldens; they don't generate them
 - When adding a new fixture: drop `.xml` in `testdata/cot_xml/`, run `gradle jvmTest` (auto-discovers via `TestFixtures.kt`), commit the generated goldens
-- Proto codegen: Wire 6.2.0 with `boxOneOfsMinSize = 5000` (flattens oneofs to nullable fields)
-- JitPack publishes the JVM variant: `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm:<tag>`
+- Proto types come from the published `org.meshtastic:protobufs` KMP artifact (version pinned in `kotlin/build.gradle.kts`, declared as a `commonMain implementation` dependency) — they are not generated in this repo. (It used to be `compileOnly` while the module was jvm-only; the full-KMP migration switched it to `implementation` because Native/JS/Wasm cannot link a `compileOnly` dep, so protobufs now ships transitively in the published POM/metadata. Android consumers already bring the same artifact and own its version.) That artifact is Wire-generated upstream with `boxOneOfsMinSize = 5000` (flattens oneofs to nullable fields), which is why the serializer sees nullable oneof arms.
+- Published to **Maven Central** (primary) via the vanniktech maven-publish plugin: `org.meshtastic:takpacket-sdk-jvm:<version>`. **JitPack** remains a fallback: `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm:<tag>`.
 
 **Environment prerequisites (these cost real time when missed):**
 - **Kotlin/Gradle needs JDK 21.** Export before any Gradle call, and use `./gradlew` (not a system `gradle`):
@@ -100,13 +101,11 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 
 ## Proto schema management
 
-- Lives in the `protobufs` git submodule (`meshtastic/protobufs` repo, branch `takv2_geometry`)
-- Package: `meshtastic`, java_package: `org.meshtastic.proto`
-- When editing proto: commit + push in the submodule first, then bump the submodule ref in the SDK repo
-- Wire generates code into `build/generated/source/wire/commonMain/` — this is NOT checked in
+- Schema lives in the `protobufs` git submodule (`meshtastic/protobufs` repo, branch `master`). Package: `meshtastic`, java_package: `org.meshtastic.proto`. The submodule is the schema source of truth and is consumed directly by the Swift/Python/TypeScript/C# bindings; **Kotlin no longer codegens from it** — there is no Wire plugin in this repo, so nothing is generated into `build/generated/source/wire/`.
+- When editing proto: commit + push in the submodule first, then bump the submodule ref in the SDK repo. **For Kotlin, additionally** publish a new `org.meshtastic:protobufs` release and bump its version in `kotlin/build.gradle.kts` — Kotlin gets its proto types from that published artifact, not from local codegen.
 - Swift proto bindings (`atak.pb.swift`) ARE checked in; regenerate with:
   `protoc --proto_path=../protobufs --swift_opt=Visibility=Public --swift_out=swift/Sources/MeshtasticTAK ../protobufs/meshtastic/atak.proto`
-- Python/C# proto bindings are also checked in and regenerated manually
+- Python (`atak_pb2.py`) and C# (`Atak.cs`) bindings are also checked in and regenerated manually. TypeScript has no codegen step — it loads `protobufs/meshtastic/atak.proto` at runtime via protobufjs.
 
 ## Naming constraints
 
@@ -152,7 +151,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 1. **Running `gradle test` instead of `gradle jvmTest`** — KMP has no root `test` task; use `jvmTest` for the JVM target
 2. **Forgetting `git submodule update --init --recursive`** — proto codegen fails without the protobufs submodule
 3. **Stale golden files after fixture changes** — first `gradle jvmTest` run regenerates goldens but `CompatibilityTest.all golden files exist` may fail; second run is steady state
-4. **JitPack parent POM pulls iOS klibs** — Android consumers must depend on `takpacket-sdk-jvm` directly, not the parent `TAKPacket-SDK` coordinate, and exclude `zstd-jni` (Android needs the @aar variant)
+4. **Depend on the `-jvm` artifact, not the KMP parent** — Android consumers must depend on the JVM artifact directly (`org.meshtastic:takpacket-sdk-jvm` on Maven Central, or `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm` on the JitPack fallback), NOT the parent `takpacket-sdk` / `TAKPacket-SDK` coordinate. (As of v0.6.0 the codec is pure Kotlin, so the SDK no longer pulls `zstd-jni` and there is no `@aar`/`zstd-jni` exclusion to manage.) The Kotlin module is full KMP (jvm + js + wasmJs + wasmWasi + 9 native), but Android still consumes the JVM variant — iOS consumers use the `MeshtasticTAK` Swift package rather than the Kotlin/Native klibs.
 5. **Swift protoc visibility** — always pass `--swift_opt=Visibility=Public` or the generated types are internal and break downstream consumers
 6. **Negative speed/course from ATAK** — ATAK sends `speed="-1.0"` for stationary; the parser clamps negatives to 0 (uint32 field)
 7. **IEEE 754 rounding on longitude assertions** — use `roundToInt()` not `toInt()` when comparing `(lon * 1e7)` to `longitudeI`
@@ -171,13 +170,12 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 ## CI/CD
 
 - **CI** (`.github/workflows/ci.yml`): all 5 platforms tested on push/PR to main/master
-- **Release** (`.github/workflows/release.yml`): manual dispatch, reads `VERSION`, tests all platforms, builds artifacts, creates GitHub Release
-- **JitPack** (`jitpack.yml`): triggered by git tags, publishes KMP JVM variant to `jitpack.io`
-- JitPack cold build takes ~120-150s; the POM URL to trigger is: `https://jitpack.io/com/github/meshtastic/TAKPacket-SDK/<tag>/TAKPacket-SDK-<tag>.pom`
+- **Release** (`.github/workflows/release.yml`): manual dispatch, reads `VERSION` / `kotlin/gradle.properties:VERSION_NAME`, tests all platforms, **publishes the Kotlin artifacts to Maven Central** (vanniktech `publishAllPublicationsToMavenCentralRepository`, `automaticRelease = true`), and creates a GitHub Release. It probes repo1.maven.org first, so a re-run skips an already-published version.
+- **JitPack** (`jitpack.yml`): fallback channel, triggered by git tags — runs `publishToMavenLocal` and serves the artifacts under `com.github.meshtastic:TAKPacket-SDK:<tag>`. Cold build ~120-150s; trigger URL: `https://jitpack.io/com/github/meshtastic/TAKPacket-SDK/<tag>/TAKPacket-SDK-<tag>.pom`
 
 ## Downstream consumers
 
-- **Meshtastic-Android** (`core/takserver`): depends on `takpacket-sdk-jvm` via JitPack, proto submodule at `core/proto/src/main/proto`
+- **Meshtastic-Android** (`core/takserver`): depends on `org.meshtastic:takpacket-sdk-jvm` via Maven Central (JitPack fallback), proto submodule at `core/proto/src/main/proto`. It also depends on the **same `org.meshtastic:protobufs` KMP artifact** directly. The SDK declares protobufs as a `commonMain implementation` dependency (the full-KMP migration could no longer use `compileOnly`, which Native/JS/Wasm can't link), so protobufs is now a transitive dependency in the SDK's POM; the consumer still owns/aligns its own protobufs version.
 - **Meshtastic-Apple**: depends on `MeshtasticTAK` Swift package via remote SPM URL, proto submodule at `protobufs/`, regenerated `atak.pb.swift` at `MeshtasticProtobufs/Sources/meshtastic/`
 
 ## PII / sensitive-data handling — read before adding any fixture
