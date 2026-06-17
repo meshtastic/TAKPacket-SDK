@@ -2,7 +2,7 @@
 kotlin = "2.4.0"
 protobufs = "2.7.25"
 xmlutil = "0.91.3"
-atomicfu = "0.27.0"
+atomicfu = "0.33.0"
 # zstd-jni is NO LONGER a runtime dependency (the codec is pure-Kotlin on every
 # target). It is retained as a jvmTest-only ORACLE: the encoder/decoder golden
 # tests cross-check that our pure-Kotlin frames are decodable by real libzstd
