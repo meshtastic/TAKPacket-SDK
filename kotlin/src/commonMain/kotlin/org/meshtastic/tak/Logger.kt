@@ -43,12 +43,13 @@ public object TakPacketSdk {
     /**
      * Release the codec's cached dictionary state.
      *
-     * As of v0.6.0 the codec is pure-Kotlin on every target, so there are no
-     * native handles to free — the [ZstdCodec] caches only the parsed entropy
-     * tables and match index derived from the static shipped dictionary (an
-     * optimization, not required state). Calling this is **optional**; a
-     * long-running consumer that wants to reclaim that memory while idle can,
-     * and the caches simply rebuild lazily on the next compress/decompress.
+     * The codec is the pure-Kotlin `org.meshtastic.kzstd` library on every
+     * target, so there are no native handles to free — [ZstdCodec] holds only the
+     * digested dictionaries (parsed entropy tables + match index) derived from the
+     * static shipped dictionary (an optimization, not required state). Calling
+     * this is **optional**; a long-running consumer that wants to reclaim that
+     * memory while idle can, and the digests simply rebuild lazily on the next
+     * compress/decompress.
      */
     public fun releaseCodecResources() {
         ZstdCodec.release()

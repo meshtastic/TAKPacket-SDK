@@ -39,10 +39,10 @@ kotlin {
 
     jvm()
 
-    // The codec is pure-Kotlin in commonMain on EVERY target (v0.6.0), so the
-    // js / wasmJs / wasmWasi targets need NO JS dependency: compress AND
-    // decompress both run through PureZstdEncoder / PureZstdDecoder. There is no
-    // jsCommonMain compress bridge, no @bokuweb, and no wasmWasi throwing path.
+    // The codec is the pure-Kotlin `org.meshtastic:kzstd` library on EVERY
+    // target, so the js / wasmJs / wasmWasi targets need NO JS dependency:
+    // compress AND decompress both run through kzstd. There is no jsCommonMain
+    // compress bridge, no @bokuweb, and no wasmWasi throwing path.
     // IR is the only Kotlin/JS compiler in 2.4+, so plain `js {}` selects it.
     js {
         browser()
@@ -84,14 +84,14 @@ kotlin {
             // is required because Native/JS/Wasm cannot link a compileOnly dep.
             implementation(libs.protobufs)
             implementation(libs.xmlutil.core)
-            // The pure-Kotlin codec's dictionary/match-index caches are shared
-            // mutable state touched by the (commonMain) ZstdCodec singleton, so
-            // they are guarded by atomicfu's multiplatform SynchronizedObject —
-            // the plain runtime library, NOT the bytecode-transform plugin. It
-            // compiles on every target (the lock is a no-op on single-threaded
-            // JS/Wasm). Date/time uses the kotlin.time stdlib (no
-            // kotlinx-datetime dependency).
-            implementation(libs.kotlinx.atomicfu)
+            // The zstd codec is the standalone pure-Kotlin `org.meshtastic:kzstd`
+            // library (extracted from this SDK's former internal.zstd package).
+            // ZstdCodec wraps kzstd's one-shot `Zstd` + digested `ZstdDictionary`
+            // API. kzstd's dictionary is immutable, so the SDK no longer needs an
+            // atomicfu lock to guard a shared mutable cache — two @Volatile digest
+            // holders give safe publication lock-free. Date/time uses the
+            // kotlin.time stdlib (no kotlinx-datetime dependency).
+            implementation(libs.kzstd)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
@@ -100,12 +100,11 @@ kotlin {
             implementation(libs.junit.jupiter)
             implementation(libs.junit.jupiter.params)
             runtimeOnly(libs.junit.platform.launcher)
-            // zstd-jni here is a TEST-ONLY oracle (not a runtime dep): the
-            // PureZstd encoder/decoder golden tests cross-check that our
-            // pure-Kotlin frames are decodable by real libzstd and vice versa —
-            // the both-directions interop gate. protobufs is inherited from
-            // commonMain (implementation), so it is not redeclared here.
-            implementation(libs.zstd.jni)
+            // No zstd-jni oracle here anymore: the both-directions libzstd interop
+            // gate (our frames decode in real libzstd and vice versa) now lives in
+            // kzstd's own test suite, so the SDK does not re-run it. The retained
+            // golden-decode oracle exercises kzstd's public API over TAK's wire
+            // frames. protobufs is inherited from commonMain (implementation).
         }
     }
 }

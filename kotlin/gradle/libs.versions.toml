@@ -2,12 +2,7 @@
 kotlin = "2.4.0"
 protobufs = "2.7.25"
 xmlutil = "0.91.3"
-atomicfu = "0.33.0"
-# zstd-jni is NO LONGER a runtime dependency (the codec is pure-Kotlin on every
-# target). It is retained as a jvmTest-only ORACLE: the encoder/decoder golden
-# tests cross-check that our pure-Kotlin frames are decodable by real libzstd
-# (and that we decode real libzstd frames), i.e. the both-directions interop gate.
-zstd-jni = "1.5.7-11"
+kzstd = "0.1.0"
 dokka = "2.2.0"
 binary-compat = "0.18.1"
 vanniktech-publish = "0.36.0"
@@ -17,12 +12,12 @@ junit-platform = "6.1.0"
 [libraries]
 protobufs = { module = "org.meshtastic:protobufs", version.ref = "protobufs" }
 xmlutil-core = { module = "io.github.pdvrieze.xmlutil:core", version.ref = "xmlutil" }
-# atomicfu library (NOT the Gradle plugin / bytecode transform): the pure-Kotlin
-# codec's dictionary/match-index caches use kotlinx.atomicfu.locks.Synchronized-
-# Object + synchronized {} for a multiplatform lock that compiles on every target.
-kotlinx-atomicfu = { module = "org.jetbrains.kotlinx:atomicfu", version.ref = "atomicfu" }
-# jvmTest-only oracle (see version comment) — NOT a runtime dependency.
-zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
+# kzstd: the pure-Kotlin multiplatform zstd codec, extracted from this SDK's
+# former internal.zstd package into a standalone library so the engine lives and
+# is tested in exactly one place. `implementation` (not compileOnly) because
+# Native/JS/Wasm cannot link a compileOnly dep, so it ships transitively in the
+# published POM/metadata alongside protobufs.
+kzstd = { module = "org.meshtastic:kzstd", version.ref = "kzstd" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
 junit-jupiter-params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
