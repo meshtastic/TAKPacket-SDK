@@ -1,6 +1,7 @@
 package org.meshtastic.tak
 
 import com.github.luben.zstd.Zstd
+import com.github.luben.zstd.ZstdDictCompress
 import com.github.luben.zstd.ZstdDictDecompress
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -148,5 +149,61 @@ class PureZstdDecoderGoldenTest {
 
         val actual = PureZstdDecoder.decode(framed, dictFor(dictId), TakCompressor.MAX_DECOMPRESSED_SIZE)
         assertArrayEquals(expected, actual)
+    }
+
+    /**
+     * Guards the dictionary-entropy decode path against silently going dark. If
+     * [TrainedDictVectors.trainedDict] were not a genuinely trained dict (magic
+     * 0xEC30A437), the decoder would treat it as raw content (no Huffman/FSE
+     * tables) and [`libzstd frames built with a zstd --train dictionary decode to the source bytes`]
+     * would never exercise the treeless-literals / FSE-repeat branches — while
+     * staying green. This fails loudly in that case.
+     */
+    @Test
+    fun `trained-dict fixture is genuinely trained`() {
+        val dict = TrainedDictVectors.trainedDict
+        assertTrue(dict.size >= 8, "dict too small to carry a header")
+        assertArrayEquals(
+            TrainedDictVectors.TRAINED_DICT_MAGIC,
+            dict.copyOfRange(0, 4),
+            "trained-dict fixture must carry the trained magic (37 A4 30 EC); " +
+                "otherwise the dict-entropy decode path is never exercised",
+        )
+    }
+
+    /**
+     * Regression guard for the Huffman weight-stream decoder. TAK's own dicts /
+     * golden frames never reference a Huffman weight FSE table containing a 0-bit
+     * (`nbBits == 0`) transition, so a false-positive "non-advancing weight
+     * transition" guard in `decodeWeightStream` shipped undetected. A `zstd
+     * --train` dictionary produces such a table; libzstd, compressing
+     * training-distribution data WITH that dict, emits frames that reference it
+     * (treeless literals / FSE-repeat). The pure decoder must read them — this is
+     * the only direction that drives the dictionary-entropy decode branches
+     * (TAK's own encoder emits Predefined-FSE + Raw-literals and never references
+     * a dictionary's entropy tables).
+     */
+    @Test
+    fun `libzstd frames built with a zstd --train dictionary decode to the source bytes`() {
+        val dict = TrainedDictVectors.trainedDict
+        val cdict = ZstdDictCompress(dict, 19)
+        val ddict = ZstdDictDecompress(dict)
+
+        for ((i, sample) in TrainedDictVectors.structured.withIndex()) {
+            val frame = Zstd.compress(sample, cdict)
+
+            // Sanity: zstd-jni itself round-trips the frame, proving it is a
+            // well-formed, dict-referencing frame (not the variable under test).
+            val jni = Zstd.decompress(frame, ddict, TakCompressor.MAX_DECOMPRESSED_SIZE)
+            assertArrayEquals(sample, jni, "zstd-jni self round-trip failed for sample $i")
+
+            // The guard: the pure-Kotlin decoder reads libzstd's dict-entropy frame.
+            val pure = PureZstdDecoder.decode(frame, dict, TakCompressor.MAX_DECOMPRESSED_SIZE)
+            assertArrayEquals(
+                sample,
+                pure,
+                "PureZstdDecoder must decode libzstd's trained-dict frame (sample $i)",
+            )
+        }
     }
 }

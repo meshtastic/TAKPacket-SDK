@@ -2,6 +2,7 @@ package org.meshtastic.tak
 
 import com.github.luben.zstd.Zstd
 import com.github.luben.zstd.ZstdDictDecompress
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.meshtastic.tak.internal.zstd.PureZstdDecoder
@@ -152,5 +153,28 @@ class PureZstdEncoderGoldenTest {
         println(report)
 
         assertTrue(failures.isEmpty(), "PureZstdEncoder gate failures:$report")
+    }
+
+    /**
+     * Trained-dict interop, encoder direction: the pure encoder must produce
+     * frames that BOTH libzstd and the pure decoder accept, even against a
+     * foreign `zstd --train` dictionary (not one of the SDK's two shipped dicts).
+     * Companion to [PureZstdDecoderGoldenTest]'s trained-dict decode guard — see
+     * [TrainedDictVectors] for fixture provenance.
+     */
+    @Test
+    fun `pure encoder frames built with a zstd --train dictionary round-trip through libzstd and the pure decoder`() {
+        val dict = TrainedDictVectors.trainedDict
+        val ddict = ZstdDictDecompress(dict)
+
+        for ((i, sample) in TrainedDictVectors.structured.withIndex()) {
+            val frame = PureZstdEncoder.encode(sample, dict, 19)
+
+            val jni = Zstd.decompress(frame, ddict, TakCompressor.MAX_DECOMPRESSED_SIZE)
+            assertArrayEquals(sample, jni, "zstd-jni must decode our trained-dict frame (sample $i)")
+
+            val pure = PureZstdDecoder.decode(frame, dict, TakCompressor.MAX_DECOMPRESSED_SIZE)
+            assertArrayEquals(sample, pure, "pure decoder must decode our trained-dict frame (sample $i)")
+        }
     }
 }

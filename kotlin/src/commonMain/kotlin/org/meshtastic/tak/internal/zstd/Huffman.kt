@@ -211,17 +211,18 @@ internal fun decodeWeightStream(fseTable: FseTable, br: ReverseBitReader): IntAr
         // one just emitted, and the OTHER state's current symbol. Emit that
         // trailing symbol and stop. (Stopping without it drops the last weight
         // and makes the implied-symbol total come up short.)
-        val before = br.bitPosition
         current.update(br)
         if (br.overflowed) {
             collected.add(other.symbol())
             break
         }
-        // A transition that consumed no bits and did not overflow is a
-        // non-terminating self-loop (nbBits==0) — malformed, would spin forever.
-        if (br.bitPosition == before) {
-            throw ZstdFormatException("Huffman: non-advancing weight transition (malformed)")
-        }
+        // A 0-bit (nbBits == 0) FSE transition is LEGAL — high-probability
+        // weight symbols transition without consuming bits — so the bit position
+        // legitimately does not advance on those steps. Termination is bounded by
+        // the `maxWeights` cap above (and by `overflowed`), NOT by requiring every
+        // transition to advance. (An earlier guard threw on any non-advancing
+        // transition; that was a false positive — it rejected valid trained
+        // dictionaries whose weight FSE table contains 0-bit states.)
         val t = current; current = other; other = t
     }
     return IntArray(collected.size) { collected[it] }
