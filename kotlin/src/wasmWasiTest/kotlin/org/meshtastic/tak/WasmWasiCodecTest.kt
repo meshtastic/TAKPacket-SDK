@@ -10,9 +10,9 @@ import kotlin.test.assertTrue
  * wasmWasi-specific codec contract (`kotlin.test`).
  *
  * wasmWasi has no JS host, no cinterop, and no native libzstd, yet it is a
- * FULLY capable target via the pure-Kotlin codec: it compresses through
- * [org.meshtastic.tak.internal.zstd.PureZstdEncoder] (R14b) and decompresses
- * through the pure-Kotlin decoder. This pins both halves of that contract:
+ * FULLY capable target via the pure-Kotlin `org.meshtastic.kzstd` codec: it
+ * compresses and decompresses through kzstd on this target like every other.
+ * This pins both halves of that contract:
  *
  *  - [TakCompressor.compress] produces a wire payload that [TakCompressor.decompress]
  *    round-trips back to the same packet (codec on this target = pure Kotlin).
