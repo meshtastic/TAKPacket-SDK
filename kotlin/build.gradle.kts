@@ -216,17 +216,14 @@ val generateEmbeddedDictionaries by tasks.registering(GenerateEmbeddedDictionari
 }
 
 // Wire the generated source onto commonMain — the single DictionaryLoader reads
-// EmbeddedDictionaries on every target — and make every main compile (and the
-// metadata + source-jar tasks) depend on the generator so it always runs first.
+// EmbeddedDictionaries on every target. Registering the task PROVIDER (not the bare
+// output dir) as the srcDir makes every consumer — each main compile, the metadata
+// tasks, and every sources jar, including the root `sourcesJar` — carry an implicit
+// dependency on the generator, so it always runs first. (Matching consumers by name
+// instead silently missed the root `sourcesJar`, breaking Maven Central publishing.)
 kotlin.sourceSets.named("commonMain") {
-    kotlin.srcDir(embeddedDictsOutputDir)
+    kotlin.srcDir(generateEmbeddedDictionaries)
 }
-tasks.matching {
-    (it.name.startsWith("compileKotlin") && !it.name.startsWith("compileTestKotlin")) ||
-        it.name == "compileCommonMainKotlinMetadata" ||
-        it.name.endsWith("MainKotlinMetadata") ||
-        it.name.endsWith("SourcesJar")
-}.configureEach { dependsOn(generateEmbeddedDictionaries) }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Codegen: inline the test fixtures for commonTest (R11).
@@ -354,16 +351,11 @@ val generateInlinedFixtures by tasks.registering(GenerateInlinedFixtures::class)
 }
 
 // Wire the generated fixtures onto commonTest (every target's test compile reads
-// them) and make all test compiles depend on the generator.
+// them). Registering the task PROVIDER as the srcDir carries an implicit dependency
+// to every consumer, so the generator always runs first (same rationale as the
+// embedded-dictionaries wiring above).
 kotlin.sourceSets.named("commonTest") {
-    kotlin.srcDir(inlinedFixturesOutputDir)
-}
-tasks.matching {
-    (it.name.startsWith("compileTestKotlin") || it.name == "compileTestKotlinMetadata") ||
-        (it.name.startsWith("compileTestDevelopmentExecutableKotlin")) ||
-        it.name.endsWith("TestKotlinMetadata")
-}.configureEach {
-    dependsOn(generateInlinedFixtures)
+    kotlin.srcDir(generateInlinedFixtures)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
