@@ -22,7 +22,7 @@ let package = Package(
         // into the MeshtasticTAK product; it enables
         // `swift package generate-documentation` for the hosted API docs and
         // Xcode Quick Help. Consumers resolve it transitively but never link it.
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.3.0"),
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
     ],
     targets: [
         .target(
