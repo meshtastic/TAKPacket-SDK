@@ -81,10 +81,17 @@ jobs:
             --transform-for-static-hosting \
             --hosting-base-path TAKPacket-SDK/swift \
             --output-path docc-out
+      - name: Package DocC output
+        # DocC emits a data file per symbol, including synthesized operators like
+        # "!=(_:_:).json". actions/upload-artifact rejects ":" in file names (an
+        # NTFS-compat rule), so tar the tree to carry those names inside the
+        # archive. The deploy job untars it; Pages' own upload-pages-artifact also
+        # tars, so serving the ":" files works fine.
+        run: tar -czf docc-swift.tgz -C docc-out .
       - uses: actions/upload-artifact@v7
         with:
           name: docs-swift
-          path: docc-out
+          path: docc-swift.tgz
 
   typescript:
     name: TypeScript (TypeDoc)
@@ -174,7 +181,11 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           name: docs-swift
-          path: site/swift
+          path: swift-artifact
+      - name: Unpack Swift DocC
+        run: |
+          mkdir -p site/swift
+          tar -xzf swift-artifact/docc-swift.tgz -C site/swift
       - uses: actions/download-artifact@v7
         with:
           name: docs-typescript
