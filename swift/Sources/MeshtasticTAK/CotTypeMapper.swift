@@ -16,6 +16,17 @@ import Foundation
 ///
 /// Receivers that want to detect the downgrade should check
 /// `cot_type_id == .other && !cot_type_str.isEmpty`.
+///
+/// ## Topics
+/// ### CoT type mapping
+/// - ``typeToEnum(_:)``
+/// - ``typeToString(_:)``
+/// ### CoT `how` mapping
+/// - ``howToEnum(_:)``
+/// - ``howToString(_:)``
+/// ### Aircraft classification
+/// - ``isAircraft(_:)``
+/// - ``isAircraftString(_:)``
 public enum CotTypeMapper {
 
     private static let stringToType: [String: CotType] = [
@@ -156,27 +167,68 @@ public enum CotTypeMapper {
         return result
     }()
 
+    /// Map a CoT type string to its well-known ``CotType`` enum value.
+    ///
+    /// - Parameter str: A CoT type string such as `"a-f-G-U-C"`.
+    /// - Returns: The matching ``CotType``, or ``CotType/other`` (0) when the
+    ///   string is not in the known mapping. On ``CotType/other`` the caller
+    ///   should preserve the original string in `cot_type_str` (see the
+    ///   type-level forward-compatibility contract).
     public static func typeToEnum(_ str: String) -> CotType {
         stringToType[str] ?? .other
     }
 
+    /// Map a well-known ``CotType`` enum value back to its CoT type string.
+    ///
+    /// - Parameter type: A well-known CoT type enum value.
+    /// - Returns: The canonical CoT type string, or `nil` for ``CotType/other``
+    ///   and any value with no string mapping (in which case the caller should
+    ///   fall back to the carried `cot_type_str`).
     public static func typeToString(_ type: CotType) -> String? {
         typeToStr[type]
     }
 
+    /// Map a CoT `how` string (coordinate-generation method) to its ``CotHow``
+    /// enum value.
+    ///
+    /// - Parameter str: A CoT `how` string such as `"m-g"` or `"h-e"`.
+    /// - Returns: The matching ``CotHow``, or ``CotHow/unspecified`` when
+    ///   unknown.
     public static func howToEnum(_ str: String) -> CotHow {
         stringToHow[str] ?? .unspecified
     }
 
+    /// Map a ``CotHow`` enum value back to its CoT `how` string.
+    ///
+    /// - Parameter how: A `how` enum value.
+    /// - Returns: The canonical `how` string, or `nil` for
+    ///   ``CotHow/unspecified`` and any value with no string mapping.
     public static func howToString(_ how: CotHow) -> String? {
         howToStr[how]
     }
 
+    /// Whether a well-known CoT type classifies as an aircraft track, which
+    /// selects the aircraft compression dictionary (ID `1`).
+    ///
+    /// Resolves the type to its string form and applies ``isAircraftString(_:)``.
+    ///
+    /// - Parameter type: A well-known CoT type enum value.
+    /// - Returns: `true` if the type's third hierarchical atom is `A`;
+    ///   `false` for unknown or non-aircraft types.
     public static func isAircraft(_ type: CotType) -> Bool {
         guard let str = typeToString(type) else { return false }
         return isAircraftString(str)
     }
 
+    /// Whether a raw CoT type string classifies as an aircraft track.
+    ///
+    /// Aircraft types carry the Air battle-dimension indicator `A` as the third
+    /// hierarchical atom of the dash-separated type string (e.g. `a-f-A-M-H`,
+    /// `a-n-A-C-F`).
+    ///
+    /// - Parameter str: A CoT type string.
+    /// - Returns: `true` if the string has at least three atoms and the third
+    ///   (index 2) is exactly `"A"`.
     public static func isAircraftString(_ str: String) -> Bool {
         let atoms = str.split(separator: "-")
         return atoms.count >= 3 && atoms[2] == "A"

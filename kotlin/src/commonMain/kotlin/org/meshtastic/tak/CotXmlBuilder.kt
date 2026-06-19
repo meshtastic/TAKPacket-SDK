@@ -4,9 +4,23 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Builds a CoT XML event string from a TakPacketV2Data.
- * Reconstructs a standards-compliant CoT XML event that can be consumed by ATAK
- * and other CoT-compatible systems.
+ * Reconstructs a CoT (Cursor-on-Target) XML event string from a [TakPacketV2Data].
+ *
+ * The inverse of [CotXmlParser]: it walks the decoded data model and emits a
+ * standards-compliant `<event>…</event>` document that ATAK / iTAK / WinTAK and
+ * other CoT-compatible systems consume directly. Per-payload `when` branches
+ * write the matching `<detail>` children (chat, aircraft, shapes, markers,
+ * routes, casevac, emergency, task, TAK-Talk), and the dual color encoding is
+ * resolved back to a single ARGB int via [AtakPalette].
+ *
+ * Multiplatform: built only on `kotlin.time` and `StringBuilder`, so it runs on
+ * every KMP target. Stateless and safe to reuse across calls.
+ *
+ * Lossy by design where CoT carries fields the wire format drops: the
+ * `time` / `start` / `stale` timestamps are regenerated from the wall clock at
+ * build time (the wire carries only `stale_seconds`), and a few elements ATAK
+ * requires for rendering (e.g. route `<strokeColor>`/`<contact>`) are
+ * synthesized from defaults rather than echoed from the source.
  */
 public class CotXmlBuilder {
 
@@ -134,7 +148,20 @@ public class CotXmlBuilder {
         AtakPalette.teamToArgb(paletteTeam) ?: argb
 
     /**
-     * Build a CoT XML event string from a TakPacketV2Data.
+     * Build a complete CoT XML `<event>` document from [packet].
+     *
+     * The `time` and `start` attributes are set to the current wall-clock
+     * instant; `stale` is that instant plus `packet.staleSeconds` (floored at
+     * 45 s). Units are converted back to ATAK's conventions on the way out —
+     * `speed` cm/s → m/s, `course` degrees×100 → degrees, shape radii cm → m —
+     * and palette/ARGB colors are resolved via [AtakPalette]. A packet with no
+     * payload variant ([TakPacketV2Data.Payload.None] / an implicit PLI) emits
+     * just the envelope (`<point>` + standard `<detail>` children).
+     *
+     * @param packet the decoded data model to render.
+     * @return a pretty-printed, multi-line CoT XML string with an `<?xml?>`
+     *         prologue. (Callers transmitting on a TAK TCP stream should pass it
+     *         through [CotMeshSanitizer.normalizeCotXml] first.)
      */
     public fun build(packet: TakPacketV2Data): String {
         val sb = StringBuilder()

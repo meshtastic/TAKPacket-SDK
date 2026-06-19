@@ -63,7 +63,37 @@ def _argb_to_signed(argb: int) -> int:
 
 
 class CotXmlBuilder:
+    """Builds a CoT XML event string from a ``TAKPacketV2`` protobuf message.
+
+    The inverse of :class:`~meshtastic_tak.cot_xml_parser.CotXmlParser`:
+    reconstructs the ``<event>`` envelope and ``<detail>`` subtree, expanding
+    whichever payload variant the packet carries (or emitting a bare PLI event
+    when none is set). Units are converted back to ATAK's expectations: speed
+    cm/s -> m/s, course degrees * 100 -> degrees, coordinates degrees * 1e7 ->
+    degrees, shape radii cm -> meters. The builder is stateless across calls.
+    """
+
     def build(self, packet: atak_pb2.TAKPacketV2) -> str:
+        """Render a ``TAKPacketV2`` message as a CoT XML event string.
+
+        Emits the ``<event>`` envelope, ``<point>``, and a ``<detail>`` block
+        whose children depend on the packet's payload variant. ``time`` and
+        ``start`` are stamped at "now" and ``stale`` is derived from "now" plus
+        ``stale_seconds`` (with a 45-second floor). Colors are emitted in
+        ATAK's signed-int32 form, resolving the palette ``Team`` enum to its
+        canonical ARGB and falling back to the exact ``_argb`` bits for custom
+        colors. Default TAK endpoints and TAK-Talk ``how="null"`` conventions
+        are reproduced so the output matches real ATAK captures.
+
+        Args:
+            packet: The packet to render.
+
+        Returns:
+            A multi-line CoT XML ``<event>`` document with an XML declaration.
+            Callers targeting the TAK TCP stream typically pass the result
+            through
+            :func:`~meshtastic_tak.cot_mesh_sanitizer.normalize_cot_xml`.
+        """
         now = datetime.now(timezone.utc)
         stale_secs = max(packet.stale_seconds, 45)
         stale = now + timedelta(seconds=stale_secs)
@@ -328,6 +358,23 @@ class CotXmlBuilder:
     # --- Typed geometry emitters ----------------------------------------
 
     def _emit_shape(self, lines: list, shape, event_lat_i: int, event_lon_i: int, uid: str = "") -> None:
+        """Append a DrawnShape's ``<detail>`` children to ``lines``.
+
+        Circles/ranging-circles/bullseyes/ellipses emit a ``<shape>`` with a
+        nested ``<ellipse>`` (radii cm -> meters) and a KML style ``<link>``;
+        rectangles/polygons/freeform/telestrations emit one ``<link point>``
+        per vertex, rehydrating each vertex from its packed lat/lon delta plus
+        the event coordinate. Stroke/fill colors are resolved through the
+        palette and emitted in ATAK's signed-int32 form. Mutates ``lines`` in
+        place.
+
+        Args:
+            lines: The output line list to append to.
+            shape: The ``DrawnShape`` payload message.
+            event_lat_i: Event latitude in degrees * 1e7 (delta reference).
+            event_lon_i: Event longitude in degrees * 1e7 (delta reference).
+            uid: The event UID, used to name the KML style link.
+        """
         stroke_argb = atak_palette.resolve_color(shape.stroke_color, shape.stroke_argb)
         fill_argb = atak_palette.resolve_color(shape.fill_color, shape.fill_argb)
         stroke_val = _argb_to_signed(stroke_argb)
@@ -404,6 +451,16 @@ class CotXmlBuilder:
         lines.append(f'    <labels_on value="{labels_str}"/>')
 
     def _emit_marker(self, lines: list, marker) -> None:
+        """Append a Marker's ``<detail>`` children to ``lines``.
+
+        Emits the optional ``<status readiness>``, parent ``<link>``,
+        ``<color>`` (palette-resolved, signed int32), and ``<usericon>``
+        elements. Mutates ``lines`` in place.
+
+        Args:
+            lines: The output line list to append to.
+            marker: The ``Marker`` payload message.
+        """
         if marker.readiness:
             lines.append('    <status readiness="true"/>')
         if marker.parent_uid:
@@ -422,6 +479,19 @@ class CotXmlBuilder:
             lines.append(f'    <usericon iconsetpath="{escape(marker.iconset)}"/>')
 
     def _emit_rab(self, lines: list, rab, event_lat_i: int, event_lon_i: int) -> None:
+        """Append a Range-and-Bearing payload's ``<detail>`` children.
+
+        Rehydrates the anchor coordinate from its lat/lon delta plus the event
+        coordinate and emits the anchor ``<link>``, ``<range>`` (cm -> meters),
+        ``<bearing>`` (degrees * 100 -> degrees), and stroke color/weight.
+        Mutates ``lines`` in place.
+
+        Args:
+            lines: The output line list to append to.
+            rab: The ``RangeAndBearing`` payload message.
+            event_lat_i: Event latitude in degrees * 1e7 (delta reference).
+            event_lon_i: Event longitude in degrees * 1e7 (delta reference).
+        """
         anchor_lat_i = event_lat_i + rab.anchor.lat_delta_i
         anchor_lon_i = event_lon_i + rab.anchor.lon_delta_i
         if anchor_lat_i != 0 or anchor_lon_i != 0:
@@ -449,6 +519,23 @@ class CotXmlBuilder:
             lines.append(f'    <strokeWeight value="{w}"/>')
 
     def _emit_route(self, lines: list, route, event_lat_i: int, event_lon_i: int, event_uid: str = "", remarks: str = "", callsign: str = "") -> None:
+        """Append a Route's ``<detail>`` children to ``lines``.
+
+        Emits one waypoint ``<link>`` per route link (rehydrated from lat/lon
+        deltas, with a deterministic UID synthesized when absent), then
+        ``<link_attr>``, ``<remarks>``, ``<__routeinfo>``, and the route style
+        elements — in the element order ATAK expects (waypoints first).
+        Mutates ``lines`` in place.
+
+        Args:
+            lines: The output line list to append to.
+            route: The ``Route`` payload message.
+            event_lat_i: Event latitude in degrees * 1e7 (delta reference).
+            event_lon_i: Event longitude in degrees * 1e7 (delta reference).
+            event_uid: The event UID, used to synthesize missing link UIDs.
+            remarks: Top-level remarks text to emit in the route block.
+            callsign: Top-level callsign to emit as ``<contact>``.
+        """
         # Emit <link> elements BEFORE <link_attr> (ATAK expects waypoints first)
         for idx, link in enumerate(route.links):
             llat = (event_lat_i + link.point.lat_delta_i) / 1e7
@@ -520,6 +607,19 @@ class CotXmlBuilder:
     }
 
     def _emit_casevac(self, lines: list, c) -> None:
+        """Append a CASEVAC report's ``<_medevac_>`` element to ``lines``.
+
+        Reverses the medline parse: emits precedence/security/HLZ-marking enums
+        as their ATAK names, the equipment/terrain bitflags as boolean
+        attributes, patient counts, free-text situational fields, and a
+        ``<zMistsMap>`` of per-patient ``<zMist>`` records. Self-closes the
+        element when there are no zMist children. Attribute order matches
+        ATAK's. Mutates ``lines`` in place.
+
+        Args:
+            lines: The output line list to append to.
+            c: The ``CasevacReport`` payload message.
+        """
         parts = []
         # Metadata (emit first to match ATAK's attribute ordering)
         if c.title: parts.append(f'title="{escape(c.title)}"')
@@ -604,6 +704,16 @@ class CotXmlBuilder:
             lines.append('    </_medevac_>')
 
     def _emit_emergency(self, lines: list, e) -> None:
+        """Append an EmergencyAlert's ``<detail>`` children to ``lines``.
+
+        Emits the ``<emergency>`` element (``cancel="true"`` for the Cancel
+        type, otherwise the named ``type``) plus optional authoring and
+        cancel-reference ``<link>`` elements. Mutates ``lines`` in place.
+
+        Args:
+            lines: The output line list to append to.
+            e: The ``EmergencyAlert`` payload message.
+        """
         parts = []
         if e.type == 6:  # Cancel
             parts.append('cancel="true"')
@@ -627,6 +737,16 @@ class CotXmlBuilder:
             )
 
     def _emit_task(self, lines: list, t) -> None:
+        """Append a TaskRequest's ``<detail>`` children to ``lines``.
+
+        Emits the ``<task>`` element (type, priority/status as their ATAK
+        names, assignee, note) plus a target ``<link>`` when a target UID is
+        present. Mutates ``lines`` in place.
+
+        Args:
+            lines: The output line list to append to.
+            t: The ``TaskRequest`` payload message.
+        """
         parts = []
         if t.task_type: parts.append(f'type="{escape(t.task_type)}"')
         pri = self._TASK_PRIORITY_INT_TO_NAME.get(t.priority)

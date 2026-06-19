@@ -1,13 +1,52 @@
 import Foundation
 
-/// Errors thrown by `CotXmlParser.parse(_:)`.
+/// Errors thrown by ``CotXmlParser/parse(_:)``.
 public enum CotXmlParserError: Error {
     /// The XML contains a DOCTYPE or ENTITY declaration, which is prohibited
     /// to prevent XXE and entity-expansion attacks.
     case prohibitedXmlConstruct
 }
 
-/// Parses a CoT XML event string into a TAKPacketV2 protobuf message.
+/// Parses a Cursor-on-Target (CoT) XML event string into a ``TAKPacketV2``
+/// protobuf message — the send-side inverse of ``CotXmlBuilder``.
+///
+/// `parse(_:)` is a single-pass SAX parse (backed by `XMLParser`) that maps the
+/// `<event>` / `<point>` / `<detail>` tree into the packet envelope plus at most
+/// one payload variant. Field values are scaled into their wire units, and the
+/// CoT type drives both payload classification and which compression dictionary
+/// the compressor later selects.
+///
+/// ### Wire units
+/// | XML source | Wire field | Unit |
+/// |---|---|---|
+/// | `point@lat` / `point@lon` | `latitude_i` / `longitude_i` | degrees × 1e7 (clamped to ±90° / ±180°) |
+/// | `point@hae` | `altitude` | meters HAE (may be negative) |
+/// | `track@speed` (m/s) | `speed` | cm/s (× 100; negative sentinels clamp to 0) |
+/// | `track@course` (deg) | `course` | degrees × 100 (× 100; negatives clamp to 0) |
+/// | shape `major`/`minor` (m) | `major_cm` / `minor_cm` | centimeters (× 100) |
+/// | R&B `range` (m) | `range_cm` | centimeters (× 100) |
+/// | R&B `bearing` (deg) | `bearing_cdeg` | degrees × 100 |
+///
+/// ### Classification notes
+/// - A position report with no payload-specific `<detail>` produces a packet with
+///   no payload variant — an **implicit PLI** (the wire format has no `pli` bool).
+/// - Route waypoints, the R&B anchor, and drawn-shape vertices are stored as
+///   lat/lon deltas relative to the event anchor.
+/// - DOCTYPE / ENTITY declarations are rejected up front (see
+///   ``CotXmlParserError/prohibitedXmlConstruct``); all other malformed input
+///   degrades gracefully rather than crashing.
+///
+/// A `CotXmlParser` instance carries mutable parse state, so it is **not**
+/// thread-safe; use one instance per parse (or per thread). `parse(_:)` resets
+/// all state at entry, so a single instance may be reused serially.
+///
+/// ## Topics
+/// ### Parsing
+/// - ``parse(_:)``
+/// - ``extractRawDetailBytes(_:)``
+/// ### Limits
+/// - ``maxVertices``
+/// - ``maxRouteLinks``
 public class CotXmlParser: NSObject, XMLParserDelegate {
 
     /// Vertex pool cap — matches `*DrawnShape.vertices max_count:32` in atak.options.
@@ -257,6 +296,22 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var chatReceiptForUid = ""
     private var chatReceiptTypeValue: GeoChat.ReceiptType = .none
 
+    /// Parse a CoT XML event string into a ``TAKPacketV2``.
+    ///
+    /// Resets all internal parse state, runs a single SAX pass, then assembles
+    /// the packet envelope and (at most) one payload variant by the priority
+    /// delete > chat > aircraft > route > range-and-bearing > shape > marker >
+    /// casevac > emergency > task > implicit PLI. Field values are scaled into
+    /// their wire units (see the type-level unit table). Malformed numeric or
+    /// structural input degrades gracefully — only DOCTYPE/ENTITY declarations
+    /// are rejected.
+    ///
+    /// - Parameter cotXml: The CoT XML event string to parse.
+    /// - Returns: The populated packet. A position report with no
+    ///   payload-specific detail returns a packet with no payload variant set,
+    ///   which is an implicit PLI.
+    /// - Throws: ``CotXmlParserError/prohibitedXmlConstruct`` if the input
+    ///   contains a `<!DOCTYPE` or `<!ENTITY` declaration.
     public func parse(_ cotXml: String) throws -> TAKPacketV2 {
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
         let lower = cotXml.lowercased()
@@ -737,6 +792,9 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
     // MARK: - XMLParserDelegate
 
+    /// `XMLParserDelegate` callback invoked on each opening tag. Public only to
+    /// satisfy the protocol conformance — call ``parse(_:)`` instead; this is not
+    /// part of the public API and should not be invoked directly.
     public func parser(_ parser: XMLParser, didStartElement name: String,
                        namespaceURI: String?, qualifiedName: String?,
                        attributes: [String: String] = [:]) {
@@ -1171,6 +1229,9 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         }
     }
 
+    /// `XMLParserDelegate` callback invoked for element-body character data.
+    /// Public only to satisfy the protocol conformance — not part of the public
+    /// API; use ``parse(_:)``.
     public func parser(_ parser: XMLParser, foundCharacters string: String) {
         // Route element-body text. Multiple flags can never be true at once
         // (the parser is in exactly one <element> at a time inside <detail>)
@@ -1206,6 +1267,9 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         }
     }
 
+    /// `XMLParserDelegate` callback invoked on each closing tag, where buffered
+    /// element-body text is committed. Public only to satisfy the protocol
+    /// conformance — not part of the public API; use ``parse(_:)``.
     public func parser(_ parser: XMLParser, didEndElement name: String,
                        namespaceURI: String?, qualifiedName: String?) {
         switch name {

@@ -5,6 +5,28 @@ using Meshtastic.Protobufs;
 
 namespace Meshtastic.TAK;
 
+/// <summary>
+/// Parses ATAK Cursor-on-Target (CoT) XML into a <c>TAKPacketV2</c> packet — the
+/// inverse of <see cref="CotXmlBuilder"/>.
+/// </summary>
+/// <remarks>
+/// <para>Reads the <c>&lt;event&gt;</c> envelope (type, how, uid, time/stale,
+/// point) and walks the <c>&lt;detail&gt;</c> children, accumulating evidence for
+/// each possible payload variant. After the walk, a single payload variant is
+/// chosen by a fixed priority order (delete &gt; TAK-Talk room &gt; TAK-Talk
+/// message &gt; chat &gt; aircraft &gt; route &gt; range &amp; bearing &gt; shape
+/// &gt; marker &gt; casevac &gt; emergency &gt; task). An event with no payload
+/// evidence and an <c>a-f-*</c> type yields an implicit PLI — no payload variant
+/// is set (the <c>pli</c> bool was removed in v0.4.0).</para>
+/// <para>Unit scaling matches the wire conventions: latitude/longitude are scaled
+/// to degrees×1e7 (clamped to the legal ±90°/±180° range), speed to cm/s, course
+/// to degrees×100, shape radii to centimeters, altitude to meters HAE (may be
+/// negative). ATAK's stationary sentinels (e.g. <c>speed="-1.0"</c>) are clamped
+/// to 0 before the unsigned cast. All numeric parsing uses the invariant culture.</para>
+/// <para>Security: input containing a <c>&lt;!DOCTYPE&gt;</c> or
+/// <c>&lt;!ENTITY&gt;</c> declaration is rejected up front to prevent XXE and
+/// entity-expansion attacks.</para>
+/// </remarks>
 public class CotXmlParser
 {
     /// <summary>Vertex pool cap matching *DrawnShape.vertices max_count:32.</summary>
@@ -235,6 +257,20 @@ public class CotXmlParser
         };
     }
 
+    /// <summary>
+    /// Parse a CoT XML <c>&lt;event&gt;</c> document into a <c>TAKPacketV2</c> packet.
+    /// </summary>
+    /// <remarks>
+    /// See the class remarks for the payload-variant priority order, unit scaling,
+    /// and the implicit-PLI rule. An event with no <c>&lt;detail&gt;</c> element
+    /// returns a bare position report (implicit PLI). Unknown CoT types are preserved
+    /// in <c>cot_type_str</c> so they survive the round trip.
+    /// </remarks>
+    /// <param name="cotXml">The CoT XML document to parse.</param>
+    /// <returns>The decoded packet.</returns>
+    /// <exception cref="ArgumentException">Thrown if the XML contains a prohibited
+    /// <c>&lt;!DOCTYPE&gt;</c> or <c>&lt;!ENTITY&gt;</c> declaration.</exception>
+    /// <exception cref="System.Xml.XmlException">Thrown if the input is not well-formed XML.</exception>
     public TAKPacketV2 Parse(string cotXml)
     {
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion

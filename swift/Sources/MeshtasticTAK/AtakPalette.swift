@@ -12,6 +12,12 @@ import Foundation
 /// don't always line up with Meshtastic's `Team` enum names — the numeric
 /// positions match and the enum tag is what rides on the wire, so the
 /// naming drift is cosmetic.
+///
+/// ## Topics
+/// ### Lookups
+/// - ``argbToTeam(_:)``
+/// - ``teamToArgb(_:)``
+/// - ``resolveColor(palette:fallback:)``
 public enum AtakPalette {
 
     /// Team enum value → exact ARGB bit pattern. Stored as `UInt32` to

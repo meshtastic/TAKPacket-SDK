@@ -197,7 +197,48 @@ _RECEIPT_TYPE_READ = 2
 
 
 class CotXmlParser:
+    """Parses a CoT XML event string into a ``TAKPacketV2`` protobuf message.
+
+    Reads the ``<event>`` envelope (uid, type, how, time/stale, ``<point>``)
+    and walks ``<detail>`` children to classify the packet into one of the
+    payload variants (chat, aircraft, route, range-and-bearing, drawn shape,
+    marker, casevac, emergency, task, TAK-Talk, TAK-Talk room) and to fill the
+    top-level annotations. The parser is stateless across calls — each
+    :meth:`parse` is independent — matching the equivalent class on every other
+    binding.
+    """
+
     def parse(self, cot_xml: str) -> atak_pb2.TAKPacketV2:
+        """Parse a CoT XML event into a ``TAKPacketV2`` protobuf message.
+
+        Populates the envelope from ``<event>`` and ``<point>``, then inspects
+        ``<detail>`` to select at most one payload variant and to capture
+        top-level annotations. Units follow the wire conventions: coordinates
+        are degrees * 1e7, ``speed`` is cm/s, ``course`` is degrees * 100,
+        ``altitude`` is meters HAE (may be negative), shape radii are cm,
+        range is cm, and bearing is degrees * 100. ATAK's stationary sentinels
+        (negative ``speed`` / ``course``) are clamped to 0 for the uint32
+        fields.
+
+        A bare event with no ``<detail>``, and any event whose detail matches
+        no variant, becomes an implicit PLI (no payload variant set) — there is
+        no ``pli`` boolean on the wire. TAK-Talk ``<voice>`` and ``<marti>``
+        recipients are preserved. Coordinates are clamped to legal lat/lon
+        ranges before scaling. ``DOCTYPE`` / ``ENTITY`` declarations are
+        rejected to block XXE and entity-expansion attacks.
+
+        Args:
+            cot_xml: A single CoT XML ``<event>`` document.
+
+        Returns:
+            The parsed ``TAKPacketV2`` message.
+
+        Raises:
+            ValueError: If the XML contains a prohibited ``DOCTYPE`` or
+                ``ENTITY`` declaration.
+            xml.etree.ElementTree.ParseError: If the input is not well-formed
+                XML.
+        """
         # Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion
         lower = cot_xml.lower()
         if "<!doctype" in lower or "<!entity" in lower:
@@ -1067,6 +1108,20 @@ class CotXmlParser:
 
     @staticmethod
     def _compute_stale_seconds(time_str: str, stale_str: str) -> int:
+        """Compute the stale lifetime in seconds from CoT ``time``/``stale``.
+
+        The wire carries a relative ``stale_seconds`` rather than the absolute
+        ``stale`` timestamp; the builder re-derives ``stale`` from "now" plus
+        this value. The trailing ``Z`` is treated as UTC.
+
+        Args:
+            time_str: The CoT ``time`` (event) timestamp, ISO-8601.
+            stale_str: The CoT ``stale`` (expiry) timestamp, ISO-8601.
+
+        Returns:
+            ``stale - time`` in whole seconds, clamped to ``0``; ``0`` if
+            either timestamp is missing or unparseable.
+        """
         if not time_str or not stale_str:
             return 0
         try:

@@ -1,5 +1,8 @@
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinMultiplatform
 import java.util.Base64
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
@@ -105,6 +108,33 @@ kotlin {
             // kzstd's own test suite, so the SDK does not re-run it. The retained
             // golden-decode oracle exercises kzstd's public API over TAK's wire
             // frames. protobufs is inherited from commonMain (implementation).
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dokka API documentation (HTML). `./gradlew dokkaGeneratePublicationHtml` writes
+// browsable docs to build/dokka/html; the same task feeds the Maven Central
+// javadoc jar (see mavenPublishing below) and the unified docs site built in CI.
+dokka {
+    moduleName.set("TAKPacket-SDK")
+    dokkaSourceSets.configureEach {
+        // Public API only — the codec internals and the proto-bridge serializer
+        // are `internal`/implementation detail and stay out of the published docs.
+        documentedVisibilities.set(setOf(VisibilityModifier.Public))
+        // Module + package overview prose (the `# Module` / `# Package` sections).
+        includes.from("module.md")
+        // Deep-link every documented symbol to its source on GitHub.
+        sourceLink {
+            localDirectory.set(file("src"))
+            remoteUrl("https://github.com/meshtastic/TAKPacket-SDK/blob/master/kotlin/src")
+            remoteLineSuffix.set("#L")
+        }
+        // The Wire-generated proto types are an implementation detail (already
+        // excluded from binary-compatibility validation) — hide them in docs too.
+        perPackageOption {
+            matchingRegex.set("org\\.meshtastic\\.proto.*")
+            suppress.set(true)
         }
     }
 }
@@ -363,6 +393,12 @@ kotlin.sourceSets.named("commonTest") {
 // Coordinates are read from gradle.properties: GROUP, POM_ARTIFACT_ID, VERSION_NAME.
 // Signing is conditional — only applied when CI provides the key via Gradle properties.
 mavenPublishing {
+    // Ship browsable Dokka HTML as the `-javadoc.jar` on Maven Central (Central
+    // requires a javadoc jar; the default empty one would waste that slot).
+    // sourcesJar stays on (vanniktech default). JavadocJar.Dokka points at the
+    // Dokka Gradle Plugin v2 HTML task whose output becomes the jar.
+    configure(KotlinMultiplatform(javadocJar = JavadocJar.Dokka("dokkaGeneratePublicationHtml")))
+
     // automaticRelease = true makes the Sonatype Central Portal publish the
     // upload directly to Maven Central instead of leaving it in a pending
     // "validated, awaiting approval" state. Without this, each release

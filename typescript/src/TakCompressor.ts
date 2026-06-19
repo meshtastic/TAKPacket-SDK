@@ -20,11 +20,25 @@ const MAX_DECOMPRESSED_SIZE = 4096;
  */
 const ZSTD_MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
 
+/**
+ * Per-packet compression statistics returned by
+ * {@link TakCompressor.compressWithStats}, primarily for reporting and the
+ * golden compression-report tooling.
+ */
 export interface CompressionResult {
+  /** Size in bytes of the serialized `TAKPacketV2` protobuf before compression. */
   protobufSize: number;
+  /** Size in bytes of the final wire payload (flags byte + body). */
   compressedSize: number;
+  /**
+   * The mode actually emitted, read back from the wire payload's flags byte:
+   * {@link DICT_ID_NON_AIRCRAFT}, {@link DICT_ID_AIRCRAFT}, or
+   * {@link DICT_ID_UNCOMPRESSED} when the skip-compress path fired.
+   */
   dictId: number;
+  /** Human-readable name of {@link dictId} (`"non-aircraft"`, `"aircraft"`, `"uncompressed"`, or `"unknown"`). */
   dictName: string;
+  /** The compressed `[flags][body]` wire payload. */
   wirePayload: Buffer;
 }
 
@@ -49,6 +63,52 @@ export interface RemarksFallbackResult {
   remarksStripped: boolean;
 }
 
+/**
+ * Encodes a {@link TAKPacketV2} into the on-wire `[flags][zstd body]` payload
+ * and decodes it back, using the bundled zstd dictionaries.
+ *
+ * @remarks
+ * **Wire format.** A compressed payload is one flags byte (bits 0–5 = dictionary
+ * ID, bits 6–7 reserved/zero) followed by a zstd frame body whose 4-byte magic
+ * number has been stripped (re-prepended on decode). When compression would not
+ * shrink the packet, {@link compress} instead emits the flags byte `0xFF`
+ * followed by the raw protobuf (skip-compress), so tiny payloads never expand.
+ * The total wire payload must stay within the 237-byte LoRa MTU; use
+ * {@link compressWithRemarksFallback} to enforce that with graceful remarks
+ * stripping.
+ *
+ * **Resilience.** Each packet is compressed as one independent, one-shot zstd
+ * frame against the static shipped dictionary — never the streaming API and
+ * never any cross-packet/adaptive state — so any single packet decodes on its
+ * own from its own bytes plus the dictionary. This is the hard resilience
+ * invariant for a lossy LoRa link.
+ *
+ * **windowLog.** zstd-napi does not auto-size its compression window to a large
+ * loaded dictionary, so this class sets `windowLog: 21` *before*
+ * `loadDictionary` (and `windowLogMax: 27` on the decompressors) so small
+ * inputs can still reference deep matches in the 512 KB dictionary and peer
+ * frames with larger windows still decode. Setting `windowLog` after the
+ * dictionary is loaded would silently reset the digested dictionary.
+ *
+ * Dictionaries are loaded and digested lazily on the first `compress`/
+ * `decompress` call, then reused for the lifetime of the instance, so reuse one
+ * `TakCompressor` rather than constructing one per packet.
+ *
+ * @example
+ * ```ts
+ * import { TakCompressor, parseCotXml, buildCotXml } from "@meshtastic/takpacket-sdk";
+ *
+ * const codec = new TakCompressor();
+ *
+ * // Encode CoT XML for the mesh:
+ * const packet = parseCotXml(cotXmlString);
+ * const wire = await codec.compress(packet); // Buffer, ≤ 237 bytes
+ *
+ * // Decode a received frame back to CoT XML:
+ * const decoded = await codec.decompress(wire);
+ * const xml = buildCotXml(decoded);
+ * ```
+ */
 export class TakCompressor {
   private compressors: Map<number, Compressor> = new Map();
   private decompressors: Map<number, Decompressor> = new Map();
@@ -102,7 +162,39 @@ export class TakCompressor {
     this.initialized = true;
   }
 
-  /** Compress a TAKPacketV2 object into wire payload: [flags][zstd compressed protobuf] */
+  /**
+   * Compress a {@link TAKPacketV2} into a wire payload: `[flags][zstd body]`.
+   *
+   * Serializes the packet to protobuf, picks the dictionary from the packet's
+   * CoT type ({@link selectDictId}), compresses as one independent zstd frame
+   * (level 19, content-size/checksum/dictID frame fields off), and strips the
+   * 4-byte zstd magic. If the raw protobuf is no larger than the compressed
+   * body, emits the skip-compress form `[0xFF][raw protobuf]` instead so the
+   * payload never expands.
+   *
+   * @remarks
+   * The caller is responsible for keeping the result within the 237-byte LoRa
+   * MTU; this method does not enforce it. Use
+   * {@link compressWithRemarksFallback} when you need MTU enforcement.
+   * Asynchronous because the protobuf schema is loaded lazily.
+   *
+   * @param packet - The packet to encode. Field units are wire units: `speed`
+   *   in cm/s, `course` in degrees×100, `altitude` in meters HAE (may be
+   *   negative), `latitudeI`/`longitudeI` in degrees×1e7, shape radii in cm.
+   *   A packet with no payload variant and an `a-f-*` CoT type is an implicit
+   *   PLI.
+   * @returns A Promise resolving to the compressed wire payload (`Buffer`).
+   * @throws If the packet fails protobuf validation, or no compressor exists
+   *         for the selected dictionary, or the zstd frame header is not the
+   *         expected magic.
+   *
+   * @example
+   * ```ts
+   * const codec = new TakCompressor();
+   * const wire = await codec.compress({ cotTypeId: 1, latitudeI: 388895000, longitudeI: -770353000 });
+   * // wire[0] is the flags byte (dictionary ID, or 0xFF if uncompressed)
+   * ```
+   */
   async compress(packet: TAKPacketV2): Promise<Buffer> {
     this.init();
     const TAKPacketV2Type = await getTAKPacketV2Type();
@@ -144,7 +236,32 @@ export class TakCompressor {
     return wire;
   }
 
-  /** Decompress wire payload back to a TAKPacketV2 object. */
+  /**
+   * Decompress a wire payload back into a {@link TAKPacketV2}.
+   *
+   * Reads the flags byte: `0xFF` means the body is raw protobuf; otherwise the
+   * low 6 bits select the dictionary, the stripped 4-byte zstd magic is
+   * re-prepended, and the body is decompressed with that dictionary. The
+   * decompressed size is capped at 4096 bytes as a decompression-bomb guard
+   * before the protobuf is parsed.
+   *
+   * @remarks
+   * Reserved flag bits are ignored (the dictionary ID is masked with `& 0x3F`).
+   * Asynchronous because the protobuf schema is loaded lazily.
+   *
+   * @param wirePayload - A received `[flags][body]` payload (must be ≥ 2 bytes).
+   * @returns A Promise resolving to the decoded packet. Field units are wire
+   *   units (see {@link compress}).
+   * @throws If the payload is shorter than 2 bytes, the dictionary ID is
+   *         unknown, zstd decompression fails, the decompressed size exceeds
+   *         4096 bytes, or the protobuf fails to parse.
+   *
+   * @example
+   * ```ts
+   * const codec = new TakCompressor();
+   * const packet = await codec.decompress(receivedWireBuffer);
+   * ```
+   */
   async decompress(wirePayload: Buffer): Promise<TAKPacketV2> {
     this.init();
     if (wirePayload.length < 2) throw new Error(`Payload too short: ${wirePayload.length}`);
@@ -237,7 +354,19 @@ export class TakCompressor {
     return { wirePayload: null, remarksStripped: true };
   }
 
-  /** Compress with stats for reporting. */
+  /**
+   * Compress a packet and report its sizes and emitted mode.
+   *
+   * Equivalent to {@link compress} plus a {@link CompressionResult} describing
+   * the protobuf size, final wire size, and the dictionary/mode actually
+   * emitted (read back from the flags byte, so it reflects a skip-compress
+   * `0xFF` fallback). Used by the golden compression-report tooling.
+   *
+   * @param packet - The packet to encode (see {@link compress} for units).
+   * @returns A Promise resolving to the compression statistics, including the
+   *          wire payload itself.
+   * @throws The same conditions as {@link compress}.
+   */
   async compressWithStats(packet: TAKPacketV2): Promise<CompressionResult> {
     const TAKPacketV2Type = await getTAKPacketV2Type();
     const msg = TAKPacketV2Type.create(packet);

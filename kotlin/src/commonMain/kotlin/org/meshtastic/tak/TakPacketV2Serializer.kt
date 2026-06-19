@@ -60,6 +60,18 @@ import org.meshtastic.proto.ZMistEntry
  */
 public object TakPacketV2Serializer {
 
+    /**
+     * Encode a [TakPacketV2Data] to `TAKPacketV2` protobuf wire bytes.
+     *
+     * Maps the SDK's camelCase data model onto the Wire-generated proto types,
+     * applying the unit conversions baked into the data model (lat/lon ×1e7,
+     * speed cm/s, course degrees×100, altitude meters HAE, shape radii cm).
+     * Exactly one [TakPacketV2Data.Payload] arm is emitted into the `oneof`;
+     * [TakPacketV2Data.Payload.None] (an implicit PLI) emits no payload variant.
+     *
+     * @return the serialized protobuf bytes (these are the bytes fed to zstd —
+     *         see [TakCompressor]).
+     */
     public fun serialize(data: TakPacketV2Data): ByteArray {
         // Build oneof payload fields as nullable locals. Exactly one will be
         // set (or none for Payload.None) and passed to the TAKPacketV2 data
@@ -368,6 +380,18 @@ public object TakPacketV2Serializer {
         return TAKPacketV2.ADAPTER.encode(packet)
     }
 
+    /**
+     * Decode `TAKPacketV2` protobuf wire bytes into a [TakPacketV2Data].
+     *
+     * The inverse of [serialize]: reads the flattened nullable `oneof` arms,
+     * reverses the unit conversions, and reconstructs the [TakPacketV2Data.Payload]
+     * variant (a packet with no payload arm becomes [TakPacketV2Data.Payload.None],
+     * i.e. an implicit PLI). Enum values outside the known range downgrade to
+     * their "unspecified" sentinel per the class-level forward-compatibility
+     * contract.
+     *
+     * @param bytes the decompressed protobuf bytes (as produced by [TakCompressor.decompress]).
+     */
     public fun deserialize(bytes: ByteArray): TakPacketV2Data {
         val proto = TAKPacketV2.ADAPTER.decode(bytes)
 

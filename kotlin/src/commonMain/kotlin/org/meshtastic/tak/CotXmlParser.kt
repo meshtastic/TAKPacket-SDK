@@ -933,8 +933,18 @@ public class CotXmlParser {
     }
 
     /**
-     * Extract the inner bytes of the `<detail>` element. Pure regex in the
-     * original (no xpp3), so this is a verbatim port.
+     * Extract the raw inner bytes of the `<detail>` element, verbatim.
+     *
+     * The escape hatch for callers that want to ship a `<detail>` block the
+     * structured parser doesn't model — the bytes go into
+     * [TakPacketV2Data.Payload.RawDetail] and are re-emitted unchanged by
+     * [CotXmlBuilder], preserving attribute order and whitespace byte-for-byte.
+     * Pure regex (no XML reader), matching the inside of the first
+     * `<detail …>…</detail>`.
+     *
+     * @param cotXml a full CoT XML event string.
+     * @return the UTF-8 bytes between the `<detail>` tags, or an empty array if
+     *         there is no `<detail>` element.
      */
     public fun extractRawDetailBytes(cotXml: String): ByteArray {
         val match = DETAIL_REGEX.find(cotXml)
@@ -943,88 +953,262 @@ public class CotXmlParser {
     }
 
     public companion object {
+        /**
+         * `GeoPointSource` enum values (position / altitude provenance), mirroring
+         * atak.proto. Carried in the `geo_src` / `alt_src` proto fields and the
+         * `<precisionlocation geopointsrc=… altsrc=…>` XML attributes.
+         */
         public const val GEOSRC_UNSPECIFIED: Int = 0
+
+        /** Position from a GPS fix (`geopointsrc="GPS"`). */
         public const val GEOSRC_GPS: Int = 1
+
+        /** Position entered / placed by the user (`geopointsrc="USER"`). */
         public const val GEOSRC_USER: Int = 2
+
+        /** Position derived from the network (`geopointsrc="NETWORK"`). */
         public const val GEOSRC_NETWORK: Int = 3
 
+        /**
+         * Maximum drawn-shape vertices retained per packet. Extra vertices are
+         * dropped and the shape's `truncated` flag is set, bounding wire size.
+         */
         public const val MAX_VERTICES: Int = 32
+
+        /**
+         * Maximum route waypoint/control-point links retained per packet. Extra
+         * links are dropped and the route's `truncated` flag is set.
+         */
         public const val MAX_ROUTE_LINKS: Int = 16
 
+        /**
+         * `DrawnShape.Kind` enum values (mirror atak.proto), set on
+         * [TakPacketV2Data.Payload.DrawnShape.kind] from the CoT type string.
+         */
         public const val SHAPE_KIND_UNSPECIFIED: Int = 0
+
+        /** Circle drawing (`u-d-c-c`), sized by `majorCm` radius. */
         public const val SHAPE_KIND_CIRCLE: Int = 1
+
+        /** Rectangle drawing (`u-d-r`), vertices as `<link point>` siblings. */
         public const val SHAPE_KIND_RECTANGLE: Int = 2
+
+        /** Freehand drawing (`u-d-f`). */
         public const val SHAPE_KIND_FREEFORM: Int = 3
+
+        /** Freehand telestration drawing (`u-d-f-m`). */
         public const val SHAPE_KIND_TELESTRATION: Int = 4
+
+        /** Closed polygon drawing (`u-d-p`). */
         public const val SHAPE_KIND_POLYGON: Int = 5
+
+        /** Ranging circle (`u-r-b-c-c`). */
         public const val SHAPE_KIND_RANGING_CIRCLE: Int = 6
+
+        /** Bullseye with range rings (`u-r-b-bullseye`); enables the bullseye-only fields. */
         public const val SHAPE_KIND_BULLSEYE: Int = 7
+
+        /** Ellipse drawing (`u-d-c-e`), sized by `majorCm`/`minorCm`/`angleDeg`. */
         public const val SHAPE_KIND_ELLIPSE: Int = 8
+
+        /** 2D vehicle outline drawing (`u-d-v`). */
         public const val SHAPE_KIND_VEHICLE_2D: Int = 9
+
+        /** 3D vehicle model drawing (`u-d-v-m`). */
         public const val SHAPE_KIND_VEHICLE_3D: Int = 10
 
+        /**
+         * `DrawnShape.StyleMode` discriminator (mirror atak.proto), set on
+         * [TakPacketV2Data.Payload.DrawnShape.style]. Records whether the source
+         * carried a stroke color, a fill color, or both.
+         */
         public const val STYLE_UNSPECIFIED: Int = 0
+
+        /** Stroke (outline) color only. */
         public const val STYLE_STROKE_ONLY: Int = 1
+
+        /** Fill color only. */
         public const val STYLE_FILL_ONLY: Int = 2
+
+        /** Both stroke and fill colors. */
         public const val STYLE_STROKE_AND_FILL: Int = 3
 
+        /**
+         * `Marker.Kind` enum values (mirror atak.proto), set on
+         * [TakPacketV2Data.Payload.Marker.kind] from the CoT type / iconset.
+         */
         public const val MARKER_KIND_UNSPECIFIED: Int = 0
+
+        /** Spot marker (`b-m-p-s-m`). */
         public const val MARKER_KIND_SPOT: Int = 1
+
+        /** Waypoint (`b-m-p-w`). */
         public const val MARKER_KIND_WAYPOINT: Int = 2
+
+        /** Checkpoint (`b-m-p-c`). */
         public const val MARKER_KIND_CHECKPOINT: Int = 3
+
+        /** Self-position marker (`b-m-p-s-p-i` / `b-m-p-s-p-loc`). */
         public const val MARKER_KIND_SELF_POSITION: Int = 4
+
+        /** 2525 military symbol (iconset `COT_MAPPING_2525B`). */
         public const val MARKER_KIND_SYMBOL_2525: Int = 5
+
+        /** Spot-map marker (iconset `COT_MAPPING_SPOTMAP`). */
         public const val MARKER_KIND_SPOT_MAP: Int = 6
+
+        /** Custom user-icon marker (any other non-empty iconset). */
         public const val MARKER_KIND_CUSTOM_ICON: Int = 7
+
+        /** Go-To / bloodhound point (`b-m-p-w-GOTO`). */
         public const val MARKER_KIND_GO_TO_POINT: Int = 8
+
+        /** Initial point (`b-m-p-c-ip`). */
         public const val MARKER_KIND_INITIAL_POINT: Int = 9
+
+        /** Contact point (`b-m-p-c-cp`). */
         public const val MARKER_KIND_CONTACT_POINT: Int = 10
+
+        /** Observation post (`b-m-p-s-p-op`). */
         public const val MARKER_KIND_OBSERVATION_POST: Int = 11
+
+        /** Quick-Pic image / media marker (`b-i-x-i`). */
         public const val MARKER_KIND_IMAGE_MARKER: Int = 12
 
+        /**
+         * `CasevacReport.Precedence` enum (9-line Line-1 patient precedence),
+         * mirror atak.proto. ATAK encodes these as letters A–E or full words.
+         */
         public const val PRECEDENCE_UNSPECIFIED: Int = 0
+
+        /** Urgent (ATAK "A"). */
         public const val PRECEDENCE_URGENT: Int = 1
+
+        /** Urgent Surgical (ATAK "B"). */
         public const val PRECEDENCE_URGENT_SURGICAL: Int = 2
+
+        /** Priority (ATAK "C"). */
         public const val PRECEDENCE_PRIORITY: Int = 3
+
+        /** Routine (ATAK "D"). */
         public const val PRECEDENCE_ROUTINE: Int = 4
+
+        /** Convenience (ATAK "E"). */
         public const val PRECEDENCE_CONVENIENCE: Int = 5
 
+        /**
+         * `CasevacReport.HlzMarking` enum (9-line Line-7 landing-zone marking
+         * method), mirror atak.proto.
+         */
         public const val HLZ_MARKING_UNSPECIFIED: Int = 0
+
+        /** Marked with panels. */
         public const val HLZ_MARKING_PANELS: Int = 1
+
+        /** Marked with a pyrotechnic signal. */
         public const val HLZ_MARKING_PYRO_SIGNAL: Int = 2
+
+        /** Marked with smoke. */
         public const val HLZ_MARKING_SMOKE: Int = 3
+
+        /** Explicitly no marking. */
         public const val HLZ_MARKING_NONE: Int = 4
+
+        /** Some other marking method (see `markedBy` free-text). */
         public const val HLZ_MARKING_OTHER: Int = 5
 
+        /**
+         * `CasevacReport.Security` enum (9-line Line-6 landing-zone security),
+         * mirror atak.proto. ATAK encodes these as letters N/P/E/X or full words.
+         */
         public const val SECURITY_UNSPECIFIED: Int = 0
+
+        /** No enemy in area (ATAK "N"). */
         public const val SECURITY_NO_ENEMY: Int = 1
+
+        /** Possible enemy in area (ATAK "P"). */
         public const val SECURITY_POSSIBLE_ENEMY: Int = 2
+
+        /** Enemy in area (ATAK "E"). */
         public const val SECURITY_ENEMY_IN_AREA: Int = 3
+
+        /** Enemy in area, armed escort required (ATAK "X"). */
         public const val SECURITY_ENEMY_IN_ARMED_CONTACT: Int = 4
 
+        /**
+         * `EmergencyAlert.Type` enum, mirror atak.proto. Set on
+         * [TakPacketV2Data.Payload.EmergencyAlert.type] from the `b-a-*` CoT type
+         * or the `<emergency type=…>` attribute.
+         */
         public const val EMERGENCY_TYPE_UNSPECIFIED: Int = 0
+
+        /** 911 alert (`b-a-o-tbl`). */
         public const val EMERGENCY_TYPE_ALERT_911: Int = 1
+
+        /** Ring-the-bell alert (`b-a-o-pan`). */
         public const val EMERGENCY_TYPE_RING_THE_BELL: Int = 2
+
+        /** Troops-in-contact alert (`b-a-o-opn`). */
         public const val EMERGENCY_TYPE_IN_CONTACT: Int = 3
+
+        /** Geo-fence-breached alert (`b-a-g`). */
         public const val EMERGENCY_TYPE_GEO_FENCE_BREACHED: Int = 4
+
+        /** Custom emergency beacon (`b-a-o-c`). */
         public const val EMERGENCY_TYPE_CUSTOM: Int = 5
+
+        /** Cancel a prior alert (`b-a-o-can`); references the cancelled alert's UID. */
         public const val EMERGENCY_TYPE_CANCEL: Int = 6
 
+        /**
+         * `TaskRequest.Priority` enum, mirror atak.proto. Set on
+         * [TakPacketV2Data.Payload.TaskRequest.priority].
+         */
         public const val TASK_PRIORITY_UNSPECIFIED: Int = 0
+
+        /** Low priority. */
         public const val TASK_PRIORITY_LOW: Int = 1
+
+        /** Normal / medium priority. */
         public const val TASK_PRIORITY_NORMAL: Int = 2
+
+        /** High priority. */
         public const val TASK_PRIORITY_HIGH: Int = 3
+
+        /** Critical priority. */
         public const val TASK_PRIORITY_CRITICAL: Int = 4
 
+        /**
+         * `TaskRequest.Status` enum, mirror atak.proto. Set on
+         * [TakPacketV2Data.Payload.TaskRequest.status].
+         */
         public const val TASK_STATUS_UNSPECIFIED: Int = 0
+
+        /** Task is pending / not yet acknowledged. */
         public const val TASK_STATUS_PENDING: Int = 1
+
+        /** Task acknowledged by the assignee. */
         public const val TASK_STATUS_ACKNOWLEDGED: Int = 2
+
+        /** Task in progress. */
         public const val TASK_STATUS_IN_PROGRESS: Int = 3
+
+        /** Task completed / done. */
         public const val TASK_STATUS_COMPLETED: Int = 4
+
+        /** Task cancelled. */
         public const val TASK_STATUS_CANCELLED: Int = 5
 
+        /**
+         * GeoChat receipt kind, set on [TakPacketV2Data.Payload.Chat.receiptType].
+         * Distinguishes a regular chat message from a delivery / read receipt.
+         */
         public const val RECEIPT_TYPE_NONE: Int = 0
+
+        /** Delivered receipt (`b-t-f-d`). */
         public const val RECEIPT_TYPE_DELIVERED: Int = 1
+
+        /** Read receipt (`b-t-f-r`). */
         public const val RECEIPT_TYPE_READ: Int = 2
 
         private val routeMethodMap = mapOf(

@@ -4,6 +4,20 @@ Shared libraries for converting ATAK Cursor-on-Target (CoT) XML to Meshtastic's 
 
 This SDK is the single source of truth for CoT conversion and compression across all Meshtastic client platforms. Each language implementation produces interoperable compressed payloads, validated by 47 shared test fixtures and 1,000+ cross-platform tests.
 
+## Documentation
+
+📚 **Browse the full API reference at [meshtastic.github.io/TAKPacket-SDK](https://meshtastic.github.io/TAKPacket-SDK/)** — generated per language from the in-source doc comments (Dokka, DocC, TypeDoc, pdoc, DocFX).
+
+| | Getting started | API reference |
+|---|---|---|
+| **Kotlin / KMP** | [kotlin/README.md](kotlin/README.md) | [Dokka](https://meshtastic.github.io/TAKPacket-SDK/kotlin/) |
+| **Swift** | [swift/README.md](swift/README.md) | [DocC](https://meshtastic.github.io/TAKPacket-SDK/swift/documentation/meshtastictak/) |
+| **Python** | [python/README.md](python/README.md) | [pdoc](https://meshtastic.github.io/TAKPacket-SDK/python/) |
+| **TypeScript** | [typescript/README.md](typescript/README.md) | [TypeDoc](https://meshtastic.github.io/TAKPacket-SDK/typescript/) |
+| **C# / .NET** | [csharp/README.md](csharp/README.md) | [DocFX](https://meshtastic.github.io/TAKPacket-SDK/csharp/) |
+
+For the wire contract see [WIRE_FORMAT.md](WIRE_FORMAT.md); to build, test, and release see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Architecture
 
 ```mermaid
@@ -931,6 +945,8 @@ var cotXml = builder.Build(received);
 ```
 
 ## API Reference
+
+📚 Browse the full generated API reference for each language at **[meshtastic.github.io/TAKPacket-SDK](https://meshtastic.github.io/TAKPacket-SDK/)**.
 
 Each platform implements the same components with identical behavior:
 

@@ -226,6 +226,48 @@ function makeGeoPoint(latDeltaI: number, lonDeltaI: number): CotGeoPoint {
   return gp;
 }
 
+/**
+ * Parse a CoT XML event string into a {@link TAKPacketV2} data object.
+ *
+ * Reads the `<event>` envelope (type, how, point, time/stale, contact, group,
+ * status, track, takv, precisionlocation, uid) plus the `<detail>` children,
+ * and classifies the event into at most one payload variant — chat, aircraft,
+ * drawn shape, marker, range-and-bearing, route, casevac, emergency, task, or
+ * TAKTALK message/room. An event with no recognized payload (and an `a-f-*`
+ * type) yields an implicit PLI: a packet with no payload variant set. Optional
+ * top-level annotations (`environment`, `sensorFov`, `marti` directed-routing
+ * recipients) attach to any event type.
+ *
+ * @remarks
+ * Field values are converted to the protobuf wire units: `latitudeI`/
+ * `longitudeI` are degrees×1e7 (clamped to ±90/±180 before scaling), `altitude`
+ * is meters HAE (may be negative), `speed` is cm/s, `course` is degrees×100,
+ * and shape radii / ranges are centimeters. ATAK's `speed="-1.0"` stationary
+ * sentinel is clamped to 0 because the proto fields are unsigned. Default TAK
+ * endpoints (`*:-1:stcp`, `0.0.0.0:4242:tcp`) are normalized to empty to save
+ * wire bytes. Unknown CoT types are carried as `cotTypeStr` so they round-trip.
+ *
+ * For XXE safety the parser rejects any input containing a `<!DOCTYPE` or
+ * `<!ENTITY>` declaration and does not process entities.
+ *
+ * @param cotXml - A CoT XML event string (the document must contain an
+ *                 `<event>` element).
+ * @returns The parsed packet, with proto3 zero-value fields elided.
+ * @throws If the XML contains a DOCTYPE/ENTITY declaration, or no `<event>`
+ *         element is present.
+ *
+ * @example
+ * ```ts
+ * import { parseCotXml, buildCotXml } from "@meshtastic/takpacket-sdk";
+ *
+ * const packet = parseCotXml(`<event version="2.0" uid="ALPHA-1" type="a-f-G-U-C" how="m-g"
+ *   time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z" stale="2026-03-15T14:22:55Z">
+ *   <point lat="38.8895" lon="-77.0353" hae="-22" ce="4.9" le="9999999"/>
+ *   <detail><contact callsign="ALPHA-1"/></detail></event>`);
+ * // packet.latitudeI === 388895000; no payload variant set → implicit PLI
+ * const roundTrip = buildCotXml(packet);
+ * ```
+ */
 export function parseCotXml(cotXml: string): TAKPacketV2 {
   // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion
   const lower = cotXml.toLowerCase();

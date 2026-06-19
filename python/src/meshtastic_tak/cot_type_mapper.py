@@ -244,28 +244,103 @@ _HOW_TO_STRING = {v: k for k, v in _STRING_TO_HOW.items()}
 
 
 class CotTypeMapper:
+    """Bidirectional CoT type/how mapping plus aircraft classification.
+
+    Translates CoT type strings (e.g. ``"a-f-G-U-C"``) and CoT ``how`` strings
+    (e.g. ``"m-g"``) to/from their compact ``CotType`` / ``CotHow`` enum tags,
+    and classifies a CoT type as aircraft or not. All methods are static; the
+    class is a stateless namespace mirroring the equivalent on every other
+    binding.
+    """
+
     @staticmethod
     def type_to_enum(cot_type_string: str) -> int:
+        """Map a CoT type string to its ``CotType`` enum tag.
+
+        Args:
+            cot_type_string: The full CoT type, e.g. ``"a-f-G-U-C"``.
+
+        Returns:
+            The matching ``COTTYPE_*`` enum value, or :data:`COTTYPE_OTHER`
+            (0) when the type is unknown. On the wire, a ``COTTYPE_OTHER``
+            tag is paired with the original string in ``cot_type_str``
+            (field 23) so unknown/forward-version types round-trip losslessly
+            (see the module docstring).
+        """
         return _STRING_TO_TYPE.get(cot_type_string, COTTYPE_OTHER)
 
     @staticmethod
     def type_to_string(cot_type_id: int) -> str | None:
+        """Map a ``CotType`` enum tag back to its CoT type string.
+
+        Args:
+            cot_type_id: A ``COTTYPE_*`` enum value.
+
+        Returns:
+            The CoT type string, or ``None`` if the tag is not in the known
+            mapping (including :data:`COTTYPE_OTHER`, where the caller should
+            fall back to the carried ``cot_type_str`` field).
+        """
         return _TYPE_TO_STRING.get(cot_type_id)
 
     @staticmethod
     def how_to_enum(how_string: str) -> int:
+        """Map a CoT ``how`` string to its ``CotHow`` enum tag.
+
+        Args:
+            how_string: The CoT ``how`` attribute value, e.g. ``"m-g"``.
+
+        Returns:
+            The matching ``COTHOW_*`` enum value, or
+            :data:`COTHOW_UNSPECIFIED` (0) when the value is unknown or empty.
+        """
         return _STRING_TO_HOW.get(how_string, COTHOW_UNSPECIFIED)
 
     @staticmethod
     def how_to_string(how_id: int) -> str | None:
+        """Map a ``CotHow`` enum tag back to its CoT ``how`` string.
+
+        Args:
+            how_id: A ``COTHOW_*`` enum value.
+
+        Returns:
+            The CoT ``how`` string, or ``None`` if the tag is unknown
+            (including :data:`COTHOW_UNSPECIFIED`).
+        """
         return _HOW_TO_STRING.get(how_id)
 
     @staticmethod
     def is_aircraft(cot_type_id: int) -> bool:
+        """Report whether a known ``CotType`` enum tag denotes an aircraft.
+
+        Resolves the tag to its CoT type string, then applies the same
+        3rd-atom test as :meth:`is_aircraft_string`. Used to pick the aircraft
+        zstd dictionary (dict ID 1) for matching packets.
+
+        Args:
+            cot_type_id: A ``COTTYPE_*`` enum value.
+
+        Returns:
+            ``True`` if the type's 3rd atom is ``"A"`` (aircraft); ``False``
+            for non-aircraft types and for unknown tags (which have no string).
+        """
         s = _TYPE_TO_STRING.get(cot_type_id)
         return CotTypeMapper.is_aircraft_string(s) if s else False
 
     @staticmethod
     def is_aircraft_string(cot_type_string: str) -> bool:
+        """Report whether a CoT type string denotes an aircraft.
+
+        A CoT type is aircraft when its 3rd dash-delimited atom is ``"A"``
+        (e.g. ``"a-n-A-C-F"``). This is the canonical aircraft test and works
+        even for types unknown to the enum, so it can classify the carried
+        ``cot_type_str`` of a forward-version packet.
+
+        Args:
+            cot_type_string: The full CoT type, e.g. ``"a-n-A-C-F"``.
+
+        Returns:
+            ``True`` if the type has at least 3 atoms and the 3rd is ``"A"``.
+        """
         atoms = cot_type_string.split("-")
         return len(atoms) >= 3 and atoms[2] == "A"

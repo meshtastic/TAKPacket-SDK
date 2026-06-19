@@ -1,11 +1,42 @@
 import Foundation
 import CZstd
 
-/// Compresses TAKPacketV2 protobuf bytes using zstd with pre-trained dictionaries.
+/// Compresses ``TAKPacketV2`` protobuf bytes into the LoRa wire payload and back,
+/// using zstd with the pre-trained dictionaries from ``DictionaryProvider``.
 ///
-/// Wire format: [1 byte flags][zstd-compressed protobuf bytes]
-/// Flags byte bits 0-5 = dictionary ID, bits 6-7 = reserved.
-/// Special value 0xFF = uncompressed raw protobuf.
+/// ## Wire format
+/// `[1 byte flags][zstd-compressed protobuf body]`, total ≤ 237 bytes (the LoRa
+/// MTU). In the flags byte, bits 0–5 are the dictionary ID and bits 6–7 are
+/// reserved (zeroed on send, masked off on receive). The sentinel value `0xFF`
+/// means the body is raw, uncompressed protobuf.
+///
+/// ## Encode pipeline
+/// `compress(_:)` serializes the packet, selects the dictionary from the CoT
+/// type, zstd-compresses with `dictID`/`contentSize`/`checksum` all disabled,
+/// then strips the 4-byte zstd magic (`28 B5 2F FD`). A **skip-compress** guard
+/// emits `[0xFF][raw protobuf]` whenever the raw bytes are no larger than the
+/// compressed body, so tiny or incompressible packets never expand on the wire.
+/// `decompress(_:)` reverses this: re-prepend the magic, decompress, and reject
+/// anything over 4096 bytes (a decompression-bomb guard).
+///
+/// ## Resilience invariant
+/// Every frame is independently decodable from its own bytes plus the static
+/// shipped dictionary — there is zero cross-packet state. Only zstd's one-shot
+/// API is used (never the streaming API), so a lost LoRa packet never affects
+/// any other.
+///
+/// ## Topics
+/// ### Creating a compressor
+/// - ``init(compressionLevel:)``
+/// ### Encoding and decoding
+/// - ``compress(_:)``
+/// - ``decompress(_:)``
+/// ### MTU-aware encoding
+/// - ``compressWithRemarksFallback(_:maxWireBytes:)``
+/// - ``compressWithRemarksFallbackDetailed(_:maxWireBytes:)``
+/// - ``RemarksFallbackResult``
+/// ### Reporting
+/// - ``compressWithStats(_:)``
 public class TakCompressor {
 
     /// Maximum allowed decompressed payload size (bytes). Prevents decompression bombs.
@@ -23,11 +54,32 @@ public class TakCompressor {
 
     private let compressionLevel: Int32
 
+    /// Create a compressor.
+    ///
+    /// - Parameter compressionLevel: The zstd compression level. Defaults to
+    ///   `19` (zstd maximum), which is what the SDK uses on the wire and what
+    ///   the golden fixtures are generated with.
     public init(compressionLevel: Int32 = 19) {
         self.compressionLevel = compressionLevel
     }
 
-    /// Compress a TAKPacketV2 into wire payload: [flags byte][zstd compressed protobuf]
+    /// Compress a ``TAKPacketV2`` into a wire payload — `[flags byte][zstd body]`,
+    /// or `[0xFF][raw protobuf]` when compression doesn't pay.
+    ///
+    /// Serializes the packet, selects the dictionary from its CoT type (via
+    /// ``DictionaryProvider/selectDictId(cotTypeId:cotTypeStr:)``), compresses
+    /// with the redundant frame fields disabled and the zstd magic stripped, and
+    /// applies the skip-compress guard. The returned payload is not checked
+    /// against the 237-byte MTU — use ``compressWithRemarksFallback(_:maxWireBytes:)``
+    /// when you need to enforce the limit.
+    ///
+    /// - Parameter packet: The packet to encode.
+    /// - Returns: The wire payload bytes.
+    /// - Throws: ``TakCompressorError/noDictionary(_:)`` if the selected
+    ///   dictionary is unavailable, ``TakCompressorError/dictCreationFailed`` if
+    ///   the dictionary fails to load, or ``TakCompressorError/compressionFailed(_:)``
+    ///   on a zstd error or unexpected frame header. May also rethrow a protobuf
+    ///   serialization error.
     public func compress(_ packet: TAKPacketV2) throws -> Data {
         let protobufBytes = try packet.serializedData()
         let dictId = DictionaryProvider.selectDictId(
@@ -56,7 +108,23 @@ public class TakCompressor {
         return wirePayload
     }
 
-    /// Decompress wire payload back to TAKPacketV2.
+    /// Decompress a wire payload back into a ``TAKPacketV2``.
+    ///
+    /// Reads the flags byte: `0xFF` means the remaining bytes are raw protobuf;
+    /// otherwise bits 0–5 select the dictionary, the 4-byte zstd magic is
+    /// re-prepended, and the body is decompressed. The decompressed size is
+    /// capped at 4096 bytes as a decompression-bomb guard. Each payload is
+    /// decoded purely from its own bytes plus the static dictionary.
+    ///
+    /// - Parameter wirePayload: The received wire bytes (flags byte + body).
+    /// - Returns: The decoded packet.
+    /// - Throws: ``TakCompressorError/payloadTooShort(_:)`` for payloads under
+    ///   2 bytes, ``TakCompressorError/unknownDictionary(_:)`` for an
+    ///   unrecognized dictionary ID, ``TakCompressorError/dictCreationFailed``
+    ///   if the dictionary fails to load, or
+    ///   ``TakCompressorError/decompressionFailed(_:)`` on a zstd error or when
+    ///   the decompressed size exceeds the 4096-byte limit. May also rethrow a
+    ///   protobuf parse error.
     public func decompress(_ wirePayload: Data) throws -> TAKPacketV2 {
         guard wirePayload.count >= 2 else {
             throw TakCompressorError.payloadTooShort(wirePayload.count)
@@ -142,14 +210,31 @@ public class TakCompressor {
     ///   before compressing — either successfully (`wirePayload` is non-nil)
     ///   or unsuccessfully (`wirePayload` is nil).
     public struct RemarksFallbackResult: Equatable {
+        /// The compressed wire bytes that fit within the limit, or `nil` if the
+        /// caller should drop the packet because even the stripped form was too
+        /// big.
         public let wirePayload: Data?
+        /// `true` if this call cleared the remarks field before compressing —
+        /// whether or not the result ultimately fit (see the outcome table on
+        /// ``compressWithRemarksFallbackDetailed(_:maxWireBytes:)``).
         public let remarksStripped: Bool
 
         /// Did this call produce a sendable wire payload?
         public var fits: Bool { wirePayload != nil }
     }
 
-    /// Compress and return stats for reporting.
+    /// Compress a packet and return a ``CompressionResult`` carrying the sizes,
+    /// the dictionary actually used, and the wire payload — for compression
+    /// reporting and metrics.
+    ///
+    /// The reported `dictId` reflects the mode actually emitted (it is `0xFF`
+    /// when the skip-compress path sent raw protobuf), not the dictionary that
+    /// would have been chosen for compression.
+    ///
+    /// - Parameter packet: The packet to encode.
+    /// - Returns: A ``CompressionResult`` with the uncompressed protobuf size,
+    ///   the wire size, the emitted dictionary ID, and the wire payload.
+    /// - Throws: The same errors as ``compress(_:)``.
     public func compressWithStats(_ packet: TAKPacketV2) throws -> CompressionResult {
         let protobufBytes = try packet.serializedData()
         let wirePayload = try compress(packet)
@@ -250,12 +335,21 @@ public class TakCompressor {
     }
 }
 
+/// Size and dictionary statistics for a single ``TakCompressor/compressWithStats(_:)``
+/// call, used for compression reporting.
 public struct CompressionResult {
+    /// Size in bytes of the uncompressed serialized ``TAKPacketV2`` protobuf.
     public let protobufSize: Int
+    /// Size in bytes of the emitted wire payload (flags byte + body).
     public let compressedSize: Int
+    /// The dictionary ID actually emitted: `0` (non-aircraft), `1` (aircraft),
+    /// or `0xFF` (uncompressed, via the skip-compress path).
     public let dictId: Int
+    /// The emitted wire payload bytes.
     public let wirePayload: Data
 
+    /// A human-readable name for ``dictId``: `"non-aircraft"`, `"aircraft"`,
+    /// `"uncompressed"`, or `"unknown"`.
     public var dictName: String {
         switch dictId {
         case DictionaryProvider.DICT_ID_NON_AIRCRAFT: return "non-aircraft"
@@ -266,11 +360,23 @@ public struct CompressionResult {
     }
 }
 
+/// Errors thrown by ``TakCompressor`` during encode and decode.
 public enum TakCompressorError: Error {
+    /// No dictionary is available for the ID selected during ``TakCompressor/compress(_:)``.
+    /// The associated value is the dictionary ID.
     case noDictionary(Int)
+    /// The received flags byte selected a dictionary ID that isn't recognized.
+    /// The associated value is the offending ID.
     case unknownDictionary(Int)
+    /// The received wire payload was shorter than the 2-byte minimum. The
+    /// associated value is the actual byte count.
     case payloadTooShort(Int)
+    /// A zstd dictionary handle could not be created from the dictionary bytes.
     case dictCreationFailed
+    /// zstd compression failed, or the produced frame did not begin with the
+    /// expected magic number. The associated value is the underlying message.
     case compressionFailed(String)
+    /// zstd decompression failed, or the decompressed size exceeded the
+    /// 4096-byte limit. The associated value is the underlying message.
     case decompressionFailed(String)
 }

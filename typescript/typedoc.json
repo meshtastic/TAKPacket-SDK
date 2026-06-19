@@ -1,0 +1,15 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs",
+  "readme": "README.md",
+  "name": "TAKPacket-SDK — TypeScript",
+  "includeVersion": true,
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "excludeExternals": true,
+  "githubPages": false,
+  "navigationLinks": {
+    "GitHub": "https://github.com/meshtastic/TAKPacket-SDK"
+  }
+}
