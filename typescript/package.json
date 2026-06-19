@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docs": "typedoc"
   },
   "dependencies": {
     "fast-xml-parser": "^5.5.10",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "typedoc": "^0.28.0",
     "typescript": "^6.0.0",
     "vitest": "^4.0.0"
   }

@@ -1,10 +1,55 @@
 package org.meshtastic.tak
 
 /**
- * Platform-agnostic data class representing a TAKPacketV2.
- * This is the SDK's internal representation, decoupled from any specific
- * protobuf library. Each platform serializes/deserializes this to protobuf
- * wire format using its native protobuf library.
+ * Platform-agnostic data model for a `TAKPacketV2` — the SDK's internal
+ * representation, decoupled from any specific protobuf library.
+ *
+ * The parser ([CotXmlParser]) produces it from CoT XML; the builder
+ * ([CotXmlBuilder]) renders it back; [TakPacketV2Serializer] converts it
+ * to/from protobuf wire bytes (each platform uses its native protobuf library).
+ *
+ * Shape: 26 envelope fields (the always-present scalars below) plus a single
+ * [payload] of type [Payload] (a sealed hierarchy with one variant per `oneof`
+ * arm). Two optional top-level annotations — [environment] and [sensorFov] —
+ * attach to any payload variant. **PLI is implicit:** there is no `bool pli`
+ * field; a packet whose [payload] is [Payload.None] (modeled here as
+ * [Payload.Pli]) and whose [cotTypeId] is an `a-f-*` friendly type IS a PLI
+ * position report.
+ *
+ * All numeric fields carry the wire units documented per-property below
+ * (degrees×1e7 coordinates, cm/s speed, degrees×100 course, meters-HAE
+ * altitude); the data model stores already-converted integers, not floats.
+ *
+ * @property cotTypeId well-known CoT type as a `CotType` enum int (see
+ *   [CotTypeMapper]); [CotTypeMapper.COTTYPE_OTHER] when the type is unknown.
+ * @property cotTypeStr raw CoT type string, set only when [cotTypeId] is
+ *   [CotTypeMapper.COTTYPE_OTHER] so unknown types round-trip losslessly; `null` otherwise.
+ * @property how coordinate-generation method as a `CotHow` enum int (see [CotTypeMapper]).
+ * @property callsign the unit / operator callsign.
+ * @property team `Team` palette enum value (1..14; see [AtakPalette]), 0 = unspecified.
+ * @property role `MemberRole` enum value, 0 = unspecified.
+ * @property latitudeI latitude in degrees × 1e7 (sfixed32 wire convention).
+ * @property longitudeI longitude in degrees × 1e7 (sfixed32 wire convention).
+ * @property altitude altitude in meters HAE (height above ellipsoid); may be negative.
+ * @property speed ground speed in cm/s (ATAK m/s × 100); clamped to ≥ 0.
+ * @property course course over ground in degrees × 100 (0..36000); clamped to ≥ 0.
+ * @property battery battery charge, 0–100 percent (0 = not reported).
+ * @property geoSrc position source as a `GeoPointSource` enum int
+ *   (see the `GEOSRC_*` constants in [CotXmlParser]).
+ * @property altSrc altitude source as a `GeoPointSource` enum int.
+ * @property uid the CoT event UID (kept as a string — never packed to raw bytes).
+ * @property deviceCallsign device identifier from `<uid Droid="…"/>`.
+ * @property staleSeconds seconds from the event's `time` to its `stale`
+ *   timestamp; the builder floors this at 45 s on emit.
+ * @property takVersion TAK client version string.
+ * @property takDevice TAK device model string.
+ * @property takPlatform TAK platform (`ATAK-CIV`, `iTAK`, `WinTAK`).
+ * @property takOs TAK client OS string.
+ * @property endpoint contact endpoint; not carried over the mesh (normalized to
+ *   empty on parse, defaulted to the TAK server-reply form on build).
+ * @property phone contact phone number.
+ * @property remarks optional free-text `<remarks>` for non-chat payload types;
+ *   stripped by [TakCompressor.compressWithRemarksFallback] when over MTU.
  */
 public data class TakPacketV2Data(
     val cotTypeId: Int = CotTypeMapper.COTTYPE_OTHER,
@@ -106,26 +151,71 @@ public data class TakPacketV2Data(
         /** Free-form device model identifier ("FLIR-Boson-640"). `null` = unknown. */
         val model: String? = null,
     ) {
-        /** Coarse sensor category inferred from `model` when the source XML doesn't label it. */
+        /**
+         * Coarse sensor category inferred from `model` when the source XML
+         * doesn't label it.
+         *
+         * @property value the wire enum int carried in the proto `SensorFov` message.
+         */
         public enum class SensorType(public val value: Int) {
+            /** Category unknown / not set. */
             Unspecified(0),
+
+            /** Electro-optical camera. */
             Camera(1),
+
+            /** Thermal / IR imager (FLIR, Boson, …). */
             Thermal(2),
+
+            /** Laser range finder / designator. */
             Laser(3),
+
+            /** Night-vision device. */
             Nvg(4),
+
+            /** Radio-frequency / radar sensor. */
             Rf(5),
+
+            /** Some other sensor type. */
             Other(6),
             ;
 
             public companion object {
+                /**
+                 * Map a wire enum int back to a [SensorType], defaulting to
+                 * [Unspecified] for any unknown value (forward-compatible).
+                 */
                 public fun fromValue(value: Int): SensorType =
                     entries.firstOrNull { it.value == value } ?: Unspecified
             }
         }
     }
 
+    /**
+     * The packet's payload variant — the SDK-side model of the `TAKPacketV2`
+     * `payload_variant` oneof. Exactly one subtype is present per packet.
+     *
+     * [None] and [Pli] both mean "no typed payload": a position report. PLI is
+     * implicit on the wire (there is no `bool pli` field), so the serializer
+     * emits no oneof arm for either; [Pli] exists only so the parser can flag a
+     * deliberate position/delete report distinctly from a default-constructed
+     * packet.
+     */
     public sealed class Payload {
+        /** No payload variant. Serializes to an empty oneof — an implicit PLI. */
         public object None : Payload()
+
+        /**
+         * An explicit position-location-information report.
+         *
+         * Modeled separately from [None] for parser clarity, but identical on
+         * the wire: PLI is implicit (no `bool pli` arm), so this serializes to
+         * an empty oneof. The parser emits it for plain `a-f-*` position reports
+         * and for delete events.
+         *
+         * @property value retained for source compatibility; always `true` and
+         *   not encoded on the wire.
+         */
         public data class Pli(val value: Boolean = true) : Payload()
         /**
          * ATAK GeoChat message — both regular chat (b-t-f) and delivered /
@@ -134,8 +224,11 @@ public data class TakPacketV2Data(
          * outbound message's event UID.
          */
         public data class Chat(
+            /** The chat message body. Empty for receipt-only events. */
             val message: String = "",
+            /** Destination chatroom / group id, or `null` for "All Chat Rooms" (broadcast). */
             val to: String? = null,
+            /** Sender's callsign as carried in `__chat[senderCallsign]`; `null` if absent. */
             val toCallsign: String? = null,
             /** UID of the chat message this event is acknowledging. */
             val receiptForUid: String = "",
@@ -170,8 +263,11 @@ public data class TakPacketV2Data(
          * envelope plus a from_voice marker for receiver UX.
          */
         public data class TakTalk(
+            /** Message text envelope (the spoken/typed content). */
             val text: String = "",
+            /** TAKTALK room UUID this message belongs to. Empty = direct/unscoped. */
             val chatroomId: String = "",
+            /** Language tag of the message (e.g. "English"). Empty = unspecified. */
             val lang: String = "",
             /** True when the source CoT had a `<voice/>` marker (speech-to-text origin). */
             val fromVoice: Boolean = false,
@@ -197,21 +293,49 @@ public data class TakPacketV2Data(
                     "Field will be removed in v0.4.x.",
             )
             val senderCallsign: String = "",
+            /** Room UUID being broadcast. */
             val roomId: String = "",
+            /** Human-friendly room name for display. */
             val roomName: String = "",
+            /** Current member callsigns in the room. */
             val participants: List<String> = emptyList(),
         ) : Payload()
+
+        /**
+         * ADS-B / military air track. Maps to the `AircraftTrack` protobuf
+         * message (payload_variant tag 32). The structured fields are
+         * synthesized into a `<remarks>` line on rebuild when no `<_aircot_>`
+         * element fits.
+         */
         public data class Aircraft(
+            /** 6-hex-digit ICAO 24-bit address (e.g. "A1B2C3"). */
             val icao: String = "",
+            /** Tail / registration (e.g. "N12345"). */
             val registration: String = "",
+            /** Flight number / callsign (e.g. "UAL123"). */
             val flight: String = "",
+            /** Aircraft type designator (e.g. "B738"). */
             val aircraftType: String = "",
+            /** Transponder squawk code (0 = not reported). */
             val squawk: Int = 0,
+            /** ADS-B emitter category string. */
             val category: String = "",
+            /** Receiver RSSI in dBm × 10 (e.g. -85 dBm → -850); 0 = not reported. */
             val rssiX10: Int = 0,
+            /** True if the track has a valid GPS fix. */
             val gps: Boolean = false,
+            /** UID of the receiving CoT host (sensor gateway). */
             val cotHostId: String = "",
         ) : Payload()
+
+        /**
+         * Raw `<detail>` bytes shipped verbatim — the fallback for callers
+         * building packets directly with detail content the structured parser
+         * doesn't model. Maps to `bytes raw_detail` (payload_variant tag 33).
+         * [CotXmlBuilder] re-emits [bytes] inside `<detail>…</detail>` unchanged.
+         *
+         * @property bytes the exact UTF-8 bytes between the `<detail>` tags.
+         */
         public data class RawDetail(val bytes: ByteArray) : Payload() {
             override fun equals(other: Any?): Boolean =
                 other is RawDetail && bytes.contentEquals(other.bytes)
@@ -228,6 +352,9 @@ public data class TakPacketV2Data(
          * Compact vertex used by polyline / polygon / rectangle shapes. Stored
          * at the SDK level as `Int` pairs to match the 1e7-scaled coordinate
          * convention used by TakPacketV2Data.latitudeI / longitudeI.
+         *
+         * @property latI latitude in degrees × 1e7.
+         * @property lonI longitude in degrees × 1e7.
          */
         public data class Vertex(val latI: Int, val lonI: Int)
 
@@ -249,27 +376,35 @@ public data class TakPacketV2Data(
              *   3 = StrokeAndFill
              */
             val style: Int = 0,
+            /** Major axis / circle radius in centimeters (ATAK meters × 100). */
             val majorCm: Int = 0,
+            /** Minor axis in centimeters (ellipses); 0 for circles. */
             val minorCm: Int = 0,
+            /** Ellipse rotation in whole degrees; 360 = unrotated default. */
             val angleDeg: Int = 360,
             /** Team enum value, or AtakPalette.UNSPECIFIED if not in palette. */
             val strokeColor: Int = 0,
             /** Exact 32-bit ARGB bit pattern (always set by the parser). */
             val strokeArgb: Int = 0,
+            /** Stroke (outline) weight × 10 (e.g. 3.0 px → 30). */
             val strokeWeightX10: Int = 0,
             /** Team enum value; AtakPalette.UNSPECIFIED for custom fill. */
             val fillColor: Int = 0,
+            /** Exact 32-bit ARGB fill bit pattern. */
             val fillArgb: Int = 0,
+            /** Whether shape labels are shown on the map. */
             val labelsOn: Boolean = false,
             /** Capped at MAX_VERTICES in the parser; sender sets [truncated] when exceeded. */
             val vertices: List<Vertex> = emptyList(),
             val truncated: Boolean = false,
             // --- Bullseye-only fields (ignored unless kind == Kind_Bullseye) ---
+            /** Range-ring spacing in decimeters (ATAK meters × 10). */
             val bullseyeDistanceDm: Int = 0,
             /** 0 unset, 1 Magnetic, 2 True, 3 Grid. */
             val bullseyeBearingRef: Int = 0,
             /** bit0 rangeRingVisible, bit1 hasRangeRings, bit2 edgeToCenter, bit3 mils. */
             val bullseyeFlags: Int = 0,
+            /** UID this bullseye references for relative bearing, if any. */
             val bullseyeUidRef: String = "",
         ) : Payload()
 
@@ -278,14 +413,21 @@ public data class TakPacketV2Data(
          * Maps to the `Marker` protobuf message at payload_variant tag 35.
          */
         public data class Marker(
-            /** One of Marker.Kind values in atak.proto (1..7). */
+            /** One of the `MARKER_KIND_*` constants in [CotXmlParser]. */
             val kind: Int = 0,
+            /** Team palette enum value, or AtakPalette.UNSPECIFIED for a custom color. */
             val color: Int = 0,
+            /** Exact 32-bit ARGB bit pattern (always set by the parser). */
             val colorArgb: Int = 0,
+            /** Readiness flag from `<status readiness="true"/>`. */
             val readiness: Boolean = false,
+            /** UID of the parent map item this marker links to. */
             val parentUid: String = "",
+            /** CoT type of the parent item. */
             val parentType: String = "",
+            /** Callsign of the parent item. */
             val parentCallsign: String = "",
+            /** Icon set path (e.g. `COT_MAPPING_2525B/…`); empty for built-in markers. */
             val iconset: String = "",
         ) : Payload()
 
@@ -295,15 +437,21 @@ public data class TakPacketV2Data(
          * a delta from the event point.
          */
         public data class RangeAndBearing(
+            /** Anchor endpoint latitude in degrees × 1e7 (absolute, not a delta). */
             val anchorLatI: Int = 0,
+            /** Anchor endpoint longitude in degrees × 1e7 (absolute, not a delta). */
             val anchorLonI: Int = 0,
+            /** UID of the anchor map item, if the line is anchored to one. */
             val anchorUid: String = "",
             /** Range in centimeters. */
             val rangeCm: Int = 0,
             /** Bearing in degrees * 100 (0..36000). */
             val bearingCdeg: Int = 0,
+            /** Team palette enum value, or AtakPalette.UNSPECIFIED for a custom color. */
             val strokeColor: Int = 0,
+            /** Exact 32-bit ARGB stroke bit pattern. */
             val strokeArgb: Int = 0,
+            /** Stroke weight × 10 (e.g. 3.0 px → 30). */
             val strokeWeightX10: Int = 0,
         ) : Payload()
 
@@ -319,18 +467,30 @@ public data class TakPacketV2Data(
             val method: Int = 0,
             /** Direction: 0 unspec, 1 Infil, 2 Exfil. */
             val direction: Int = 0,
+            /** Waypoint-label prefix (e.g. "CP" → CP1, CP2, …). */
             val prefix: String = "",
+            /** Route line weight × 10 (e.g. 3.0 px → 30). */
             val strokeWeightX10: Int = 0,
+            /** Ordered route waypoints / control points (capped at MAX_ROUTE_LINKS). */
             val links: List<Link> = emptyList(),
+            /** True if links were dropped because the route exceeded MAX_ROUTE_LINKS. */
             val truncated: Boolean = false,
         ) : Payload() {
-            /** Route waypoint or control point. */
+            /**
+             * One route waypoint or control point.
+             *
+             * @property latI latitude in degrees × 1e7.
+             * @property lonI longitude in degrees × 1e7.
+             * @property uid the point's UID (a deterministic one is generated on
+             *   build when empty).
+             * @property callsign the point's display callsign.
+             * @property linkType 0 = waypoint (`b-m-p-w`), 1 = checkpoint (`b-m-p-c`).
+             */
             public data class Link(
                 val latI: Int = 0,
                 val lonI: Int = 0,
                 val uid: String = "",
                 val callsign: String = "",
-                /** 0 = waypoint (b-m-p-w), 1 = checkpoint (b-m-p-c). */
                 val linkType: Int = 0,
             )
         }

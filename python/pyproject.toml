@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "meshtastic-tak"
 version = "0.7.0"
 description = "CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic"
+readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "GPL-3.0-or-later"}
 dependencies = [
@@ -17,6 +18,8 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "build",
+    # API documentation generator (HTML, from docstrings). `pdoc meshtastic_tak`.
+    "pdoc>=14.0",
 ]
 
 [project.urls]

@@ -64,6 +64,14 @@ dist/
 # Test outputs (generated, not committed except compression-report.md)
 **/test-reports/
 
+# Generated API documentation (built by the docs.yml workflow / local doc commands).
+# Kotlin Dokka HTML lives under kotlin/build/ (already ignored above).
+typescript/docs/
+python/docs/
+csharp/_site/
+csharp/api/*.yml
+csharp/api/.manifest
+
 # Zstd training corpus (regenerated locally by DictionaryTrainingTest;
 # canonical copy lives in the TAKPacket-ZTSD repo)
 testdata/training_corpus/

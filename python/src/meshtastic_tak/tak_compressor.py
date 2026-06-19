@@ -22,6 +22,19 @@ _ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
 
 @dataclass
 class CompressionResult:
+    """Stats and bytes from :meth:`TakCompressor.compress_with_stats`.
+
+    :ivar protobuf_size: Size in bytes of the serialized ``TAKPacketV2``
+        protobuf before compression.
+    :ivar compressed_size: Size in bytes of the full wire payload (the flags
+        byte plus the body).
+    :ivar dict_id: The dictionary ID actually emitted in the flags byte —
+        0/1 for a dictionary-compressed payload, or
+        :data:`DICT_ID_UNCOMPRESSED` (``0xFF``) when the skip-compress path
+        emitted raw protobuf.
+    :ivar wire_payload: The full ``[flags][body]`` wire payload bytes.
+    """
+
     protobuf_size: int
     compressed_size: int
     dict_id: int
@@ -29,6 +42,12 @@ class CompressionResult:
 
     @property
     def dict_name(self) -> str:
+        """Human-readable name of the emitted mode for reporting.
+
+        Returns:
+            ``"non-aircraft"``, ``"aircraft"``, ``"uncompressed"``, or
+            ``"unknown"`` for an unrecognized :attr:`dict_id`.
+        """
         if self.dict_id == DICT_ID_NON_AIRCRAFT:
             return "non-aircraft"
         elif self.dict_id == DICT_ID_AIRCRAFT:
@@ -72,7 +91,38 @@ class RemarksFallbackResult:
 
 
 class TakCompressor:
+    """Compresses ``TAKPacketV2`` to/from the LoRa wire payload.
+
+    Produces the ``[1 byte flags][zstd body]`` wire payload and reverses it.
+    Bits 0-5 of the flags byte carry the dictionary ID; ``0xFF`` marks an
+    uncompressed raw-protobuf payload. The 4-byte zstd frame magic is stripped
+    on compress and re-prepended on decompress (see :data:`_ZSTD_MAGIC`), so
+    the on-wire body carries no magic number.
+
+    Resilience invariant: each packet is one independent zstd frame using the
+    static shipped dictionary, produced/consumed only via the one-shot
+    compress/decompress API — never the streaming API. There is no cross-packet
+    state, so any packet decodes from its own bytes alone. The per-dictionary
+    compressor/decompressor objects are reused only as a performance
+    optimization; reuse carries no state across frames.
+
+    An instance loads the dictionaries eagerly in :meth:`__init__`; construct
+    one and reuse it for many packets.
+    """
+
     def __init__(self, compression_level: int = 19):
+        """Build a compressor and load the shipped dictionaries.
+
+        Eagerly loads the non-aircraft and aircraft dictionaries and builds a
+        reusable one-shot compressor and decompressor for each. The compressors
+        write frames with the dictionary ID, content size, and checksum fields
+        all OFF — the dictionary ID lives in the SDK's own flags byte and the
+        other two are dead weight on tiny dict-compressed payloads.
+
+        Args:
+            compression_level: zstd compression level; defaults to 19 (the
+                maximum, used for the shipped goldens).
+        """
         self._level = compression_level
         self._dict_data: dict[int, zstandard.ZstdCompressionDict] = {}
         # Reusable one-shot compressors/decompressors per dict. python-zstandard's
@@ -101,7 +151,27 @@ class TakCompressor:
                 self._decompressors[dict_id] = zstandard.ZstdDecompressor(dict_data=zdict)
 
     def compress(self, packet: atak_pb2.TAKPacketV2) -> bytes:
-        """Compress a TAKPacketV2 into wire payload: [flags byte][zstd compressed protobuf]."""
+        """Compress a ``TAKPacketV2`` into a wire payload.
+
+        Serializes the packet, picks the dictionary from its CoT type, and
+        emits ``[1 byte flags][zstd body]`` with the 4-byte frame magic
+        stripped. If compression does not pay (the raw protobuf is no larger
+        than the zstd body), emits the skip-compress form
+        ``[0xFF][raw protobuf]`` instead, so tiny/incompressible packets never
+        expand. Each call produces one independent frame (one-shot, never
+        streaming).
+
+        Args:
+            packet: The packet to compress.
+
+        Returns:
+            The wire payload bytes (flags byte plus body).
+
+        Raises:
+            ValueError: If no dictionary is configured for the selected ID, or
+                if the produced zstd frame does not start with the expected
+                magic (which would break the strip/prepend contract).
+        """
         protobuf_bytes = packet.SerializeToString()
         dict_id = DictionaryProvider.select_dict_id(packet.cot_type_id, packet.cot_type_str or None)
 
@@ -125,7 +195,26 @@ class TakCompressor:
         return bytes([dict_id & 0x3F]) + body
 
     def decompress(self, wire_payload: bytes) -> atak_pb2.TAKPacketV2:
-        """Decompress wire payload back to TAKPacketV2."""
+        """Decompress a wire payload back to a ``TAKPacketV2``.
+
+        Reads the dictionary ID from bits 0-5 of the flags byte (or detects the
+        ``0xFF`` uncompressed form), re-attaches the stripped 4-byte frame magic
+        for the dictionary-compressed case, decompresses with the matching
+        dictionary, and parses the protobuf. Output is capped at
+        :data:`MAX_DECOMPRESSED_SIZE` bytes as a decompression-bomb guard.
+
+        Args:
+            wire_payload: The ``[flags][body]`` wire payload bytes.
+
+        Returns:
+            The decoded ``TAKPacketV2`` message.
+
+        Raises:
+            ValueError: If the payload is shorter than 2 bytes, the dictionary
+                ID is unknown, decompression fails, the decompressed size
+                exceeds :data:`MAX_DECOMPRESSED_SIZE`, or protobuf parsing
+                fails.
+        """
         if len(wire_payload) < 2:
             raise ValueError(f"Wire payload too short: {len(wire_payload)} bytes")
 
@@ -212,7 +301,19 @@ class TakCompressor:
         return RemarksFallbackResult(wire_payload=None, remarks_stripped=True)
 
     def compress_with_stats(self, packet: atak_pb2.TAKPacketV2) -> CompressionResult:
-        """Compress and return stats for reporting."""
+        """Compress a packet and return sizing stats alongside the payload.
+
+        Reports the mode actually emitted from the flags byte, so the
+        skip-compress path is visible as ``DICT_ID_UNCOMPRESSED`` rather than
+        the dictionary that was tried. Used to build the compression report.
+
+        Args:
+            packet: The packet to compress.
+
+        Returns:
+            A :class:`CompressionResult` with the protobuf size, wire size,
+            emitted dictionary ID, and the wire payload.
+        """
         protobuf_bytes = packet.SerializeToString()
         wire_payload = self.compress(packet)
         # Report the ACTUAL emitted mode from the flags byte — skip-compress may

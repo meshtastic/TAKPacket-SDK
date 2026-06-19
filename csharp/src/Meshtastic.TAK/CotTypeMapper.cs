@@ -76,17 +76,63 @@ public static class CotTypeMapper
     private static readonly Dictionary<int, string> HowToStr =
         StringToHow.ToDictionary(kv => kv.Value, kv => kv.Key);
 
+    /// <summary>
+    /// Map a CoT type string (e.g. <c>"a-f-G-U-C"</c>) to its <c>CotType</c> enum ID.
+    /// </summary>
+    /// <param name="s">The CoT type string from the <c>&lt;event type="…"&gt;</c> attribute.</param>
+    /// <returns>The matching enum ID, or <c>0</c> (<c>COTTYPE_OTHER</c>) for any
+    /// unknown type. When 0 is returned, the caller is expected to preserve the
+    /// original string in <c>cot_type_str</c> (field 23) so the type survives
+    /// the round trip — see the class-level forward-compatibility contract.</returns>
     public static int TypeToEnum(string s) => StringToType.GetValueOrDefault(s, 0);
+
+    /// <summary>
+    /// Map a <c>CotType</c> enum ID back to its canonical CoT type string.
+    /// </summary>
+    /// <param name="id">A <c>CotType</c> enum ID.</param>
+    /// <returns>The CoT type string, or <c>null</c> if the ID is not a known type
+    /// (including <c>0</c>/<c>COTTYPE_OTHER</c>, whose string lives in
+    /// <c>cot_type_str</c> instead).</returns>
     public static string? TypeToString(int id) => TypeToStr.GetValueOrDefault(id);
+
+    /// <summary>
+    /// Map a CoT <c>how</c> string (e.g. <c>"m-g"</c>, <c>"h-e"</c>) to its
+    /// <c>CotHow</c> enum ID.
+    /// </summary>
+    /// <param name="s">The CoT <c>how</c> string from the <c>&lt;event how="…"&gt;</c> attribute.</param>
+    /// <returns>The matching enum ID, or <c>0</c> for an unknown/absent value.</returns>
     public static int HowToEnum(string s) => StringToHow.GetValueOrDefault(s, 0);
+
+    /// <summary>
+    /// Map a <c>CotHow</c> enum ID back to its CoT <c>how</c> string.
+    /// </summary>
+    /// <param name="id">A <c>CotHow</c> enum ID.</param>
+    /// <returns>The <c>how</c> string, or <c>null</c> if the ID is unknown.</returns>
     public static string? HowToString(int id) => HowToStr.GetValueOrDefault(id);
 
+    /// <summary>
+    /// Determine whether a CoT type enum ID classifies as an aircraft type.
+    /// </summary>
+    /// <remarks>Resolves the ID to its CoT type string and applies the same
+    /// 3rd-atom rule as <see cref="IsAircraftString(string)"/>. Used to select the
+    /// aircraft compression dictionary (see <see cref="DictionaryProvider.SelectDictId"/>).</remarks>
+    /// <param name="id">A <c>CotType</c> enum ID.</param>
+    /// <returns><c>true</c> if the type is an aircraft type; otherwise <c>false</c>
+    /// (including for unknown IDs).</returns>
     public static bool IsAircraft(int id)
     {
         var s = TypeToString(id);
         return s != null && IsAircraftString(s);
     }
 
+    /// <summary>
+    /// Determine whether a CoT type string classifies as an aircraft type.
+    /// </summary>
+    /// <remarks>The rule is structural: the 3rd dash-delimited atom of the type
+    /// string is <c>"A"</c> (e.g. <c>a-n-A-C-F</c>). This drives selection of the
+    /// aircraft compression dictionary.</remarks>
+    /// <param name="s">A CoT type string.</param>
+    /// <returns><c>true</c> if the 3rd atom is <c>"A"</c>; otherwise <c>false</c>.</returns>
     public static bool IsAircraftString(string s)
     {
         var atoms = s.Split('-');

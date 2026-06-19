@@ -17,12 +17,33 @@
  * `cotTypeId === COTTYPE_OTHER && cotTypeStr`.
  */
 
+/**
+ * `CotType` enum value for an unknown / unmapped CoT type (`CotType_Other`).
+ *
+ * When {@link typeToEnum} returns this, the caller carries the full original
+ * type string in the packet's `cotTypeStr` (field 23) so the type round-trips
+ * losslessly even on receivers whose enum doesn't know the value.
+ */
 export const COTTYPE_OTHER = 0;
+
+/** `CotHow` enum value for an unknown / unmapped `how` attribute (`CotHow_Unspecified`). */
 export const COTHOW_UNSPECIFIED = 0;
 
-// TAKTALK plugin CoT types — exported so callers can dispatch on them
-// without re-deriving the numeric value from typeToEnum().
+/**
+ * `CotType` enum value for the TAKTALK voice/text message type `m-t-t`.
+ *
+ * Exported so callers can dispatch on it directly without re-deriving the
+ * numeric value from {@link typeToEnum}.
+ */
 export const COTTYPE_M_T_T = 125;
+
+/**
+ * `CotType` enum value for the TAKTALK room/membership broadcast type `y-`.
+ *
+ * The trailing dash with no second atom is the literal wire form ATAK + the
+ * TAKTALK plugin emit for room broadcasts — not a typo. Exported so callers can
+ * dispatch on it directly.
+ */
 export const COTTYPE_Y_DASH = 126;
 
 const STRING_TO_TYPE: Record<string, number> = {
@@ -79,27 +100,77 @@ const STRING_TO_HOW: Record<string, number> = {
 const HOW_TO_STRING: Record<number, string> = {};
 for (const [k, v] of Object.entries(STRING_TO_HOW)) HOW_TO_STRING[v] = k;
 
+/**
+ * Map a CoT type string (e.g. `"a-f-G-U-C"`) to its `CotType` enum value.
+ *
+ * @param s - The full CoT type string from `<event type="…">`.
+ * @returns The numeric `CotType` enum value, or {@link COTTYPE_OTHER} (0) when
+ *          the string is not in the known mapping. On a miss the caller should
+ *          preserve the original string in `cotTypeStr` so it round-trips.
+ */
 export function typeToEnum(s: string): number {
   return STRING_TO_TYPE[s] ?? COTTYPE_OTHER;
 }
 
+/**
+ * Map a `CotType` enum value back to its canonical CoT type string.
+ *
+ * @param id - A numeric `CotType` enum value.
+ * @returns The CoT type string, or `undefined` when `id` has no known mapping
+ *          (including {@link COTTYPE_OTHER}). The builder falls back to the
+ *          packet's `cotTypeStr` in that case.
+ */
 export function typeToString(id: number): string | undefined {
   return TYPE_TO_STRING[id];
 }
 
+/**
+ * Map a CoT `how` attribute string (e.g. `"m-g"`) to its `CotHow` enum value.
+ *
+ * @param s - The `how` attribute from `<event how="…">`.
+ * @returns The numeric `CotHow` enum value, or {@link COTHOW_UNSPECIFIED} (0)
+ *          when the string is unknown.
+ */
 export function howToEnum(s: string): number {
   return STRING_TO_HOW[s] ?? COTHOW_UNSPECIFIED;
 }
 
+/**
+ * Map a `CotHow` enum value back to its CoT `how` attribute string.
+ *
+ * @param id - A numeric `CotHow` enum value.
+ * @returns The `how` string, or `undefined` when `id` has no known mapping.
+ */
 export function howToString(id: number): string | undefined {
   return HOW_TO_STRING[id];
 }
 
+/**
+ * Classify whether a `CotType` enum value denotes an aircraft.
+ *
+ * Aircraft selection drives which zstd dictionary {@link selectDictId} picks.
+ * Resolves the enum to its string form and defers to {@link isAircraftString}.
+ *
+ * @param id - A numeric `CotType` enum value.
+ * @returns `true` if the type is an aircraft type, `false` otherwise (including
+ *          for unknown enum values that have no string mapping).
+ */
 export function isAircraft(id: number): boolean {
   const s = typeToString(id);
   return s ? isAircraftString(s) : false;
 }
 
+/**
+ * Classify whether a CoT type string denotes an aircraft.
+ *
+ * The rule (per the wire spec): the 3rd hyphen-separated atom of the type
+ * string is the Air battle-dimension indicator `"A"` (e.g. `a-f-A-M-H`,
+ * `a-n-A-C-F`). Works on unknown/unmapped type strings, which is why the parser
+ * path uses it directly when the enum is {@link COTTYPE_OTHER}.
+ *
+ * @param s - The full CoT type string.
+ * @returns `true` if the 3rd atom is `"A"`, `false` otherwise.
+ */
 export function isAircraftString(s: string): boolean {
   const atoms = s.split("-");
   return atoms.length >= 3 && atoms[2] === "A";

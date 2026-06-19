@@ -18,6 +18,11 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.38.0"),
+        // DocC documentation generator. A command plugin only — it is NOT linked
+        // into the MeshtasticTAK product; it enables
+        // `swift package generate-documentation` for the hosted API docs and
+        // Xcode Quick Help. Consumers resolve it transitively but never link it.
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.3.0"),
     ],
     targets: [
         .target(

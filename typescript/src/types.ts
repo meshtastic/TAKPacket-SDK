@@ -36,15 +36,21 @@ export type GeoPointSource = number;
 
 /** Compact geographic vertex — delta-encoded from the enclosing event's anchor. */
 export interface CotGeoPoint {
+  /** Latitude delta from the event anchor, in degrees×1e7 (signed). */
   latDeltaI?: number;
+  /** Longitude delta from the event anchor, in degrees×1e7 (signed). */
   lonDeltaI?: number;
 }
 
 /** GeoChat message or receipt. */
 export interface GeoChat {
+  /** The chat message text. */
   message?: string;
+  /** Destination chatroom / recipient ID; the `"All Chat Rooms"` broadcast sentinel is elided. */
   to?: string;
+  /** Sender callsign (from the `<__chat senderCallsign="…">` attribute). */
   toCallsign?: string;
+  /** For a receipt: the UID of the original message being acknowledged. */
   receiptForUid?: string;
   /** 0 = None, 1 = Delivered, 2 = Read */
   receiptType?: number;
@@ -63,8 +69,11 @@ export interface GeoChat {
 
 /** TAKTALK voice/text chat message (CoT type m-t-t). */
 export interface TakTalkMessage {
+  /** Message body from `<text>`. */
   text?: string;
+  /** Target TAKTALK chatroom ID from `<chatroom-id>`. */
   chatroomId?: string;
+  /** Language tag from `<lang>` (e.g. `"English"`). */
   lang?: string;
   /** True when the source CoT carried a <voice/> push-to-talk marker. */
   fromVoice?: boolean;
@@ -79,8 +88,11 @@ export interface TakTalkRoomData {
    * encoded packets decode cleanly. To be removed entirely in v0.4.x.
    */
   senderCallsign?: string;
+  /** TAKTALK room ID from `<chatroom-id>`. */
   roomId?: string;
+  /** Human-readable room name from `<chatroom-name>`. */
   roomName?: string;
+  /** Member callsigns from the comma-separated `<chatroom-participants>` list. */
   participants?: string[];
 }
 
@@ -94,19 +106,29 @@ export interface TakTalkRoomData {
  * awareness events).
  */
 export interface Marti {
+  /** Recipient callsigns from `<dest callsign='X'/>` elements; empty/absent means broadcast. */
   destCallsign?: string[];
 }
 
 /** ADS-B / military air track data. */
 export interface AircraftTrack {
+  /** ICAO 24-bit address as a 6-hex-digit string. */
   icao?: string;
+  /** Tail number / registration. */
   registration?: string;
+  /** Flight number / callsign. */
   flight?: string;
+  /** Aircraft type designator. */
   aircraftType?: string;
+  /** Transponder squawk code. */
   squawk?: number;
+  /** ADS-B emitter category. */
   category?: string;
+  /** Receiver signal strength in dBm×10 (e.g. -752 = -75.2 dBm). */
   rssiX10?: number;
+  /** True when the track has a valid GPS position fix. */
   gps?: boolean;
+  /** UID of the CoT host/feeder that originated the track. */
   cotHostId?: string;
 }
 
@@ -116,14 +138,23 @@ export interface DrawnShape {
   kind?: number;
   /** DrawnShape.StyleMode: 0=Unspecified, 1=StrokeOnly, 2=FillOnly, 3=StrokeAndFill */
   style?: number;
+  /** Ellipse/circle major axis (semi-major radius) in centimeters. */
   majorCm?: number;
+  /** Ellipse minor axis (semi-minor radius) in centimeters. */
   minorCm?: number;
+  /** Ellipse rotation angle in whole degrees. */
   angleDeg?: number;
+  /** Stroke color as a {@link Team} palette enum (0 = no palette match). */
   strokeColor?: Team;
+  /** Exact stroke color as an ARGB int32 — lossless fallback for {@link strokeColor}. */
   strokeArgb?: number;
+  /** Stroke line weight ×10 (e.g. 30 = 3.0). */
   strokeWeightX10?: number;
+  /** Fill color as a {@link Team} palette enum (0 = no palette match). */
   fillColor?: Team;
+  /** Exact fill color as an ARGB int32 — lossless fallback for {@link fillColor}. */
   fillArgb?: number;
+  /** True when vertex/segment labels are shown. */
   labelsOn?: boolean;
   /**
    * Vertex deltas as two PACKED parallel columns (lat, lon) of signed 1e-7°
@@ -133,10 +164,15 @@ export interface DrawnShape {
    */
   vertexLatDeltas?: number[];
   vertexLonDeltas?: number[];
+  /** True when the vertex list was capped (more vertices existed than the wire limit). */
   truncated?: boolean;
+  /** Bullseye reference-ring distance in decimeters. */
   bullseyeDistanceDm?: number;
+  /** Bullseye bearing reference: 1=Magnetic, 2=True, 3=Grid. */
   bullseyeBearingRef?: number;
+  /** Bullseye boolean options packed as a bitfield (rangeRingVisible, hasRangeRings, edgeToCenter, mils). */
   bullseyeFlags?: number;
+  /** UID of the referenced bullseye object. */
   bullseyeUidRef?: string;
 }
 
@@ -144,31 +180,49 @@ export interface DrawnShape {
 export interface Marker {
   /** Marker.Kind enum: 0=Unspecified, 1=Spot, ..., 12=ImageMarker */
   kind?: number;
+  /** Marker color as a {@link Team} palette enum (0 = no palette match). */
   color?: Team;
+  /** Exact marker color as an ARGB int32 — lossless fallback for {@link color}. */
   colorArgb?: number;
+  /** Readiness flag (`<status readiness="true"/>`). */
   readiness?: boolean;
+  /** UID of the parent TAK object this marker is attached to. */
   parentUid?: string;
+  /** CoT type of the parent object. */
   parentType?: string;
+  /** Callsign of the parent object. */
   parentCallsign?: string;
+  /** Icon-set path (e.g. a 2525B or SPOTMAP iconset reference). */
   iconset?: string;
 }
 
 /** Range and bearing measurement line. */
 export interface RangeAndBearing {
+  /** Anchor (origin) point, delta-encoded from the event anchor. */
   anchor?: CotGeoPoint;
+  /** UID of the object the anchor is attached to, if any. */
   anchorUid?: string;
+  /** Range from anchor in centimeters. */
   rangeCm?: number;
+  /** Bearing from anchor in degrees×100 (centidegrees). */
   bearingCdeg?: number;
+  /** Line color as a {@link Team} palette enum (0 = no palette match). */
   strokeColor?: Team;
+  /** Exact line color as an ARGB int32 — lossless fallback for {@link strokeColor}. */
   strokeArgb?: number;
+  /** Line weight ×10 (e.g. 30 = 3.0). */
   strokeWeightX10?: number;
 }
 
 /** Route waypoint/control point link. */
 export interface RouteLink {
+  /** Waypoint position, delta-encoded from the event anchor. */
   point?: CotGeoPoint;
+  /** Waypoint UID (the builder synthesizes one from the event UID + index when absent). */
   uid?: string;
+  /** Waypoint callsign / label. */
   callsign?: string;
+  /** 0 = waypoint (`b-m-p-w`), 1 = control point (`b-m-p-c`). */
   linkType?: number;
 }
 
@@ -178,19 +232,29 @@ export interface Route {
   method?: number;
   /** Route.Direction: 0=Unspecified, 1=Infil, 2=Exfil */
   direction?: number;
+  /** Waypoint-label prefix (e.g. `"CP"`). */
   prefix?: string;
+  /** Route line weight ×10 (e.g. 30 = 3.0). */
   strokeWeightX10?: number;
+  /** Ordered waypoints and control points. */
   links?: RouteLink[];
+  /** True when the waypoint list was capped at the wire limit. */
   truncated?: boolean;
 }
 
-/** Per-patient ZMIST clinical record. */
+/** Per-patient ZMIST clinical record (Zap/Mechanism/Injury/Signs/Treatment). */
 export interface ZMistEntry {
+  /** Free-text title for this ZMIST entry. */
   title?: string;
+  /** Z — zap number / patient tag. */
   z?: string;
+  /** M — mechanism of injury. */
   m?: string;
+  /** I — injuries sustained. */
   i?: string;
+  /** S — signs (vitals). */
   s?: string;
+  /** T — treatment given. */
   t?: string;
 }
 
@@ -198,40 +262,70 @@ export interface ZMistEntry {
 export interface CasevacReport {
   /** CasevacReport.Precedence: 0=Unspecified, 1=Urgent, ..., 5=Convenience */
   precedence?: number;
+  /** Special-equipment requirements packed as a bitfield (none, hoist, extraction, ventilator, blood, other). */
   equipmentFlags?: number;
+  /** Number of litter (non-ambulatory) patients. */
   litterPatients?: number;
+  /** Number of ambulatory patients. */
   ambulatoryPatients?: number;
   /** CasevacReport.Security: 0=Unspecified, 1=NoEnemy, ..., 4=EnemyInArmedContact */
   security?: number;
   /** CasevacReport.HlzMarking: 0=Unspecified, 1=Panels, ..., 5=Other */
   hlzMarking?: number;
+  /** Free-text HLZ zone / pickup-site marker description. */
   zoneMarker?: string;
+  /** Count of US military patients. */
   usMilitary?: number;
+  /** Count of US civilian patients. */
   usCivilian?: number;
+  /** Count of non-US military patients. */
   nonUsMilitary?: number;
+  /** Count of non-US civilian patients. */
   nonUsCivilian?: number;
+  /** Count of enemy prisoner-of-war patients. */
   epw?: number;
+  /** Count of child patients. */
   child?: number;
+  /** HLZ terrain hazards packed as a bitfield (slope, rough, loose, trees, wires, other). */
   terrainFlags?: number;
+  /** Radio frequency for the pickup. */
   frequency?: string;
   // v2.x medline extensions
+  /** Report title (newer ATAK medline format). */
   title?: string;
+  /** Free-text medline remarks. */
   medlineRemarks?: string;
+  /** Patient count at Urgent precedence (newer ATAK count-based format). */
   urgentCount?: number;
+  /** Patient count at Urgent-Surgical precedence. */
   urgentSurgicalCount?: number;
+  /** Patient count at Priority precedence. */
   priorityCount?: number;
+  /** Patient count at Routine precedence. */
   routineCount?: number;
+  /** Patient count at Convenience precedence. */
   convenienceCount?: number;
+  /** Free-text detail for the "other equipment" flag. */
   equipmentDetail?: string;
+  /** Protected-zone coordinate string. */
   zoneProtectedCoord?: string;
+  /** Terrain slope direction. */
   terrainSlopeDir?: string;
+  /** Free-text detail for the "other terrain" flag. */
   terrainOtherDetail?: string;
+  /** Who marked the HLZ. */
   markedBy?: string;
+  /** Free-text obstacles description. */
   obstacles?: string;
+  /** Wind origin direction (free text). */
   windsAreFrom?: string;
+  /** Friendly-forces situational note. */
   friendlies?: string;
+  /** Enemy situational note. */
   enemy?: string;
+  /** Free-text HLZ remarks. */
   hlzRemarks?: string;
+  /** Per-patient ZMIST clinical records. */
   zmist?: ZMistEntry[];
 }
 
@@ -239,26 +333,35 @@ export interface CasevacReport {
 export interface EmergencyAlert {
   /** EmergencyAlert.Type: 0=Unspecified, 1=Alert911, ..., 6=Cancel */
   type?: number;
+  /** UID of the user who raised the alert. */
   authoringUid?: string;
+  /** For a Cancel alert: the UID of the alert being cancelled. */
   cancelReferenceUid?: string;
 }
 
 /** Task / engage request (t-s). */
 export interface TaskRequest {
+  /** Task-type tag string. */
   taskType?: string;
+  /** UID of the map item being tasked / targeted. */
   targetUid?: string;
+  /** UID of the user assigned the task. */
   assigneeUid?: string;
   /** TaskRequest.Priority: 0=Unspecified, 1=Low, ..., 4=Critical */
   priority?: number;
   /** TaskRequest.Status: 0=Unspecified, 1=Pending, ..., 5=Cancelled */
   status?: number;
+  /** Free-text note. */
   note?: string;
 }
 
 /** Weather annotation from <environment> detail element. */
 export interface TAKEnvironment {
+  /** Temperature in deci-degrees Celsius (e.g. 225 = 22.5 °C). */
   temperatureCX10?: number;
+  /** Wind direction in whole degrees (the direction the wind is coming from). */
   windDirectionDeg?: number;
+  /** Wind speed in cm/s. */
   windSpeedCmS?: number;
 }
 
@@ -266,12 +369,19 @@ export interface TAKEnvironment {
 export interface SensorFov {
   /** SensorFov.SensorType: 0=Unspecified, 1=Camera, ..., 6=Other */
   type?: number;
+  /** Center azimuth of the cone in whole degrees. */
   azimuthDeg?: number;
+  /** Sensor range in meters. */
   rangeM?: number;
+  /** Horizontal field-of-view width in whole degrees. */
   fovHorizontalDeg?: number;
+  /** Vertical field-of-view height in whole degrees. */
   fovVerticalDeg?: number;
+  /** Sensor elevation (tilt) angle in whole degrees. */
   elevationDeg?: number;
+  /** Sensor roll angle in whole degrees. */
   rollDeg?: number;
+  /** Sensor model identifier. */
   model?: string;
 }
 
@@ -291,33 +401,59 @@ export interface SensorFov {
  */
 export interface TAKPacketV2 {
   // --- Common envelope fields ---
+  /** Well-known CoT type as a `CotType` enum value; 0 (`CotType_Other`) when unknown (see {@link cotTypeStr}). */
   cotTypeId?: CotTypeId;
+  /** Coordinate-generation method as a `CotHow` enum value. */
   how?: CotHow;
+  /** User / sender callsign. */
   callsign?: string;
+  /** Team color as a `Team` enum value. */
   team?: Team;
+  /** Role within the team as a `MemberRole` enum value. */
   role?: MemberRole;
+  /** Latitude in degrees×1e7 (signed; e.g. 388895000 = 38.8895°). */
   latitudeI?: number;
+  /** Longitude in degrees×1e7 (signed; e.g. -770353000 = -77.0353°). */
   longitudeI?: number;
+  /** Altitude in meters HAE (height above ellipsoid); may be negative. */
   altitude?: number;
+  /** Ground speed in cm/s (ATAK's m/s ×100). Negative ATAK sentinels are clamped to 0. */
   speed?: number;
+  /** Course over ground in degrees×100 (centidegrees). */
   course?: number;
+  /** Battery charge, 0–100 percent. */
   battery?: number;
+  /** Position source as a `GeoPointSource` enum value (GPS / USER / NETWORK). */
   geoSrc?: GeoPointSource;
+  /** Altitude source as a `GeoPointSource` enum value. */
   altSrc?: GeoPointSource;
+  /** Event UID (the ATAK object identifier). */
   uid?: string;
+  /** Device callsign from `<uid Droid="…"/>`. */
   deviceCallsign?: string;
+  /** Seconds from event time to stale time (`stale − time`), varint-encoded. */
   staleSeconds?: number;
+  /** TAK client version string. */
   takVersion?: string;
+  /** TAK device model. */
   takDevice?: string;
+  /** TAK platform (e.g. `ATAK-CIV`, `iTAK`, `WinTAK`). */
   takPlatform?: string;
+  /** TAK client OS string. */
   takOs?: string;
+  /** Contact endpoint; default TAK endpoints are normalized to empty to save wire bytes. */
   endpoint?: string;
+  /** Contact phone number. */
   phone?: string;
+  /** Original CoT type string, populated only when {@link cotTypeId} is 0 so unknown types round-trip. */
   cotTypeStr?: string;
+  /** Optional free-text `<remarks>` for non-chat payload types; stripped first under MTU pressure. */
   remarks?: string;
 
   // --- Optional annotations ---
+  /** Optional weather annotation; attaches to any event type (not a payload variant). */
   environment?: TAKEnvironment;
+  /** Optional sensor field-of-view annotation; attaches to any event type (not a payload variant). */
   sensorFov?: SensorFov;
   /**
    * Directed-routing recipient list (CoT <marti><dest callsign='X'/>…</marti>).
@@ -331,16 +467,28 @@ export interface TAKPacketV2 {
   // --- payload_variant oneof (at most one set; PLI is implicit = none set) ---
   // Tag 30 (former `bool pli`) was dropped in v0.4.0 — a position report sets
   // no payload variant. See atak.proto.
+  /** GeoChat message or delivered/read receipt. */
   chat?: GeoChat;
+  /** ADS-B / military air track. */
   aircraft?: AircraftTrack;
+  /** Raw `<detail>` bytes fallback for callers building packets directly. */
   rawDetail?: Uint8Array | Buffer;
+  /** User-drawn tactical graphic (circle, rectangle, polygon, etc.). */
   shape?: DrawnShape;
+  /** Fixed marker (spot, waypoint, 2525 symbol, etc.). */
   marker?: Marker;
+  /** Range-and-bearing measurement. */
   rab?: RangeAndBearing;
+  /** Named route with ordered waypoints / control points. */
   route?: Route;
+  /** 9-line MEDEVAC / CASEVAC request. */
   casevac?: CasevacReport;
+  /** Emergency / 911 alert. */
   emergency?: EmergencyAlert;
+  /** Tasking / engagement request. */
   task?: TaskRequest;
+  /** TAKTALK voice/text chat message (`m-t-t`). */
   taktalk?: TakTalkMessage;
+  /** TAKTALK room/membership broadcast (`y-`). */
   taktalkRoom?: TakTalkRoomData;
 }

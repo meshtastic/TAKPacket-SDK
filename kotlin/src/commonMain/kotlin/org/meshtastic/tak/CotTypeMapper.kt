@@ -21,7 +21,12 @@ package org.meshtastic.tak
  */
 public object CotTypeMapper {
 
-    // CotType enum values from atak.proto
+    // CotType enum values from atak.proto. Each constant mirrors a tag in the
+    // `CotType` enum (0..126); the underscore-joined suffix is the CoT type
+    // string with `-` replaced by `_` (e.g. COTTYPE_A_F_G_U_C == "a-f-G-U-C").
+    // These are the integer values carried in the `cot_type_id` proto field.
+
+    /** Sentinel for an unknown / unmapped CoT type. The raw string then travels in `cot_type_str`. */
     public const val COTTYPE_OTHER: Int = 0
     public const val COTTYPE_A_F_G_U_C: Int = 1
     public const val COTTYPE_A_F_G_U_C_I: Int = 2
@@ -182,7 +187,11 @@ public object CotTypeMapper {
     public const val COTTYPE_M_T_T: Int = 125          // TAKTALK voice/text chat message
     public const val COTTYPE_Y_DASH: Int = 126         // TAKTALK room/membership broadcast
 
-    // CotHow enum values from atak.proto
+    // CotHow enum values from atak.proto. `how` describes how a CoT event's
+    // coordinates were derived (the `<event how="…">` attribute): h-* = human
+    // entered, m-* = machine generated.
+
+    /** Sentinel for an unknown / unset `how`. The builder defaults this to `m-g` on emit. */
     public const val COTHOW_UNSPECIFIED: Int = 0
     public const val COTHOW_H_E: Int = 1
     public const val COTHOW_M_G: Int = 2
@@ -341,30 +350,65 @@ public object CotTypeMapper {
 
     private val howToStr = stringToHow.entries.associate { (k, v) -> v to k }
 
-    /** Convert a CoT type string to its enum int value. Returns COTTYPE_OTHER if unknown. */
+    /**
+     * Map a CoT type string (e.g. `"a-f-G-U-C"`) to its `CotType` enum int.
+     *
+     * @param cotTypeString the full CoT type string from `<event type="…">`.
+     * @return the matching `COTTYPE_*` value, or [COTTYPE_OTHER] when the string
+     *         is not in the known mapping (the caller then preserves the original
+     *         string in `cot_type_str` — see the class-level forward-compat note).
+     */
     public fun typeToEnum(cotTypeString: String): Int =
         stringToType[cotTypeString] ?: COTTYPE_OTHER
 
-    /** Convert a CotType enum int to its canonical string. Returns null for COTTYPE_OTHER. */
+    /**
+     * Map a `CotType` enum int back to its canonical CoT type string.
+     *
+     * @param cotTypeId one of the `COTTYPE_*` values.
+     * @return the canonical string (e.g. `"a-f-G-U-C"`), or `null` for
+     *         [COTTYPE_OTHER] / any value not in the mapping.
+     */
     public fun typeToString(cotTypeId: Int): String? = typeToString[cotTypeId]
 
-    /** Convert a CoT how string to its enum int value. */
+    /**
+     * Map a CoT `how` string (e.g. `"m-g"`) to its `CotHow` enum int.
+     *
+     * @return the matching `COTHOW_*` value, or [COTHOW_UNSPECIFIED] if unknown.
+     */
     public fun howToEnum(howString: String): Int =
         stringToHow[howString] ?: COTHOW_UNSPECIFIED
 
-    /** Convert a CotHow enum int to its canonical string. */
+    /**
+     * Map a `CotHow` enum int back to its canonical `how` string.
+     *
+     * @return the canonical string (e.g. `"m-g"`), or `null` for
+     *         [COTHOW_UNSPECIFIED] / any unmapped value.
+     */
     public fun howToString(howId: Int): String? = howToStr[howId]
 
     /**
-     * Returns true if the CoT type is in the Air domain (3rd atom = 'A').
-     * Used to select the aircraft vs non-aircraft compression dictionary.
+     * Whether a known CoT type is in the Air battle dimension (the 3rd CoT
+     * atom is `A`, as in `a-n-A-C-F`).
+     *
+     * Drives the aircraft-vs-non-aircraft dictionary selection in
+     * [DictionaryProvider.selectDictId]. Returns `false` for [COTTYPE_OTHER]
+     * and any value with no canonical string; use [isAircraftString] when only
+     * the raw type string is available.
+     *
+     * @param cotTypeId one of the `COTTYPE_*` values.
      */
     public fun isAircraft(cotTypeId: Int): Boolean {
         val typeStr = typeToString(cotTypeId) ?: return false
         return isAircraftString(typeStr)
     }
 
-    /** Returns true if the CoT type string is in the Air domain. */
+    /**
+     * Whether a CoT type string is in the Air battle dimension (3rd `-`-atom
+     * equals `"A"`, e.g. `"a-f-A-M-H"`).
+     *
+     * The string-based counterpart to [isAircraft], used for types that fell
+     * through to [COTTYPE_OTHER] but still carry a raw type string.
+     */
     public fun isAircraftString(cotTypeString: String): Boolean {
         val atoms = cotTypeString.split("-")
         return atoms.size >= 3 && atoms[2] == "A"

@@ -1,0 +1,195 @@
+name: Docs
+
+# Builds each binding's API docs, assembles them into one site, and publishes to
+# GitHub Pages at https://meshtastic.github.io/TAKPacket-SDK/.
+#
+# ONE-TIME SETUP: a repo admin must set Settings → Pages → Source = "GitHub Actions"
+# for the deploy step to publish.
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  push:
+    branches: [master]
+    paths:
+      - "kotlin/**/*.kt"
+      - "kotlin/module.md"
+      - "kotlin/build.gradle.kts"
+      - "swift/Sources/**"
+      - "Package.swift"
+      - "swift/Package.swift"
+      - "python/src/**/*.py"
+      - "python/pyproject.toml"
+      - "python/README.md"
+      - "typescript/src/**/*.ts"
+      - "typescript/typedoc.json"
+      - "typescript/package.json"
+      - "csharp/src/**/*.cs"
+      - "csharp/docfx.json"
+      - "csharp/index.md"
+      - "csharp/toc.yml"
+      - "csharp/api/index.md"
+      - "csharp/src/Meshtastic.TAK/Meshtastic.TAK.csproj"
+      - "docs/index.html"
+      - ".github/workflows/docs.yml"
+
+# Least-privilege defaults; the deploy job needs pages + id-token to publish.
+permissions:
+  contents: read
+
+# Never cancel an in-flight Pages deployment.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  kotlin:
+    name: Kotlin (Dokka)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Build Dokka HTML
+        working-directory: kotlin
+        run: ./gradlew dokkaGeneratePublicationHtml --quiet
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docs-kotlin
+          path: kotlin/build/dokka/html
+
+  swift:
+    name: Swift (DocC)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - name: Build DocC static site
+        # Run from the repo root (root Package.swift). hosting-base-path matches the
+        # /swift/ subpath of the project Pages site.
+        run: |
+          swift package --allow-writing-to-directory docc-out \
+            generate-documentation \
+            --target MeshtasticTAK \
+            --disable-indexing \
+            --transform-for-static-hosting \
+            --hosting-base-path TAKPacket-SDK/swift \
+            --output-path docc-out
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docs-swift
+          path: docc-out
+
+  typescript:
+    name: TypeScript (TypeDoc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install deps
+        working-directory: typescript
+        run: rm -f package-lock.json && npm install
+      - name: Build TypeDoc
+        working-directory: typescript
+        run: npm run docs
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docs-typescript
+          path: typescript/docs
+
+  python:
+    name: Python (pdoc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install package + docs deps
+        run: pip install -e "./python[dev]"
+      - name: Build pdoc
+        run: pdoc meshtastic_tak -o site-python -d google
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docs-python
+          path: site-python
+
+  csharp:
+    name: C# (DocFX)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
+      - name: Install DocFX
+        run: |
+          dotnet tool install -g docfx
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+      - name: Build DocFX site
+        working-directory: csharp
+        run: docfx docfx.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: docs-csharp
+          path: csharp/_site
+
+  deploy:
+    name: Assemble & deploy to Pages
+    needs: [kotlin, swift, typescript, python, csharp]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Lay out the landing page
+        run: |
+          mkdir -p site
+          cp docs/index.html site/index.html
+          # Disable Jekyll so files/dirs starting with "_" (Dokka, DocFX, DocC
+          # assets) are served verbatim.
+          touch site/.nojekyll
+      - uses: actions/download-artifact@v7
+        with:
+          name: docs-kotlin
+          path: site/kotlin
+      - uses: actions/download-artifact@v7
+        with:
+          name: docs-swift
+          path: site/swift
+      - uses: actions/download-artifact@v7
+        with:
+          name: docs-typescript
+          path: site/typescript
+      - uses: actions/download-artifact@v7
+        with:
+          name: docs-python
+          path: site/python
+      - uses: actions/download-artifact@v7
+        with:
+          name: docs-csharp
+          path: site/csharp
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

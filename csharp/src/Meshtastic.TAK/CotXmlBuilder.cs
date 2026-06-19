@@ -4,6 +4,26 @@ using Meshtastic.Protobufs;
 
 namespace Meshtastic.TAK;
 
+/// <summary>
+/// Rebuilds ATAK Cursor-on-Target (CoT) XML from a decoded <c>TAKPacketV2</c>
+/// packet — the inverse of <see cref="CotXmlParser"/>.
+/// </summary>
+/// <remarks>
+/// <para>Emits a complete <c>&lt;event&gt;</c> document with a <c>&lt;point&gt;</c>
+/// and a <c>&lt;detail&gt;</c> body whose children are reconstructed from the
+/// packet's payload variant (chat, aircraft, drawn shape, marker, range &amp;
+/// bearing, route, casevac, emergency, task, TAK-Talk) plus the shared envelope
+/// fields (contact, group, track, TAK version, etc.).</para>
+/// <para>Element shapes and attribute ordering are chosen to match what real
+/// ATAK / iTAK captures emit, so the receiving plugin parses the rebuilt XML
+/// natively. The builder reverses the parser's unit scaling — speed back to m/s
+/// (from cm/s), course back to degrees (from degrees×100), shape radii back to
+/// meters (from centimeters), and integer-scaled coordinates back to degrees
+/// (from degrees×1e7). Delta-encoded route waypoints, R&amp;B anchors, and
+/// drawn-shape vertices are re-anchored against the envelope coordinate.</para>
+/// <para>Doubles are formatted with the invariant culture so locales that use a
+/// comma decimal separator cannot corrupt the XML.</para>
+/// </remarks>
 public class CotXmlBuilder
 {
     private static readonly Dictionary<int, string> TeamNames = new()
@@ -117,6 +137,20 @@ public class CotXmlBuilder
     /// </summary>
     private static string F(double d) => d.ToString("R", CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// Build a complete CoT XML <c>&lt;event&gt;</c> document from a decoded packet.
+    /// </summary>
+    /// <remarks>
+    /// <para>The <c>type</c> attribute comes from the packet's CoT type enum, falling
+    /// back to <c>cot_type_str</c> for types the enum doesn't know. The <c>time</c> and
+    /// <c>start</c> are stamped at the current UTC instant and <c>stale</c> is derived
+    /// from <c>stale_seconds</c> (floored at 45s). The detail body is reconstructed from
+    /// the packet's payload variant; an empty payload with an <c>a-f-*</c> type round-trips
+    /// as an implicit PLI (a bare position report with no payload-specific detail).</para>
+    /// </remarks>
+    /// <param name="pkt">The decoded packet to serialize.</param>
+    /// <returns>The CoT XML document as a string, beginning with the
+    /// <c>&lt;?xml …?&gt;</c> declaration.</returns>
     public string Build(Meshtastic.Protobufs.TAKPacketV2 pkt)
     {
         var now = DateTimeOffset.UtcNow;

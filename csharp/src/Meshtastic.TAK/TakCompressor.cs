@@ -5,8 +5,24 @@ using ZstdSharp.Unsafe;
 
 namespace Meshtastic.TAK;
 
+/// <summary>
+/// Compression statistics returned by <see cref="TakCompressor.CompressWithStats"/>.
+/// </summary>
+/// <param name="ProtobufSize">Size in bytes of the serialized protobuf before compression.</param>
+/// <param name="CompressedSize">Size in bytes of the full wire payload (1-byte flags prefix + body).</param>
+/// <param name="DictId">The dictionary ID actually emitted in the flags byte —
+/// <see cref="DictionaryProvider.DictIdNonAircraft"/>,
+/// <see cref="DictionaryProvider.DictIdAircraft"/>, or
+/// <see cref="DictionaryProvider.DictIdUncompressed"/> when the skip-compress path
+/// emitted a raw protobuf body.</param>
+/// <param name="WirePayload">The full wire payload bytes.</param>
 public record CompressionResult(int ProtobufSize, int CompressedSize, int DictId, byte[] WirePayload)
 {
+    /// <summary>
+    /// Human-readable name of the emitted dictionary mode (<c>"non-aircraft"</c>,
+    /// <c>"aircraft"</c>, <c>"uncompressed"</c>, or <c>"unknown"</c>), derived from
+    /// <see cref="DictId"/>.
+    /// </summary>
     public string DictName => DictId switch
     {
         DictionaryProvider.DictIdNonAircraft => "non-aircraft",
@@ -39,6 +55,29 @@ public record RemarksFallbackResult(byte[]? WirePayload, bool RemarksStripped)
     public bool Fits => WirePayload is not null;
 }
 
+/// <summary>
+/// Compresses and decompresses <c>TAKPacketV2</c> protobuf packets to and from
+/// the on-wire LoRa payload format.
+/// </summary>
+/// <remarks>
+/// <para>The wire payload is <c>[1 byte flags][zstd body]</c>. Bits 0–5 of the
+/// flags byte carry the dictionary ID; the reserved value
+/// <see cref="DictionaryProvider.DictIdUncompressed"/> (<c>0xFF</c>) marks a raw,
+/// uncompressed protobuf body. Compression uses zstd dictionary compression with
+/// a statically shipped dictionary selected per packet.</para>
+/// <para>Two frame-slimming optimizations apply on the wire:</para>
+/// <list type="bullet">
+/// <item><description>The 4-byte zstd frame magic is stripped on compress and
+/// re-prepended on decompress (see <see cref="ZstdMagic"/>).</description></item>
+/// <item><description>Skip-compress: if the raw protobuf is no larger than the
+/// zstd body, the raw bytes are emitted under the <c>0xFF</c> flag so tiny or
+/// incompressible packets never expand.</description></item>
+/// </list>
+/// <para>Resilience invariant: every packet is fully and independently decodable
+/// from its own bytes plus the static dictionary. Only the one-shot zstd API is
+/// used — never the streaming API — so there is zero cross-packet state, which
+/// matters on a lossy LoRa mesh where any packet may be lost.</para>
+/// </remarks>
 public class TakCompressor
 {
     /// <summary>Maximum allowed decompressed payload size (bytes). Prevents decompression bombs.</summary>
@@ -58,8 +97,30 @@ public class TakCompressor
 
     private readonly int _level;
 
+    /// <summary>
+    /// Create a compressor at the given zstd compression level.
+    /// </summary>
+    /// <param name="level">The zstd compression level. Defaults to 19 (zstd
+    /// maximum), the level used to produce the canonical golden wire payloads.</param>
     public TakCompressor(int level = 19) => _level = level;
 
+    /// <summary>
+    /// Compress a packet into its on-wire payload <c>[1 byte flags][zstd body]</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Selects the dictionary from the packet's CoT type (see
+    /// <see cref="DictionaryProvider.SelectDictId"/>), compresses with content-size,
+    /// checksum, and dictionary-ID frame fields all disabled, then strips the 4-byte
+    /// zstd magic (see <see cref="ZstdMagic"/>). If the raw protobuf is no larger
+    /// than the compressed body, emits <c>[0xFF][raw protobuf]</c> instead so the
+    /// packet never expands. The dictionary ID is written into bits 0–5 of the flags
+    /// byte; bits 6–7 are left zero.</para>
+    /// </remarks>
+    /// <param name="packet">The packet to compress.</param>
+    /// <returns>The wire payload bytes.</returns>
+    /// <exception cref="InvalidOperationException">Thrown if no dictionary maps to
+    /// the selected ID, or if the zstd frame does not begin with the expected magic
+    /// (which would break the strip/prepend contract).</exception>
     public byte[] Compress(Meshtastic.Protobufs.TAKPacketV2 packet)
     {
         var protoBytes = packet.ToByteArray();
@@ -103,6 +164,23 @@ public class TakCompressor
         return wire;
     }
 
+    /// <summary>
+    /// Decompress a wire payload back into a <c>TAKPacketV2</c> packet.
+    /// </summary>
+    /// <remarks>
+    /// <para>Reads the dictionary ID from bits 0–5 of the flags byte (or recognizes
+    /// the <see cref="DictionaryProvider.DictIdUncompressed"/> raw path), re-attaches
+    /// the stripped 4-byte zstd magic (see <see cref="ZstdMagic"/>), and decompresses
+    /// using the matching shipped dictionary. The packet is decoded entirely from its
+    /// own bytes plus the static dictionary — no cross-packet state.</para>
+    /// </remarks>
+    /// <param name="wirePayload">The wire payload bytes (flags prefix + body).</param>
+    /// <returns>The decoded packet.</returns>
+    /// <exception cref="ArgumentException">Thrown if the payload is too short or its
+    /// flags byte names an unknown dictionary ID.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if zstd decompression fails,
+    /// the decompressed size exceeds <see cref="MaxDecompressedSize"/>, or protobuf
+    /// parsing fails.</exception>
     public Meshtastic.Protobufs.TAKPacketV2 Decompress(byte[] wirePayload)
     {
         if (wirePayload.Length < 2)
@@ -207,6 +285,17 @@ public class TakCompressor
             : new RemarksFallbackResult(null, RemarksStripped: true);
     }
 
+    /// <summary>
+    /// Compress a packet and report size statistics alongside the wire payload.
+    /// </summary>
+    /// <remarks>
+    /// The reported <see cref="CompressionResult.DictId"/> reflects the mode actually
+    /// emitted: the skip-compress path may report
+    /// <see cref="DictionaryProvider.DictIdUncompressed"/> when compression did not pay.
+    /// </remarks>
+    /// <param name="packet">The packet to compress.</param>
+    /// <returns>A <see cref="CompressionResult"/> with the protobuf size, wire size,
+    /// emitted dictionary ID, and wire payload.</returns>
     public CompressionResult CompressWithStats(Meshtastic.Protobufs.TAKPacketV2 packet)
     {
         var protoBytes = packet.ToByteArray();

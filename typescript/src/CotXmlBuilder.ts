@@ -86,6 +86,43 @@ function argbToSigned(argb: number): number {
   return argb | 0;
 }
 
+/**
+ * Reconstruct a CoT XML event string from a {@link TAKPacketV2} data object.
+ *
+ * The inverse of {@link parseCotXml}: rebuilds the `<event>` envelope and the
+ * `<detail>` children, dispatching on whichever payload variant is set
+ * (TAKTALK room/message are checked before chat; otherwise chat, aircraft,
+ * shape, marker, range-and-bearing, route, casevac, emergency, task, or raw
+ * detail). A packet with no payload variant rebuilds as a plain position
+ * report (implicit PLI). Directed-routing recipients (`marti`) are emitted last
+ * among the detail children to match ATAK's element ordering.
+ *
+ * @remarks
+ * Wire units are converted back to ATAK's XML units: `latitudeI`/`longitudeI`
+ * (degrees×1e7) become decimal degrees, `speed` (cm/s) and `course`
+ * (degrees×100) are divided by 100, and shape radii / ranges (cm) by 100.
+ * Because the wire format does not carry timestamps, `time`/`start` are set to
+ * "now" and `stale` to now + `staleSeconds` (with a 45-second floor), so output
+ * is not byte-identical to the original XML across a round trip — but the
+ * structural content is. Color fields resolve through the `AtakPalette` helpers
+ * (palette enum first, exact `_argb` fallback otherwise). A default endpoint of
+ * `*:-1:stcp` is re-synthesized when none is present so ATAK can route directed
+ * GeoChat / TAK-Talk replies. Text content is XML-escaped.
+ *
+ * @param packet - The packet to render. `cotTypeId` resolves to a type string,
+ *                 falling back to `cotTypeStr` for unknown types.
+ * @returns A multi-line CoT XML event string (with `<?xml?>` prologue). Run it
+ *          through {@link normalizeCotXml} before writing to a TAK TCP stream.
+ *
+ * @example
+ * ```ts
+ * import { buildCotXml, TakCompressor } from "@meshtastic/takpacket-sdk";
+ *
+ * const codec = new TakCompressor();
+ * const packet = await codec.decompress(receivedWireBuffer);
+ * const cotXml = buildCotXml(packet);
+ * ```
+ */
 export function buildCotXml(packet: TAKPacketV2): string {
   const now = new Date().toISOString();
   const staleSecs = Math.max(packet.staleSeconds ?? 0, 45);

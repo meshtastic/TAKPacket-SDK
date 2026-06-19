@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAKPacket-SDK — Documentation</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #1a2129; --panel2: #222b35; --border: #2d3742;
+    --fg: #e6edf3; --muted: #9aa7b2; --accent: #4ea1ff; --accent2: #7ee787;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans);
+         line-height: 1.55; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+  header { padding: 56px 0 28px; border-bottom: 1px solid var(--border); }
+  h1 { font-size: 2.1rem; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .tagline { color: var(--muted); font-size: 1.05rem; margin: 0 0 20px; max-width: 70ch; }
+  .pipeline { font-family: var(--mono); font-size: .82rem; color: var(--muted);
+              background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+              padding: 12px 14px; overflow-x: auto; white-space: nowrap; }
+  .pipeline b { color: var(--accent2); font-weight: 600; }
+  h2 { font-size: 1.3rem; margin: 44px 0 4px; }
+  .section-sub { color: var(--muted); margin: 0 0 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 14px; }
+  .card { display: block; background: var(--panel); border: 1px solid var(--border);
+          border-radius: 10px; padding: 16px 18px; text-decoration: none; color: inherit;
+          transition: border-color .15s, transform .15s, background .15s; }
+  .card:hover { border-color: var(--accent); background: var(--panel2); transform: translateY(-2px); }
+  .card .lang { font-size: 1.05rem; font-weight: 650; margin: 0 0 2px; }
+  .card .gen { color: var(--accent); font-size: .8rem; font-family: var(--mono); }
+  .card .inst { color: var(--muted); font-size: .82rem; font-family: var(--mono);
+                margin-top: 10px; display: block; word-break: break-all; }
+  ul.links { list-style: none; padding: 0; margin: 16px 0 0; }
+  ul.links li { margin: 0 0 10px; }
+  ul.links a { color: var(--accent); text-decoration: none; font-weight: 550; }
+  ul.links a:hover { text-decoration: underline; }
+  ul.links .desc { color: var(--muted); }
+  footer { margin: 56px 0 40px; padding-top: 20px; border-top: 1px solid var(--border);
+           color: var(--muted); font-size: .85rem; }
+  code { font-family: var(--mono); background: var(--panel2); padding: 1px 5px; border-radius: 4px;
+         font-size: .85em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>TAKPacket-SDK</h1>
+    <p class="tagline">Convert ATAK Cursor-on-Target (CoT) XML to Meshtastic's
+      <code>TAKPacketV2</code> protobuf and compress it with zstd dictionary compression for LoRa
+      mesh transport (237-byte MTU, port 78). Five byte-interoperable language bindings.</p>
+    <div class="pipeline">CoT XML &nbsp;→&nbsp; <b>CotMeshSanitizer</b> &nbsp;→&nbsp;
+      <b>CotXmlParser</b> &nbsp;→&nbsp; TAKPacketV2 &nbsp;→&nbsp; <b>TakCompressor</b>
+      &nbsp;→&nbsp; [flags byte][zstd body] &nbsp;≤ 237 B</div>
+  </header>
+
+  <h2>Consume the SDK</h2>
+  <p class="section-sub">Per-platform API references, generated from the source doc comments.</p>
+  <div class="grid">
+    <a class="card" href="kotlin/">
+      <p class="lang">Kotlin / KMP <span class="gen">· Dokka</span></p>
+      <span class="inst">org.meshtastic:takpacket-sdk-jvm</span>
+    </a>
+    <a class="card" href="swift/documentation/meshtastictak/">
+      <p class="lang">Swift <span class="gen">· DocC</span></p>
+      <span class="inst">github.com/meshtastic/TAKPacket-SDK</span>
+    </a>
+    <a class="card" href="python/">
+      <p class="lang">Python <span class="gen">· pdoc</span></p>
+      <span class="inst">pip install meshtastic-tak</span>
+    </a>
+    <a class="card" href="typescript/">
+      <p class="lang">TypeScript <span class="gen">· TypeDoc</span></p>
+      <span class="inst">npm i @meshtastic/takpacket-sdk</span>
+    </a>
+    <a class="card" href="csharp/">
+      <p class="lang">C# / .NET <span class="gen">· DocFX</span></p>
+      <span class="inst">dotnet add package Meshtastic.TAK</span>
+    </a>
+  </div>
+
+  <h2>Develop the SDK</h2>
+  <p class="section-sub">Architecture, the wire contract, and how to build, test, and release.</p>
+  <ul class="links">
+    <li><a href="https://github.com/meshtastic/TAKPacket-SDK#readme">Overview &amp; architecture (README)</a>
+        — <span class="desc">the pipeline, payload-type catalog, and real-world compression examples</span></li>
+    <li><a href="https://github.com/meshtastic/TAKPacket-SDK/blob/master/WIRE_FORMAT.md">Wire format specification</a>
+        — <span class="desc">the on-wire byte layout, flags byte, and error-handling requirements</span></li>
+    <li><a href="https://github.com/meshtastic/TAKPacket-SDK/blob/master/CONTRIBUTING.md">Contributing guide</a>
+        — <span class="desc">prerequisites, build/test, regenerating goldens, adding fixtures, releasing</span></li>
+    <li><a href="https://github.com/meshtastic/TAKPacket-SDK/tree/master/testdata">Test fixtures</a>
+        — <span class="desc">47 shared CoT fixtures and the <code>.pb</code>/<code>.bin</code> goldens</span></li>
+  </ul>
+
+  <footer>
+    TAKPacket-SDK is part of <a href="https://meshtastic.org" style="color:var(--accent)">Meshtastic</a>,
+    licensed GPL-3.0. Every packet is independently decodable from its own bytes plus the static
+    shipped dictionary — zero cross-packet state.
+  </footer>
+</div>
+</body>
+</html>

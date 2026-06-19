@@ -13,6 +13,14 @@
     <PackageTags>tak;meshtastic;cot;protobuf;compression</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Ship the XML doc file in the package so consumers get IntelliSense from the
+         /// doc comments, and feed DocFX for the hosted API site. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591 = missing XML doc on a public member. The generated Atak.cs is
+         undocumented by design, so don't let it warn (or fail) the build. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Rendered as the package landing page on NuGet.org. -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +31,12 @@
   <ItemGroup>
     <Content Include="..\..\Resources\dict_non_aircraft.zstd" Pack="true" PackagePath="content" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\Resources\dict_aircraft.zstd" Pack="true" PackagePath="content" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Package landing page; PackagePath="\" puts it at the nupkg root to match
+         <PackageReadmeFile>. -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

@@ -17,6 +17,11 @@ import Foundation
 /// flag so behaviour is byte-for-byte identical across all five language
 /// bindings. The cross-binding fixtures under `testdata/sanitizer/` lock that
 /// parity.
+///
+/// ## Topics
+/// ### Sanitization
+/// - ``stripNonEssentialForMesh(_:)``
+/// - ``normalizeCotXml(_:)``
 public enum CotMeshSanitizer {
 
     // Display-only / receiver-rederivable elements that add ~100–200 wire bytes.

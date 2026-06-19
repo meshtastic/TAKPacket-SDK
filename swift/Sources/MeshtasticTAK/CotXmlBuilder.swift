@@ -1,6 +1,31 @@
 import Foundation
 
-/// Builds a CoT XML event string from a TAKPacketV2 protobuf message.
+/// Reconstructs a Cursor-on-Target (CoT) XML event string from a decoded
+/// ``TAKPacketV2`` protobuf message — the receive-side inverse of
+/// ``CotXmlParser``.
+///
+/// `build(_:)` walks the packet envelope and its single payload variant and
+/// re-emits the `<event>` / `<point>` / `<detail>` structure that ATAK, iTAK,
+/// and WinTAK expect. Field values are scaled back out of their wire units
+/// (speed cm/s → m/s, course degrees×100 → degrees, lat/lon ×1e7 → degrees,
+/// shape radii cm → m, etc.; see the unit conventions on ``CotXmlParser``).
+///
+/// Because the on-wire protobuf drops display-only and receiver-rederivable
+/// detail, the rebuilt XML is *semantically* equivalent rather than
+/// byte-identical to the original capture: a stable, ATAK-parseable
+/// reconstruction, not a verbatim copy. Several reconstructions are
+/// deliberately ATAK-shaped — e.g. an empty/missing contact endpoint becomes
+/// `*:-1:stcp` (TAK "reply via this server"), TAK-Talk `m-t-t` / `y-` events
+/// use `how="null"`, and a packet with no payload variant and an `a-f-*` type
+/// rebuilds as an implicit PLI position report.
+///
+/// All emitted text is XML-escaped. A new instance is cheap; the type holds no
+/// per-call mutable state.
+///
+/// ## Topics
+/// ### Building
+/// - ``init()``
+/// - ``build(_:)``
 public class CotXmlBuilder {
 
     private static let teamEnumToName: [Team: String] = [
@@ -43,8 +68,27 @@ public class CotXmlBuilder {
         }
     }
 
+    /// Create a builder. Holds no per-call state, so a single instance may be
+    /// reused across many ``build(_:)`` calls.
     public init() {}
 
+    /// Reconstruct a CoT XML event string from a decoded ``TAKPacketV2``.
+    ///
+    /// Emits a complete `<?xml?>`-prefixed `<event>` document: the envelope
+    /// becomes the `<event>`/`<point>` attributes (lat/lon scaled from ×1e7,
+    /// `hae` from meters HAE, which may be negative), and the single
+    /// `payload_variant` (or its absence — an implicit PLI) drives the
+    /// `<detail>` children. `time`/`start` are stamped at call time and `stale`
+    /// is `now + max(staleSeconds, 45)`, so successive rebuilds of the same
+    /// packet differ only in those timestamps.
+    ///
+    /// Reconstruction is semantically faithful but not byte-identical to the
+    /// original capture; see the type-level discussion of the ATAK-specific
+    /// reconstructions (contact endpoint, TAK-Talk `how="null"`, route anchor
+    /// from the first waypoint, etc.).
+    ///
+    /// - Parameter packet: The decoded packet to render.
+    /// - Returns: A CoT XML event string ready to hand to a TAK client.
     public func build(_ packet: TAKPacketV2) -> String {
         let now = Self.isoFmt.string(from: Date())
         let staleSecs = max(Int(packet.staleSeconds), 45)
