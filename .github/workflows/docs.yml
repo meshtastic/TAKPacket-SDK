@@ -174,11 +174,11 @@ jobs:
           # Disable Jekyll so files/dirs starting with "_" (Dokka, DocFX, DocC
           # assets) are served verbatim.
           touch site/.nojekyll
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: docs-kotlin
           path: site/kotlin
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: docs-swift
           path: swift-artifact
@@ -186,15 +186,15 @@ jobs:
         run: |
           mkdir -p site/swift
           tar -xzf swift-artifact/docc-swift.tgz -C site/swift
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: docs-typescript
           path: site/typescript
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: docs-python
           path: site/python
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: docs-csharp
           path: site/csharp
