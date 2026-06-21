@@ -5,7 +5,7 @@ xmlutil = "0.91.3"
 kzstd = "0.1.0"
 dokka = "2.2.0"
 binary-compat = "0.18.1"
-vanniktech-publish = "0.36.0"
+vanniktech-publish = "0.37.0"
 junit-jupiter = "6.1.0"
 junit-platform = "6.1.0"
 
