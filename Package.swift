@@ -17,7 +17,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.38.0"),
+        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.38.1"),
         // DocC documentation generator. A command plugin only — it is NOT linked
         // into the MeshtasticTAK product; it enables
         // `swift package generate-documentation` for the hosted API docs and

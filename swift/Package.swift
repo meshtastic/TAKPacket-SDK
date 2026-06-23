@@ -14,7 +14,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.38.0"),
+        .package(url: "https://github.com/apple/swift-protobuf.git", from: "1.38.1"),
         // DocC documentation generator (command plugin only; not linked into the
         // product). Enables `swift package generate-documentation`.
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.5.0"),
