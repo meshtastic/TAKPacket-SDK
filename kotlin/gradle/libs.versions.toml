@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.4.0"
 protobufs = "2.7.25"
-xmlutil = "0.91.3"
+xmlutil = "1.0.1"
 kzstd = "0.1.0"
 dokka = "2.2.0"
 binary-compat = "0.18.1"
