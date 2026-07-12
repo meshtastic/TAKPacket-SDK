@@ -6,8 +6,8 @@ kzstd = "0.1.0"
 dokka = "2.2.0"
 binary-compat = "0.18.1"
 vanniktech-publish = "0.37.0"
-junit-jupiter = "6.1.1"
-junit-platform = "6.1.1"
+junit-jupiter = "6.1.2"
+junit-platform = "6.1.2"
 
 [libraries]
 protobufs = { module = "org.meshtastic:protobufs", version.ref = "protobufs" }
