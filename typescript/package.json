@@ -20,7 +20,7 @@
   "dependencies": {
     "fast-xml-parser": "^5.5.10",
     "protobufjs": "^7.4.0",
-    "zstd-napi": "^0.0.12"
+    "zstd-napi": "^0.0.13"
   },
   "files": [
     "dist",
