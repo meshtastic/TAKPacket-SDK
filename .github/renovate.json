@@ -15,11 +15,17 @@
   },
   "packageRules": [
     {
-      "description": "Track meshtastic/protobufs submodule and link the diff in PR bodies. The SDK owns Wire codegen for atak.proto (issue #6) so submodule bumps land here first, then Renovate-bumps the SDK release in downstream consumers.",
+      "description": "Track meshtastic/protobufs submodule and link the diff in PR bodies. The SDK owns Wire codegen for atak.proto (issue #6) so submodule bumps land here first, then Renovate-bumps the SDK release in downstream consumers. Weekly schedule: upstream commits near-daily (~12 digest PRs in June/July 2026) but atak.proto rarely changes; a weekly batch keeps the submodule fresh without the churn.",
       "matchPackageNames": [
         "https://github.com/meshtastic/protobufs.git"
       ],
-      "changelogUrl": "https://github.com/meshtastic/protobufs/compare/{{currentDigest}}...{{newDigest}}"
+      "changelogUrl": "https://github.com/meshtastic/protobufs/compare/{{currentDigest}}...{{newDigest}}",
+      "schedule": ["before 6am on monday"]
+    },
+    {
+      "description": "Hold typescript at <7 until a stable typedoc supports it. typedoc 0.28.x peer-requires typescript 5.x-6.0.x and only 1.0.0-dev prereleases target 7.x, so the ts7 PR can never go green (npm ERESOLVE). Drop this rule when typedoc 1.0 ships.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
     },
     {
       "description": "Automerge non-major dependency updates",
