@@ -436,3 +436,17 @@ mavenPublishing {
         }
     }
 }
+
+// Security floors for the Kotlin/JS test harness (karma/webpack/mocha stack in
+// kotlin-js-store/yarn.lock). Dev-time only — nothing here ships in published
+// artifacts. Each pin clears an open Dependabot alert; drop a resolution once
+// the transitive tree requires at least that version on its own.
+// After changing these, regenerate the lock: ./gradlew kotlinUpgradeYarnLock
+plugins.withType<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin> {
+    the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().apply {
+        resolution("ws", "8.21.0") // GHSA memory-exhaustion DoS (< 8.21.0)
+        resolution("serialize-javascript", "7.0.5") // RCE (< 7.0.3) + CPU-exhaustion DoS (< 7.0.5)
+        resolution("webpack", "5.104.1") // buildHttp allow-list bypasses (< 5.104.1)
+        resolution("diff", "8.0.3") // parsePatch/applyPatch DoS (< 8.0.3)
+    }
+}
