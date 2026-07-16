@@ -4,6 +4,35 @@ All notable changes to the TAKPacket-SDK Kotlin module are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.0] — Kotlin 2.4.10 toolchain, protobufjs 8, xmlutil 1.0
+
+Dependency-refresh release; the wire format is unchanged (`atak.proto` is
+byte-identical to v0.7.0 — the protobufs submodule updates over this window
+touched other files only, and all `.bin`/`.pb` goldens are unchanged).
+
+- **Kotlin 2.4.10** (was 2.3.x) (#100). Native/iOS consumers of the KMP
+  artifact need a Kotlin 2.4.x toolchain to consume the published klibs;
+  JVM/Android consumers are unaffected. This is why the version is 0.8.0
+  rather than 0.7.1.
+- **TypeScript: protobufjs 8** (#62). protobufjs 8 elides set-to-default
+  values on encode (proto3-canonical; 7.x wrote them), so `decompress()` now
+  materializes proto3 defaults via `toObject(msg, { defaults: true })` —
+  absent scalars come back as `0`/`""`/`false`, exactly like the
+  Wire/protobuf runtimes in the Kotlin/Swift/Python/C# bindings. TS consumers
+  that distinguished `undefined` from `0`/`""` on decompressed packets must
+  use proto3 semantics instead.
+- **Kotlin: xmlutil 1.0** (#85) — API-stabilization release of the CoT XML
+  parsing dependency; no `CotXmlParser` changes needed.
+- Per-platform API docs and publishing for all 5 bindings (#69).
+- Security: yarn resolution floors for the Kotlin/JS **test harness**
+  (ws 8.21.0, serialize-javascript 7.0.5, webpack 5.104.1, diff 8.0.3),
+  clearing all six open Dependabot alerts; dev-time only, nothing ships in
+  published artifacts (#106).
+- Toolchain/CI: Gradle 9.6.1, JUnit 6.1.2, vanniktech publish 0.37.0,
+  swift-protobuf 1.38.1, zstd-napi 0.0.13, .NET test SDK 18.8.1, Python 3.14,
+  GitHub Actions updates; Renovate now batches protobufs digest bumps weekly
+  and holds typescript <7 until a stable typedoc supports it (#105).
+
 ## [0.7.0] — zstd codec extracted to the standalone kzstd library
 
 The pure-Kotlin zstd codec introduced in 0.6.0 now lives in its own published
