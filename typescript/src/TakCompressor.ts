@@ -294,7 +294,13 @@ export class TakCompressor {
     try {
       const TAKPacketV2Type = await getTAKPacketV2Type();
       const msg = TAKPacketV2Type.decode(protobufBytes);
-      return TAKPacketV2Type.toObject(msg) as TAKPacketV2;
+      // defaults:true materializes proto3 zero values (0, "", false) for
+      // absent scalar fields, matching what the Wire/protobuf runtimes in the
+      // other bindings return. protobufjs 8 elides default values on encode
+      // (7.x wrote zero-valued own properties to the wire), so without this
+      // option those fields come back undefined instead. Oneof members are
+      // never defaulted, so payload_variant is unaffected.
+      return TAKPacketV2Type.toObject(msg, { defaults: true }) as TAKPacketV2;
     } catch (e) {
       throw new Error(`Protobuf parsing failed: ${e}`);
     }

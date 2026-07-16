@@ -15,22 +15,29 @@ describe("RoundTrip", () => {
     const wire = await compressor.compress(packet);
     const decompressed = await compressor.decompress(wire);
 
-    expect(decompressed.cotTypeId).toBe(packet.cotTypeId);
-    expect(decompressed.how).toBe(packet.how);
-    expect(decompressed.callsign).toBe(packet.callsign);
-    expect(decompressed.team).toBe(packet.team);
-    expect(decompressed.latitudeI).toBe(packet.latitudeI);
-    expect(decompressed.longitudeI).toBe(packet.longitudeI);
-    expect(decompressed.altitude).toBe(packet.altitude);
-    expect(decompressed.battery).toBe(packet.battery);
-    expect(decompressed.uid).toBe(packet.uid);
-    expect(decompressed.speed).toBe(packet.speed);
-    expect(decompressed.course).toBe(packet.course);
-    expect(decompressed.role).toBe(packet.role);
-    expect(decompressed.deviceCallsign).toBe(packet.deviceCallsign);
-    expect(decompressed.takVersion).toBe(packet.takVersion);
-    expect(decompressed.takPlatform).toBe(packet.takPlatform);
-    expect(decompressed.endpoint).toBe(packet.endpoint);
+    // proto3 wire format cannot distinguish an explicitly-set default (0, "")
+    // from an absent field, and protobufjs 8 elides set-to-default values on
+    // encode (7.x wrote zero-valued own properties). decompress() materializes
+    // defaults — like the Wire/protobuf runtimes in the other bindings — so
+    // compare under proto3 semantics: absent == default.
+    const num = (v: unknown) => (v as number | undefined) ?? 0;
+    const str = (v: unknown) => (v as string | undefined) ?? "";
+    expect(num(decompressed.cotTypeId)).toBe(num(packet.cotTypeId));
+    expect(num(decompressed.how)).toBe(num(packet.how));
+    expect(str(decompressed.callsign)).toBe(str(packet.callsign));
+    expect(num(decompressed.team)).toBe(num(packet.team));
+    expect(num(decompressed.latitudeI)).toBe(num(packet.latitudeI));
+    expect(num(decompressed.longitudeI)).toBe(num(packet.longitudeI));
+    expect(num(decompressed.altitude)).toBe(num(packet.altitude));
+    expect(num(decompressed.battery)).toBe(num(packet.battery));
+    expect(str(decompressed.uid)).toBe(str(packet.uid));
+    expect(num(decompressed.speed)).toBe(num(packet.speed));
+    expect(num(decompressed.course)).toBe(num(packet.course));
+    expect(num(decompressed.role)).toBe(num(packet.role));
+    expect(str(decompressed.deviceCallsign)).toBe(str(packet.deviceCallsign));
+    expect(str(decompressed.takVersion)).toBe(str(packet.takVersion));
+    expect(str(decompressed.takPlatform)).toBe(str(packet.takPlatform));
+    expect(str(decompressed.endpoint)).toBe(str(packet.endpoint));
     // v0.3.2 directed-routing recipients. Empty list = broadcast (default
     // for PLI / situational-awareness); populated for TAKTALK m-t-t and
     // directed b-t-f DMs. TAKTALK gates voice TTS on this list matching
@@ -42,16 +49,16 @@ describe("RoundTrip", () => {
       const origChat = packet.chat as Record<string, unknown>;
       const decChat = decompressed.chat as Record<string, unknown>;
       expect(decChat).toBeTruthy();
-      expect(decChat.message).toBe(origChat.message);
+      expect(str(decChat.message)).toBe(str(origChat.message));
     }
     if (packet.aircraft) {
       const origAc = packet.aircraft as Record<string, unknown>;
       const decAc = decompressed.aircraft as Record<string, unknown>;
       expect(decAc).toBeTruthy();
-      expect(decAc.icao).toBe(origAc.icao);
-      expect(decAc.registration).toBe(origAc.registration);
-      expect(decAc.flight).toBe(origAc.flight);
-      expect(decAc.squawk).toBe(origAc.squawk);
+      expect(num(decAc.icao)).toBe(num(origAc.icao));
+      expect(str(decAc.registration)).toBe(str(origAc.registration));
+      expect(str(decAc.flight)).toBe(str(origAc.flight));
+      expect(num(decAc.squawk)).toBe(num(origAc.squawk));
     }
     if (packet.casevac) {
       const origC = packet.casevac as Record<string, unknown>;
