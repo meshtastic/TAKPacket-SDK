@@ -5,6 +5,7 @@ xmlutil = "1.0.1"
 kzstd = "0.1.0"
 dokka = "2.2.0"
 binary-compat = "0.18.1"
+kover = "0.9.9"
 vanniktech-publish = "0.37.0"
 junit-jupiter = "6.1.2"
 junit-platform = "6.1.2"
@@ -27,3 +28,4 @@ kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref 
 vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-publish" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 binary-compat = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binary-compat" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

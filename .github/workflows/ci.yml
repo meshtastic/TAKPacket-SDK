@@ -5,10 +5,19 @@ on:
     branches: [main, master]
   push:
     branches: [main, master]
+  merge_group:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GRADLE_CACHE_URL: ${{ secrets.GRADLE_CACHE_URL }}
+  GRADLE_CACHE_USERNAME: ${{ secrets.GRADLE_CACHE_USERNAME }}
+  GRADLE_CACHE_PASSWORD: ${{ secrets.GRADLE_CACHE_PASSWORD }}
 
 jobs:
   kotlin:
@@ -21,14 +30,24 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
       - name: Test
         working-directory: kotlin
         # The Kotlin module is now a kotlin("multiplatform") project with a
         # jvm() target. The top-level `test` task no longer exists — use
         # `jvmTest` to run the JVM target's tests (equivalent to the old
         # kotlin("jvm") `test` task). iOS targets are compile-only for now.
-        run: gradle jvmTest --quiet
+        run: ./gradlew jvmTest --quiet
+      - name: Coverage report (Kover XML)
+        working-directory: kotlin
+        run: ./gradlew koverXmlReport
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: kotlin/build/reports/kover/report.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7
