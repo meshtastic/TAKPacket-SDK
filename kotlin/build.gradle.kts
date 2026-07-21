@@ -146,11 +146,11 @@ dokka {
 // klib (native/common) ABI validation is enabled alongside the JVM dump so the
 // check covers the full cross-platform public surface, not JVM only. `apiDump`
 // writes TWO baselines into api/ — the JVM `takpacket-sdk.api` and the merged
-// `takpacket-sdk.klib.api` (all 13 targets) — and `apiCheck` validates both.
+// `takpacket-sdk.klib.api` (all 12 non-JVM targets) — and `apiCheck` validates both.
 // With the cinterop gone the nine native klibs build from pure Kotlin, so klib
 // validation runs cleanly. Targets a CI host can't build (the Apple targets on
 // the Linux runner) are skipped by BCV and trusted from the committed dump, so
-// regenerate the full 13-target dump on a macOS host via `./gradlew apiDump`.
+// regenerate the full 12-target klib dump on a macOS host via `./gradlew apiDump`.
 apiValidation {
     ignoredPackages.add("org.meshtastic.proto")
 

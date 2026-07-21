@@ -44,7 +44,7 @@ jobs:
         # Validates api/takpacket-sdk.api (JVM) and api/takpacket-sdk.klib.api
         # (merged native/common surface). The Linux runner can't build the Apple
         # targets, so BCV skips them and trusts the committed dump; the full
-        # 13-target dump is regenerated on macOS via `./gradlew apiDump`.
+        # 12-target klib dump is regenerated on macOS via `./gradlew apiDump`.
         run: ./gradlew apiCheck --stacktrace
       - name: Test
         working-directory: kotlin
