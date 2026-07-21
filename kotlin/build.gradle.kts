@@ -142,16 +142,23 @@ dokka {
 
 // Binary-compatibility-validator: the generated org.meshtastic.proto.* types are
 // an implementation detail, not part of this SDK's public API surface.
+//
+// klib (native/common) ABI validation is enabled alongside the JVM dump so the
+// check covers the full cross-platform public surface, not JVM only. `apiDump`
+// writes TWO baselines into api/ — the JVM `takpacket-sdk.api` and the merged
+// `takpacket-sdk.klib.api` (all 13 targets) — and `apiCheck` validates both.
+// With the cinterop gone the nine native klibs build from pure Kotlin, so klib
+// validation runs cleanly. Targets a CI host can't build (the Apple targets on
+// the Linux runner) are skipped by BCV and trusted from the committed dump, so
+// regenerate the full 13-target dump on a macOS host via `./gradlew apiDump`.
 apiValidation {
     ignoredPackages.add("org.meshtastic.proto")
-}
 
-// klib API validation runs as part of `apiCheck`. With the cinterop gone the
-// nine native klibs build from pure Kotlin (no vendored libzstd.a was the only
-// blocker that forced detaching it before), so klib validation is fully
-// re-attached. The klib `.api` baseline lives in api/ alongside the JVM one
-// (run `./gradlew apiDump` to refresh both). The public Kotlin API is identical
-// across targets and every codec/dictionary internal is `internal`.
+    @OptIn(kotlinx.validation.ExperimentalBCVApi::class)
+    klib {
+        enabled = true
+    }
+}
 
 // Reproducible archives: stable file order + zeroed timestamps so published
 // artifacts are byte-deterministic across builds.
