@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, master]
+    branches: [main]
   push:
-    branches: [main, master]
+    branches: [main]
   merge_group:
 
 concurrency:
@@ -129,7 +129,7 @@ jobs:
 
   publish-snapshot:
     name: Publish Snapshot
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [kotlin, swift, python, typescript, csharp]
     runs-on: macos-latest
     steps:

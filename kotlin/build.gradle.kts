@@ -128,7 +128,7 @@ dokka {
         // Deep-link every documented symbol to its source on GitHub.
         sourceLink {
             localDirectory.set(file("src"))
-            remoteUrl("https://github.com/meshtastic/TAKPacket-SDK/blob/master/kotlin/src")
+            remoteUrl("https://github.com/meshtastic/TAKPacket-SDK/blob/main/kotlin/src")
             remoteLineSuffix.set("#L")
         }
         // The Wire-generated proto types are an implementation detail (already
