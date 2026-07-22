@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, master]
+    branches: [main]
   push:
-    branches: [main, master]
+    branches: [main]
   merge_group:
 
 concurrency:
@@ -129,7 +129,7 @@ jobs:
 
   publish-snapshot:
     name: Publish Snapshot
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [kotlin, swift, python, typescript, csharp]
     runs-on: macos-latest
     steps:
@@ -139,7 +139,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
       - name: Compute snapshot version
         id: version
         run: |
@@ -150,7 +150,7 @@ jobs:
       - name: Publish to Maven Central (snapshots)
         working-directory: kotlin
         run: >-
-          gradle publishAllPublicationsToMavenCentralRepository
+          ./gradlew publishAllPublicationsToMavenCentralRepository
           -PVERSION_NAME=${{ steps.version.outputs.snapshot }}
           --stacktrace
         env:
