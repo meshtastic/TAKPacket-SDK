@@ -32,6 +32,20 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
+      - name: Cache Konan (Kotlin/Native toolchain)
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('kotlin/gradle/libs.versions.toml', 'kotlin/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
+      - name: Check public API (BCV — JVM + klib/native ABI)
+        working-directory: kotlin
+        # Validates api/takpacket-sdk.api (JVM) and api/takpacket-sdk.klib.api
+        # (merged native/common surface). The Linux runner can't build the Apple
+        # targets, so BCV skips them and trusts the committed dump; the full
+        # 12-target klib dump is regenerated on macOS via `./gradlew apiDump`.
+        run: ./gradlew apiCheck --stacktrace
       - name: Test
         working-directory: kotlin
         # The Kotlin module is now a kotlin("multiplatform") project with a
