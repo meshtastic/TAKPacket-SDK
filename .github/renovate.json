@@ -13,6 +13,9 @@
   "git-submodules": {
     "enabled": true
   },
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
   "packageRules": [
     {
       "description": "Track meshtastic/protobufs submodule and link the diff in PR bodies. The SDK owns Wire codegen for atak.proto (issue #6) so submodule bumps land here first, then Renovate-bumps the SDK release in downstream consumers. Weekly schedule: upstream commits near-daily (~12 digest PRs in June/July 2026) but atak.proto rarely changes; a weekly batch keeps the submodule fresh without the churn.",
