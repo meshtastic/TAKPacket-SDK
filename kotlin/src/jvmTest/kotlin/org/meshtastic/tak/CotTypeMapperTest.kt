@@ -1,10 +1,12 @@
 package org.meshtastic.tak
 
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 
 class CotTypeMapperTest {
-
     @Test
     fun `known type strings map to correct enum values`() {
         assertEquals(CotTypeMapper.COTTYPE_A_F_G_U_C, CotTypeMapper.typeToEnum("a-f-G-U-C"))
@@ -28,8 +30,11 @@ class CotTypeMapperTest {
         for (enumVal in 1..75) {
             val str = CotTypeMapper.typeToString(enumVal)
             if (str != null) {
-                assertEquals(enumVal, CotTypeMapper.typeToEnum(str),
-                    "Round-trip failed for enum $enumVal -> $str")
+                assertEquals(
+                    enumVal,
+                    CotTypeMapper.typeToEnum(str),
+                    "Round-trip failed for enum $enumVal -> $str",
+                )
             }
         }
     }
@@ -103,8 +108,11 @@ class CotTypeMapperTest {
         for (enumVal in 1..7) {
             val str = CotTypeMapper.howToString(enumVal)
             if (str != null) {
-                assertEquals(enumVal, CotTypeMapper.howToEnum(str),
-                    "How round-trip failed for enum $enumVal -> $str")
+                assertEquals(
+                    enumVal,
+                    CotTypeMapper.howToEnum(str),
+                    "How round-trip failed for enum $enumVal -> $str",
+                )
             }
         }
     }

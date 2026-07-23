@@ -1,7 +1,9 @@
 package org.meshtastic.tak
 
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
@@ -17,7 +19,6 @@ import org.junit.jupiter.params.provider.MethodSource
  * is a zero-edit operation in this file — just drop the XML and run the tests.
  */
 class CompatibilityTest {
-
     private val parser = CotXmlParser()
     private val compressor = TakCompressor()
 
@@ -27,8 +28,9 @@ class CompatibilityTest {
         // Note: Exact byte match is expected within the same platform but may differ across
         // platforms due to protobuf serialization order. The key invariant is interoperability:
         // golden files from any platform can be decompressed by any other platform.
-        val golden = TestFixtures.loadGolden(fixtureName)
-            ?: return // Skip if golden files haven't been generated yet
+        val golden =
+            TestFixtures.loadGolden(fixtureName)
+                ?: return // Skip if golden files haven't been generated yet
 
         val xml = TestFixtures.loadFixture("$fixtureName.xml")
         val packet = parser.parse(xml)
@@ -37,30 +39,37 @@ class CompatibilityTest {
         // Protobuf serializers across platforms may produce different byte orderings,
         // resulting in different compressed sizes. Allow wide tolerance.
         val ratio = wirePayload.size.toDouble() / golden.size.toDouble()
-        assertTrue(ratio in 0.5..2.0,
-            "$fixtureName: compressed size ${wirePayload.size}B differs significantly from golden ${golden.size}B")
+        assertTrue(
+            ratio in 0.5..2.0,
+            "$fixtureName: compressed size ${wirePayload.size}B differs significantly from golden ${golden.size}B",
+        )
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("org.meshtastic.tak.TestFixtures#allFixtureNames")
     fun `protobuf output matches golden file`(fixtureName: String) {
-        val goldenPb = TestFixtures.loadProtobuf(fixtureName)
-            ?: return // Skip if protobuf golden files haven't been generated yet
+        val goldenPb =
+            TestFixtures.loadProtobuf(fixtureName)
+                ?: return // Skip if protobuf golden files haven't been generated yet
 
         val xml = TestFixtures.loadFixture("$fixtureName.xml")
         val packet = parser.parse(xml)
         val protobuf = TakPacketV2Serializer.serialize(packet)
 
-        assertArrayEquals(goldenPb, protobuf,
+        assertArrayEquals(
+            goldenPb,
+            protobuf,
             "$fixtureName: protobuf bytes do not match golden file " +
-            "(got ${protobuf.size}B, expected ${goldenPb.size}B)")
+                "(got ${protobuf.size}B, expected ${goldenPb.size}B)",
+        )
     }
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("org.meshtastic.tak.TestFixtures#allFixtureNames")
     fun `golden file decompresses to valid packet`(fixtureName: String) {
-        val golden = TestFixtures.loadGolden(fixtureName)
-            ?: return // Skip if golden files haven't been generated yet
+        val golden =
+            TestFixtures.loadGolden(fixtureName)
+                ?: return // Skip if golden files haven't been generated yet
 
         val packet = compressor.decompress(golden)
         assertNotEquals("", packet.uid, "$fixtureName: decompressed packet should have a UID")

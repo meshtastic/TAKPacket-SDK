@@ -10,7 +10,6 @@ package org.meshtastic.tak
  * selection rule.
  */
 public object DictionaryProvider {
-
     /**
      * Dictionary ID for the 512 KB non-aircraft, proto-trained dictionary —
      * the default for PLI, chat, ground units, shapes, markers, routes, etc.
@@ -49,11 +48,12 @@ public object DictionaryProvider {
      *         unknown ID (the decoder treats a `null` here as "unknown
      *         dictionary" and rejects the frame).
      */
-    public fun getDictionary(dictId: Int): ByteArray? = when (dictId) {
-        DICT_ID_NON_AIRCRAFT -> nonAircraftDict
-        DICT_ID_AIRCRAFT -> aircraftDict
-        else -> null
-    }
+    public fun getDictionary(dictId: Int): ByteArray? =
+        when (dictId) {
+            DICT_ID_NON_AIRCRAFT -> nonAircraftDict
+            DICT_ID_AIRCRAFT -> aircraftDict
+            else -> null
+        }
 
     /**
      * Pick the dictionary ID to compress a packet with, based on its CoT type.
@@ -68,7 +68,10 @@ public object DictionaryProvider {
      *        [CotTypeMapper.COTTYPE_OTHER]; may be `null`.
      * @return [DICT_ID_AIRCRAFT] or [DICT_ID_NON_AIRCRAFT].
      */
-    public fun selectDictId(cotTypeId: Int, cotTypeStr: String?): Int {
+    public fun selectDictId(
+        cotTypeId: Int,
+        cotTypeStr: String?,
+    ): Int {
         // Check enum-based classification first
         if (cotTypeId != CotTypeMapper.COTTYPE_OTHER) {
             return if (CotTypeMapper.isAircraft(cotTypeId)) DICT_ID_AIRCRAFT else DICT_ID_NON_AIRCRAFT

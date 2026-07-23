@@ -9,6 +9,9 @@ kover = "0.9.9"
 vanniktech-publish = "0.37.0"
 junit-jupiter = "6.1.2"
 junit-platform = "6.1.2"
+spotless = "8.8.0"
+ktlint = "1.8.0"
+detekt = "1.23.8"
 
 [libraries]
 protobufs = { module = "org.meshtastic:protobufs", version.ref = "protobufs" }
@@ -29,3 +32,5 @@ vanniktech-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanni
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 binary-compat = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", version.ref = "binary-compat" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

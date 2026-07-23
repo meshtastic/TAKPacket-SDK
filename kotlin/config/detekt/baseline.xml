@@ -1,0 +1,114 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:CotXmlBuilder.kt$CotXmlBuilder$kind == SHAPE_KIND_CIRCLE || kind == SHAPE_KIND_RANGING_CIRCLE || kind == SHAPE_KIND_BULLSEYE || kind == SHAPE_KIND_ELLIPSE</ID>
+    <ID>ComplexCondition:CotXmlBuilder.kt$CotXmlBuilder$packet.remarks.isNotEmpty() &amp;&amp; packet.payload !is TakPacketV2Data.Payload.Chat &amp;&amp; packet.payload !is TakPacketV2Data.Payload.Aircraft &amp;&amp; packet.payload !is TakPacketV2Data.Payload.Route &amp;&amp; packet.payload !is TakPacketV2Data.Payload.TakTalk &amp;&amp; packet.payload !is TakPacketV2Data.Payload.TakTalkRoom</ID>
+    <ID>ComplexCondition:CotXmlBuilder.kt$CotXmlBuilder$routePayload != null &amp;&amp; packet.latitudeI == 0 &amp;&amp; packet.longitudeI == 0 &amp;&amp; routePayload.links.isNotEmpty()</ID>
+    <ID>ComplexCondition:CotXmlParser.kt$CotXmlParser$!isStyleLink &amp;&amp; linkUidAttr != null &amp;&amp; relation == "p-p" &amp;&amp; linkType.isNotEmpty()</ID>
+    <ID>CyclomaticComplexMethod:CotXmlBuilder.kt$CotXmlBuilder$public fun build(packet: TakPacketV2Data): String</ID>
+    <ID>CyclomaticComplexMethod:CotXmlParser.kt$CotXmlParser$@Throws(IllegalArgumentException::class) public fun parse(cotXml: String): TakPacketV2Data</ID>
+    <ID>CyclomaticComplexMethod:CotXmlParser.kt$CotXmlParser.Companion$internal fun inferSensorType(model: String?): TakPacketV2Data.SensorFovData.SensorType</ID>
+    <ID>CyclomaticComplexMethod:CotXmlParser.kt$CotXmlParser.Companion$private fun markerKindFromCotType( cotType: String, iconset: String, ): Int</ID>
+    <ID>CyclomaticComplexMethod:DictionaryTrainingTest.kt$DictionaryTrainingTest$@Test fun `generate training corpus`()</ID>
+    <ID>CyclomaticComplexMethod:TakPacketV2Serializer.kt$TakPacketV2Serializer$public fun deserialize(bytes: ByteArray): TakPacketV2Data</ID>
+    <ID>CyclomaticComplexMethod:TakPacketV2Serializer.kt$TakPacketV2Serializer$public fun serialize(data: TakPacketV2Data): ByteArray</ID>
+    <ID>EmptyFunctionBlock:Logger.kt$NoOpLogger${}</ID>
+    <ID>ImplicitDefaultLocale:CompressionTest.kt$CompressionTest$String.format("%.1f", medianRatio)</ID>
+    <ID>ImplicitDefaultLocale:CompressionTest.kt$CompressionTest$String.format("%.1f", ratio)</ID>
+    <ID>ImplicitDefaultLocale:CompressionTest.kt$CompressionTest$String.format("%.1f", row.ratio)</ID>
+    <ID>LargeClass:CotXmlParser.kt$CotXmlParser</ID>
+    <ID>LargeClass:RoundTripTest.kt$RoundTripTest</ID>
+    <ID>LongMethod:CompressionTest.kt$CompressionTest$@Test fun `generate compression report`()</ID>
+    <ID>LongMethod:CotXmlBuilder.kt$CotXmlBuilder$public fun build(packet: TakPacketV2Data): String</ID>
+    <ID>LongMethod:CotXmlParser.kt$CotXmlParser$@Throws(IllegalArgumentException::class) public fun parse(cotXml: String): TakPacketV2Data</ID>
+    <ID>LongMethod:DictionaryTrainingTest.kt$DictionaryTrainingTest$@Test fun `generate training corpus`()</ID>
+    <ID>LongMethod:RoundTripTest.kt$RoundTripTest$@ParameterizedTest(name = "{0}") @MethodSource("org.meshtastic.tak.TestFixtures#allFixtureFilenames") fun `full round-trip preserves fields`(fixture: String)</ID>
+    <ID>LongMethod:TakPacketV2Serializer.kt$TakPacketV2Serializer$public fun deserialize(bytes: ByteArray): TakPacketV2Data</ID>
+    <ID>LongMethod:TakPacketV2Serializer.kt$TakPacketV2Serializer$public fun serialize(data: TakPacketV2Data): ByteArray</ID>
+    <ID>LoopWithTooManyJumpStatements:GoldenDecodeCommonTest.kt$GoldenDecodeCommonTest$for</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$10</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$11</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$12</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$13</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$14</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$3</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$4</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$5</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$6</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$7</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$8</ID>
+    <ID>MagicNumber:AtakPalette.kt$AtakPalette$9</ID>
+    <ID>MagicNumber:CotTypeMapper.kt$CotTypeMapper$3</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$0x04</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$0x08</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$0x10</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$0x20</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$10.0</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$100.0</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$1e7</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$3</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$3.0</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$4</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$45</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder$6</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder.Companion$0xFF</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder.Companion$16</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder.Companion$24</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder.Companion$3</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder.Companion$4</ID>
+    <ID>MagicNumber:CotXmlBuilder.kt$CotXmlBuilder.Companion$8</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser$0x04</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser$0x08</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser$0x10</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser$0x20</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser$10</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser$100</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser$360</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser$4</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser$5</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser.Companion$180.0</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser.Companion$1e7</ID>
+    <ID>MagicNumber:CotXmlParser.kt$CotXmlParser.Companion$90.0</ID>
+    <ID>MagicNumber:TakCompressor.kt$TakCompressor$0x3F</ID>
+    <ID>MagicNumber:TakCompressor.kt$TakCompressor$0xFF</ID>
+    <ID>MagicNumber:TakCompressor.kt$TakCompressor$3</ID>
+    <ID>MagicNumber:TakCompressor.kt$TakCompressor.Companion$0xFF</ID>
+    <ID>MagicNumber:TakCompressor.kt$TakCompressor.Companion$4</ID>
+    <ID>MagicNumber:TakPacketV2Data.kt$TakPacketV2Data.SensorFovData.SensorType.Laser$3</ID>
+    <ID>MagicNumber:TakPacketV2Data.kt$TakPacketV2Data.SensorFovData.SensorType.Nvg$4</ID>
+    <ID>MagicNumber:TakPacketV2Data.kt$TakPacketV2Data.SensorFovData.SensorType.Other$6</ID>
+    <ID>MagicNumber:TakPacketV2Data.kt$TakPacketV2Data.SensorFovData.SensorType.Rf$5</ID>
+    <ID>MagicNumber:TakPacketV2Serializer.kt$TakPacketV2Serializer$10</ID>
+    <ID>MagicNumber:TakPacketV2Serializer.kt$TakPacketV2Serializer$100</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$10</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$19</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$237</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$3</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$4</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$5</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$6</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$7</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$8</ID>
+    <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$9</ID>
+    <ID>NestedBlockDepth:CotXmlBuilder.kt$CotXmlBuilder$public fun build(packet: TakPacketV2Data): String</ID>
+    <ID>NestedBlockDepth:CotXmlParser.kt$CotXmlParser$@Throws(IllegalArgumentException::class) public fun parse(cotXml: String): TakPacketV2Data</ID>
+    <ID>ReturnCount:CotXmlParser.kt$CotXmlParser.Companion$private fun parseCasevacEnum( raw: String?, nameMap: Map&lt;String, Int>, maxValue: Int, ): Int</ID>
+    <ID>ReturnCount:DictionaryProvider.kt$DictionaryProvider$public fun selectDictId( cotTypeId: Int, cotTypeStr: String?, ): Int</ID>
+    <ID>ReturnCount:TakCompressor.kt$TakCompressor$@Throws(ZstdException::class) public fun compressWithRemarksFallbackDetailed( packet: TakPacketV2Data, maxWireBytes: Int, ): RemarksFallbackResult</ID>
+    <ID>SwallowedException:CotXmlParser.kt$CotXmlParser$e: Exception</ID>
+    <ID>ThrowsCount:TakCompressor.kt$TakCompressor$@Throws(ZstdException::class, IllegalArgumentException::class) public fun decompress(wirePayload: ByteArray): TakPacketV2Data</ID>
+    <ID>TooGenericExceptionCaught:CotXmlParser.kt$CotXmlParser$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:TakCompressor.kt$TakCompressor$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:ZstdCodec.kt$ZstdCodec$e: Exception</ID>
+    <ID>TooGenericExceptionThrown:TakCompressor.kt$TakCompressor$throw RuntimeException( "Protobuf parsing failed " + "(flagsByte=0x${hex2Upper(flagsByte)}, protobufSize=${protobufBytes.size}): " + (e.message ?: e::class.simpleName ?: "unknown"), e, )</ID>
+    <ID>TooGenericExceptionThrown:TakCompressor.kt$TakCompressor$throw RuntimeException( "Zstd decompression failed " + "(dictId=$dictId, compressedSize=${compressedBytes.size}): " + (e.message ?: e::class.simpleName ?: "unknown"), e, )</ID>
+    <ID>UnusedPrivateProperty:CotXmlBuilder.kt$CotXmlBuilder.Companion$private const val RECEIPT_TYPE_DELIVERED = 1</ID>
+    <ID>UnusedPrivateProperty:CotXmlBuilder.kt$CotXmlBuilder.Companion$private const val RECEIPT_TYPE_READ = 2</ID>
+    <ID>UnusedPrivateProperty:CotXmlParser.kt$CotXmlParser$var chatMessage = ""</ID>
+    <ID>UseCheckOrError:DictionaryLoader.kt$DictionaryLoader$throw IllegalStateException("Unknown dictionary resource: $name")</ID>
+    <ID>UseRequire:CotXmlParser.kt$CotXmlParser$throw IllegalArgumentException("XML contains prohibited DOCTYPE or ENTITY declaration")</ID>
+    <ID>UseRequire:TakCompressor.kt$TakCompressor$throw IllegalArgumentException( "Uncompressed payload size ${compressedBytes.size} exceeds limit $MAX_DECOMPRESSED_SIZE", )</ID>
+    <ID>UseRequire:TakCompressor.kt$TakCompressor$throw IllegalArgumentException("Unknown dictionary ID: $dictId")</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -21,7 +21,6 @@ package org.meshtastic.tak
  * `testdata/sanitizer/` lock byte-for-byte parity.
  */
 public object CotMeshSanitizer {
-
     // Display-only / receiver-rederivable elements that add ~100–200 wire bytes.
     //
     // DELIBERATELY ABSENT: <voice> and <marti>. They are TAK-Talk essentials —

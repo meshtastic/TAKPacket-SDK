@@ -32,6 +32,11 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+      - name: Static analysis (Spotless + detekt)
+        working-directory: kotlin
+        # Spotless (ktlint via .editorconfig) enforces formatting; detekt runs the
+        # default ruleset (legacy findings grandfathered in config/detekt/baseline.xml).
+        run: ./gradlew spotlessCheck detekt --stacktrace
       - name: Cache Konan (Kotlin/Native toolchain)
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -46,13 +51,14 @@ jobs:
         # targets, so BCV skips them and trusts the committed dump; the full
         # 12-target klib dump is regenerated on macOS via `./gradlew apiDump`.
         run: ./gradlew apiCheck --stacktrace
-      - name: Test
+      - name: Test (JVM + JS + Wasm/JS + Linux native)
         working-directory: kotlin
-        # The Kotlin module is now a kotlin("multiplatform") project with a
-        # jvm() target. The top-level `test` task no longer exists — use
-        # `jvmTest` to run the JVM target's tests (equivalent to the old
-        # kotlin("jvm") `test` task). iOS targets are compile-only for now.
-        run: ./gradlew jvmTest --quiet
+        # KMP has no top-level `test` task — each target has its own `<target>Test`.
+        # The common suites (RoundTrip/Resilience/Decode via InlinedFixtures) are
+        # compiled per target but only execute when their task is invoked, so run
+        # every target this Linux runner can build: jvmTest + jsTest + wasmJsTest
+        # + linuxX64Test. The Apple/native targets run on the macOS leg below.
+        run: ./gradlew jvmTest jsTest wasmJsTest linuxX64Test --stacktrace
       - name: Coverage report (Kover XML)
         working-directory: kotlin
         run: ./gradlew koverXmlReport
@@ -68,6 +74,33 @@ jobs:
         with:
           name: kotlin-test-results
           path: kotlin/build/reports/tests/
+
+  kotlin-native:
+    name: Kotlin (Apple/native)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+      - name: Cache Konan (Kotlin/Native toolchain)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('kotlin/gradle/libs.versions.toml', 'kotlin/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
+      - name: Test (Apple/native targets)
+        working-directory: kotlin
+        # The ubuntu Kotlin job can't build the Apple targets, so 12/13 targets
+        # never ran their tests. Execute the Apple/native suites here — the same
+        # common RoundTrip/Resilience/Decode suites (via InlinedFixtures), just on
+        # macosArm64 + iosSimulatorArm64.
+        run: ./gradlew macosArm64Test iosSimulatorArm64Test --stacktrace
 
   swift:
     name: Swift
@@ -130,7 +163,7 @@ jobs:
   publish-snapshot:
     name: Publish Snapshot
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [kotlin, swift, python, typescript, csharp]
+    needs: [kotlin, kotlin-native, swift, python, typescript, csharp]
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

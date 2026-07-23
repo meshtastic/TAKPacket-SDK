@@ -77,7 +77,7 @@ jobs:
           if gh pr list --head "$BRANCH" --state open --json number -q '.[0].number' | grep -q .; then
             echo "::notice::PR for ${BRANCH} already open — updated with the new commit."
           else
-            gh pr create --base master --head "$BRANCH" \
+            gh pr create --base main --head "$BRANCH" \
               --title "release: bump version to ${V}" \
               --body "$BODY"
           fi

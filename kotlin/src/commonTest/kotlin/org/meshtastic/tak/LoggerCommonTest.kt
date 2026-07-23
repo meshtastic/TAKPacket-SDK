@@ -19,7 +19,6 @@ import kotlin.test.assertTrue
  * jvm + the 9 native targets + js + wasmJs + wasmWasi.
  */
 class LoggerCommonTest {
-
     @AfterTest
     fun restoreDefault() {
         // Logger is a process-global; always leave it back at the no-op default

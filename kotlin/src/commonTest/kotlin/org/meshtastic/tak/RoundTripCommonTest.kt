@@ -27,13 +27,16 @@ import kotlin.test.assertTrue
  * this is ADDITIVE cross-platform coverage of the same pipeline.
  */
 class RoundTripCommonTest {
-
     private val parser = CotXmlParser()
     private val builder = CotXmlBuilder()
     private val compressor = TakCompressor()
 
     /** Assert the load-bearing envelope + payload fields match between two packets. */
-    private fun assertKeyFields(expected: TakPacketV2Data, actual: TakPacketV2Data, ctx: String) {
+    private fun assertKeyFields(
+        expected: TakPacketV2Data,
+        actual: TakPacketV2Data,
+        ctx: String,
+    ) {
         assertEquals(expected.cotTypeId, actual.cotTypeId, "cotTypeId mismatch ($ctx)")
         assertEquals(expected.cotTypeStr, actual.cotTypeStr, "cotTypeStr mismatch ($ctx)")
         assertEquals(expected.callsign, actual.callsign, "callsign mismatch ($ctx)")

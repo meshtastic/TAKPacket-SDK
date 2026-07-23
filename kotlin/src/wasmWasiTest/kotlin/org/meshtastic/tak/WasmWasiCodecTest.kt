@@ -24,16 +24,18 @@ import kotlin.test.assertTrue
  * wasmWasi — this locks the wasmWasi-only specifics.
  */
 class WasmWasiCodecTest {
-
     @Test
     fun codecCompressRoundTrips() {
         // The codec's compress actual now uses the pure-Kotlin encoder; the
         // pure-Kotlin decoder must reproduce the input exactly.
         val input = byteArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5)
         val frame = ZstdCodec.compressWithDict(input, DictionaryProvider.DICT_ID_NON_AIRCRAFT, 19)
-        val back = ZstdCodec.decompressWithDict(
-            frame, DictionaryProvider.DICT_ID_NON_AIRCRAFT, TakCompressor.MAX_DECOMPRESSED_SIZE,
-        )
+        val back =
+            ZstdCodec.decompressWithDict(
+                frame,
+                DictionaryProvider.DICT_ID_NON_AIRCRAFT,
+                TakCompressor.MAX_DECOMPRESSED_SIZE,
+            )
         assertContentEquals(input, back)
     }
 

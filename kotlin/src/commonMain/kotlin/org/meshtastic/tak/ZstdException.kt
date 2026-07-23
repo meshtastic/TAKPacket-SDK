@@ -8,4 +8,7 @@ package org.meshtastic.tak
  * callers can catch one exception on every target. The original cause, when
  * available, is preserved in [cause].
  */
-public class ZstdException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
+public class ZstdException(
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)

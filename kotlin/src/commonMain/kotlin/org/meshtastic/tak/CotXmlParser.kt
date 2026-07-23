@@ -1,9 +1,9 @@
 package org.meshtastic.tak
 
-import kotlin.math.roundToInt
-import kotlin.time.Instant
 import nl.adaptivity.xmlutil.EventType
 import nl.adaptivity.xmlutil.xmlStreaming
+import kotlin.math.roundToInt
+import kotlin.time.Instant
 
 /**
  * Parses a CoT (Cursor-on-Target) XML event string into a [TakPacketV2Data].
@@ -18,7 +18,6 @@ import nl.adaptivity.xmlutil.xmlStreaming
  * coalesced + trimmed value on `END_ELEMENT`.
  */
 public class CotXmlParser {
-
     /**
      * Parse a CoT XML event string into a [TakPacketV2Data].
      *
@@ -244,47 +243,57 @@ public class CotXmlParser {
                                 staleStr = reader.getAttributeValue(null, "stale") ?: ""
                                 isDeleteEvent = cotTypeStr == "t-x-d-d"
                             }
+
                             "point" -> {
                                 lat = reader.getAttributeValue(null, "lat")?.toDoubleOrNull() ?: 0.0
                                 lon = reader.getAttributeValue(null, "lon")?.toDoubleOrNull() ?: 0.0
                                 hae = reader.getAttributeValue(null, "hae")?.toDoubleOrNull() ?: 0.0
                             }
+
                             "detail" -> {
                                 inDetail = true
                             }
+
                             "contact" -> {
                                 callsign = reader.getAttributeValue(null, "callsign") ?: ""
                                 val ep = reader.getAttributeValue(null, "endpoint") ?: ""
                                 endpoint = if (ep == "0.0.0.0:4242:tcp" || ep == "*:-1:stcp") "" else ep
                                 phone = reader.getAttributeValue(null, "phone") ?: phone
                             }
+
                             "__group" -> {
                                 teamName = reader.getAttributeValue(null, "name") ?: ""
                                 roleName = reader.getAttributeValue(null, "role") ?: ""
                             }
+
                             "status" -> {
                                 val bat = reader.getAttributeValue(null, "battery")?.toIntOrNull()
                                 if (bat != null && bat > 0) battery = bat
                                 if (reader.getAttributeValue(null, "readiness") == "true") markerReadiness = true
                             }
+
                             "track" -> {
                                 speed = reader.getAttributeValue(null, "speed")?.toDoubleOrNull() ?: 0.0
                                 course = reader.getAttributeValue(null, "course")?.toDoubleOrNull() ?: 0.0
                             }
+
                             "takv" -> {
                                 takVersion = reader.getAttributeValue(null, "version") ?: ""
                                 takDevice = reader.getAttributeValue(null, "device") ?: ""
                                 takPlatform = reader.getAttributeValue(null, "platform") ?: ""
                                 takOs = reader.getAttributeValue(null, "os") ?: ""
                             }
+
                             "precisionlocation" -> {
                                 geoSrc = reader.getAttributeValue(null, "geopointsrc") ?: ""
                                 altSrc = reader.getAttributeValue(null, "altsrc") ?: ""
                             }
+
                             "uid", "UID" -> {
                                 val droid = reader.getAttributeValue(null, "Droid")
                                 if (droid != null) deviceCallsign = droid
                             }
+
                             "_radio" -> {
                                 val rssiStr = reader.getAttributeValue(null, "rssi")
                                 if (rssiStr != null) {
@@ -293,6 +302,7 @@ public class CotXmlParser {
                                 }
                                 gps = reader.getAttributeValue(null, "gps")?.toBooleanStrictOrNull() ?: false
                             }
+
                             "_aircot_" -> {
                                 icao = reader.getAttributeValue(null, "icao") ?: ""
                                 registration = reader.getAttributeValue(null, "reg") ?: ""
@@ -301,54 +311,114 @@ public class CotXmlParser {
                                 cotHostId = reader.getAttributeValue(null, "cot_host_id") ?: ""
                                 hasAircraftData = true
                             }
+
                             "__chat" -> {
                                 hasChatData = true
                                 chatToCallsign = reader.getAttributeValue(null, "senderCallsign")
                                 val chatId = reader.getAttributeValue(null, "id")
                                 chatTo = if (chatId == "All Chat Rooms") null else chatId
                             }
-                            "text" -> if (cotTypeStr == "m-t-t") {
-                                hasTakTalkData = true; inTaktalkText = true
+
+                            "text" -> {
+                                if (cotTypeStr == "m-t-t") {
+                                    hasTakTalkData = true
+                                    inTaktalkText = true
+                                }
                             }
-                            "chatroom-id" -> when (cotTypeStr) {
-                                "m-t-t" -> { hasTakTalkData = true; inTaktalkChatroomId = true }
-                                "y-" -> { hasRoomData = true; inRoomDataId = true }
+
+                            "chatroom-id" -> {
+                                when (cotTypeStr) {
+                                    "m-t-t" -> {
+                                        hasTakTalkData = true
+                                        inTaktalkChatroomId = true
+                                    }
+
+                                    "y-" -> {
+                                        hasRoomData = true
+                                        inRoomDataId = true
+                                    }
+                                }
                             }
-                            "lang" -> if (cotTypeStr == "m-t-t") {
-                                hasTakTalkData = true; inTaktalkLang = true
+
+                            "lang" -> {
+                                if (cotTypeStr == "m-t-t") {
+                                    hasTakTalkData = true
+                                    inTaktalkLang = true
+                                }
                             }
-                            "voice" -> if (cotTypeStr == "m-t-t") {
-                                hasTakTalkData = true; fromVoice = true
+
+                            "voice" -> {
+                                if (cotTypeStr == "m-t-t") {
+                                    hasTakTalkData = true
+                                    fromVoice = true
+                                }
                             }
-                            "callsign" -> if (cotTypeStr == "m-t-t") {
-                                hasTakTalkData = true; inMttCallsign = true
+
+                            "callsign" -> {
+                                if (cotTypeStr == "m-t-t") {
+                                    hasTakTalkData = true
+                                    inMttCallsign = true
+                                }
                             }
-                            "Ea" -> if (hasChatData) inChatEa = true
-                            "roomId" -> if (hasChatData) inChatRoomId = true
-                            "voice_profile_id" -> if (hasChatData) {
-                                chatHasVoiceProfile = true
-                                inChatVoiceProfileId = true
+
+                            "Ea" -> {
+                                if (hasChatData) inChatEa = true
                             }
-                            "sender-callsign" -> if (cotTypeStr == "y-") {
-                                hasRoomData = true; inRoomSender = true
+
+                            "roomId" -> {
+                                if (hasChatData) inChatRoomId = true
                             }
-                            "remarks" -> inRemarks = true
-                            "chatroom-name" -> if (cotTypeStr == "y-") {
-                                hasRoomData = true; inRoomName = true
+
+                            "voice_profile_id" -> {
+                                if (hasChatData) {
+                                    chatHasVoiceProfile = true
+                                    inChatVoiceProfileId = true
+                                }
                             }
-                            "chatroom-participants" -> if (cotTypeStr == "y-") {
-                                hasRoomData = true; inRoomParticipants = true
+
+                            "sender-callsign" -> {
+                                if (cotTypeStr == "y-") {
+                                    hasRoomData = true
+                                    inRoomSender = true
+                                }
                             }
-                            "marti" -> inMarti = true
-                            "dest" -> if (inMarti) {
-                                reader.getAttributeValue(null, "callsign")
-                                    ?.takeIf { it.isNotEmpty() }
-                                    ?.let { martiDests.add(it) }
+
+                            "remarks" -> {
+                                inRemarks = true
                             }
+
+                            "chatroom-name" -> {
+                                if (cotTypeStr == "y-") {
+                                    hasRoomData = true
+                                    inRoomName = true
+                                }
+                            }
+
+                            "chatroom-participants" -> {
+                                if (cotTypeStr == "y-") {
+                                    hasRoomData = true
+                                    inRoomParticipants = true
+                                }
+                            }
+
+                            "marti" -> {
+                                inMarti = true
+                            }
+
+                            "dest" -> {
+                                if (inMarti) {
+                                    reader
+                                        .getAttributeValue(null, "callsign")
+                                        ?.takeIf { it.isNotEmpty() }
+                                        ?.let { martiDests.add(it) }
+                                }
+                            }
+
                             "shape" -> {
                                 hasShapeData = true
                                 inShape = true
                             }
+
                             "ellipse" -> {
                                 if (inShape) {
                                     val majorM = reader.getAttributeValue(null, "major")?.toDoubleOrNull() ?: 0.0
@@ -359,32 +429,39 @@ public class CotXmlParser {
                                     hasShapeData = true
                                 }
                             }
+
                             "strokeColor" -> {
                                 sawStrokeColor = true
                                 strokeColorArgb = reader.getAttributeValue(null, "value")?.toIntOrNull() ?: 0
                                 hasShapeData = true
                             }
+
                             "strokeWeight" -> {
                                 val w = reader.getAttributeValue(null, "value")?.toDoubleOrNull() ?: 0.0
                                 strokeWeightX10 = (w * 10).roundToInt().coerceAtLeast(0)
                                 hasShapeData = true
                             }
+
                             "fillColor" -> {
                                 sawFillColor = true
                                 fillColorArgb = reader.getAttributeValue(null, "value")?.toIntOrNull() ?: 0
                                 hasShapeData = true
                             }
+
                             "labels_on" -> {
                                 labelsOn = reader.getAttributeValue(null, "value") == "true"
                             }
+
                             "color" -> {
                                 markerColorArgb = reader.getAttributeValue(null, "argb")?.toIntOrNull() ?: 0
                                 hasMarkerData = true
                             }
+
                             "usericon" -> {
                                 markerIconset = reader.getAttributeValue(null, "iconsetpath") ?: ""
                                 if (markerIconset.isNotEmpty()) hasMarkerData = true
                             }
+
                             "bullseye" -> {
                                 hasBullseyeData = true
                                 hasShapeData = true
@@ -399,19 +476,23 @@ public class CotXmlParser {
                                 bullseyeFlags = flags
                                 bullseyeUidRef = reader.getAttributeValue(null, "bullseyeUID") ?: ""
                             }
+
                             "range" -> {
                                 val v = reader.getAttributeValue(null, "value")?.toDoubleOrNull() ?: 0.0
                                 rabRangeCm = (v * 100).roundToInt().coerceAtLeast(0)
                                 hasRabData = true
                             }
+
                             "bearing" -> {
                                 val v = reader.getAttributeValue(null, "value")?.toDoubleOrNull() ?: 0.0
                                 rabBearingCdeg = (v * 100).roundToInt().coerceAtLeast(0)
                                 hasRabData = true
                             }
+
                             "__routeinfo" -> {
                                 hasRouteData = true
                             }
+
                             "link_attr" -> {
                                 hasRouteData = true
                                 routePrefix = reader.getAttributeValue(null, "prefix") ?: ""
@@ -420,6 +501,7 @@ public class CotXmlParser {
                                 val sw = reader.getAttributeValue(null, "stroke")?.toIntOrNull() ?: 0
                                 if (sw > 0) strokeWeightX10 = sw * 10
                             }
+
                             "_medevac_" -> {
                                 hasCasevacData = true
                                 casevacPrecedence = parseCasevacEnum(reader.getAttributeValue(null, "precedence"), precedenceMap, 5)
@@ -440,10 +522,14 @@ public class CotXmlParser {
                                 casevacZoneMarker = reader.getAttributeValue(null, "zone_prot_marker") ?: ""
                                 casevacUsMilitary = reader.getAttributeValue(null, "us_military")?.toIntOrNull() ?: 0
                                 casevacUsCivilian = reader.getAttributeValue(null, "us_civilian")?.toIntOrNull() ?: 0
-                                casevacNonUsMilitary = (reader.getAttributeValue(null, "non_us_military")
-                                    ?: reader.getAttributeValue(null, "nonus_military"))?.toIntOrNull() ?: 0
-                                casevacNonUsCivilian = (reader.getAttributeValue(null, "non_us_civilian")
-                                    ?: reader.getAttributeValue(null, "nonus_civilian"))?.toIntOrNull() ?: 0
+                                casevacNonUsMilitary = (
+                                    reader.getAttributeValue(null, "non_us_military")
+                                        ?: reader.getAttributeValue(null, "nonus_military")
+                                )?.toIntOrNull() ?: 0
+                                casevacNonUsCivilian = (
+                                    reader.getAttributeValue(null, "non_us_civilian")
+                                        ?: reader.getAttributeValue(null, "nonus_civilian")
+                                )?.toIntOrNull() ?: 0
                                 casevacEpw = reader.getAttributeValue(null, "epw")?.toIntOrNull() ?: 0
                                 casevacChild = reader.getAttributeValue(null, "child")?.toIntOrNull() ?: 0
                                 var tf = 0
@@ -473,6 +559,7 @@ public class CotXmlParser {
                                 casevacEnemy = reader.getAttributeValue(null, "enemy") ?: ""
                                 casevacHlzRemarks = reader.getAttributeValue(null, "hlz_remarks") ?: ""
                             }
+
                             "zMist" -> {
                                 if (hasCasevacData) {
                                     casevacZmistEntries.add(
@@ -483,10 +570,11 @@ public class CotXmlParser {
                                             i = reader.getAttributeValue(null, "i") ?: "",
                                             s = reader.getAttributeValue(null, "s") ?: "",
                                             t = reader.getAttributeValue(null, "t") ?: "",
-                                        )
+                                        ),
                                     )
                                 }
                             }
+
                             "emergency" -> {
                                 hasEmergencyData = true
                                 val typeAttr = reader.getAttributeValue(null, "type") ?: ""
@@ -496,6 +584,7 @@ public class CotXmlParser {
                                     emergencyTypeInt = EMERGENCY_TYPE_CANCEL
                                 }
                             }
+
                             "task", "_task_" -> {
                                 hasTaskData = true
                                 taskTypeTag = reader.getAttributeValue(null, "type") ?: ""
@@ -506,37 +595,60 @@ public class CotXmlParser {
                                 val assigneeAttr = reader.getAttributeValue(null, "assignee") ?: ""
                                 if (assigneeAttr.isNotEmpty()) taskAssigneeUid = assigneeAttr
                             }
+
                             "environment" -> {
                                 val temp = reader.getAttributeValue(null, "temperature")?.toDoubleOrNull()
                                 val windDir = reader.getAttributeValue(null, "windDirection")?.toIntOrNull()
                                 val windSpeed = reader.getAttributeValue(null, "windSpeed")?.toDoubleOrNull()
                                 if (temp != null || windDir != null || windSpeed != null) {
-                                    environmentData = TakPacketV2Data.EnvironmentData(
-                                        temperatureCelsius = temp,
-                                        windDirectionDeg = windDir,
-                                        windSpeedMetersPerSec = windSpeed,
-                                    )
+                                    environmentData =
+                                        TakPacketV2Data.EnvironmentData(
+                                            temperatureCelsius = temp,
+                                            windDirectionDeg = windDir,
+                                            windSpeedMetersPerSec = windSpeed,
+                                        )
                                 }
                             }
+
                             "sensor" -> {
                                 val model = reader.getAttributeValue(null, "model")
-                                sensorFovData = TakPacketV2Data.SensorFovData(
-                                    type = inferSensorType(model),
-                                    azimuthDeg = reader.getAttributeValue(null, "azimuth")
-                                        ?.toDoubleOrNull()?.roundToInt() ?: 270,
-                                    rangeMeters = reader.getAttributeValue(null, "range")
-                                        ?.toDoubleOrNull()?.roundToInt(),
-                                    fovHorizontalDeg = reader.getAttributeValue(null, "fov")
-                                        ?.toDoubleOrNull()?.roundToInt() ?: 45,
-                                    fovVerticalDeg = reader.getAttributeValue(null, "vfov")
-                                        ?.toDoubleOrNull()?.roundToInt(),
-                                    elevationDeg = reader.getAttributeValue(null, "elevation")
-                                        ?.toDoubleOrNull()?.roundToInt() ?: 0,
-                                    rollDeg = reader.getAttributeValue(null, "roll")
-                                        ?.toDoubleOrNull()?.roundToInt(),
-                                    model = model,
-                                )
+                                sensorFovData =
+                                    TakPacketV2Data.SensorFovData(
+                                        type = inferSensorType(model),
+                                        azimuthDeg =
+                                            reader
+                                                .getAttributeValue(null, "azimuth")
+                                                ?.toDoubleOrNull()
+                                                ?.roundToInt() ?: 270,
+                                        rangeMeters =
+                                            reader
+                                                .getAttributeValue(null, "range")
+                                                ?.toDoubleOrNull()
+                                                ?.roundToInt(),
+                                        fovHorizontalDeg =
+                                            reader
+                                                .getAttributeValue(null, "fov")
+                                                ?.toDoubleOrNull()
+                                                ?.roundToInt() ?: 45,
+                                        fovVerticalDeg =
+                                            reader
+                                                .getAttributeValue(null, "vfov")
+                                                ?.toDoubleOrNull()
+                                                ?.roundToInt(),
+                                        elevationDeg =
+                                            reader
+                                                .getAttributeValue(null, "elevation")
+                                                ?.toDoubleOrNull()
+                                                ?.roundToInt() ?: 0,
+                                        rollDeg =
+                                            reader
+                                                .getAttributeValue(null, "roll")
+                                                ?.toDoubleOrNull()
+                                                ?.roundToInt(),
+                                        model = model,
+                                    )
                             }
+
                             "link" -> {
                                 val linkUidAttr = reader.getAttributeValue(null, "uid")
                                 val pointAttr = reader.getAttributeValue(null, "point")
@@ -545,8 +657,9 @@ public class CotXmlParser {
                                 val linkCallsign = reader.getAttributeValue(null, "callsign") ?: ""
                                 val parentCallsignAttr = reader.getAttributeValue(null, "parent_callsign") ?: ""
 
-                                val isStyleLink = linkType.startsWith("b-x-KmlStyle") ||
-                                    (linkUidAttr != null && linkUidAttr.endsWith(".Style"))
+                                val isStyleLink =
+                                    linkType.startsWith("b-x-KmlStyle") ||
+                                        (linkUidAttr != null && linkUidAttr.endsWith(".Style"))
 
                                 if (!isStyleLink && pointAttr != null) {
                                     val parts = pointAttr.split(",")
@@ -565,22 +678,25 @@ public class CotXmlParser {
                                                 }
                                                 hasRabData = true
                                             }
+
                                             (linkType == "b-m-p-w" || linkType == "b-m-p-c") &&
                                                 cotTypeStr == "b-m-r" -> {
                                                 if (routeLinks.size < MAX_ROUTE_LINKS) {
                                                     routeLinks.add(
                                                         TakPacketV2Data.Payload.Route.Link(
-                                                            latI = plati, lonI = ploni,
+                                                            latI = plati,
+                                                            lonI = ploni,
                                                             uid = linkUidAttr ?: "",
                                                             callsign = linkCallsign,
                                                             linkType = if (linkType == "b-m-p-c") 1 else 0,
-                                                        )
+                                                        ),
                                                     )
                                                 } else {
                                                     routeTruncated = true
                                                 }
                                                 hasRouteData = true
                                             }
+
                                             else -> {
                                                 if (vertices.size < MAX_VERTICES) {
                                                     vertices.add(TakPacketV2Data.Payload.Vertex(plati, ploni))
@@ -598,11 +714,12 @@ public class CotXmlParser {
                                         if (chatReceiptForUid.isEmpty()) {
                                             chatReceiptForUid = linkUidAttr
                                         }
-                                        chatReceiptType = if (cotTypeStr == "b-t-f-d") {
-                                            RECEIPT_TYPE_DELIVERED
-                                        } else {
-                                            RECEIPT_TYPE_READ
-                                        }
+                                        chatReceiptType =
+                                            if (cotTypeStr == "b-t-f-d") {
+                                                RECEIPT_TYPE_DELIVERED
+                                            } else {
+                                                RECEIPT_TYPE_READ
+                                            }
                                         hasChatData = true
                                     } else if (cotTypeStr == "t-s") {
                                         if (taskTargetUid.isEmpty()) {
@@ -659,44 +776,116 @@ public class CotXmlParser {
                             val text = textBuf.toString().trim()
                             if (text.isNotEmpty()) {
                                 when {
-                                    inTaktalkText -> talkText = text
-                                    inTaktalkChatroomId -> talkChatroomId = text
-                                    inTaktalkLang -> talkLang = text
-                                    inMttCallsign -> callsign = text
-                                    inChatEa -> chatLang = text
-                                    inChatRoomId -> chatRoomId = text
-                                    inChatVoiceProfileId -> chatVoiceProfileId = text
-                                    inRoomSender -> callsign = text
-                                    inRoomDataId -> roomDataId = text
-                                    inRoomName -> roomName = text
-                                    inRoomParticipants -> roomParticipants.addAll(
-                                        text.split(",")
-                                            .map { it.trim() }
-                                            .filter { it.isNotEmpty() }
-                                    )
-                                    inRemarks -> remarksText = text
+                                    inTaktalkText -> {
+                                        talkText = text
+                                    }
+
+                                    inTaktalkChatroomId -> {
+                                        talkChatroomId = text
+                                    }
+
+                                    inTaktalkLang -> {
+                                        talkLang = text
+                                    }
+
+                                    inMttCallsign -> {
+                                        callsign = text
+                                    }
+
+                                    inChatEa -> {
+                                        chatLang = text
+                                    }
+
+                                    inChatRoomId -> {
+                                        chatRoomId = text
+                                    }
+
+                                    inChatVoiceProfileId -> {
+                                        chatVoiceProfileId = text
+                                    }
+
+                                    inRoomSender -> {
+                                        callsign = text
+                                    }
+
+                                    inRoomDataId -> {
+                                        roomDataId = text
+                                    }
+
+                                    inRoomName -> {
+                                        roomName = text
+                                    }
+
+                                    inRoomParticipants -> {
+                                        roomParticipants.addAll(
+                                            text
+                                                .split(",")
+                                                .map { it.trim() }
+                                                .filter { it.isNotEmpty() },
+                                        )
+                                    }
+
+                                    inRemarks -> {
+                                        remarksText = text
+                                    }
                                 }
                             }
                         }
                         textBuf.setLength(0)
 
                         when (reader.localName) {
-                            "shape" -> inShape = false
-                            "text" -> inTaktalkText = false
+                            "shape" -> {
+                                inShape = false
+                            }
+
+                            "text" -> {
+                                inTaktalkText = false
+                            }
+
                             "chatroom-id" -> {
                                 inTaktalkChatroomId = false
                                 inRoomDataId = false
                             }
-                            "lang" -> inTaktalkLang = false
-                            "callsign" -> inMttCallsign = false
-                            "Ea" -> inChatEa = false
-                            "roomId" -> inChatRoomId = false
-                            "voice_profile_id" -> inChatVoiceProfileId = false
-                            "sender-callsign" -> inRoomSender = false
-                            "chatroom-name" -> inRoomName = false
-                            "chatroom-participants" -> inRoomParticipants = false
-                            "remarks" -> inRemarks = false
-                            "marti" -> inMarti = false
+
+                            "lang" -> {
+                                inTaktalkLang = false
+                            }
+
+                            "callsign" -> {
+                                inMttCallsign = false
+                            }
+
+                            "Ea" -> {
+                                inChatEa = false
+                            }
+
+                            "roomId" -> {
+                                inChatRoomId = false
+                            }
+
+                            "voice_profile_id" -> {
+                                inChatVoiceProfileId = false
+                            }
+
+                            "sender-callsign" -> {
+                                inRoomSender = false
+                            }
+
+                            "chatroom-name" -> {
+                                inRoomName = false
+                            }
+
+                            "chatroom-participants" -> {
+                                inRoomParticipants = false
+                            }
+
+                            "remarks" -> {
+                                inRemarks = false
+                            }
+
+                            "marti" -> {
+                                inMarti = false
+                            }
                         }
                     }
 
@@ -730,12 +919,13 @@ public class CotXmlParser {
         val cotTypeId = CotTypeMapper.typeToEnum(cotTypeStr)
         val cotTypeStrField = if (cotTypeId == CotTypeMapper.COTTYPE_OTHER) cotTypeStr else null
 
-        val shapeStyle = when {
-            sawStrokeColor && sawFillColor -> STYLE_STROKE_AND_FILL
-            sawStrokeColor -> STYLE_STROKE_ONLY
-            sawFillColor -> STYLE_FILL_ONLY
-            else -> STYLE_UNSPECIFIED
-        }
+        val shapeStyle =
+            when {
+                sawStrokeColor && sawFillColor -> STYLE_STROKE_AND_FILL
+                sawStrokeColor -> STYLE_STROKE_ONLY
+                sawFillColor -> STYLE_FILL_ONLY
+                else -> STYLE_UNSPECIFIED
+            }
 
         if (!hasEmergencyData && cotTypeStr.startsWith("b-a-")) {
             hasEmergencyData = true
@@ -745,139 +935,183 @@ public class CotXmlParser {
             hasCasevacData = true
         }
 
-        val payload = when {
-            isDeleteEvent -> TakPacketV2Data.Payload.Pli(true)
-            hasRoomData && cotTypeStr == "y-" -> @Suppress("DEPRECATION") TakPacketV2Data.Payload.TakTalkRoom(
-                roomId = roomDataId,
-                roomName = roomName,
-                participants = roomParticipants.toList(),
-            )
-            hasTakTalkData && cotTypeStr == "m-t-t" -> TakPacketV2Data.Payload.TakTalk(
-                text = talkText,
-                chatroomId = talkChatroomId,
-                lang = talkLang,
-                fromVoice = fromVoice,
-            )
-            hasChatData -> TakPacketV2Data.Payload.Chat(
-                message = remarksText,
-                to = chatTo,
-                toCallsign = chatToCallsign,
-                receiptForUid = chatReceiptForUid,
-                receiptType = chatReceiptType,
-                lang = chatLang,
-                roomId = chatRoomId,
-                voiceProfileId = chatVoiceProfileId,
-                hasVoiceProfile = chatHasVoiceProfile,
-            )
-            hasAircraftData -> TakPacketV2Data.Payload.Aircraft(
-                icao = icao,
-                registration = registration,
-                flight = flight,
-                aircraftType = aircraftType,
-                squawk = squawk,
-                category = category,
-                rssiX10 = rssiX10,
-                gps = gps,
-                cotHostId = cotHostId,
-            )
-            hasRouteData && routeLinks.isNotEmpty() -> TakPacketV2Data.Payload.Route(
-                method = routeMethod,
-                direction = routeDirection,
-                prefix = routePrefix,
-                strokeWeightX10 = strokeWeightX10,
-                links = routeLinks.toList(),
-                truncated = routeTruncated,
-            )
-            hasRabData -> TakPacketV2Data.Payload.RangeAndBearing(
-                anchorLatI = rabAnchorLatI,
-                anchorLonI = rabAnchorLonI,
-                anchorUid = rabAnchorUid,
-                rangeCm = rabRangeCm,
-                bearingCdeg = rabBearingCdeg,
-                strokeColor = AtakPalette.argbToTeam(strokeColorArgb),
-                strokeArgb = strokeColorArgb,
-                strokeWeightX10 = strokeWeightX10,
-            )
-            hasShapeData -> TakPacketV2Data.Payload.DrawnShape(
-                kind = shapeKindFromCotType(cotTypeStr),
-                style = shapeStyle,
-                majorCm = shapeMajorCm,
-                minorCm = shapeMinorCm,
-                angleDeg = shapeAngleDeg,
-                strokeColor = AtakPalette.argbToTeam(strokeColorArgb),
-                strokeArgb = strokeColorArgb,
-                strokeWeightX10 = strokeWeightX10,
-                fillColor = AtakPalette.argbToTeam(fillColorArgb),
-                fillArgb = fillColorArgb,
-                labelsOn = labelsOn,
-                vertices = vertices.toList(),
-                truncated = verticesTruncated,
-                bullseyeDistanceDm = bullseyeDistanceDm,
-                bullseyeBearingRef = bullseyeBearingRef,
-                bullseyeFlags = bullseyeFlags,
-                bullseyeUidRef = bullseyeUidRef,
-            )
-            hasMarkerData -> TakPacketV2Data.Payload.Marker(
-                kind = markerKindFromCotType(cotTypeStr, markerIconset),
-                color = AtakPalette.argbToTeam(markerColorArgb),
-                colorArgb = markerColorArgb,
-                readiness = markerReadiness,
-                parentUid = markerParentUid,
-                parentType = markerParentType,
-                parentCallsign = markerParentCallsign,
-                iconset = markerIconset,
-            )
-            hasCasevacData -> TakPacketV2Data.Payload.CasevacReport(
-                precedence = casevacPrecedence,
-                equipmentFlags = casevacEquipmentFlags,
-                litterPatients = casevacLitterPatients,
-                ambulatoryPatients = casevacAmbulatoryPatients,
-                security = casevacSecurity,
-                hlzMarking = casevacHlzMarking,
-                zoneMarker = casevacZoneMarker,
-                usMilitary = casevacUsMilitary,
-                usCivilian = casevacUsCivilian,
-                nonUsMilitary = casevacNonUsMilitary,
-                nonUsCivilian = casevacNonUsCivilian,
-                epw = casevacEpw,
-                child = casevacChild,
-                terrainFlags = casevacTerrainFlags,
-                frequency = casevacFrequency,
-                title = casevacTitle,
-                medlineRemarks = casevacMedlineRemarks,
-                urgentCount = casevacUrgentCount,
-                urgentSurgicalCount = casevacUrgentSurgicalCount,
-                priorityCount = casevacPriorityCount,
-                routineCount = casevacRoutineCount,
-                convenienceCount = casevacConvenienceCount,
-                equipmentDetail = casevacEquipmentDetail,
-                zoneProtectedCoord = casevacZoneProtectedCoord,
-                terrainSlopeDir = casevacTerrainSlopeDir,
-                terrainOtherDetail = casevacTerrainOtherDetail,
-                markedBy = casevacMarkedBy,
-                obstacles = casevacObstacles,
-                windsAreFrom = casevacWindsAreFrom,
-                friendlies = casevacFriendlies,
-                enemy = casevacEnemy,
-                hlzRemarks = casevacHlzRemarks,
-                zmist = casevacZmistEntries.toList(),
-            )
-            hasEmergencyData -> TakPacketV2Data.Payload.EmergencyAlert(
-                type = if (emergencyTypeInt != 0) emergencyTypeInt
-                       else emergencyTypeFromCotType(cotTypeStr),
-                authoringUid = emergencyAuthoringUid,
-                cancelReferenceUid = emergencyCancelReferenceUid,
-            )
-            hasTaskData -> TakPacketV2Data.Payload.TaskRequest(
-                taskType = taskTypeTag,
-                targetUid = taskTargetUid,
-                assigneeUid = taskAssigneeUid,
-                priority = taskPriority,
-                status = taskStatus,
-                note = taskNote,
-            )
-            else -> TakPacketV2Data.Payload.Pli(true)
-        }
+        val payload =
+            when {
+                isDeleteEvent -> {
+                    TakPacketV2Data.Payload.Pli(true)
+                }
+
+                hasRoomData && cotTypeStr == "y-" -> {
+                    @Suppress("DEPRECATION")
+                    TakPacketV2Data.Payload.TakTalkRoom(
+                        roomId = roomDataId,
+                        roomName = roomName,
+                        participants = roomParticipants.toList(),
+                    )
+                }
+
+                hasTakTalkData && cotTypeStr == "m-t-t" -> {
+                    TakPacketV2Data.Payload.TakTalk(
+                        text = talkText,
+                        chatroomId = talkChatroomId,
+                        lang = talkLang,
+                        fromVoice = fromVoice,
+                    )
+                }
+
+                hasChatData -> {
+                    TakPacketV2Data.Payload.Chat(
+                        message = remarksText,
+                        to = chatTo,
+                        toCallsign = chatToCallsign,
+                        receiptForUid = chatReceiptForUid,
+                        receiptType = chatReceiptType,
+                        lang = chatLang,
+                        roomId = chatRoomId,
+                        voiceProfileId = chatVoiceProfileId,
+                        hasVoiceProfile = chatHasVoiceProfile,
+                    )
+                }
+
+                hasAircraftData -> {
+                    TakPacketV2Data.Payload.Aircraft(
+                        icao = icao,
+                        registration = registration,
+                        flight = flight,
+                        aircraftType = aircraftType,
+                        squawk = squawk,
+                        category = category,
+                        rssiX10 = rssiX10,
+                        gps = gps,
+                        cotHostId = cotHostId,
+                    )
+                }
+
+                hasRouteData && routeLinks.isNotEmpty() -> {
+                    TakPacketV2Data.Payload.Route(
+                        method = routeMethod,
+                        direction = routeDirection,
+                        prefix = routePrefix,
+                        strokeWeightX10 = strokeWeightX10,
+                        links = routeLinks.toList(),
+                        truncated = routeTruncated,
+                    )
+                }
+
+                hasRabData -> {
+                    TakPacketV2Data.Payload.RangeAndBearing(
+                        anchorLatI = rabAnchorLatI,
+                        anchorLonI = rabAnchorLonI,
+                        anchorUid = rabAnchorUid,
+                        rangeCm = rabRangeCm,
+                        bearingCdeg = rabBearingCdeg,
+                        strokeColor = AtakPalette.argbToTeam(strokeColorArgb),
+                        strokeArgb = strokeColorArgb,
+                        strokeWeightX10 = strokeWeightX10,
+                    )
+                }
+
+                hasShapeData -> {
+                    TakPacketV2Data.Payload.DrawnShape(
+                        kind = shapeKindFromCotType(cotTypeStr),
+                        style = shapeStyle,
+                        majorCm = shapeMajorCm,
+                        minorCm = shapeMinorCm,
+                        angleDeg = shapeAngleDeg,
+                        strokeColor = AtakPalette.argbToTeam(strokeColorArgb),
+                        strokeArgb = strokeColorArgb,
+                        strokeWeightX10 = strokeWeightX10,
+                        fillColor = AtakPalette.argbToTeam(fillColorArgb),
+                        fillArgb = fillColorArgb,
+                        labelsOn = labelsOn,
+                        vertices = vertices.toList(),
+                        truncated = verticesTruncated,
+                        bullseyeDistanceDm = bullseyeDistanceDm,
+                        bullseyeBearingRef = bullseyeBearingRef,
+                        bullseyeFlags = bullseyeFlags,
+                        bullseyeUidRef = bullseyeUidRef,
+                    )
+                }
+
+                hasMarkerData -> {
+                    TakPacketV2Data.Payload.Marker(
+                        kind = markerKindFromCotType(cotTypeStr, markerIconset),
+                        color = AtakPalette.argbToTeam(markerColorArgb),
+                        colorArgb = markerColorArgb,
+                        readiness = markerReadiness,
+                        parentUid = markerParentUid,
+                        parentType = markerParentType,
+                        parentCallsign = markerParentCallsign,
+                        iconset = markerIconset,
+                    )
+                }
+
+                hasCasevacData -> {
+                    TakPacketV2Data.Payload.CasevacReport(
+                        precedence = casevacPrecedence,
+                        equipmentFlags = casevacEquipmentFlags,
+                        litterPatients = casevacLitterPatients,
+                        ambulatoryPatients = casevacAmbulatoryPatients,
+                        security = casevacSecurity,
+                        hlzMarking = casevacHlzMarking,
+                        zoneMarker = casevacZoneMarker,
+                        usMilitary = casevacUsMilitary,
+                        usCivilian = casevacUsCivilian,
+                        nonUsMilitary = casevacNonUsMilitary,
+                        nonUsCivilian = casevacNonUsCivilian,
+                        epw = casevacEpw,
+                        child = casevacChild,
+                        terrainFlags = casevacTerrainFlags,
+                        frequency = casevacFrequency,
+                        title = casevacTitle,
+                        medlineRemarks = casevacMedlineRemarks,
+                        urgentCount = casevacUrgentCount,
+                        urgentSurgicalCount = casevacUrgentSurgicalCount,
+                        priorityCount = casevacPriorityCount,
+                        routineCount = casevacRoutineCount,
+                        convenienceCount = casevacConvenienceCount,
+                        equipmentDetail = casevacEquipmentDetail,
+                        zoneProtectedCoord = casevacZoneProtectedCoord,
+                        terrainSlopeDir = casevacTerrainSlopeDir,
+                        terrainOtherDetail = casevacTerrainOtherDetail,
+                        markedBy = casevacMarkedBy,
+                        obstacles = casevacObstacles,
+                        windsAreFrom = casevacWindsAreFrom,
+                        friendlies = casevacFriendlies,
+                        enemy = casevacEnemy,
+                        hlzRemarks = casevacHlzRemarks,
+                        zmist = casevacZmistEntries.toList(),
+                    )
+                }
+
+                hasEmergencyData -> {
+                    TakPacketV2Data.Payload.EmergencyAlert(
+                        type =
+                            if (emergencyTypeInt != 0) {
+                                emergencyTypeInt
+                            } else {
+                                emergencyTypeFromCotType(cotTypeStr)
+                            },
+                        authoringUid = emergencyAuthoringUid,
+                        cancelReferenceUid = emergencyCancelReferenceUid,
+                    )
+                }
+
+                hasTaskData -> {
+                    TakPacketV2Data.Payload.TaskRequest(
+                        taskType = taskTypeTag,
+                        targetUid = taskTargetUid,
+                        assigneeUid = taskAssigneeUid,
+                        priority = taskPriority,
+                        status = taskStatus,
+                        note = taskNote,
+                    )
+                }
+
+                else -> {
+                    TakPacketV2Data.Payload.Pli(true)
+                }
+            }
 
         return TakPacketV2Data(
             cotTypeId = cotTypeId,
@@ -920,7 +1154,10 @@ public class CotXmlParser {
      * without fractional seconds), matching `DateTimeFormatter.ISO_INSTANT`.
      * Any parse failure returns 0, identical to the original try/catch.
      */
-    private fun computeStaleSeconds(timeStr: String, staleStr: String): Int {
+    private fun computeStaleSeconds(
+        timeStr: String,
+        staleStr: String,
+    ): Int {
         if (timeStr.isEmpty() || staleStr.isEmpty()) return 0
         return try {
             val time = Instant.parse(timeStr)
@@ -1211,45 +1448,70 @@ public class CotXmlParser {
         /** Read receipt (`b-t-f-r`). */
         public const val RECEIPT_TYPE_READ: Int = 2
 
-        private val routeMethodMap = mapOf(
-            "Driving" to 1, "Walking" to 2, "Flying" to 3,
-            "Swimming" to 4, "Watercraft" to 5,
-        )
+        private val routeMethodMap =
+            mapOf(
+                "Driving" to 1,
+                "Walking" to 2,
+                "Flying" to 3,
+                "Swimming" to 4,
+                "Watercraft" to 5,
+            )
 
-        private val routeDirectionMap = mapOf(
-            "Infil" to 1, "Exfil" to 2,
-        )
+        private val routeDirectionMap =
+            mapOf(
+                "Infil" to 1,
+                "Exfil" to 2,
+            )
 
         private val bearingRefMap = mapOf("M" to 1, "T" to 2, "G" to 3)
 
-        private val teamNameToEnum = mapOf(
-            "White" to 1, "Yellow" to 2, "Orange" to 3, "Magenta" to 4,
-            "Red" to 5, "Maroon" to 6, "Purple" to 7, "Dark Blue" to 8,
-            "Blue" to 9, "Cyan" to 10, "Teal" to 11, "Green" to 12,
-            "Dark Green" to 13, "Brown" to 14,
-        )
+        private val teamNameToEnum =
+            mapOf(
+                "White" to 1,
+                "Yellow" to 2,
+                "Orange" to 3,
+                "Magenta" to 4,
+                "Red" to 5,
+                "Maroon" to 6,
+                "Purple" to 7,
+                "Dark Blue" to 8,
+                "Blue" to 9,
+                "Cyan" to 10,
+                "Teal" to 11,
+                "Green" to 12,
+                "Dark Green" to 13,
+                "Brown" to 14,
+            )
 
-        private val roleNameToEnum = mapOf(
-            "Team Member" to 1, "Team Lead" to 2, "HQ" to 3,
-            "Sniper" to 4, "Medic" to 5, "ForwardObserver" to 6,
-            "RTO" to 7, "K9" to 8,
-        )
+        private val roleNameToEnum =
+            mapOf(
+                "Team Member" to 1,
+                "Team Lead" to 2,
+                "HQ" to 3,
+                "Sniper" to 4,
+                "Medic" to 5,
+                "ForwardObserver" to 6,
+                "RTO" to 7,
+                "K9" to 8,
+            )
 
-        private fun parseGeoSrc(src: String?): Int = when (src) {
-            "GPS" -> GEOSRC_GPS
-            "USER" -> GEOSRC_USER
-            "NETWORK" -> GEOSRC_NETWORK
-            else -> GEOSRC_UNSPECIFIED
-        }
+        private fun parseGeoSrc(src: String?): Int =
+            when (src) {
+                "GPS" -> GEOSRC_GPS
+                "USER" -> GEOSRC_USER
+                "NETWORK" -> GEOSRC_NETWORK
+                else -> GEOSRC_UNSPECIFIED
+            }
 
         // Inner bytes of the `<detail>` element. `([\s\S]*?)` matches any char
         // INCLUDING newlines on every Kotlin target; RegexOption.DOT_MATCHES_ALL
         // is JVM/Native-only (absent on Kotlin/JS + Wasm), so "dot-all" is encoded
         // in the pattern itself. Hoisted to a companion val so it compiles once.
-        private val DETAIL_REGEX = Regex(
-            """<detail\b[^>]*>([\s\S]*?)</detail\s*>""",
-            RegexOption.IGNORE_CASE,
-        )
+        private val DETAIL_REGEX =
+            Regex(
+                """<detail\b[^>]*>([\s\S]*?)</detail\s*>""",
+                RegexOption.IGNORE_CASE,
+            )
         private val AIRCRAFT_ICAO_REGEX = Regex("""ICAO:\s*([A-Fa-f0-9]{6})""")
         private val AIRCRAFT_REG_REGEX = Regex("""REG:\s*(\S+)""")
         private val AIRCRAFT_FLIGHT_REGEX = Regex("""Flight:\s*(\S+)""")
@@ -1257,146 +1519,201 @@ public class CotXmlParser {
         private val AIRCRAFT_SQUAWK_REGEX = Regex("""Squawk:\s*(\d+)""")
         private val AIRCRAFT_CATEGORY_REGEX = Regex("""Category:\s*(\S+)""")
 
-        private fun scaleLatitudeI(lat: Double): Int =
-            (lat.coerceIn(-90.0, 90.0) * 1e7).roundToInt()
+        private fun scaleLatitudeI(lat: Double): Int = (lat.coerceIn(-90.0, 90.0) * 1e7).roundToInt()
 
-        private fun scaleLongitudeI(lon: Double): Int =
-            (lon.coerceIn(-180.0, 180.0) * 1e7).roundToInt()
+        private fun scaleLongitudeI(lon: Double): Int = (lon.coerceIn(-180.0, 180.0) * 1e7).roundToInt()
 
-        private fun shapeKindFromCotType(t: String): Int = when (t) {
-            "u-d-c-c" -> SHAPE_KIND_CIRCLE
-            "u-d-r" -> SHAPE_KIND_RECTANGLE
-            "u-d-f" -> SHAPE_KIND_FREEFORM
-            "u-d-f-m" -> SHAPE_KIND_TELESTRATION
-            "u-d-p" -> SHAPE_KIND_POLYGON
-            "u-r-b-c-c" -> SHAPE_KIND_RANGING_CIRCLE
-            "u-r-b-bullseye" -> SHAPE_KIND_BULLSEYE
-            "u-d-c-e" -> SHAPE_KIND_ELLIPSE
-            "u-d-v" -> SHAPE_KIND_VEHICLE_2D
-            "u-d-v-m" -> SHAPE_KIND_VEHICLE_3D
-            else -> SHAPE_KIND_UNSPECIFIED
-        }
-
-        private fun markerKindFromCotType(cotType: String, iconset: String): Int = when (cotType) {
-            "b-m-p-s-m" -> MARKER_KIND_SPOT
-            "b-m-p-w" -> MARKER_KIND_WAYPOINT
-            "b-m-p-c" -> MARKER_KIND_CHECKPOINT
-            "b-m-p-s-p-i", "b-m-p-s-p-loc" -> MARKER_KIND_SELF_POSITION
-            "b-m-p-w-GOTO" -> MARKER_KIND_GO_TO_POINT
-            "b-m-p-c-ip" -> MARKER_KIND_INITIAL_POINT
-            "b-m-p-c-cp" -> MARKER_KIND_CONTACT_POINT
-            "b-m-p-s-p-op" -> MARKER_KIND_OBSERVATION_POST
-            "b-i-x-i" -> MARKER_KIND_IMAGE_MARKER
-            else -> when {
-                iconset.startsWith("COT_MAPPING_2525B") -> MARKER_KIND_SYMBOL_2525
-                iconset.startsWith("COT_MAPPING_SPOTMAP") -> MARKER_KIND_SPOT_MAP
-                iconset.isNotEmpty() -> MARKER_KIND_CUSTOM_ICON
-                else -> MARKER_KIND_UNSPECIFIED
+        private fun shapeKindFromCotType(t: String): Int =
+            when (t) {
+                "u-d-c-c" -> SHAPE_KIND_CIRCLE
+                "u-d-r" -> SHAPE_KIND_RECTANGLE
+                "u-d-f" -> SHAPE_KIND_FREEFORM
+                "u-d-f-m" -> SHAPE_KIND_TELESTRATION
+                "u-d-p" -> SHAPE_KIND_POLYGON
+                "u-r-b-c-c" -> SHAPE_KIND_RANGING_CIRCLE
+                "u-r-b-bullseye" -> SHAPE_KIND_BULLSEYE
+                "u-d-c-e" -> SHAPE_KIND_ELLIPSE
+                "u-d-v" -> SHAPE_KIND_VEHICLE_2D
+                "u-d-v-m" -> SHAPE_KIND_VEHICLE_3D
+                else -> SHAPE_KIND_UNSPECIFIED
             }
-        }
 
-        private val precedenceMap = mapOf(
-            "A" to PRECEDENCE_URGENT,
-            "URGENT" to PRECEDENCE_URGENT,
-            "Urgent" to PRECEDENCE_URGENT,
-            "B" to PRECEDENCE_URGENT_SURGICAL,
-            "URGENT SURGICAL" to PRECEDENCE_URGENT_SURGICAL,
-            "Urgent Surgical" to PRECEDENCE_URGENT_SURGICAL,
-            "C" to PRECEDENCE_PRIORITY,
-            "PRIORITY" to PRECEDENCE_PRIORITY,
-            "Priority" to PRECEDENCE_PRIORITY,
-            "D" to PRECEDENCE_ROUTINE,
-            "ROUTINE" to PRECEDENCE_ROUTINE,
-            "Routine" to PRECEDENCE_ROUTINE,
-            "E" to PRECEDENCE_CONVENIENCE,
-            "CONVENIENCE" to PRECEDENCE_CONVENIENCE,
-            "Convenience" to PRECEDENCE_CONVENIENCE,
-        )
+        private fun markerKindFromCotType(
+            cotType: String,
+            iconset: String,
+        ): Int =
+            when (cotType) {
+                "b-m-p-s-m" -> {
+                    MARKER_KIND_SPOT
+                }
 
-        private val hlzMarkingMap = mapOf(
-            "Panels" to HLZ_MARKING_PANELS,
-            "Pyro" to HLZ_MARKING_PYRO_SIGNAL,
-            "Pyrotechnic" to HLZ_MARKING_PYRO_SIGNAL,
-            "Smoke" to HLZ_MARKING_SMOKE,
-            "None" to HLZ_MARKING_NONE,
-            "Other" to HLZ_MARKING_OTHER,
-        )
+                "b-m-p-w" -> {
+                    MARKER_KIND_WAYPOINT
+                }
 
-        private val securityMap = mapOf(
-            "N" to SECURITY_NO_ENEMY,
-            "No Enemy" to SECURITY_NO_ENEMY,
-            "P" to SECURITY_POSSIBLE_ENEMY,
-            "Possible Enemy" to SECURITY_POSSIBLE_ENEMY,
-            "E" to SECURITY_ENEMY_IN_AREA,
-            "Enemy In Area" to SECURITY_ENEMY_IN_AREA,
-            "X" to SECURITY_ENEMY_IN_ARMED_CONTACT,
-            "Enemy In Armed Contact" to SECURITY_ENEMY_IN_ARMED_CONTACT,
-        )
+                "b-m-p-c" -> {
+                    MARKER_KIND_CHECKPOINT
+                }
 
-        private fun parseCasevacEnum(raw: String?, nameMap: Map<String, Int>, maxValue: Int): Int {
+                "b-m-p-s-p-i", "b-m-p-s-p-loc" -> {
+                    MARKER_KIND_SELF_POSITION
+                }
+
+                "b-m-p-w-GOTO" -> {
+                    MARKER_KIND_GO_TO_POINT
+                }
+
+                "b-m-p-c-ip" -> {
+                    MARKER_KIND_INITIAL_POINT
+                }
+
+                "b-m-p-c-cp" -> {
+                    MARKER_KIND_CONTACT_POINT
+                }
+
+                "b-m-p-s-p-op" -> {
+                    MARKER_KIND_OBSERVATION_POST
+                }
+
+                "b-i-x-i" -> {
+                    MARKER_KIND_IMAGE_MARKER
+                }
+
+                else -> {
+                    when {
+                        iconset.startsWith("COT_MAPPING_2525B") -> MARKER_KIND_SYMBOL_2525
+                        iconset.startsWith("COT_MAPPING_SPOTMAP") -> MARKER_KIND_SPOT_MAP
+                        iconset.isNotEmpty() -> MARKER_KIND_CUSTOM_ICON
+                        else -> MARKER_KIND_UNSPECIFIED
+                    }
+                }
+            }
+
+        private val precedenceMap =
+            mapOf(
+                "A" to PRECEDENCE_URGENT,
+                "URGENT" to PRECEDENCE_URGENT,
+                "Urgent" to PRECEDENCE_URGENT,
+                "B" to PRECEDENCE_URGENT_SURGICAL,
+                "URGENT SURGICAL" to PRECEDENCE_URGENT_SURGICAL,
+                "Urgent Surgical" to PRECEDENCE_URGENT_SURGICAL,
+                "C" to PRECEDENCE_PRIORITY,
+                "PRIORITY" to PRECEDENCE_PRIORITY,
+                "Priority" to PRECEDENCE_PRIORITY,
+                "D" to PRECEDENCE_ROUTINE,
+                "ROUTINE" to PRECEDENCE_ROUTINE,
+                "Routine" to PRECEDENCE_ROUTINE,
+                "E" to PRECEDENCE_CONVENIENCE,
+                "CONVENIENCE" to PRECEDENCE_CONVENIENCE,
+                "Convenience" to PRECEDENCE_CONVENIENCE,
+            )
+
+        private val hlzMarkingMap =
+            mapOf(
+                "Panels" to HLZ_MARKING_PANELS,
+                "Pyro" to HLZ_MARKING_PYRO_SIGNAL,
+                "Pyrotechnic" to HLZ_MARKING_PYRO_SIGNAL,
+                "Smoke" to HLZ_MARKING_SMOKE,
+                "None" to HLZ_MARKING_NONE,
+                "Other" to HLZ_MARKING_OTHER,
+            )
+
+        private val securityMap =
+            mapOf(
+                "N" to SECURITY_NO_ENEMY,
+                "No Enemy" to SECURITY_NO_ENEMY,
+                "P" to SECURITY_POSSIBLE_ENEMY,
+                "Possible Enemy" to SECURITY_POSSIBLE_ENEMY,
+                "E" to SECURITY_ENEMY_IN_AREA,
+                "Enemy In Area" to SECURITY_ENEMY_IN_AREA,
+                "X" to SECURITY_ENEMY_IN_ARMED_CONTACT,
+                "Enemy In Armed Contact" to SECURITY_ENEMY_IN_ARMED_CONTACT,
+            )
+
+        private fun parseCasevacEnum(
+            raw: String?,
+            nameMap: Map<String, Int>,
+            maxValue: Int,
+        ): Int {
             if (raw == null || raw.isEmpty()) return 0
             nameMap[raw]?.let { return it }
             val asInt = raw.toIntOrNull() ?: return 0
             return if (asInt in 0..maxValue) asInt else 0
         }
 
-        private val emergencyTypeMap = mapOf(
-            "911 Alert" to EMERGENCY_TYPE_ALERT_911,
-            "911" to EMERGENCY_TYPE_ALERT_911,
-            "Ring The Bell" to EMERGENCY_TYPE_RING_THE_BELL,
-            "Ring the Bell" to EMERGENCY_TYPE_RING_THE_BELL,
-            "In Contact" to EMERGENCY_TYPE_IN_CONTACT,
-            "Troops In Contact" to EMERGENCY_TYPE_IN_CONTACT,
-            "Geo-fence Breached" to EMERGENCY_TYPE_GEO_FENCE_BREACHED,
-            "Geo Fence Breached" to EMERGENCY_TYPE_GEO_FENCE_BREACHED,
-            "Custom" to EMERGENCY_TYPE_CUSTOM,
-            "Cancel" to EMERGENCY_TYPE_CANCEL,
-        )
+        private val emergencyTypeMap =
+            mapOf(
+                "911 Alert" to EMERGENCY_TYPE_ALERT_911,
+                "911" to EMERGENCY_TYPE_ALERT_911,
+                "Ring The Bell" to EMERGENCY_TYPE_RING_THE_BELL,
+                "Ring the Bell" to EMERGENCY_TYPE_RING_THE_BELL,
+                "In Contact" to EMERGENCY_TYPE_IN_CONTACT,
+                "Troops In Contact" to EMERGENCY_TYPE_IN_CONTACT,
+                "Geo-fence Breached" to EMERGENCY_TYPE_GEO_FENCE_BREACHED,
+                "Geo Fence Breached" to EMERGENCY_TYPE_GEO_FENCE_BREACHED,
+                "Custom" to EMERGENCY_TYPE_CUSTOM,
+                "Cancel" to EMERGENCY_TYPE_CANCEL,
+            )
 
-        private fun emergencyTypeFromCotType(cotType: String): Int = when (cotType) {
-            "b-a-o-tbl" -> EMERGENCY_TYPE_ALERT_911
-            "b-a-o-pan" -> EMERGENCY_TYPE_RING_THE_BELL
-            "b-a-o-opn" -> EMERGENCY_TYPE_IN_CONTACT
-            "b-a-g" -> EMERGENCY_TYPE_GEO_FENCE_BREACHED
-            "b-a-o-c" -> EMERGENCY_TYPE_CUSTOM
-            "b-a-o-can" -> EMERGENCY_TYPE_CANCEL
-            else -> EMERGENCY_TYPE_UNSPECIFIED
-        }
+        private fun emergencyTypeFromCotType(cotType: String): Int =
+            when (cotType) {
+                "b-a-o-tbl" -> EMERGENCY_TYPE_ALERT_911
+                "b-a-o-pan" -> EMERGENCY_TYPE_RING_THE_BELL
+                "b-a-o-opn" -> EMERGENCY_TYPE_IN_CONTACT
+                "b-a-g" -> EMERGENCY_TYPE_GEO_FENCE_BREACHED
+                "b-a-o-c" -> EMERGENCY_TYPE_CUSTOM
+                "b-a-o-can" -> EMERGENCY_TYPE_CANCEL
+                else -> EMERGENCY_TYPE_UNSPECIFIED
+            }
 
-        private val taskPriorityMap = mapOf(
-            "Low" to TASK_PRIORITY_LOW,
-            "Normal" to TASK_PRIORITY_NORMAL,
-            "Medium" to TASK_PRIORITY_NORMAL,
-            "High" to TASK_PRIORITY_HIGH,
-            "Critical" to TASK_PRIORITY_CRITICAL,
-        )
+        private val taskPriorityMap =
+            mapOf(
+                "Low" to TASK_PRIORITY_LOW,
+                "Normal" to TASK_PRIORITY_NORMAL,
+                "Medium" to TASK_PRIORITY_NORMAL,
+                "High" to TASK_PRIORITY_HIGH,
+                "Critical" to TASK_PRIORITY_CRITICAL,
+            )
 
-        private val taskStatusMap = mapOf(
-            "Pending" to TASK_STATUS_PENDING,
-            "Acknowledged" to TASK_STATUS_ACKNOWLEDGED,
-            "InProgress" to TASK_STATUS_IN_PROGRESS,
-            "In Progress" to TASK_STATUS_IN_PROGRESS,
-            "Completed" to TASK_STATUS_COMPLETED,
-            "Done" to TASK_STATUS_COMPLETED,
-            "Cancelled" to TASK_STATUS_CANCELLED,
-            "Canceled" to TASK_STATUS_CANCELLED,
-        )
+        private val taskStatusMap =
+            mapOf(
+                "Pending" to TASK_STATUS_PENDING,
+                "Acknowledged" to TASK_STATUS_ACKNOWLEDGED,
+                "InProgress" to TASK_STATUS_IN_PROGRESS,
+                "In Progress" to TASK_STATUS_IN_PROGRESS,
+                "Completed" to TASK_STATUS_COMPLETED,
+                "Done" to TASK_STATUS_COMPLETED,
+                "Cancelled" to TASK_STATUS_CANCELLED,
+                "Canceled" to TASK_STATUS_CANCELLED,
+            )
 
         internal fun inferSensorType(model: String?): TakPacketV2Data.SensorFovData.SensorType {
             if (model.isNullOrEmpty()) return TakPacketV2Data.SensorFovData.SensorType.Unspecified
             val m = model.lowercase()
             return when {
-                "flir" in m || "thermal" in m || "boson" in m ->
+                "flir" in m || "thermal" in m || "boson" in m -> {
                     TakPacketV2Data.SensorFovData.SensorType.Thermal
-                "laser" in m || "lrf" in m ->
+                }
+
+                "laser" in m || "lrf" in m -> {
                     TakPacketV2Data.SensorFovData.SensorType.Laser
-                "nvg" in m || "night" in m ->
+                }
+
+                "nvg" in m || "night" in m -> {
                     TakPacketV2Data.SensorFovData.SensorType.Nvg
-                "radar" in m || "rf-" in m ->
+                }
+
+                "radar" in m || "rf-" in m -> {
                     TakPacketV2Data.SensorFovData.SensorType.Rf
-                "cam" in m || "eo-" in m || "optic" in m ->
+                }
+
+                "cam" in m || "eo-" in m || "optic" in m -> {
                     TakPacketV2Data.SensorFovData.SensorType.Camera
-                else -> TakPacketV2Data.SensorFovData.SensorType.Other
+                }
+
+                else -> {
+                    TakPacketV2Data.SensorFovData.SensorType.Other
+                }
             }
         }
     }

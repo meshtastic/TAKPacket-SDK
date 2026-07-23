@@ -114,46 +114,47 @@ public class TakCompressor(
         val flagsByte = wirePayload[0].toInt() and 0xFF
         val compressedBytes = wirePayload.copyOfRange(1, wirePayload.size)
 
-        val protobufBytes = if (flagsByte == DictionaryProvider.DICT_ID_UNCOMPRESSED) {
-            // Uncompressed raw protobuf (e.g. from TAK_TRACKER firmware). Enforce
-            // the decompressed-size cap here because there's no zstd pass to do it.
-            if (compressedBytes.size > MAX_DECOMPRESSED_SIZE) {
-                throw IllegalArgumentException(
-                    "Uncompressed payload size ${compressedBytes.size} exceeds limit $MAX_DECOMPRESSED_SIZE"
-                )
-            }
-            compressedBytes
-        } else {
-            val dictId = flagsByte and 0x3F
-            // Reject unknown dictionary IDs up front with IllegalArgumentException
-            // (the codec would only learn this once it tried to load a dict).
-            if (DictionaryProvider.getDictionary(dictId) == null) {
-                throw IllegalArgumentException("Unknown dictionary ID: $dictId")
-            }
+        val protobufBytes =
+            if (flagsByte == DictionaryProvider.DICT_ID_UNCOMPRESSED) {
+                // Uncompressed raw protobuf (e.g. from TAK_TRACKER firmware). Enforce
+                // the decompressed-size cap here because there's no zstd pass to do it.
+                if (compressedBytes.size > MAX_DECOMPRESSED_SIZE) {
+                    throw IllegalArgumentException(
+                        "Uncompressed payload size ${compressedBytes.size} exceeds limit $MAX_DECOMPRESSED_SIZE",
+                    )
+                }
+                compressedBytes
+            } else {
+                val dictId = flagsByte and 0x3F
+                // Reject unknown dictionary IDs up front with IllegalArgumentException
+                // (the codec would only learn this once it tried to load a dict).
+                if (DictionaryProvider.getDictionary(dictId) == null) {
+                    throw IllegalArgumentException("Unknown dictionary ID: $dictId")
+                }
 
-            try {
-                // Re-attach the 4-byte magic stripped on compress (see ZSTD_MAGIC),
-                // yielding a standard frame the stock decoder accepts. The supplied
-                // dict (not a frame-embedded dict ID) selects the dictionary.
-                val restored = ByteArray(ZSTD_MAGIC.size + compressedBytes.size)
-                ZSTD_MAGIC.copyInto(restored, destinationOffset = 0)
-                compressedBytes.copyInto(restored, destinationOffset = ZSTD_MAGIC.size)
-                // The codec's size-limited decompress guards the 4096B cap — a bomb
-                // that expands past the limit throws inside the zstd library.
-                ZstdCodec.decompressWithDict(restored, dictId, MAX_DECOMPRESSED_SIZE)
-            } catch (e: ZstdException) {
-                // Preserve the typed codec exception so callers can catch it
-                // (re-wrapping in RuntimeException would defeat the contract).
-                throw e
-            } catch (e: Exception) {
-                throw RuntimeException(
-                    "Zstd decompression failed " +
-                        "(dictId=$dictId, compressedSize=${compressedBytes.size}): " +
-                        (e.message ?: e::class.simpleName ?: "unknown"),
-                    e,
-                )
+                try {
+                    // Re-attach the 4-byte magic stripped on compress (see ZSTD_MAGIC),
+                    // yielding a standard frame the stock decoder accepts. The supplied
+                    // dict (not a frame-embedded dict ID) selects the dictionary.
+                    val restored = ByteArray(ZSTD_MAGIC.size + compressedBytes.size)
+                    ZSTD_MAGIC.copyInto(restored, destinationOffset = 0)
+                    compressedBytes.copyInto(restored, destinationOffset = ZSTD_MAGIC.size)
+                    // The codec's size-limited decompress guards the 4096B cap — a bomb
+                    // that expands past the limit throws inside the zstd library.
+                    ZstdCodec.decompressWithDict(restored, dictId, MAX_DECOMPRESSED_SIZE)
+                } catch (e: ZstdException) {
+                    // Preserve the typed codec exception so callers can catch it
+                    // (re-wrapping in RuntimeException would defeat the contract).
+                    throw e
+                } catch (e: Exception) {
+                    throw RuntimeException(
+                        "Zstd decompression failed " +
+                            "(dictId=$dictId, compressedSize=${compressedBytes.size}): " +
+                            (e.message ?: e::class.simpleName ?: "unknown"),
+                        e,
+                    )
+                }
             }
-        }
 
         try {
             return TakPacketV2Serializer.deserialize(protobufBytes)
@@ -253,8 +254,7 @@ public class TakCompressor(
                 remarksStripped == other.remarksStripped &&
                 (wirePayload?.contentEquals(other.wirePayload) ?: (other.wirePayload == null))
 
-        override fun hashCode(): Int =
-            31 * (wirePayload?.contentHashCode() ?: 0) + remarksStripped.hashCode()
+        override fun hashCode(): Int = 31 * (wirePayload?.contentHashCode() ?: 0) + remarksStripped.hashCode()
     }
 
     /**
@@ -286,17 +286,19 @@ public class TakCompressor(
         val dictId: Int,
         val wirePayload: ByteArray,
     ) {
-        public val dictName: String get() = when (dictId) {
-            DictionaryProvider.DICT_ID_NON_AIRCRAFT -> "non-aircraft"
-            DictionaryProvider.DICT_ID_AIRCRAFT -> "aircraft"
-            DictionaryProvider.DICT_ID_UNCOMPRESSED -> "uncompressed"
-            else -> "unknown"
-        }
+        public val dictName: String get() =
+            when (dictId) {
+                DictionaryProvider.DICT_ID_NON_AIRCRAFT -> "non-aircraft"
+                DictionaryProvider.DICT_ID_AIRCRAFT -> "aircraft"
+                DictionaryProvider.DICT_ID_UNCOMPRESSED -> "uncompressed"
+                else -> "unknown"
+            }
 
         override fun equals(other: Any?): Boolean =
             other is CompressionResult && protobufSize == other.protobufSize &&
                 compressedSize == other.compressedSize && dictId == other.dictId &&
                 wirePayload.contentEquals(other.wirePayload)
+
         override fun hashCode(): Int = wirePayload.contentHashCode()
     }
 }

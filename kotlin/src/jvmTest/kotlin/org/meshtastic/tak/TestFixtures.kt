@@ -21,7 +21,6 @@ import java.util.stream.Stream
  * `"../testdata/cot_xml/..."` paths, so this matches their behavior.
  */
 object TestFixtures {
-
     /** Directory containing the input CoT XML fixtures. */
     val cotXmlDir: File = File("../testdata/cot_xml")
 
@@ -38,7 +37,8 @@ object TestFixtures {
      */
     val filenames: List<String> by lazy {
         require(cotXmlDir.exists()) { "cot_xml fixture dir missing: ${cotXmlDir.absolutePath}" }
-        cotXmlDir.listFiles { _, name -> name.endsWith(".xml") }
+        cotXmlDir
+            .listFiles { _, name -> name.endsWith(".xml") }
             .orEmpty()
             .map { it.name }
             .sorted()
