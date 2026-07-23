@@ -9,6 +9,11 @@ This module is full Kotlin Multiplatform: **JVM** (Android), **9 native** target
 tvOS, Linux, Windows), **JS**, **wasmJs**, and **wasmWasi** — one pure-Kotlin codebase, no
 native `libzstd`.
 
+[![License: GPL-3.0-or-later](https://img.shields.io/badge/License-GPL--3.0--or--later-blue.svg)](../LICENSE)
+[![Maven Central](https://img.shields.io/maven-central/v/org.meshtastic/takpacket-sdk-jvm)](https://central.sonatype.com/artifact/org.meshtastic/takpacket-sdk-jvm)
+[![CI](https://github.com/meshtastic/TAKPacket-SDK/actions/workflows/ci.yml/badge.svg)](https://github.com/meshtastic/TAKPacket-SDK/actions/workflows/ci.yml)
+[![API Docs](https://img.shields.io/badge/docs-Dokka-blue)](https://meshtastic.github.io/TAKPacket-SDK/)
+
 📚 **[API reference (Dokka)](https://meshtastic.github.io/TAKPacket-SDK/kotlin/)**
 
 ## Install
@@ -18,7 +23,7 @@ Published to **Maven Central**. Android / JVM consumers depend on the **`-jvm`**
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("org.meshtastic:takpacket-sdk-jvm:0.7.0")
+    implementation("org.meshtastic:takpacket-sdk-jvm:0.8.0")
 }
 ```
 
@@ -79,9 +84,9 @@ Requires **JDK 21**:
 export JAVA_HOME=/path/to/jdk21
 ./gradlew jvmTest                         # JVM unit tests
 ./gradlew dokkaGeneratePublicationHtml    # API docs → build/dokka/html
-./gradlew publishToMavenLocal             # local publish (resolves as org.meshtastic:takpacket-sdk[-jvm]:0.7.0)
+./gradlew publishToMavenLocal             # local publish (resolves as org.meshtastic:takpacket-sdk[-jvm]:0.8.0)
 ```
 
-See the repository [CONTRIBUTING guide](https://github.com/meshtastic/TAKPacket-SDK/blob/master/CONTRIBUTING.md)
-for the full workflow, and [WIRE_FORMAT.md](https://github.com/meshtastic/TAKPacket-SDK/blob/master/WIRE_FORMAT.md)
+See the repository [CONTRIBUTING guide](https://github.com/meshtastic/TAKPacket-SDK/blob/main/CONTRIBUTING.md)
+for the full workflow, and [WIRE_FORMAT.md](https://github.com/meshtastic/TAKPacket-SDK/blob/main/WIRE_FORMAT.md)
 for the wire specification.
