@@ -49,7 +49,6 @@ package org.meshtastic.tak
  * This object is immutable and safe to share across threads.
  */
 public object AtakPalette {
-
     /**
      * Meshtastic `Team` enum value for "no palette match" / "use the exact
      * ARGB fallback". Mirrors the proto-generated `Team.Unspecifed_Color = 0`.
@@ -62,22 +61,23 @@ public object AtakPalette {
      * Team enum value → exact ARGB bit pattern.
      * Position numbers match the `Team` enum tag values in atak.proto.
      */
-    private val TEAM_TO_ARGB: Map<Int, Int> = mapOf(
-        1 to 0xFFFFFFFF.toInt(),  // White
-        2 to 0xFFFFFF00.toInt(),  // Yellow
-        3 to 0xFFFF7700.toInt(),  // Orange
-        4 to 0xFFFF00FF.toInt(),  // Magenta
-        5 to 0xFFFF0000.toInt(),  // Red
-        6 to 0xFF7F0000.toInt(),  // Maroon (ATAK label "Brown")
-        7 to 0xFF7F007F.toInt(),  // Purple
-        8 to 0xFF00007F.toInt(),  // Dark_Blue (ATAK label "Navy")
-        9 to 0xFF0000FF.toInt(),  // Blue
-        10 to 0xFF00FFFF.toInt(), // Cyan
-        11 to 0xFF007F7F.toInt(), // Teal (ATAK label "Turqoise")
-        12 to 0xFF00FF00.toInt(), // Green
-        13 to 0xFF007F00.toInt(), // Dark_Green (ATAK label "Forest")
-        14 to 0xFF777777.toInt(), // Brown — misnamed in Meshtastic; ATAK value is mid-gray
-    )
+    private val TEAM_TO_ARGB: Map<Int, Int> =
+        mapOf(
+            1 to 0xFFFFFFFF.toInt(), // White
+            2 to 0xFFFFFF00.toInt(), // Yellow
+            3 to 0xFFFF7700.toInt(), // Orange
+            4 to 0xFFFF00FF.toInt(), // Magenta
+            5 to 0xFFFF0000.toInt(), // Red
+            6 to 0xFF7F0000.toInt(), // Maroon (ATAK label "Brown")
+            7 to 0xFF7F007F.toInt(), // Purple
+            8 to 0xFF00007F.toInt(), // Dark_Blue (ATAK label "Navy")
+            9 to 0xFF0000FF.toInt(), // Blue
+            10 to 0xFF00FFFF.toInt(), // Cyan
+            11 to 0xFF007F7F.toInt(), // Teal (ATAK label "Turqoise")
+            12 to 0xFF00FF00.toInt(), // Green
+            13 to 0xFF007F00.toInt(), // Dark_Green (ATAK label "Forest")
+            14 to 0xFF777777.toInt(), // Brown — misnamed in Meshtastic; ATAK value is mid-gray
+        )
 
     /**
      * Exact ARGB → Team enum value. Built by inverting [TEAM_TO_ARGB] at

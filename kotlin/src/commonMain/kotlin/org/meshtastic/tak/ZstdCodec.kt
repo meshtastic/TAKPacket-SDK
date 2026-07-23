@@ -1,7 +1,7 @@
 package org.meshtastic.tak
 
-import kotlin.concurrent.Volatile
 import org.meshtastic.kzstd.Zstd
+import kotlin.concurrent.Volatile
 import org.meshtastic.kzstd.ZstdDictionary as KzstdDictionary
 import org.meshtastic.kzstd.ZstdException as KzstdException
 
@@ -30,7 +30,6 @@ import org.meshtastic.kzstd.ZstdException as KzstdException
  * framing logic exists in exactly one place.
  */
 internal object ZstdCodec {
-
     // Digested dictionaries (parsed entropy tables + match index), built once per
     // dict ID from the static shipped bytes and reused for every packet. Holding
     // them is the SDK's only "cache" — it carries ZERO cross-packet state, so
@@ -43,7 +42,11 @@ internal object ZstdCodec {
      * Compress [data] with the dictionary identified by [dictId] at the given
      * [level], returning a standard zstd frame (with magic).
      */
-    fun compressWithDict(data: ByteArray, dictId: Int, level: Int = Zstd.DEFAULT_LEVEL): ByteArray =
+    fun compressWithDict(
+        data: ByteArray,
+        dictId: Int,
+        level: Int = Zstd.DEFAULT_LEVEL,
+    ): ByteArray =
         try {
             Zstd.compress(data, digestFor(dictId), level)
         } catch (e: ZstdException) {
@@ -60,7 +63,11 @@ internal object ZstdCodec {
      * Decompress a standard zstd frame [data] (with magic) using the dictionary
      * identified by [dictId], rejecting output larger than [maxSize] bytes.
      */
-    fun decompressWithDict(data: ByteArray, dictId: Int, maxSize: Int): ByteArray =
+    fun decompressWithDict(
+        data: ByteArray,
+        dictId: Int,
+        maxSize: Int,
+    ): ByteArray =
         try {
             Zstd.decompress(data, digestFor(dictId), maxSize)
         } catch (e: ZstdException) {
@@ -84,17 +91,25 @@ internal object ZstdCodec {
     }
 
     /** Return the digested dictionary for [dictId], building and caching it on first use. */
-    private fun digestFor(dictId: Int): KzstdDictionary = when (dictId) {
-        DictionaryProvider.DICT_ID_NON_AIRCRAFT ->
-            nonAircraftDigest ?: buildDigest(dictId).also { nonAircraftDigest = it }
-        DictionaryProvider.DICT_ID_AIRCRAFT ->
-            aircraftDigest ?: buildDigest(dictId).also { aircraftDigest = it }
-        else -> throw ZstdException("No dictionary for ID $dictId")
-    }
+    private fun digestFor(dictId: Int): KzstdDictionary =
+        when (dictId) {
+            DictionaryProvider.DICT_ID_NON_AIRCRAFT -> {
+                nonAircraftDigest ?: buildDigest(dictId).also { nonAircraftDigest = it }
+            }
+
+            DictionaryProvider.DICT_ID_AIRCRAFT -> {
+                aircraftDigest ?: buildDigest(dictId).also { aircraftDigest = it }
+            }
+
+            else -> {
+                throw ZstdException("No dictionary for ID $dictId")
+            }
+        }
 
     private fun buildDigest(dictId: Int): KzstdDictionary {
-        val bytes = DictionaryProvider.getDictionary(dictId)
-            ?: throw ZstdException("No dictionary for ID $dictId")
+        val bytes =
+            DictionaryProvider.getDictionary(dictId)
+                ?: throw ZstdException("No dictionary for ID $dictId")
         return KzstdDictionary(bytes)
     }
 }

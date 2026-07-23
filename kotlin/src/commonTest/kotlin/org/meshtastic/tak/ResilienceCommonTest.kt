@@ -18,16 +18,13 @@ import kotlin.test.assertTrue
  * compresses AND decompresses on EVERY target, so both halves run everywhere.
  */
 class ResilienceCommonTest {
-
     private val parser = CotXmlParser()
     private val compressor = TakCompressor()
 
     /** name -> golden wire frame, every fixture (decode works on all targets). */
-    private fun wireFrames(): List<Pair<String, ByteArray>> =
-        InlinedFixtures.names.map { name -> name to InlinedFixtures.goldenWire.getValue(name) }
+    private fun wireFrames(): List<Pair<String, ByteArray>> = InlinedFixtures.names.map { name -> name to InlinedFixtures.goldenWire.getValue(name) }
 
-    private fun serialize(p: TakPacketV2Data): List<Byte> =
-        TakPacketV2Serializer.serialize(p).toList()
+    private fun serialize(p: TakPacketV2Data): List<Byte> = TakPacketV2Serializer.serialize(p).toList()
 
     @Test
     fun eachPacketDecodesIdenticallyRegardlessOfOrder() {
@@ -35,9 +32,11 @@ class ResilienceCommonTest {
 
         val forward = wire.map { (name, w) -> name to serialize(compressor.decompress(w)) }
         // Decode the same payloads in REVERSE order — order must not matter.
-        val reverse = wire.reversed()
-            .map { (name, w) -> name to serialize(compressor.decompress(w)) }
-            .reversed()
+        val reverse =
+            wire
+                .reversed()
+                .map { (name, w) -> name to serialize(compressor.decompress(w)) }
+                .reversed()
 
         for (i in forward.indices) {
             val (name, f) = forward[i]

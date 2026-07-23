@@ -1,7 +1,11 @@
 package org.meshtastic.tak
 
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.File
@@ -20,7 +24,6 @@ import java.io.File
  * adds it to every test in the suite with zero code edits.
  */
 class CompressionTest {
-
     companion object {
         const val LORA_MTU = 237
     }
@@ -35,9 +38,11 @@ class CompressionTest {
         val packet = parser.parse(xml)
         val result = compressor.compressWithStats(packet)
 
-        assertTrue(result.compressedSize <= LORA_MTU,
+        assertTrue(
+            result.compressedSize <= LORA_MTU,
             "$fixture: compressed size ${result.compressedSize}B exceeds LoRa MTU ${LORA_MTU}B " +
-            "(XML: ${xml.length}B, proto: ${result.protobufSize}B)")
+                "(XML: ${xml.length}B, proto: ${result.protobufSize}B)",
+        )
     }
 
     // -- compressWithRemarksFallback boundary & outcome tests ----------------
@@ -48,17 +53,18 @@ class CompressionTest {
     // directly from TakPacketV2Data rather than fixture XML, so the thresholds
     // are deterministic regardless of future fixture or dictionary changes.
 
-    private fun makePliWithRemarks(remarks: String): TakPacketV2Data = TakPacketV2Data(
-        cotTypeId = CotTypeMapper.COTTYPE_A_F_G_U_C,
-        how = CotTypeMapper.COTHOW_M_G,
-        callsign = "TESTER",
-        latitudeI = 340522000,
-        longitudeI = -1182437000,
-        altitude = 100,
-        uid = "testnode",
-        remarks = remarks,
-        payload = TakPacketV2Data.Payload.Pli(true),
-    )
+    private fun makePliWithRemarks(remarks: String): TakPacketV2Data =
+        TakPacketV2Data(
+            cotTypeId = CotTypeMapper.COTTYPE_A_F_G_U_C,
+            how = CotTypeMapper.COTHOW_M_G,
+            callsign = "TESTER",
+            latitudeI = 340522000,
+            longitudeI = -1182437000,
+            altitude = 100,
+            uid = "testnode",
+            remarks = remarks,
+            payload = TakPacketV2Data.Payload.Pli(true),
+        )
 
     @Test
     fun `fallback returns full payload when under limit with no strip`() {
@@ -74,8 +80,10 @@ class CompressionTest {
         val packet = makePliWithRemarks("x".repeat(500))
         val fullSize = compressor.compress(packet).size
         val strippedSize = compressor.compress(packet.copy(remarks = "")).size
-        assertTrue(fullSize > strippedSize,
-            "test setup: padded remarks must grow the wire payload (full=$fullSize stripped=$strippedSize)")
+        assertTrue(
+            fullSize > strippedSize,
+            "test setup: padded remarks must grow the wire payload (full=$fullSize stripped=$strippedSize)",
+        )
 
         // Limit sits between the two sizes — stripping must save the packet.
         val limit = strippedSize + (fullSize - strippedSize) / 2
@@ -97,8 +105,10 @@ class CompressionTest {
         // Limit is below even the stripped size — nothing can save this packet.
         val result = compressor.compressWithRemarksFallbackDetailed(packet, strippedSize - 1)
         assertNull(result.wirePayload)
-        assertTrue(result.remarksStripped,
-            "stripping was attempted even though it didn't help")
+        assertTrue(
+            result.remarksStripped,
+            "stripping was attempted even though it didn't help",
+        )
         assertFalse(result.fits)
         assertNull(compressor.compressWithRemarksFallback(packet, strippedSize - 1))
     }
@@ -112,8 +122,10 @@ class CompressionTest {
         // remarks, so stripping is a no-op and the caller must drop it.
         val result = compressor.compressWithRemarksFallbackDetailed(packet, fullSize - 1)
         assertNull(result.wirePayload)
-        assertFalse(result.remarksStripped,
-            "no remarks => stripping should not be attempted")
+        assertFalse(
+            result.remarksStripped,
+            "no remarks => stripping should not be attempted",
+        )
     }
 
     @Test
@@ -165,8 +177,10 @@ class CompressionTest {
         }
 
         val ratio = totalXml.toDouble() / totalCompressed
-        assertTrue(ratio >= 3.0,
-            "Average compression ratio ${String.format("%.1f", ratio)}x is below 3x minimum")
+        assertTrue(
+            ratio >= 3.0,
+            "Average compression ratio ${String.format("%.1f", ratio)}x is below 3x minimum",
+        )
     }
 
     @Test
@@ -194,15 +208,17 @@ class CompressionTest {
             val result = compressor.compressWithStats(packet)
             val ratio = xml.length.toDouble() / result.compressedSize
 
-            rows.add(Row(
-                fixture = fixture.removeSuffix(".xml"),
-                cotType = packet.cotTypeString(),
-                xmlSize = xml.length,
-                protoSize = result.protobufSize,
-                compressedSize = result.compressedSize,
-                ratio = ratio,
-                dictName = result.dictName,
-            ))
+            rows.add(
+                Row(
+                    fixture = fixture.removeSuffix(".xml"),
+                    cotType = packet.cotTypeString(),
+                    xmlSize = xml.length,
+                    protoSize = result.protobufSize,
+                    compressedSize = result.compressedSize,
+                    ratio = ratio,
+                    dictName = result.dictName,
+                ),
+            )
         }
 
         val allUnderMtu = rows.all { it.compressedSize <= LORA_MTU }

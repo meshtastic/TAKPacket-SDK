@@ -8,7 +8,6 @@ import org.junit.jupiter.api.assertThrows
 import java.io.File
 
 class MalformedInputTest {
-
     private val compressor = TakCompressor()
 
     private fun loadMalformed(name: String): ByteArray {

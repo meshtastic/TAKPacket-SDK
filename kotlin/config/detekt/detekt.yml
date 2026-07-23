@@ -1,0 +1,15 @@
+# detekt project config — layered on top of `buildUponDefaultConfig = true`.
+#
+# Kept intentionally small: only the rules that must differ for this repo.
+# Everything else uses detekt's defaults. Pre-existing findings in the
+# hand-written CoT parser / builder / serializer (long state-machine methods,
+# deliberate broad catches around the decoder) are grandfathered in
+# config/detekt/baseline.xml, so detekt still enforces the FULL default ruleset
+# on all NEW code.
+
+# Formatting/line-length is owned by Spotless (ktlint via .editorconfig). Turn
+# off detekt's overlapping line-length check so the two tools don't double-report
+# the same lines with different heuristics.
+style:
+  MaxLineLength:
+    active: false

@@ -12,7 +12,6 @@ import java.io.File
  * to lock cross-binding parity.
  */
 class CotMeshSanitizerTest {
-
     private val dir = File("../testdata/sanitizer")
 
     @Test
@@ -34,9 +33,23 @@ class CotMeshSanitizerTest {
 
         // Non-essentials removed.
         listOf(
-            "<takv", "<precisionlocation", "<creator", "<archive", "<tog", "<__geofence",
-            "<__shapeExtras", "<strokeStyle", "<remarks>", "readiness=\"???\"",
-            "uid=\"LINK-UUID", "routetype=", "order=", "color=", "callsign=\"\"", "phone=\"\"", "access=",
+            "<takv",
+            "<precisionlocation",
+            "<creator",
+            "<archive",
+            "<tog",
+            "<__geofence",
+            "<__shapeExtras",
+            "<strokeStyle",
+            "<remarks>",
+            "readiness=\"???\"",
+            "uid=\"LINK-UUID",
+            "routetype=",
+            "order=",
+            "color=",
+            "callsign=\"\"",
+            "phone=\"\"",
+            "access=",
         ).forEach { gone -> assertFalse(out.contains(gone), "should be stripped: $gone") }
     }
 

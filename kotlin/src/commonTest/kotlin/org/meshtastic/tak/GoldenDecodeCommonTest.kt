@@ -28,20 +28,19 @@ import kotlin.test.assertTrue
  * shipped dictionary, and assert the result equals the inlined `.pb` byte-for-byte.
  */
 class GoldenDecodeCommonTest {
-
     // The 4-byte zstd frame magic that TakCompressor strips on encode; the golden
     // .bin frames have it stripped, so the decoder gets it re-prepended.
     private val zstdMagic = byteArrayOf(0x28, 0xB5.toByte(), 0x2F, 0xFD.toByte())
 
     // Digest each shipped dictionary once and reuse it across the whole suite.
-    private val dictById: Map<Int, ZstdDictionary> = mapOf(
-        DictionaryProvider.DICT_ID_NON_AIRCRAFT to ZstdDictionary(DictionaryProvider.nonAircraftDict),
-        DictionaryProvider.DICT_ID_AIRCRAFT to ZstdDictionary(DictionaryProvider.aircraftDict),
-    )
+    private val dictById: Map<Int, ZstdDictionary> =
+        mapOf(
+            DictionaryProvider.DICT_ID_NON_AIRCRAFT to ZstdDictionary(DictionaryProvider.nonAircraftDict),
+            DictionaryProvider.DICT_ID_AIRCRAFT to ZstdDictionary(DictionaryProvider.aircraftDict),
+        )
 
     /** Re-frame a golden .bin: drop the 1-byte flags prefix, re-prepend the magic. */
-    private fun reframe(golden: ByteArray): ByteArray =
-        zstdMagic + golden.copyOfRange(1, golden.size)
+    private fun reframe(golden: ByteArray): ByteArray = zstdMagic + golden.copyOfRange(1, golden.size)
 
     @Test
     fun decoderReproducesEveryCompressedGoldenByteForByte() {
@@ -57,8 +56,10 @@ class GoldenDecodeCommonTest {
             val dictId = flags and 0x3F
             // 0xFF (uncompressed) and unknown-dict fixtures carry no zstd frame.
             if (flags == DictionaryProvider.DICT_ID_UNCOMPRESSED ||
-                (dictId != DictionaryProvider.DICT_ID_NON_AIRCRAFT &&
-                    dictId != DictionaryProvider.DICT_ID_AIRCRAFT)
+                (
+                    dictId != DictionaryProvider.DICT_ID_NON_AIRCRAFT &&
+                        dictId != DictionaryProvider.DICT_ID_AIRCRAFT
+                )
             ) {
                 skipped++
                 continue
@@ -66,15 +67,19 @@ class GoldenDecodeCommonTest {
             compressed++
 
             val dict = dictById[dictId] ?: error("no dictionary for id $dictId ($name)")
-            val decoded = runCatching {
-                Zstd.decompress(reframe(golden), dict, TakCompressor.MAX_DECOMPRESSED_SIZE)
-            }
+            val decoded =
+                runCatching {
+                    Zstd.decompress(reframe(golden), dict, TakCompressor.MAX_DECOMPRESSED_SIZE)
+                }
             when {
-                decoded.isFailure ->
+                decoded.isFailure -> {
                     failures += "$name: decoder threw ${decoded.exceptionOrNull()?.message}"
-                !decoded.getOrNull().contentEquals(expected) ->
+                }
+
+                !decoded.getOrNull().contentEquals(expected) -> {
                     failures += "$name: output mismatch (got ${decoded.getOrNull()?.size}B," +
                         " expected ${expected.size}B)"
+                }
             }
         }
 

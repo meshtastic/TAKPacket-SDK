@@ -1,17 +1,21 @@
 package org.meshtastic.tak
 
-import kotlin.math.roundToInt
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import kotlin.math.roundToInt
 
 /**
  * Round-trip tests: CoT XML -> parse -> compress -> decompress -> build XML
  * Validates that all fields survive the full pipeline.
  */
 class RoundTripTest {
-
     private val parser = CotXmlParser()
     private val builder = CotXmlBuilder()
     private val compressor = TakCompressor()
@@ -57,8 +61,11 @@ class RoundTripTest {
         assertEquals(packet.marti, decompressed.marti, "marti mismatch in $fixture")
 
         // Verify payload type matches
-        assertEquals(packet.payload::class, decompressed.payload::class,
-            "payload type mismatch in $fixture")
+        assertEquals(
+            packet.payload::class,
+            decompressed.payload::class,
+            "payload type mismatch in $fixture",
+        )
 
         // Verify payload-specific fields
         when (val p = packet.payload) {
@@ -73,6 +80,7 @@ class RoundTripTest {
                 assertEquals(p.voiceProfileId, d.voiceProfileId, "chat voiceProfileId mismatch in $fixture")
                 assertEquals(p.hasVoiceProfile, d.hasVoiceProfile, "chat hasVoiceProfile mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.TakTalk -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.TakTalk
                 assertEquals(p.text, d.text, "taktalk text mismatch in $fixture")
@@ -80,6 +88,7 @@ class RoundTripTest {
                 assertEquals(p.lang, d.lang, "taktalk lang mismatch in $fixture")
                 assertEquals(p.fromVoice, d.fromVoice, "taktalk fromVoice mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.TakTalkRoom -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.TakTalkRoom
                 // senderCallsign deprecated in v0.3.2 — always equals
@@ -91,6 +100,7 @@ class RoundTripTest {
                 assertEquals(p.roomName, d.roomName, "room roomName mismatch in $fixture")
                 assertEquals(p.participants, d.participants, "room participants mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.Aircraft -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.Aircraft
                 assertEquals(p.icao, d.icao, "icao mismatch in $fixture")
@@ -98,6 +108,7 @@ class RoundTripTest {
                 assertEquals(p.flight, d.flight, "flight mismatch in $fixture")
                 assertEquals(p.squawk, d.squawk, "squawk mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.DrawnShape -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.DrawnShape
                 assertEquals(p.kind, d.kind, "shape kind mismatch in $fixture")
@@ -109,6 +120,7 @@ class RoundTripTest {
                 assertEquals(p.vertices.size, d.vertices.size, "shape vertex count mismatch in $fixture")
                 assertEquals(p.truncated, d.truncated, "shape truncated mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.Marker -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.Marker
                 assertEquals(p.kind, d.kind, "marker kind mismatch in $fixture")
@@ -116,6 +128,7 @@ class RoundTripTest {
                 assertEquals(p.iconset, d.iconset, "marker iconset mismatch in $fixture")
                 assertEquals(p.parentUid, d.parentUid, "marker parentUid mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.RangeAndBearing -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.RangeAndBearing
                 assertEquals(p.rangeCm, d.rangeCm, "rab rangeCm mismatch in $fixture")
@@ -123,6 +136,7 @@ class RoundTripTest {
                 assertEquals(p.anchorLatI, d.anchorLatI, "rab anchorLatI mismatch in $fixture")
                 assertEquals(p.anchorLonI, d.anchorLonI, "rab anchorLonI mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.Route -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.Route
                 assertEquals(p.method, d.method, "route method mismatch in $fixture")
@@ -131,6 +145,7 @@ class RoundTripTest {
                 assertEquals(p.links.size, d.links.size, "route link count mismatch in $fixture")
                 assertEquals(p.truncated, d.truncated, "route truncated mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.CasevacReport -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.CasevacReport
                 assertEquals(p.precedence, d.precedence, "casevac precedence mismatch in $fixture")
@@ -149,12 +164,14 @@ class RoundTripTest {
                 assertEquals(p.terrainFlags, d.terrainFlags, "casevac terrainFlags mismatch in $fixture")
                 assertEquals(p.frequency, d.frequency, "casevac frequency mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.EmergencyAlert -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.EmergencyAlert
                 assertEquals(p.type, d.type, "emergency type mismatch in $fixture")
                 assertEquals(p.authoringUid, d.authoringUid, "emergency authoringUid mismatch in $fixture")
                 assertEquals(p.cancelReferenceUid, d.cancelReferenceUid, "emergency cancelReferenceUid mismatch in $fixture")
             }
+
             is TakPacketV2Data.Payload.TaskRequest -> {
                 val d = decompressed.payload as TakPacketV2Data.Payload.TaskRequest
                 assertEquals(p.taskType, d.taskType, "task type mismatch in $fixture")
@@ -164,14 +181,17 @@ class RoundTripTest {
                 assertEquals(p.status, d.status, "task status mismatch in $fixture")
                 assertEquals(p.note, d.note, "task note mismatch in $fixture")
             }
+
             else -> { /* PLI, None, RawDetail have no extra fields to check */ }
         }
 
         // Build XML from decompressed data and verify it's valid XML
         val rebuiltXml = builder.build(decompressed)
         assertTrue(rebuiltXml.contains("<event"), "Rebuilt XML should contain <event> for $fixture")
-        assertTrue(rebuiltXml.contains(decompressed.callsign),
-            "Rebuilt XML should contain callsign for $fixture")
+        assertTrue(
+            rebuiltXml.contains(decompressed.callsign),
+            "Rebuilt XML should contain callsign for $fixture",
+        )
     }
 
     @Test
@@ -194,8 +214,10 @@ class RoundTripTest {
         // (leading space), zeroing all longitudes and rendering flat shapes.
         val xml = loadFixture("drawing_rectangle_itak.xml")
         val packet = parser.parse(xml)
-        assertTrue(packet.payload is TakPacketV2Data.Payload.DrawnShape,
-            "Should be DrawnShape, got ${packet.payload}")
+        assertTrue(
+            packet.payload is TakPacketV2Data.Payload.DrawnShape,
+            "Should be DrawnShape, got ${packet.payload}",
+        )
         val shape = packet.payload as TakPacketV2Data.Payload.DrawnShape
         assertEquals(4, shape.vertices.size, "Rectangle must have 4 vertices")
         // All longitudes must be non-zero (around -107.248 to -107.250)
@@ -579,15 +601,16 @@ class RoundTripTest {
 
     @Test
     fun `uncompressed payload (0xFF flag) round-trips`() {
-        val packet = TakPacketV2Data(
-            cotTypeId = CotTypeMapper.COTTYPE_A_F_G_U_C,
-            how = CotTypeMapper.COTHOW_M_G,
-            callsign = "TEST",
-            latitudeI = 340522000,
-            longitudeI = -1182437000,
-            altitude = 100,
-            payload = TakPacketV2Data.Payload.Pli(true),
-        )
+        val packet =
+            TakPacketV2Data(
+                cotTypeId = CotTypeMapper.COTTYPE_A_F_G_U_C,
+                how = CotTypeMapper.COTHOW_M_G,
+                callsign = "TEST",
+                latitudeI = 340522000,
+                longitudeI = -1182437000,
+                altitude = 100,
+                payload = TakPacketV2Data.Payload.Pli(true),
+            )
 
         // Simulate firmware TAK_TRACKER: flags=0xFF + raw protobuf
         val protobuf = TakPacketV2Serializer.serialize(packet)
@@ -624,14 +647,22 @@ class RoundTripTest {
         // TAKTALK fields. The rebuilt XML must carry element-body children so
         // ATAK's TAKTALK plugin parses it natively.
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
-        assertTrue(rebuilt.contains("<text>Testing 123, testing 123.</text>"),
-            "rebuilt XML must re-emit <text> element body")
-        assertTrue(rebuilt.contains("<chatroom-id>1</chatroom-id>"),
-            "rebuilt XML must re-emit <chatroom-id>")
-        assertTrue(rebuilt.contains("<lang>English</lang>"),
-            "rebuilt XML must re-emit <lang>")
-        assertFalse(rebuilt.contains("<voice/>"),
-            "no source <voice/> means no rebuilt <voice/>")
+        assertTrue(
+            rebuilt.contains("<text>Testing 123, testing 123.</text>"),
+            "rebuilt XML must re-emit <text> element body",
+        )
+        assertTrue(
+            rebuilt.contains("<chatroom-id>1</chatroom-id>"),
+            "rebuilt XML must re-emit <chatroom-id>",
+        )
+        assertTrue(
+            rebuilt.contains("<lang>English</lang>"),
+            "rebuilt XML must re-emit <lang>",
+        )
+        assertFalse(
+            rebuilt.contains("<voice/>"),
+            "no source <voice/> means no rebuilt <voice/>",
+        )
     }
 
     @Test
@@ -650,24 +681,36 @@ class RoundTripTest {
         // the receiver couldn't attribute the message and silently dropped it
         // instead of running TTS.  See:
         //   ~/Downloads/cotexplorer-20260527T170723Z.txt lines 105 vs 106
-        assertEquals("ASPEN", packet.callsign,
-            "TAKTALK m-t-t carries sender in <callsign>X</callsign> direct child; parser must capture it")
+        assertEquals(
+            "ASPEN",
+            packet.callsign,
+            "TAKTALK m-t-t carries sender in <callsign>X</callsign> direct child; parser must capture it",
+        )
 
         // v0.3.2: m-t-t includes <marti><dest callsign='ETHEL'/></marti> in the
         // source XML (real ATAK uses directed routing). The parser must capture
         // it into envelope packet.marti so the receiver's TAKTALK can resolve
         // "addressed to me?" and play TTS audio.
-        assertEquals(listOf("ETHEL"), packet.marti,
-            "m-t-t source includes <marti><dest callsign='ETHEL'/>; must round-trip via packet.marti")
+        assertEquals(
+            listOf("ETHEL"),
+            packet.marti,
+            "m-t-t source includes <marti><dest callsign='ETHEL'/>; must round-trip via packet.marti",
+        )
 
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
-        assertTrue(rebuilt.contains("<voice/>"),
-            "rebuilt XML must re-emit the <voice/> push-to-talk marker")
+        assertTrue(
+            rebuilt.contains("<voice/>"),
+            "rebuilt XML must re-emit the <voice/> push-to-talk marker",
+        )
         assertTrue(rebuilt.contains("<text>Testing 123</text>"))
-        assertTrue(rebuilt.contains("<callsign>ASPEN</callsign>"),
-            "rebuilt XML must re-emit <callsign>SENDER</callsign> so TAKTALK can attribute and TTS-play it")
-        assertTrue(rebuilt.contains("""<marti><dest callsign="ETHEL"/></marti>"""),
-            "rebuilt XML must re-emit <marti><dest callsign='ETHEL'/></marti> — TAKTALK gates TTS on it")
+        assertTrue(
+            rebuilt.contains("<callsign>ASPEN</callsign>"),
+            "rebuilt XML must re-emit <callsign>SENDER</callsign> so TAKTALK can attribute and TTS-play it",
+        )
+        assertTrue(
+            rebuilt.contains("""<marti><dest callsign="ETHEL"/></marti>"""),
+            "rebuilt XML must re-emit <marti><dest callsign='ETHEL'/></marti> — TAKTALK gates TTS on it",
+        )
         // v0.3.2: m-t-t builder must NOT synthesize the spurious
         // <contact endpoint='0.0.0.0:4242:tcp' callsign='ASPEN'/> element.
         // Real ATAK never emits <contact> on m-t-t events, and emitting one
@@ -688,20 +731,30 @@ class RoundTripTest {
         // TakTalkRoomData.sender_callsign is deprecated and no longer
         // written by the builder — it's reconstituted from envelope callsign
         // on emit, eliminating the duplicate wire byte.
-        assertEquals("ASPEN", packet.callsign,
-            "y- carries sender in <sender-callsign>; parser must route it to envelope callsign")
+        assertEquals(
+            "ASPEN",
+            packet.callsign,
+            "y- carries sender in <sender-callsign>; parser must route it to envelope callsign",
+        )
         val room = packet.payload as TakPacketV2Data.Payload.TakTalkRoom
         assertEquals("30b2755c-c547-44ef-a0cc-cdbd8a15616f", room.roomId)
         assertEquals("test", room.roomName)
-        assertEquals(listOf("ETHEL", "ASPEN"), room.participants,
-            "participants must round-trip as ordered list, not just a joined string")
+        assertEquals(
+            listOf("ETHEL", "ASPEN"),
+            room.participants,
+            "participants must round-trip as ordered list, not just a joined string",
+        )
 
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
-        assertTrue(rebuilt.contains("<sender-callsign>ASPEN</sender-callsign>"),
-            "builder must reconstitute <sender-callsign> from envelope packet.callsign")
+        assertTrue(
+            rebuilt.contains("<sender-callsign>ASPEN</sender-callsign>"),
+            "builder must reconstitute <sender-callsign> from envelope packet.callsign",
+        )
         assertTrue(rebuilt.contains("<chatroom-name>test</chatroom-name>"))
-        assertTrue(rebuilt.contains("<chatroom-participants>ETHEL,ASPEN</chatroom-participants>"),
-            "participants must be joined with ',' on the wire-side XML")
+        assertTrue(
+            rebuilt.contains("<chatroom-participants>ETHEL,ASPEN</chatroom-participants>"),
+            "participants must be joined with ',' on the wire-side XML",
+        )
     }
 
     @Test
@@ -712,16 +765,23 @@ class RoundTripTest {
         assertEquals("Test message", chat.message)
         assertEquals("English", chat.lang)
         assertEquals("30b2755c-c547-44ef-a0cc-cdbd8a15616f", chat.roomId)
-        assertTrue(chat.hasVoiceProfile,
-            "source has <voice_profile_id/> empty marker — hasVoiceProfile must be true")
-        assertEquals("", chat.voiceProfileId,
-            "empty marker maps to empty string content")
+        assertTrue(
+            chat.hasVoiceProfile,
+            "source has <voice_profile_id/> empty marker — hasVoiceProfile must be true",
+        )
+        assertEquals(
+            "",
+            chat.voiceProfileId,
+            "empty marker maps to empty string content",
+        )
 
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
         assertTrue(rebuilt.contains("<Ea>English</Ea>"))
         assertTrue(rebuilt.contains("<roomId>30b2755c-c547-44ef-a0cc-cdbd8a15616f</roomId>"))
-        assertTrue(rebuilt.contains("<voice_profile_id/>"),
-            "empty marker must round-trip as self-closing element")
+        assertTrue(
+            rebuilt.contains("<voice_profile_id/>"),
+            "empty marker must round-trip as self-closing element",
+        )
     }
 
     @Test
@@ -730,14 +790,17 @@ class RoundTripTest {
         val packet = parser.parse(xml)
         val chat = packet.payload as TakPacketV2Data.Payload.Chat
         assertTrue(chat.hasVoiceProfile)
-        assertEquals("profile-uuid-9f8e7d6c-5b4a-3210-fedc-ba9876543210",
+        assertEquals(
+            "profile-uuid-9f8e7d6c-5b4a-3210-fedc-ba9876543210",
             chat.voiceProfileId,
-            "non-empty voice_profile_id must round-trip with content intact")
+            "non-empty voice_profile_id must round-trip with content intact",
+        )
 
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
-        assertTrue(rebuilt.contains(
-            "<voice_profile_id>profile-uuid-9f8e7d6c-5b4a-3210-fedc-ba9876543210</voice_profile_id>"),
-            "non-empty value emits as <voice_profile_id>X</voice_profile_id>, not as marker")
+        assertTrue(
+            rebuilt.contains("<voice_profile_id>profile-uuid-9f8e7d6c-5b4a-3210-fedc-ba9876543210</voice_profile_id>"),
+            "non-empty value emits as <voice_profile_id>X</voice_profile_id>, not as marker",
+        )
     }
 
     // ── Directed-routing (<marti>) — v0.3.2 ──────────────────────────────
@@ -753,8 +816,11 @@ class RoundTripTest {
         assertEquals(CotTypeMapper.COTTYPE_M_T_T, packet.cotTypeId)
         // Order matters — ATAK distinguishes primary recipient from cc list
         // by position, so receivers must see the same ordering as the sender.
-        assertEquals(listOf("ETHEL", "FOXTROT"), packet.marti,
-            "multi-recipient <marti> must preserve dest order across compression")
+        assertEquals(
+            listOf("ETHEL", "FOXTROT"),
+            packet.marti,
+            "multi-recipient <marti> must preserve dest order across compression",
+        )
 
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
         assertTrue(
@@ -768,11 +834,15 @@ class RoundTripTest {
         // taktalk_room_data is a broadcast (y-) — no directed routing.
         val xml = loadFixture("taktalk_room_data.xml")
         val packet = parser.parse(xml)
-        assertTrue(packet.marti.isEmpty(),
-            "broadcast events parse with empty marti list")
+        assertTrue(
+            packet.marti.isEmpty(),
+            "broadcast events parse with empty marti list",
+        )
 
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
-        assertFalse(rebuilt.contains("<marti>"),
-            "broadcast events must NOT emit a <marti> element — even an empty one wastes wire bytes")
+        assertFalse(
+            rebuilt.contains("<marti>"),
+            "broadcast events must NOT emit a <marti> element — even an empty one wastes wire bytes",
+        )
     }
 }

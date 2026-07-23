@@ -1,9 +1,9 @@
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.KotlinMultiplatform
-import java.util.Base64
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import java.util.Base64
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -11,6 +11,8 @@ plugins {
     alias(libs.plugins.dokka)
     alias(libs.plugins.binary.compat)
     alias(libs.plugins.kover)
+    alias(libs.plugins.spotless)
+    alias(libs.plugins.detekt)
 }
 
 group = "org.meshtastic"
@@ -21,6 +23,36 @@ repositories {
     maven("https://central.sonatype.com/repository/maven-snapshots/") {
         mavenContent { snapshotsOnly() }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Static analysis + formatting (§7.1 / §7.2). Spotless (ktlint) enforces the
+// .editorconfig ktlint ruleset over all Kotlin sources + this build script;
+// detekt runs on top of its default ruleset with a small project override file.
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        // Pin ktlint so local + CI format identically; .editorconfig drives the rules.
+        ktlint(libs.versions.ktlint.get())
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint(libs.versions.ktlint.get())
+    }
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(files("config/detekt/detekt.yml"))
+    // Grandfather the pre-existing findings in the hand-written codec so the full
+    // default ruleset is enforced on NEW code without a legacy-refactor blocking
+    // this CI change. Regenerate with `./gradlew detektBaseline`.
+    baseline = file("config/detekt/baseline.xml")
+    // KMP has no `src/main`/`src/test` layout, so the default `detekt` task finds
+    // no sources. Point it at the whole hand-written tree (every source set);
+    // detekt scans recursively for *.kt. Generated code lives under build/ and is
+    // excluded automatically.
+    source.setFrom(files("src"))
 }
 
 kotlin {
@@ -203,7 +235,10 @@ abstract class GenerateEmbeddedDictionaries : DefaultTask() {
         // any interior padding from appearing mid-string.
         val encoder = Base64.getEncoder()
 
-        fun emitChunks(propName: String, bytes: ByteArray): String {
+        fun emitChunks(
+            propName: String,
+            bytes: ByteArray,
+        ): String {
             val b64 = encoder.encodeToString(bytes)
             val chunks = b64.chunked(chunkChars)
             val sb = StringBuilder()
@@ -294,20 +329,23 @@ abstract class GenerateInlinedFixtures : DefaultTask() {
     @TaskAction
     fun generate() {
         // fixtureName (no .xml) -> XML text, sorted for stable output.
-        val xmlByName = cotXml.files
-            .filter { it.name.endsWith(".xml") }
-            .associate { it.name.removeSuffix(".xml") to it.readText() }
-            .toSortedMap()
+        val xmlByName =
+            cotXml.files
+                .filter { it.name.endsWith(".xml") }
+                .associate { it.name.removeSuffix(".xml") to it.readText() }
+                .toSortedMap()
         // fixtureName -> golden .bin wire frame (Base64), where present.
-        val goldenByName = golden.files
-            .filter { it.name.endsWith(".bin") }
-            .associate { it.name.removeSuffix(".bin") to Base64.getEncoder().encodeToString(it.readBytes()) }
-            .toSortedMap()
+        val goldenByName =
+            golden.files
+                .filter { it.name.endsWith(".bin") }
+                .associate { it.name.removeSuffix(".bin") to Base64.getEncoder().encodeToString(it.readBytes()) }
+                .toSortedMap()
         // fixtureName -> intermediate .pb protobuf bytes (Base64), where present.
-        val protobufByName = protobuf.files
-            .filter { it.name.endsWith(".pb") }
-            .associate { it.name.removeSuffix(".pb") to Base64.getEncoder().encodeToString(it.readBytes()) }
-            .toSortedMap()
+        val protobufByName =
+            protobuf.files
+                .filter { it.name.endsWith(".pb") }
+                .associate { it.name.removeSuffix(".pb") to Base64.getEncoder().encodeToString(it.readBytes()) }
+                .toSortedMap()
 
         fun kotlinString(s: String): String {
             // Emit as a raw triple-quoted string. Fixtures are plain CoT XML with
@@ -343,14 +381,22 @@ abstract class GenerateInlinedFixtures : DefaultTask() {
                 append("    /** fixtureName (no extension) -> CoT XML source text. */\n")
                 append("    val xml: Map<String, String> = mapOf(\n")
                 xmlByName.forEach { (name, text) ->
-                    append("        \"").append(name).append("\" to ").append(kotlinString(text)).append(",\n")
+                    append("        \"")
+                        .append(name)
+                        .append("\" to ")
+                        .append(kotlinString(text))
+                        .append(",\n")
                 }
                 append("    )\n\n")
 
                 append("    /** fixtureName (no extension) -> golden `.bin` wire frame, Base64. */\n")
                 append("    private val goldenWireB64: Map<String, String> = mapOf(\n")
                 goldenByName.forEach { (name, b64) ->
-                    append("        \"").append(name).append("\" to \"").append(b64).append("\",\n")
+                    append("        \"")
+                        .append(name)
+                        .append("\" to \"")
+                        .append(b64)
+                        .append("\",\n")
                 }
                 append("    )\n\n")
 
@@ -362,7 +408,11 @@ abstract class GenerateInlinedFixtures : DefaultTask() {
                 append("    /** fixtureName (no extension) -> intermediate `.pb` protobuf, Base64. */\n")
                 append("    private val protobufB64: Map<String, String> = mapOf(\n")
                 protobufByName.forEach { (name, b64) ->
-                    append("        \"").append(name).append("\" to \"").append(b64).append("\",\n")
+                    append("        \"")
+                        .append(name)
+                        .append("\" to \"")
+                        .append(b64)
+                        .append("\",\n")
                 }
                 append("    )\n\n")
 

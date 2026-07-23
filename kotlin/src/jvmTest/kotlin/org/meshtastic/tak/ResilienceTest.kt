@@ -1,7 +1,9 @@
 package org.meshtastic.tak
 
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 
 /**
  * Locks the LoRa-resilience invariant: every packet MUST be fully, independently
@@ -13,7 +15,6 @@ import org.junit.jupiter.api.Assertions.*
  * cross-packet dependency, one of these tests fails.
  */
 class ResilienceTest {
-
     private val parser = CotXmlParser()
     private val compressor = TakCompressor()
 
@@ -31,8 +32,11 @@ class ResilienceTest {
         val forward = wire.map { (name, w) -> name to compressor.decompress(w) }
 
         // Decode the SAME payloads in reverse order — order must not matter.
-        val reverse = wire.reversed().map { (name, w) -> name to compressor.decompress(w) }
-            .reversed()
+        val reverse =
+            wire
+                .reversed()
+                .map { (name, w) -> name to compressor.decompress(w) }
+                .reversed()
 
         for (i in forward.indices) {
             val (name, f) = forward[i]

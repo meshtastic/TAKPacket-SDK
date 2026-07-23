@@ -23,34 +23,59 @@ import kotlin.time.Duration.Companion.seconds
  * synthesized from defaults rather than echoed from the source.
  */
 public class CotXmlBuilder {
-
     private companion object {
-        private val teamEnumToName = mapOf(
-            1 to "White", 2 to "Yellow", 3 to "Orange", 4 to "Magenta",
-            5 to "Red", 6 to "Maroon", 7 to "Purple", 8 to "Dark Blue",
-            9 to "Blue", 10 to "Cyan", 11 to "Teal", 12 to "Green",
-            13 to "Dark Green", 14 to "Brown",
-        )
+        private val teamEnumToName =
+            mapOf(
+                1 to "White",
+                2 to "Yellow",
+                3 to "Orange",
+                4 to "Magenta",
+                5 to "Red",
+                6 to "Maroon",
+                7 to "Purple",
+                8 to "Dark Blue",
+                9 to "Blue",
+                10 to "Cyan",
+                11 to "Teal",
+                12 to "Green",
+                13 to "Dark Green",
+                14 to "Brown",
+            )
 
-        private val roleEnumToName = mapOf(
-            1 to "Team Member", 2 to "Team Lead", 3 to "HQ",
-            4 to "Sniper", 5 to "Medic", 6 to "ForwardObserver",
-            7 to "RTO", 8 to "K9",
-        )
+        private val roleEnumToName =
+            mapOf(
+                1 to "Team Member",
+                2 to "Team Lead",
+                3 to "HQ",
+                4 to "Sniper",
+                5 to "Medic",
+                6 to "ForwardObserver",
+                7 to "RTO",
+                8 to "K9",
+            )
 
         // --- Reverse lookups for route/bullseye fields -------------------
         // Mirrors CotXmlParser's forward maps — the parser → builder round
         // trip must preserve the original attribute strings.
-        private val routeMethodIntToName = mapOf(
-            1 to "Driving", 2 to "Walking", 3 to "Flying",
-            4 to "Swimming", 5 to "Watercraft",
-        )
-        private val routeDirectionIntToName = mapOf(
-            1 to "Infil", 2 to "Exfil",
-        )
-        private val bearingRefIntToName = mapOf(
-            1 to "M", 2 to "T", 3 to "G",
-        )
+        private val routeMethodIntToName =
+            mapOf(
+                1 to "Driving",
+                2 to "Walking",
+                3 to "Flying",
+                4 to "Swimming",
+                5 to "Watercraft",
+            )
+        private val routeDirectionIntToName =
+            mapOf(
+                1 to "Infil",
+                2 to "Exfil",
+            )
+        private val bearingRefIntToName =
+            mapOf(
+                1 to "M",
+                2 to "T",
+                3 to "G",
+            )
 
         // --- DrawnShape Kind values (mirror atak.proto) ------------------
         private const val SHAPE_KIND_CIRCLE = 1
@@ -59,32 +84,57 @@ public class CotXmlBuilder {
         private const val SHAPE_KIND_ELLIPSE = 8
 
         // --- CasevacReport reverse lookups (mirror CotXmlParser maps) ----
-        private val precedenceIntToName = mapOf(
-            1 to "Urgent", 2 to "Urgent Surgical", 3 to "Priority",
-            4 to "Routine", 5 to "Convenience",
-        )
-        private val hlzMarkingIntToName = mapOf(
-            1 to "Panels", 2 to "Pyro", 3 to "Smoke",
-            4 to "None", 5 to "Other",
-        )
-        private val securityIntToName = mapOf(
-            1 to "N", 2 to "P", 3 to "E", 4 to "X",
-        )
+        private val precedenceIntToName =
+            mapOf(
+                1 to "Urgent",
+                2 to "Urgent Surgical",
+                3 to "Priority",
+                4 to "Routine",
+                5 to "Convenience",
+            )
+        private val hlzMarkingIntToName =
+            mapOf(
+                1 to "Panels",
+                2 to "Pyro",
+                3 to "Smoke",
+                4 to "None",
+                5 to "Other",
+            )
+        private val securityIntToName =
+            mapOf(
+                1 to "N",
+                2 to "P",
+                3 to "E",
+                4 to "X",
+            )
 
         // --- EmergencyAlert reverse lookups ------------------------------
-        private val emergencyTypeIntToName = mapOf(
-            1 to "911 Alert", 2 to "Ring The Bell", 3 to "In Contact",
-            4 to "Geo-fence Breached", 5 to "Custom", 6 to "Cancel",
-        )
+        private val emergencyTypeIntToName =
+            mapOf(
+                1 to "911 Alert",
+                2 to "Ring The Bell",
+                3 to "In Contact",
+                4 to "Geo-fence Breached",
+                5 to "Custom",
+                6 to "Cancel",
+            )
 
         // --- TaskRequest reverse lookups ---------------------------------
-        private val taskPriorityIntToName = mapOf(
-            1 to "Low", 2 to "Normal", 3 to "High", 4 to "Critical",
-        )
-        private val taskStatusIntToName = mapOf(
-            1 to "Pending", 2 to "Acknowledged", 3 to "In Progress",
-            4 to "Completed", 5 to "Cancelled",
-        )
+        private val taskPriorityIntToName =
+            mapOf(
+                1 to "Low",
+                2 to "Normal",
+                3 to "High",
+                4 to "Critical",
+            )
+        private val taskStatusIntToName =
+            mapOf(
+                1 to "Pending",
+                2 to "Acknowledged",
+                3 to "In Progress",
+                4 to "Completed",
+                5 to "Cancelled",
+            )
 
         // --- GeoChat ReceiptType ----------------------------------------
         private const val RECEIPT_TYPE_NONE = 0
@@ -113,13 +163,14 @@ public class CotXmlBuilder {
         // Any other value (e.g. a future GeoPointSource added to atak.proto that
         // the builder hasn't been taught about) throws rather than silently
         // collapsing to "???" and losing data on the rebuilt XML.
-        private fun geoSrcToString(src: Int): String = when (src) {
-            0 -> "???"
-            1 -> "GPS"
-            2 -> "USER"
-            3 -> "NETWORK"
-            else -> throw IllegalArgumentException("Unknown GeoPointSource value: $src")
-        }
+        private fun geoSrcToString(src: Int): String =
+            when (src) {
+                0 -> "???"
+                1 -> "GPS"
+                2 -> "USER"
+                3 -> "NETWORK"
+                else -> throw IllegalArgumentException("Unknown GeoPointSource value: $src")
+            }
 
         /** Lowercase two-hex-digit rendering of a byte value (0..255), no `String.format`. */
         private fun hex2(value: Int): String {
@@ -144,8 +195,10 @@ public class CotXmlBuilder {
      * otherwise we fall back to the exact [argb] bits carried on the wire
      * so custom user-picked colors round-trip byte-for-byte.
      */
-    private fun resolveColor(paletteTeam: Int, argb: Int): Int =
-        AtakPalette.teamToArgb(paletteTeam) ?: argb
+    private fun resolveColor(
+        paletteTeam: Int,
+        argb: Int,
+    ): Int = AtakPalette.teamToArgb(paletteTeam) ?: argb
 
     /**
      * Build a complete CoT XML `<event>` document from [packet].
@@ -171,7 +224,12 @@ public class CotXmlBuilder {
         // Instant.parse on the receive side.
         val now = Clock.System.now()
         val timeStr = now.toString()
-        val stale = now + packet.staleSeconds.toLong().coerceAtLeast(45).seconds
+        val stale =
+            now +
+                packet.staleSeconds
+                    .toLong()
+                    .coerceAtLeast(45)
+                    .seconds
         val staleStr = stale.toString()
 
         val cotType = packet.cotTypeString()
@@ -181,9 +239,10 @@ public class CotXmlBuilder {
         // the TAKTALK plugin's inbound classifier appears to gate on this
         // value, so a source how="null" that round-trips as "m-g" prevents
         // TTS playback on the receive side.
-        val how = packet.howString().ifEmpty {
-            if (cotType == "m-t-t" || cotType == "y-") "null" else "m-g"
-        }
+        val how =
+            packet.howString().ifEmpty {
+                if (cotType == "m-t-t" || cotType == "y-") "null" else "m-g"
+            }
 
         var lat = packet.latitudeI / 1e7
         var lon = packet.longitudeI / 1e7
@@ -215,8 +274,9 @@ public class CotXmlBuilder {
         // bloats the wire ~35 bytes (compressed by zstd, but still) and produces XML
         // that doesn't match captures from real ATAK + TAKTALK.
         val isRoute = packet.payload is TakPacketV2Data.Payload.Route
-        val isTakTalkShape = packet.payload is TakPacketV2Data.Payload.TakTalk
-            || packet.payload is TakPacketV2Data.Payload.TakTalkRoom
+        val isTakTalkShape =
+            packet.payload is TakPacketV2Data.Payload.TakTalk ||
+                packet.payload is TakPacketV2Data.Payload.TakTalkRoom
         if (packet.callsign.isNotEmpty() && !isRoute && !isTakTalkShape) {
             val ep = packet.endpoint.ifEmpty { DEFAULT_ENDPOINT }
             sb.append("""    <contact callsign="${esc(packet.callsign)}" endpoint="$ep"""")
@@ -241,8 +301,8 @@ public class CotXmlBuilder {
         }
 
         // Track
-        val speedMs = packet.speed / 100.0  // cm/s -> m/s
-        val courseDeg = packet.course / 100.0  // degrees*100 -> degrees
+        val speedMs = packet.speed / 100.0 // cm/s -> m/s
+        val courseDeg = packet.course / 100.0 // degrees*100 -> degrees
         if (packet.speed > 0 || packet.course > 0) {
             sb.append("""    <track speed="$speedMs" course="$courseDeg"/>""")
             sb.append("\n")
@@ -315,8 +375,9 @@ public class CotXmlBuilder {
                         val senderUid = gcParts[1]
                         val chatroom = gcParts[2]
                         val msgId = gcParts[3]
-                        val senderCs = payload.toCallsign?.ifEmpty { null }
-                            ?: packet.callsign.ifEmpty { "UNKNOWN" }
+                        val senderCs =
+                            payload.toCallsign?.ifEmpty { null }
+                                ?: packet.callsign.ifEmpty { "UNKNOWN" }
                         sb.append("    <__chat parent=\"RootContactGroup\" groupOwner=\"false\"")
                         sb.append(""" messageId="${esc(msgId)}" chatroom="${esc(chatroom)}"""")
                         sb.append(""" id="${esc(chatroom)}" senderCallsign="${esc(senderCs)}">""")
@@ -339,16 +400,18 @@ public class CotXmlBuilder {
                     // unchanged. Order matches what ATAK emits (voice_profile_id,
                     // callsign, Ea, roomId — see the b-t-f capture in
                     // cotexplorer-20260526T211059Z.txt).
-                    val isTaktalk = payload.hasVoiceProfile ||
-                        payload.lang.isNotEmpty() ||
-                        payload.roomId.isNotEmpty()
+                    val isTaktalk =
+                        payload.hasVoiceProfile ||
+                            payload.lang.isNotEmpty() ||
+                            payload.roomId.isNotEmpty()
                     if (isTaktalk) {
                         if (payload.hasVoiceProfile) {
                             if (payload.voiceProfileId.isEmpty()) {
                                 // Self-closing marker exactly as ATAK + TAKTALK emit it.
                                 sb.append("    <voice_profile_id/>\n")
                             } else {
-                                sb.append("    <voice_profile_id>")
+                                sb
+                                    .append("    <voice_profile_id>")
                                     .append(esc(payload.voiceProfileId))
                                     .append("</voice_profile_id>\n")
                             }
@@ -369,6 +432,7 @@ public class CotXmlBuilder {
                     }
                 }
             }
+
             // TAKTALK voice/text message (CoT type m-t-t). Element-body shape
             // matches what ATAK + the TAKTALK plugin emit so the receiver's
             // plugin parses it natively without translation.
@@ -387,6 +451,7 @@ public class CotXmlBuilder {
                     sb.append("    <voice/>\n")
                 }
             }
+
             // TAKTALK room/membership broadcast (CoT type y-).
             is TakPacketV2Data.Payload.TakTalkRoom -> {
                 // Reconstitute <sender-callsign> from the envelope callsign,
@@ -396,26 +461,31 @@ public class CotXmlBuilder {
                 // <sender-callsign>'s body into packet.callsign on the way in;
                 // here we route it back out.
                 if (packet.callsign.isNotEmpty()) {
-                    sb.append("    <sender-callsign>")
+                    sb
+                        .append("    <sender-callsign>")
                         .append(esc(packet.callsign))
                         .append("</sender-callsign>\n")
                 }
                 if (payload.roomId.isNotEmpty()) {
-                    sb.append("    <chatroom-id>")
+                    sb
+                        .append("    <chatroom-id>")
                         .append(esc(payload.roomId))
                         .append("</chatroom-id>\n")
                 }
                 if (payload.roomName.isNotEmpty()) {
-                    sb.append("    <chatroom-name>")
+                    sb
+                        .append("    <chatroom-name>")
                         .append(esc(payload.roomName))
                         .append("</chatroom-name>\n")
                 }
                 if (payload.participants.isNotEmpty()) {
-                    sb.append("    <chatroom-participants>")
+                    sb
+                        .append("    <chatroom-participants>")
                         .append(esc(payload.participants.joinToString(",")))
                         .append("</chatroom-participants>\n")
                 }
             }
+
             is TakPacketV2Data.Payload.Aircraft -> {
                 if (payload.icao.isNotEmpty()) {
                     sb.append("    <_aircot_")
@@ -446,22 +516,26 @@ public class CotXmlBuilder {
                     sb.append("/>\n")
                 }
             }
+
             is TakPacketV2Data.Payload.DrawnShape -> {
                 val strokeVal = resolveColor(payload.strokeColor, payload.strokeArgb)
                 val fillVal = resolveColor(payload.fillColor, payload.fillArgb)
-                val emitStroke = payload.style == STYLE_STROKE_ONLY ||
-                    payload.style == STYLE_STROKE_AND_FILL ||
-                    (payload.style == STYLE_UNSPECIFIED && strokeVal != 0)
-                val emitFill = payload.style == STYLE_FILL_ONLY ||
-                    payload.style == STYLE_STROKE_AND_FILL ||
-                    (payload.style == STYLE_UNSPECIFIED && fillVal != 0)
+                val emitStroke =
+                    payload.style == STYLE_STROKE_ONLY ||
+                        payload.style == STYLE_STROKE_AND_FILL ||
+                        (payload.style == STYLE_UNSPECIFIED && strokeVal != 0)
+                val emitFill =
+                    payload.style == STYLE_FILL_ONLY ||
+                        payload.style == STYLE_STROKE_AND_FILL ||
+                        (payload.style == STYLE_UNSPECIFIED && fillVal != 0)
 
                 // Circle-like kinds (circle, ranging circle, bullseye) use <shape><ellipse/></shape>.
                 // Polyline-like kinds (rectangle, polygon, freeform, telestration) use
                 // top-level <link point="lat,lon"/> siblings that the parser picks up as vertices.
                 val kind = payload.kind
                 if (kind == SHAPE_KIND_CIRCLE || kind == SHAPE_KIND_RANGING_CIRCLE ||
-                    kind == SHAPE_KIND_BULLSEYE || kind == SHAPE_KIND_ELLIPSE) {
+                    kind == SHAPE_KIND_BULLSEYE || kind == SHAPE_KIND_ELLIPSE
+                ) {
                     if (payload.majorCm > 0 || payload.minorCm > 0) {
                         val majorM = payload.majorCm / 100.0
                         val minorM = payload.minorCm / 100.0
@@ -524,6 +598,7 @@ public class CotXmlBuilder {
                 sb.append("""    <labels_on value="${payload.labelsOn}"/>""")
                 sb.append("\n")
             }
+
             is TakPacketV2Data.Payload.Marker -> {
                 if (payload.readiness) {
                     sb.append("""    <status readiness="true"/>""")
@@ -551,6 +626,7 @@ public class CotXmlBuilder {
                     sb.append("\n")
                 }
             }
+
             is TakPacketV2Data.Payload.RangeAndBearing -> {
                 if (payload.anchorLatI != 0 || payload.anchorLonI != 0) {
                     val alat = payload.anchorLatI / 1e7
@@ -583,6 +659,7 @@ public class CotXmlBuilder {
                     sb.append("\n")
                 }
             }
+
             is TakPacketV2Data.Payload.RawDetail -> {
                 // Raw-detail fallback path: raw bytes of the original <detail>
                 // element are shipped verbatim. Emit them inside the
@@ -594,6 +671,7 @@ public class CotXmlBuilder {
                     if (!sb.endsWith("\n")) sb.append("\n")
                 }
             }
+
             is TakPacketV2Data.Payload.Route -> {
                 // Emit <link> elements BEFORE <link_attr> and <__routeinfo> —
                 // ATAK's parser expects waypoints first, then route metadata.
@@ -640,6 +718,7 @@ public class CotXmlBuilder {
                 sb.append("    <labels_on value=\"false\"/>\n")
                 sb.append("    <color value=\"-1\"/>\n")
             }
+
             is TakPacketV2Data.Payload.CasevacReport -> {
                 sb.append("    <_medevac_")
                 if (payload.title.isNotEmpty()) {
@@ -740,6 +819,7 @@ public class CotXmlBuilder {
                     sb.append("    </_medevac_>\n")
                 }
             }
+
             is TakPacketV2Data.Payload.EmergencyAlert -> {
                 // <emergency type="…"/> element carries the alert type; if
                 // the EmergencyAlert.type is Cancel (6) we emit cancel="true"
@@ -765,6 +845,7 @@ public class CotXmlBuilder {
                     sb.append("\n")
                 }
             }
+
             is TakPacketV2Data.Payload.TaskRequest -> {
                 sb.append("    <task")
                 if (payload.taskType.isNotEmpty()) {
@@ -789,6 +870,7 @@ public class CotXmlBuilder {
                     sb.append("\n")
                 }
             }
+
             else -> { /* PLI, None, RawDetail — no extra detail elements */ }
         }
 
@@ -798,12 +880,12 @@ public class CotXmlBuilder {
         // m-t-t and y- don't use <remarks> at all, so excluding them prevents accidental
         // double-emission when callers populate the legacy remarks field. All other types
         // (shapes, markers, RAB, casevac, emergency, task) emit here.
-        if (packet.remarks.isNotEmpty()
-            && packet.payload !is TakPacketV2Data.Payload.Chat
-            && packet.payload !is TakPacketV2Data.Payload.Aircraft
-            && packet.payload !is TakPacketV2Data.Payload.Route
-            && packet.payload !is TakPacketV2Data.Payload.TakTalk
-            && packet.payload !is TakPacketV2Data.Payload.TakTalkRoom
+        if (packet.remarks.isNotEmpty() &&
+            packet.payload !is TakPacketV2Data.Payload.Chat &&
+            packet.payload !is TakPacketV2Data.Payload.Aircraft &&
+            packet.payload !is TakPacketV2Data.Payload.Route &&
+            packet.payload !is TakPacketV2Data.Payload.TakTalk &&
+            packet.payload !is TakPacketV2Data.Payload.TakTalkRoom
         ) {
             sb.append("    <remarks>${esc(packet.remarks)}</remarks>\n")
         }
@@ -828,10 +910,11 @@ public class CotXmlBuilder {
         return sb.toString()
     }
 
-    private fun esc(s: String): String = s
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-        .replace("'", "&apos;")
+    private fun esc(s: String): String =
+        s
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
 }

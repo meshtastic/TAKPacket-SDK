@@ -56,16 +56,16 @@ public data class TakPacketV2Data(
     val cotTypeStr: String? = null,
     val how: Int = CotTypeMapper.COTHOW_UNSPECIFIED,
     val callsign: String = "",
-    val team: Int = 0,    // Team enum value
-    val role: Int = 0,    // MemberRole enum value
-    val latitudeI: Int = 0,   // degrees * 1e7
-    val longitudeI: Int = 0,  // degrees * 1e7
-    val altitude: Int = 0,    // meters HAE
-    val speed: Int = 0,       // cm/s
-    val course: Int = 0,      // degrees * 100
-    val battery: Int = 0,     // 0-100
-    val geoSrc: Int = 0,      // GeoPointSource enum
-    val altSrc: Int = 0,      // GeoPointSource enum
+    val team: Int = 0, // Team enum value
+    val role: Int = 0, // MemberRole enum value
+    val latitudeI: Int = 0, // degrees * 1e7
+    val longitudeI: Int = 0, // degrees * 1e7
+    val altitude: Int = 0, // meters HAE
+    val speed: Int = 0, // cm/s
+    val course: Int = 0, // degrees * 100
+    val battery: Int = 0, // 0-100
+    val geoSrc: Int = 0, // GeoPointSource enum
+    val altSrc: Int = 0, // GeoPointSource enum
     val uid: String = "",
     val deviceCallsign: String = "",
     val staleSeconds: Int = 0,
@@ -157,7 +157,9 @@ public data class TakPacketV2Data(
          *
          * @property value the wire enum int carried in the proto `SensorFov` message.
          */
-        public enum class SensorType(public val value: Int) {
+        public enum class SensorType(
+            public val value: Int,
+        ) {
             /** Category unknown / not set. */
             Unspecified(0),
 
@@ -185,8 +187,7 @@ public data class TakPacketV2Data(
                  * Map a wire enum int back to a [SensorType], defaulting to
                  * [Unspecified] for any unknown value (forward-compatible).
                  */
-                public fun fromValue(value: Int): SensorType =
-                    entries.firstOrNull { it.value == value } ?: Unspecified
+                public fun fromValue(value: Int): SensorType = entries.firstOrNull { it.value == value } ?: Unspecified
             }
         }
     }
@@ -216,7 +217,10 @@ public data class TakPacketV2Data(
          * @property value retained for source compatibility; always `true` and
          *   not encoded on the wire.
          */
-        public data class Pli(val value: Boolean = true) : Payload()
+        public data class Pli(
+            val value: Boolean = true,
+        ) : Payload()
+
         /**
          * ATAK GeoChat message — both regular chat (b-t-f) and delivered /
          * read receipts (b-t-f-d / b-t-f-r). Receipts leave [message] empty
@@ -234,11 +238,15 @@ public data class TakPacketV2Data(
             val receiptForUid: String = "",
             /** Receipt kind: 0 = none (regular chat), 1 = delivered, 2 = read. */
             val receiptType: Int = 0,
-            // --- TAKTALK-flavored b-t-f sidecars ---
-            // Empty / false for regular ATAK GeoChat. When the originator's
-            // ATAK runs the TAKTALK plugin, these mirror the <Ea>, <roomId>,
-            // <voice_profile_id> elements ATAK appends to the chat detail.
-            /** TAKTALK language tag from <Ea> (e.g. "English"). Empty = absent. */
+            /**
+             * TAKTALK-flavored b-t-f sidecar: TAKTALK language tag from <Ea>
+             * (e.g. "English"). Empty = absent.
+             *
+             * This and the following [roomId] / [voiceProfileId] fields are
+             * empty / false for regular ATAK GeoChat. When the originator's ATAK
+             * runs the TAKTALK plugin, they mirror the <Ea>, <roomId>,
+             * <voice_profile_id> elements ATAK appends to the chat detail.
+             */
             val lang: String = "",
             /** TAKTALK room UUID from <roomId>. Empty = absent. */
             val roomId: String = "",
@@ -257,6 +265,7 @@ public data class TakPacketV2Data(
              */
             val hasVoiceProfile: Boolean = false,
         ) : Payload()
+
         /**
          * TAKTALK voice/text chat message (CoT type m-t-t). The voice audio
          * itself rides UDP/RTP outside the mesh; this carries the text
@@ -272,6 +281,7 @@ public data class TakPacketV2Data(
             /** True when the source CoT had a `<voice/>` marker (speech-to-text origin). */
             val fromVoice: Boolean = false,
         ) : Payload()
+
         /**
          * TAKTALK room/membership broadcast (CoT type y-). Not a chat message;
          * receivers cache these to resolve room UUIDs (used in
@@ -336,9 +346,11 @@ public data class TakPacketV2Data(
          *
          * @property bytes the exact UTF-8 bytes between the `<detail>` tags.
          */
-        public data class RawDetail(val bytes: ByteArray) : Payload() {
-            override fun equals(other: Any?): Boolean =
-                other is RawDetail && bytes.contentEquals(other.bytes)
+        public data class RawDetail(
+            val bytes: ByteArray,
+        ) : Payload() {
+            override fun equals(other: Any?): Boolean = other is RawDetail && bytes.contentEquals(other.bytes)
+
             override fun hashCode(): Int = bytes.contentHashCode()
         }
 
@@ -356,7 +368,10 @@ public data class TakPacketV2Data(
          * @property latI latitude in degrees × 1e7.
          * @property lonI longitude in degrees × 1e7.
          */
-        public data class Vertex(val latI: Int, val lonI: Int)
+        public data class Vertex(
+            val latI: Int,
+            val lonI: Int,
+        )
 
         /**
          * User-drawn tactical graphic: circle, rectangle, polygon, polyline,
@@ -397,8 +412,10 @@ public data class TakPacketV2Data(
             /** Capped at MAX_VERTICES in the parser; sender sets [truncated] when exceeded. */
             val vertices: List<Vertex> = emptyList(),
             val truncated: Boolean = false,
-            // --- Bullseye-only fields (ignored unless kind == Kind_Bullseye) ---
-            /** Range-ring spacing in decimeters (ATAK meters × 10). */
+            /**
+             * Bullseye-only field (ignored unless kind == Kind_Bullseye):
+             * range-ring spacing in decimeters (ATAK meters × 10).
+             */
             val bullseyeDistanceDm: Int = 0,
             /** 0 unset, 1 Magnetic, 2 True, 3 Grid. */
             val bullseyeBearingRef: Int = 0,
@@ -541,8 +558,10 @@ public data class TakPacketV2Data(
             val terrainFlags: Int = 0,
             /** Line 2 radio frequency / callsign metadata. */
             val frequency: String = "",
-            // --- v2.x medline extensions -----------------------------------
-            /** Short MEDEVAC title / ops number (e.g. "EAGLE.15.181230"). */
+            /**
+             * v2.x medline extension: short MEDEVAC title / ops number
+             * (e.g. "EAGLE.15.181230").
+             */
             val title: String = "",
             /**
              * Primary medline free-text — single most clinically important
@@ -637,10 +656,8 @@ public data class TakPacketV2Data(
     }
 
     /** Convenience: get the CoT type as a string, resolving enum or fallback. */
-    public fun cotTypeString(): String =
-        CotTypeMapper.typeToString(cotTypeId) ?: cotTypeStr ?: ""
+    public fun cotTypeString(): String = CotTypeMapper.typeToString(cotTypeId) ?: cotTypeStr ?: ""
 
     /** Convenience: get the how as a string. */
-    public fun howString(): String =
-        CotTypeMapper.howToString(how) ?: ""
+    public fun howString(): String = CotTypeMapper.howToString(how) ?: ""
 }
