@@ -62,6 +62,24 @@ def _argb_to_signed(argb: int) -> int:
     return argb - 0x100000000 if argb >= 0x80000000 else argb
 
 
+# Tag tokens that can never appear inside one <detail> element's content.
+_RAW_DETAIL_FOREIGN_TOKENS = ("<event", "</event", "<detail", "</detail")
+
+
+def _raw_detail_is_well_formed(text: str) -> bool:
+    """Report whether decoded raw-detail text may be emitted verbatim.
+
+    These bytes are the inner content of ONE ``<detail>`` element. Well-formed
+    CoT escapes a literal ``<`` as ``&lt;``, so this inner content can never
+    legitimately carry an ``<event>`` or ``<detail>`` tag token. When one is
+    present the fragment is malformed: re-emitting it verbatim would unbalance
+    the enclosing ``<detail>``/``<event>`` wrapper and yield a document the
+    receiver cannot parse as a single event.
+    """
+    lowered = text.lower()
+    return not any(token in lowered for token in _RAW_DETAIL_FOREIGN_TOKENS)
+
+
 class CotXmlBuilder:
     """Builds a CoT XML event string from a ``TAKPacketV2`` protobuf message.
 
@@ -134,10 +152,11 @@ class CotXmlBuilder:
         # wire ~35 bytes and produces XML that doesn't match captures.
         is_taktalk_shape = variant in ("taktalk", "taktalk_room")
         if packet.callsign and not is_route and not is_taktalk_shape:
-            # "*:-1:stcp" = TAK "reply via this server" — required so ATAK routes directed
-            # GeoChat / TAK-Talk back down the server stream. A concrete host breaks it.
-            ep = packet.endpoint or "*:-1:stcp"
-            parts = [f'callsign="{escape(packet.callsign)}"', f'endpoint="{escape(ep)}"']
+            # Always "*:-1:stcp" = TAK "reply via this server" — required so ATAK routes
+            # directed GeoChat / TAK-Talk back down the server stream. A concrete host
+            # breaks it, and packets from older senders may still carry one, so any
+            # endpoint on the packet is ignored here. The constant needs no escaping.
+            parts = [f'callsign="{escape(packet.callsign)}"', 'endpoint="*:-1:stcp"']
             if packet.phone: parts.append(f'phone="{escape(packet.phone)}"')
             lines.append(f'    <contact {" ".join(parts)}/>')
 
@@ -326,10 +345,15 @@ class CotXmlBuilder:
             # Raw-detail fallback path: emit the raw bytes verbatim as the
             # inner content of <detail>.  No re-escaping — bytes pass
             # through so the receiver round trip stays byte-exact with the
-            # source XML.
+            # source XML.  A fragment carrying an <event>/<detail> tag token
+            # cannot be the content of a single <detail>, so it is dropped
+            # rather than re-emitted: keeping it would unbalance the wrapper
+            # and leave the receiver unable to parse the document as one
+            # event.  Every other part of the event is still built normally.
             if packet.raw_detail:
                 text = packet.raw_detail.decode("utf-8", errors="replace")
-                lines.append(text)
+                if text and _raw_detail_is_well_formed(text):
+                    lines.append(text)
 
         # Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
         # Chat uses GeoChat.message; Aircraft synthesizes from ICAO fields; Route handles

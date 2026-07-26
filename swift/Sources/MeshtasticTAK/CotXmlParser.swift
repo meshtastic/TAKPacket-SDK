@@ -821,10 +821,11 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
         case "contact":
             packet.callsign = attributes["callsign"] ?? ""
-            // Normalize default TAK endpoints to empty — saves ~20 wire bytes
-            if let ep = attributes["endpoint"], ep != "0.0.0.0:4242:tcp" && ep != "*:-1:stcp" {
-                packet.endpoint = ep
-            }
+            // The contact endpoint is never carried over the mesh — replies go
+            // back via the server stream, so a peer's concrete endpoint isn't
+            // reachable by the other mesh members anyway. Dropping it saves
+            // ~20 wire bytes and keeps the receiving client from dialing a
+            // socket it can't open.
             if let ph = attributes["phone"] { packet.phone = ph }
 
         case "__group":

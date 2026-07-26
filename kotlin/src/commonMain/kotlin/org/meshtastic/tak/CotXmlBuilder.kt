@@ -142,13 +142,13 @@ public class CotXmlBuilder {
         private const val RECEIPT_TYPE_READ = 2
 
         /**
-         * Default contact endpoint emitted when the proto field is empty (the endpoint is
-         * never carried over the mesh). MUST be the TAK "reply via this server" form
-         * `*:-1:stcp`: real ATAK presents server-relayed contacts this way, and it is what
-         * makes ATAK route directed GeoChat / TAK-Talk (`<marti>`) back down the server
-         * stream to the bridge. A concrete host (e.g. `0.0.0.0:4242:tcp`) makes ATAK attempt
-         * a dead direct connection instead, so directed messages never reach the mesh.
-         * Parsers normalize both forms back to empty, so this stays round-trip safe.
+         * The one contact endpoint this builder ever emits (the endpoint is never carried
+         * over the mesh). MUST be the TAK "reply via this server" form `*:-1:stcp`: real
+         * ATAK presents server-relayed contacts this way, and it is what makes ATAK route
+         * directed GeoChat / TAK-Talk (`<marti>`) back down the server stream to the
+         * bridge. A concrete host (e.g. `0.0.0.0:4242:tcp`) makes ATAK attempt a dead
+         * direct connection instead, so directed messages never reach the mesh.
+         * Parsers never store an endpoint, so this stays round-trip safe.
          */
         private const val DEFAULT_ENDPOINT = "*:-1:stcp"
 
@@ -278,8 +278,12 @@ public class CotXmlBuilder {
             packet.payload is TakPacketV2Data.Payload.TakTalk ||
                 packet.payload is TakPacketV2Data.Payload.TakTalkRoom
         if (packet.callsign.isNotEmpty() && !isRoute && !isTakTalkShape) {
-            val ep = packet.endpoint.ifEmpty { DEFAULT_ENDPOINT }
-            sb.append("""    <contact callsign="${esc(packet.callsign)}" endpoint="$ep"""")
+            // Always DEFAULT_ENDPOINT, never packet.endpoint: a mesh contact is
+            // replied to over the server stream, so a peer's concrete endpoint is
+            // unreachable for everyone else on the mesh. Packets from older senders
+            // may still carry one — emitting it would point the receiving client at
+            // a socket it can't open. The constant also needs no esc().
+            sb.append("""    <contact callsign="${esc(packet.callsign)}" endpoint="$DEFAULT_ENDPOINT"""")
             if (packet.phone.isNotEmpty()) sb.append(""" phone="${esc(packet.phone)}"""")
             sb.append("/>\n")
         }
@@ -665,9 +669,14 @@ public class CotXmlBuilder {
                 // element are shipped verbatim. Emit them inside the
                 // <detail>…</detail> wrapper without any normalization so
                 // the receiver's round trip preserves attribute order and
-                // whitespace identically to the source.
-                if (payload.bytes.isNotEmpty()) {
-                    sb.append(payload.bytes.decodeToString())
+                // whitespace identically to the source — but only while the
+                // fragment still reads as detail inner content, per
+                // isRawDetailWellFormed. A fragment that fails that check is
+                // dropped instead of appended; the rest of the event is built
+                // normally so the receiver still gets a usable document.
+                val rawDetail = payload.bytes.decodeToString()
+                if (rawDetail.isNotEmpty() && isRawDetailWellFormed(rawDetail)) {
+                    sb.append(rawDetail)
                     if (!sb.endsWith("\n")) sb.append("\n")
                 }
             }
@@ -908,6 +917,25 @@ public class CotXmlBuilder {
         sb.append("</event>")
 
         return sb.toString()
+    }
+
+    /**
+     * True when [text] can be appended verbatim as the inner content of the one
+     * `<detail>` element this builder opens.
+     *
+     * Well-formed CoT escapes a literal `<` as `&lt;`, so detail inner content can
+     * never legitimately hold an `<event>` or `<detail>` tag token. A fragment that
+     * carries one is malformed, and re-emitting it as-is would unbalance the
+     * enclosing `<detail>`/`<event>` wrapper — the receiver would be handed a
+     * document it can no longer read as a single event. Leaving such a fragment out
+     * keeps the rebuilt document well-formed.
+     */
+    private fun isRawDetailWellFormed(text: String): Boolean {
+        val lower = text.lowercase()
+        return !lower.contains("<event") &&
+            !lower.contains("</event") &&
+            !lower.contains("<detail") &&
+            !lower.contains("</detail")
     }
 
     private fun esc(s: String): String =
