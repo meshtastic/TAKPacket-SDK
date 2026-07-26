@@ -531,10 +531,11 @@ public class CotXmlParser
             {
                 case "contact":
                     pkt.Callsign = el.Attribute("callsign")?.Value ?? "";
-                    // Normalize default TAK endpoints to empty — saves ~20 wire bytes
-                    if (el.Attribute("endpoint") is { } epAttr &&
-                        epAttr.Value != "0.0.0.0:4242:tcp" && epAttr.Value != "*:-1:stcp")
-                        pkt.Endpoint = epAttr.Value;
+                    // The endpoint attribute is never carried — saves ~20 wire bytes.
+                    // Over the mesh a contact is always replied to via the server
+                    // stream, so a peer's concrete endpoint isn't reachable by other
+                    // mesh members; forwarding it only makes the receiving client
+                    // dial a socket it can't open.
                     if (el.Attribute("phone") is { } ph) pkt.Phone = ph.Value;
                     break;
                 case "__group":

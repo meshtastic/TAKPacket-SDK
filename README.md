@@ -807,7 +807,7 @@ The SDK applies several optimizations to minimize wire payload size:
 
 | Optimization | Savings | Description |
 |-------------|---------|-------------|
-| **Endpoint normalization** | ~20 B/msg | Default endpoints (`0.0.0.0:4242:tcp`, `*:-1:stcp`) normalized to empty; builder restores the default on reconstruction |
+| **Endpoint dropped** | ~20 B/msg | The `<contact>` endpoint never travels over the mesh: the parser stores none, and the builder always re-emits the `*:-1:stcp` "reply via this server" form. A peer's concrete host is not reachable by other mesh members, so forwarding it would only point the receiving client at a socket it cannot open |
 | **Broadcast sentinel** | ~16 B/chat | `chat.to = "All Chat Rooms"` normalized to null (proto field omitted) |
 | **Element stripping** | ~100-200 B/msg | Non-essential XML elements (`<takv>`, `<voice>`, `<precisionLocation>`, `<__geofence>`, `<marti>`, `<__shapeExtras>`, `<creator>`, `<tog>`, `<archive>`, `<strokeStyle>`, empty `<remarks>`) stripped before SDK parsing |
 | **Attribute stripping** | ~30-80 B/msg | Display-only attributes stripped: `routetype`, `order`, `color` (from `<link_attr>`), `access`, empty `callsign`/`phone`, and all `"???"` placeholder values |

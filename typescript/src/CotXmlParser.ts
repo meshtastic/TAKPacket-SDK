@@ -243,9 +243,10 @@ function makeGeoPoint(latDeltaI: number, lonDeltaI: number): CotGeoPoint {
  * `longitudeI` are degrees×1e7 (clamped to ±90/±180 before scaling), `altitude`
  * is meters HAE (may be negative), `speed` is cm/s, `course` is degrees×100,
  * and shape radii / ranges are centimeters. ATAK's `speed="-1.0"` stationary
- * sentinel is clamped to 0 because the proto fields are unsigned. Default TAK
- * endpoints (`*:-1:stcp`, `0.0.0.0:4242:tcp`) are normalized to empty to save
- * wire bytes. Unknown CoT types are carried as `cotTypeStr` so they round-trip.
+ * sentinel is clamped to 0 because the proto fields are unsigned. The `<contact>`
+ * endpoint is never carried — mesh replies travel back over the server stream, so
+ * a peer's concrete endpoint is unreachable to other mesh members and would cost
+ * ~20 wire bytes. Unknown CoT types are carried as `cotTypeStr` so they round-trip.
  *
  * For XXE safety the parser rejects any input containing a `<!DOCTYPE` or
  * `<!ENTITY>` declaration and does not process entities.
@@ -546,8 +547,11 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
     takDevice: takv["@_device"] ?? "",
     takPlatform: takv["@_platform"] ?? "",
     takOs: takv["@_os"] ?? "",
-    // Normalize default TAK endpoints to empty — saves ~20 wire bytes
-    endpoint: (() => { const ep = contact["@_endpoint"] ?? ""; return (ep === "0.0.0.0:4242:tcp" || ep === "*:-1:stcp") ? "" : ep; })(),
+    // A contact reached over the mesh is always replied to via the server
+    // stream, so a peer's concrete endpoint is not reachable by other mesh
+    // members: carrying it costs ~20 wire bytes and makes the receiving
+    // client dial a socket it cannot open. Never stored — stays empty.
+    endpoint: "",
     phone: contact["@_phone"] ?? "",
   };
 

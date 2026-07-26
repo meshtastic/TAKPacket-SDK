@@ -44,7 +44,6 @@ public class CotXmlParser {
         var hae = 0.0
         var callsign = ""
         var deviceCallsign = ""
-        var endpoint = ""
         var phone = ""
         var teamName = ""
         var roleName = ""
@@ -256,8 +255,11 @@ public class CotXmlParser {
 
                             "contact" -> {
                                 callsign = reader.getAttributeValue(null, "callsign") ?: ""
-                                val ep = reader.getAttributeValue(null, "endpoint") ?: ""
-                                endpoint = if (ep == "0.0.0.0:4242:tcp" || ep == "*:-1:stcp") "" else ep
+                                // The `endpoint` attribute is deliberately never stored. Over
+                                // the mesh a contact is always replied to via the server
+                                // stream, so a peer's concrete endpoint is not reachable by
+                                // other mesh members: carrying it burns ~20 wire bytes and
+                                // makes the receiving client dial a socket it cannot open.
                                 phone = reader.getAttributeValue(null, "phone") ?: phone
                             }
 
@@ -1135,7 +1137,7 @@ public class CotXmlParser {
             takDevice = takDevice,
             takPlatform = takPlatform,
             takOs = takOs,
-            endpoint = endpoint,
+            // endpoint intentionally left at its empty default — see <contact> above.
             phone = phone,
             remarks = if (hasChatData) "" else remarksText,
             environment = environmentData,

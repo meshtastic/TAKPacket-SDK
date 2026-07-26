@@ -524,10 +524,11 @@ class CotXmlParser:
             tag = elem.tag
             if tag == "contact":
                 pkt.callsign = elem.get("callsign", "")
-                # Normalize default TAK endpoints to empty — saves ~20 wire bytes
-                ep = elem.get("endpoint", "")
-                if ep and ep != "0.0.0.0:4242:tcp" and ep != "*:-1:stcp":
-                    pkt.endpoint = ep
+                # Never carry the contact endpoint — over the mesh a contact is
+                # always replied to via the server stream, so a peer's concrete
+                # endpoint is not reachable by other mesh members. Sending it
+                # costs ~20 wire bytes and makes the receiving client dial a
+                # socket it cannot open. The builder re-emits "*:-1:stcp".
                 ph = elem.get("phone")
                 if ph: pkt.phone = ph
             elif tag == "__group":

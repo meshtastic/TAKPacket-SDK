@@ -45,8 +45,8 @@ package org.meshtastic.tak
  * @property takDevice TAK device model string.
  * @property takPlatform TAK platform (`ATAK-CIV`, `iTAK`, `WinTAK`).
  * @property takOs TAK client OS string.
- * @property endpoint contact endpoint; not carried over the mesh (normalized to
- *   empty on parse, defaulted to the TAK server-reply form on build).
+ * @property endpoint contact endpoint; not carried over the mesh (never stored on
+ *   parse, always emitted as the TAK server-reply form on build).
  * @property phone contact phone number.
  * @property remarks optional free-text `<remarks>` for non-chat payload types;
  *   stripped by [TakCompressor.compressWithRemarksFallback] when over MTU.

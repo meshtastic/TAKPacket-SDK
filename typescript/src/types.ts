@@ -441,7 +441,7 @@ export interface TAKPacketV2 {
   takPlatform?: string;
   /** TAK client OS string. */
   takOs?: string;
-  /** Contact endpoint; default TAK endpoints are normalized to empty to save wire bytes. */
+  /** Contact endpoint; left empty on parse and ignored on rebuild — mesh replies go back over the server stream. */
   endpoint?: string;
   /** Contact phone number. */
   phone?: string;

@@ -121,6 +121,28 @@ public class CotXmlBuilder
 
     private static string Esc(string s) => System.Security.SecurityElement.Escape(s) ?? s;
 
+    /// <summary>
+    /// True when decoded raw-detail text may be re-emitted verbatim as the
+    /// inner content of the one <c>&lt;detail&gt;</c> element being built.
+    /// </summary>
+    /// <remarks>
+    /// Well-formed CoT escapes a literal '&lt;' as <c>&amp;lt;</c>, so this
+    /// inner content can never legitimately carry an <c>&lt;event&gt;</c> or
+    /// <c>&lt;detail&gt;</c> tag token. A fragment that does is malformed:
+    /// re-emitting it verbatim would unbalance the enclosing
+    /// <c>&lt;detail&gt;</c>/<c>&lt;event&gt;</c> wrapper and hand the receiver
+    /// a document it can't parse as a single event. Dropping such a fragment
+    /// keeps the rebuilt document well-formed.
+    /// </remarks>
+    private static bool IsRawDetailWellFormed(string text)
+    {
+        var lower = text.ToLowerInvariant();
+        return !lower.Contains("<event")
+            && !lower.Contains("</event")
+            && !lower.Contains("<detail")
+            && !lower.Contains("</detail");
+    }
+
     /// <summary>Convert ARGB int to ABGR hex string (KML color format).</summary>
     private static string ArgbToAbgrHex(int argb)
     {
@@ -194,9 +216,11 @@ public class CotXmlBuilder
         if (!string.IsNullOrEmpty(pkt.Callsign) && !isRoute && !isTakTalkShape)
         {
             // "*:-1:stcp" = TAK "reply via this server" — required so ATAK routes directed
-            // GeoChat / TAK-Talk back down the server stream. A concrete host breaks it.
-            var ep = string.IsNullOrEmpty(pkt.Endpoint) ? "*:-1:stcp" : pkt.Endpoint;
-            var tag = $"    <contact callsign=\"{Esc(pkt.Callsign)}\" endpoint=\"{Esc(ep)}\"";
+            // GeoChat / TAK-Talk back down the server stream. A concrete host breaks it,
+            // so the constant is emitted unconditionally: packets from older senders may
+            // still carry a concrete endpoint, and honoring it would point the receiver at
+            // a socket no other mesh member can open.
+            var tag = $"    <contact callsign=\"{Esc(pkt.Callsign)}\" endpoint=\"*:-1:stcp\"";
             if (!string.IsNullOrEmpty(pkt.Phone)) tag += $" phone=\"{Esc(pkt.Phone)}\"";
             sb.AppendLine(tag + "/>");
         }
@@ -380,12 +404,18 @@ public class CotXmlBuilder
                 // Raw-detail fallback path: emit the raw bytes verbatim as
                 // the inner content of <detail>.  No re-escaping — bytes
                 // pass through so the receiver round trip stays byte-exact
-                // with the source XML.
+                // with the source XML.  A fragment that fails
+                // IsRawDetailWellFormed can't be inner content of a single
+                // <detail>, so it is skipped rather than emitted; every other
+                // part of the event is still built as usual.
                 if (pkt.RawDetail.Length > 0)
                 {
                     var text = pkt.RawDetail.ToStringUtf8();
-                    sb.Append(text);
-                    if (!text.EndsWith('\n')) sb.AppendLine();
+                    if (text.Length > 0 && IsRawDetailWellFormed(text))
+                    {
+                        sb.Append(text);
+                        if (!text.EndsWith('\n')) sb.AppendLine();
+                    }
                 }
                 break;
         }

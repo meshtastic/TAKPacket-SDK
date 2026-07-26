@@ -14,7 +14,7 @@ import Foundation
 /// detail, the rebuilt XML is *semantically* equivalent rather than
 /// byte-identical to the original capture: a stable, ATAK-parseable
 /// reconstruction, not a verbatim copy. Several reconstructions are
-/// deliberately ATAK-shaped — e.g. an empty/missing contact endpoint becomes
+/// deliberately ATAK-shaped — e.g. a contact endpoint is always emitted as
 /// `*:-1:stcp` (TAK "reply via this server"), TAK-Talk `m-t-t` / `y-` events
 /// use `how="null"`, and a packet with no payload variant and an `a-f-*` type
 /// rebuilds as an implicit PLI position report.
@@ -136,9 +136,10 @@ public class CotXmlBuilder {
 
         if !packet.callsign.isEmpty && !isRoute && !isTakTalkShape {
             // "*:-1:stcp" = TAK "reply via this server" — required so ATAK routes directed
-            // GeoChat / TAK-Talk back down the server stream. A concrete host breaks it.
-            let ep = packet.endpoint.isEmpty ? "*:-1:stcp" : packet.endpoint
-            s += "    <contact callsign=\"\(esc(packet.callsign))\" endpoint=\"\(esc(ep))\""
+            // GeoChat / TAK-Talk back down the server stream. A concrete host breaks it,
+            // so the constant is emitted unconditionally: any endpoint riding along on the
+            // packet (older senders still put one there) is deliberately ignored.
+            s += "    <contact callsign=\"\(esc(packet.callsign))\" endpoint=\"*:-1:stcp\""
             if !packet.phone.isEmpty { s += " phone=\"\(esc(packet.phone))\"" }
             s += "/>\n"
         }
@@ -320,8 +321,11 @@ public class CotXmlBuilder {
             // Raw-detail fallback path: the original <detail> inner bytes
             // are shipped verbatim and re-emitted without any normalization
             // so the receiver round trip stays byte-exact with the source
-            // XML.
-            if !bytes.isEmpty, let text = String(data: bytes, encoding: .utf8) {
+            // XML. A fragment that doesn't hold up as inner content is
+            // skipped instead (see isRawDetailWellFormed) — every other part
+            // of the event is still built normally.
+            if !bytes.isEmpty, let text = String(data: bytes, encoding: .utf8),
+               isRawDetailWellFormed(text) {
                 s += text
                 if !text.hasSuffix("\n") { s += "\n" }
             }
@@ -683,6 +687,23 @@ public class CotXmlBuilder {
         let g = (argb >> 8) & 0xFF
         let b = argb & 0xFF
         return String(format: "%02x%02x%02x%02x", a, b, g, r)
+    }
+
+    /// Whether stored `raw_detail` bytes hold up as the inner content of the
+    /// single `<detail>` element this builder is filling in.
+    ///
+    /// Well-formed CoT escapes a literal `<` as `&lt;`, so that inner content
+    /// can never legitimately carry an `<event>` or `<detail>` tag token. When
+    /// one shows up the fragment is malformed, and echoing it back verbatim
+    /// would unbalance the enclosing `<detail>`/`<event>` wrapper — the result
+    /// is a document the receiver can no longer read as one event. Leaving
+    /// such a fragment out keeps the rebuilt document well formed.
+    private func isRawDetailWellFormed(_ text: String) -> Bool {
+        let lowered = text.lowercased()
+        return !lowered.contains("<event")
+            && !lowered.contains("</event")
+            && !lowered.contains("<detail")
+            && !lowered.contains("</detail")
     }
 
     private func esc(_ s: String) -> String {

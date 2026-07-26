@@ -72,6 +72,22 @@ function esc(s: string): string {
           .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
+/**
+ * Well-formedness guard for the raw-detail passthrough. The stored bytes are
+ * the inner content of ONE `<detail>` element, and well-formed CoT escapes a
+ * literal `<` as `&lt;`, so that content can never legitimately carry an
+ * `<event>` or `<detail>` tag token. A fragment that does is malformed:
+ * re-emitting it verbatim would unbalance the enclosing `<detail>`/`<event>`
+ * wrapper and produce a document the receiver can no longer parse as a single
+ * event. Returns false for those so the caller drops the fragment and the
+ * rebuilt document stays well-formed.
+ */
+function isRawDetailWellFormed(text: string): boolean {
+  const lower = text.toLowerCase();
+  return !lower.includes("<event") && !lower.includes("</event") &&
+         !lower.includes("<detail") && !lower.includes("</detail");
+}
+
 /** Convert ARGB int to ABGR hex string (KML color format). */
 function argbToAbgrHex(argb: number): string {
   const a = (argb >>> 24) & 0xFF;
@@ -105,9 +121,12 @@ function argbToSigned(argb: number): number {
  * "now" and `stale` to now + `staleSeconds` (with a 45-second floor), so output
  * is not byte-identical to the original XML across a round trip — but the
  * structural content is. Color fields resolve through the `AtakPalette` helpers
- * (palette enum first, exact `_argb` fallback otherwise). A default endpoint of
- * `*:-1:stcp` is re-synthesized when none is present so ATAK can route directed
- * GeoChat / TAK-Talk replies. Text content is XML-escaped.
+ * (palette enum first, exact `_argb` fallback otherwise). The `<contact>`
+ * endpoint is always the `*:-1:stcp` default — any endpoint carried on the
+ * packet is ignored — so ATAK routes directed GeoChat / TAK-Talk replies back
+ * down the server stream. Text content is XML-escaped, and a raw-detail
+ * fragment carrying an `<event>` / `<detail>` tag token is dropped so the
+ * rebuilt document parses as a single well-formed event.
  *
  * @param packet - The packet to render. `cotTypeId` resolves to a type string,
  *                 falling back to `cotTypeStr` for unknown types.
@@ -165,9 +184,10 @@ export function buildCotXml(packet: TAKPacketV2): string {
   const isTakTalkShape = packet.taktalk != null || packet.taktalkRoom != null;
   if (callsign && !isRoute && !isTakTalkShape) {
     // "*:-1:stcp" = TAK "reply via this server" — required so ATAK routes directed
-    // GeoChat / TAK-Talk back down the server stream. A concrete host breaks it.
-    const ep = packet.endpoint || "*:-1:stcp";
-    let tag = `    <contact callsign="${esc(callsign)}" endpoint="${esc(ep)}"`;
+    // GeoChat / TAK-Talk back down the server stream. A concrete host breaks it,
+    // so the constant is emitted unconditionally: packets from older senders may
+    // still carry an endpoint field, and that host is not dialable from the mesh.
+    let tag = `    <contact callsign="${esc(callsign)}" endpoint="*:-1:stcp"`;
     if (packet.phone) tag += ` phone="${esc(packet.phone)}"`;
     lines.push(tag + "/>");
   }
@@ -354,12 +374,14 @@ export function buildCotXml(packet: TAKPacketV2): string {
     // Raw-detail fallback path: raw bytes of the original <detail>
     // element are shipped verbatim and re-emitted without any
     // normalization so the receiver round trip stays byte-exact with
-    // the source XML.
+    // the source XML. A fragment that fails the well-formedness guard is
+    // dropped rather than re-emitted — the rest of the event still builds
+    // normally, just without this <detail> body.
     const raw = packet.rawDetail;
     const text = typeof raw === "string"
       ? raw
       : Buffer.from(raw as Uint8Array).toString("utf-8");
-    if (text.length > 0) lines.push(text);
+    if (text.length > 0 && isRawDetailWellFormed(text)) lines.push(text);
   }
 
   // Emit <remarks> for non-Chat/non-Aircraft/non-Route types that carried remarks text.
