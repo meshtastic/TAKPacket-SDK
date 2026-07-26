@@ -4,6 +4,46 @@ All notable changes to the TAKPacket-SDK Kotlin module are documented here.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.1] — CoT rebuild hygiene
+
+Bug-fix release. The wire format is unchanged (all `.bin`/`.pb` goldens are
+byte-identical to v0.8.0) and no public API changed — only the values the
+parser stores and the builder re-emits.
+
+- **A peer's `<contact>` endpoint no longer travels over the mesh** (#122).
+  The parser previously stored any `endpoint` attribute that was not one of the
+  two known defaults, and the builder re-emitted it on rebuild. That address is
+  a host on the *sending* peer's own LAN, so every other mesh member handed its
+  TAK client an address it has no route to — surfacing as a transmission socket
+  that could not be created for `<peer-lan-ip>:4243`. The parser now never
+  stores a contact endpoint and the builder always emits the TAK server-reply
+  form.
+- **Malformed raw detail is dropped rather than re-emitted** (#122).
+- Both fixes are applied consistently across all five bindings (Kotlin, Swift,
+  Python, TypeScript, C#), each with a `RebuildHygiene` test suite.
+
+### Tooling and CI
+
+No effect on published artifacts.
+
+- Native and Apple targets now actually **execute** their test suites in CI: a
+  `macos-latest` leg runs `macosArm64Test` and `iosSimulatorArm64Test`, and the
+  Linux leg adds `jsTest`, `wasmJsTest`, and `linuxX64Test`. Previously only
+  `jvmTest` ran, leaving 12 of 13 targets compile-checked but never tested
+  (#121).
+- Spotless (ktlint) and detekt now gate the Kotlin module (#121).
+- klib ABI validation enforced in CI, with the native/common surface dumped
+  alongside the JVM one (#111).
+- Every third-party GitHub Action is pinned to a full commit SHA (#117, #119);
+  CodeQL and OpenSSF Scorecard analysis added (#112); Codecov reports gate on
+  coverage regression (#118); JS test-harness dependencies pinned to clear
+  Dependabot alerts (#114).
+- Stale `master` references repointed at `main` after the branch rename,
+  including the `bump-version` workflow's PR base, which had been broken since
+  the rename (#113, #121).
+- Community-health files, `CODEOWNERS`, Gradle wrapper checksum pinning, and a
+  refreshed Kotlin README badge row (#115, #116, #120).
+
 ## [0.8.0] — Kotlin 2.4.10 toolchain, protobufjs 8, xmlutil 1.0
 
 Dependency-refresh release; the wire format is unchanged (`atak.proto` is
