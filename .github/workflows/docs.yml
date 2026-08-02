@@ -43,6 +43,11 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# No setup-gradle step in this workflow, so there is no action input to carry
+# the key — the Develocity plugin reads this variable directly.
+env:
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+
 jobs:
   kotlin:
     name: Kotlin (Dokka)
