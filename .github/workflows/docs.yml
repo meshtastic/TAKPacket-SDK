@@ -57,6 +57,10 @@ jobs:
           java-version: 21
       - name: Build Dokka HTML
         working-directory: kotlin
+        env:
+          # Scoped to this step: the Develocity plugin reads it directly,
+          # and no other step in this job needs the credential.
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
         run: ./gradlew dokkaGeneratePublicationHtml --quiet
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
