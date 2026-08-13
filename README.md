@@ -27,7 +27,7 @@ flowchart TD
     subgraph send ["Sending App"]
         A["CoT XML<br/>(~400-2300 B)"]
         B["TAKPacketV2<br/>Protobuf"]
-        C["Wire Payload<br/>(median 87B,<br/>max 184B)"]
+        C["Wire Payload<br/>(median 93B,<br/>max 211B)"]
         A -->|"CotMeshSanitizer<br/>→ CotXmlParser"| B
         B -->|TakCompressor| C
     end
@@ -82,9 +82,9 @@ Two pre-trained zstd dictionaries are used because aircraft and non-aircraft CoT
 |---|---|
 | Total test messages | 47 |
 | 100% under 237B LoRa MTU | ✅ YES |
-| Median compressed size | **87B** |
-| Median compression ratio | **7.2×** |
-| Worst case | 184B (77% of LoRa MTU — `route_itak_3wp`) |
+| Median compressed size | **93B** |
+| Median compression ratio | **7.0×** |
+| Worst case | 211B (89% of LoRa MTU — `route_itak_3wp`) |
 
 See [`testdata/compression-report.md`](testdata/compression-report.md) for the per-fixture breakdown, regenerated on every Kotlin test run.
 
@@ -792,16 +792,19 @@ marker {
 
 ### Compression Summary
 
-| Payload Type | Raw XML | Compressed | Ratio | Fits LoRa? |
-|-------------|---------|------------|-------|------------|
-| PLI (position) | 754 B | 98 B | 7.7x | ✅ |
-| GeoChat (text) | 1,031 B | 80 B | 12.9x | ✅ |
-| Rectangle (4 vertices) | 945 B | 101 B | 9.4x | ✅ |
-| Circle (ellipse) | 851 B | 90 B | 9.5x | ✅ |
-| Route (3 waypoints) | 890 B | ~80 B | 11.1x | ✅ |
-| Marker (spot) | 721 B | 81 B | 8.9x | ✅ |
+Sampled from [`testdata/compression-report.md`](testdata/compression-report.md), which is regenerated on every Kotlin test run — each row names its fixture so the numbers can be checked against that report:
 
-Median compression ratio across all 47 fixture types: **7.2×** (400-2300 bytes XML → 42-184 bytes wire).
+| Payload Type | Fixture | Raw XML | Compressed | Ratio | Fits LoRa? |
+|-------------|---------|---------|------------|-------|------------|
+| PLI (position) | `pli_full` | 754 B | 98 B | 7.7x | ✅ |
+| GeoChat (direct message) | `geochat_dm` | 960 B | 65 B | 14.8x | ✅ |
+| Rectangle | `drawing_rectangle` | 770 B | 100 B | 7.7x | ✅ |
+| Circle (ellipse) | `drawing_ellipse` | 646 B | 61 B | 10.6x | ✅ |
+| Route (3 waypoints) | `route_3wp` | 861 B | 132 B | 6.5x | ✅ |
+| Route (iTAK, 3 waypoints) | `route_itak_3wp` | 771 B | 211 B | 3.7x | ✅ |
+| Marker (spot) | `marker_spot` | 723 B | 74 B | 9.8x | ✅ |
+
+Median compression ratio across all 47 fixture types: **7.0×** (400-2300 bytes XML → 39-211 bytes wire).
 
 ### Wire Optimizations
 

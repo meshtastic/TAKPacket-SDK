@@ -84,7 +84,8 @@ def test_generate_compression_report():
 
     lines.append("")
     lines.append("## Size Distribution")
-    lines.append("```")
+    # Tagged `text` so the generated report satisfies markdownlint MD040.
+    lines.append("```text")
     for r in sorted(rows, key=lambda x: x["compressed_size"]):
         bar = "#" * max(1, int(r["compressed_size"] / LORA_MTU * 50))
         lines.append(f'{r["fixture"]:<20} {r["compressed_size"]:>4}B |{bar}')
