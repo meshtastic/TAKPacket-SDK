@@ -27,7 +27,7 @@ flowchart TD
     subgraph send ["Sending App"]
         A["CoT XML<br/>(~400-2300 B)"]
         B["TAKPacketV2<br/>Protobuf"]
-        C["Wire Payload<br/>(median 87B,<br/>max 184B)"]
+        C["Wire Payload<br/>(median 93B,<br/>max 211B)"]
         A -->|"CotMeshSanitizer<br/>→ CotXmlParser"| B
         B -->|TakCompressor| C
     end
@@ -82,9 +82,9 @@ Two pre-trained zstd dictionaries are used because aircraft and non-aircraft CoT
 |---|---|
 | Total test messages | 47 |
 | 100% under 237B LoRa MTU | ✅ YES |
-| Median compressed size | **87B** |
-| Median compression ratio | **7.2×** |
-| Worst case | 184B (77% of LoRa MTU — `route_itak_3wp`) |
+| Median compressed size | **93B** |
+| Median compression ratio | **7.0×** |
+| Worst case | 211B (89% of LoRa MTU — `route_itak_3wp`) |
 
 See [`testdata/compression-report.md`](testdata/compression-report.md) for the per-fixture breakdown, regenerated on every Kotlin test run.
 
@@ -801,7 +801,7 @@ marker {
 | Route (3 waypoints) | 890 B | ~80 B | 11.1x | ✅ |
 | Marker (spot) | 721 B | 81 B | 8.9x | ✅ |
 
-Median compression ratio across all 47 fixture types: **7.2×** (400-2300 bytes XML → 42-184 bytes wire).
+Median compression ratio across all 47 fixture types: **7.0×** (400-2300 bytes XML → 39-211 bytes wire).
 
 ### Wire Optimizations
 
