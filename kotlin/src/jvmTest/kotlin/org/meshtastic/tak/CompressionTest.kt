@@ -245,7 +245,8 @@ class CompressionTest {
         report.appendLine()
 
         report.appendLine("## Size Distribution")
-        report.appendLine("```")
+        // Tagged `text` so the generated report satisfies markdownlint MD040.
+        report.appendLine("```text")
         for (row in rows.sortedBy { it.compressedSize }) {
             val bar = "#".repeat((row.compressedSize.toDouble() / LORA_MTU * 50).toInt().coerceAtLeast(1))
             report.appendLine("${row.fixture.padEnd(20)} ${row.compressedSize.toString().padStart(4)}B |$bar")

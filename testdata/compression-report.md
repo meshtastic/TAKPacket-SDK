@@ -62,7 +62,7 @@ Generated: 2026-08-13 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-tra
 | waypoint | b-m-p-w | 574B | 124B | 52B | 11.0x | non-aircraft |
 
 ## Size Distribution
-```
+```text
 marker_goto            39B |########
 pli_basic              42B |########
 delete_event           46B |#########
