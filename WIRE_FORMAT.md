@@ -63,7 +63,7 @@ The payload is a zstd-compressed frame body containing a serialized `TAKPacketV2
 
 **Compression parameters:**
 - Algorithm: Zstandard (zstd)
-- Compression level: 19 (maximum)
+- Compression level: 19 requested (Kotlin's pure-Kotlin encoder, `org.meshtastic:kzstd`, treats `level` as a documented no-op — it uses a single fixed strategy regardless of the value passed; other bindings' libzstd encoders do honor 19 as maximum)
 - Dictionary: Pre-trained on serialized protobuf bytes, embedded in client applications
 - Frame fields: `dictID`, `contentSize`, and `checksum` all **disabled** — the dictionary ID already travels in the flags byte, and content-size / checksum are dead weight on these tiny dict-compressed payloads
 - Magic number: the 4-byte zstd magic (`28 B5 2F FD`) is stripped on encode and re-prepended on decode (saves ~8 bytes/packet; the body on the wire has **no** magic number)
