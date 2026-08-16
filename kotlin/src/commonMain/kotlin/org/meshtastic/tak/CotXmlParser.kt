@@ -894,13 +894,15 @@ public class CotXmlParser {
                     else -> { /* ignore PIs, comments, whitespace, doc start/end */ }
                 }
             }
-        } catch (e: IllegalArgumentException) {
-            throw e
         } catch (e: Exception) {
             // xmlutil's reader throws its own XmlException (an IOException) for
             // malformed markup, not IllegalArgumentException — wrap it so the
             // documented @throws contract above holds for every unparseable input,
-            // not just the DOCTYPE/ENTITY guard above.
+            // not just the DOCTYPE/ENTITY guard above. Nothing inside this try
+            // block currently throws IllegalArgumentException directly (the
+            // DOCTYPE/ENTITY guard runs before the reader is even created), so a
+            // single catch-all is sufficient — no double-wrap risk today, and a
+            // third throw statement here would trip detekt's ThrowsCount.
             throw IllegalArgumentException("XML is not well-formed or otherwise unparseable: ${e.message}", e)
         } finally {
             reader.close()
