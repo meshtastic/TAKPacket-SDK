@@ -1,5 +1,5 @@
 # TAKPacket-SDK Compression Report
-Generated: 2026-08-13 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)
+Generated: 2026-08-15 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)
 
 ## Summary
 | Metric | Value |

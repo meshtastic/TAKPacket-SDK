@@ -452,15 +452,7 @@ public object TakPacketV2Serializer {
                 // somehow end up populated on an out-of-spec packet.
                 proto.taktalk_room != null -> {
                     val r = proto.taktalk_room!!
-                    @Suppress("DEPRECATION")
                     TakPacketV2Data.Payload.TakTalkRoom(
-                        // r.sender_callsign is the deprecated v0.3.1 field. v0.3.2
-                        // packets encode it as "" (builder stops writing it) and
-                        // carry the sender in proto.callsign instead. v0.3.1 packets
-                        // populate it with the sender; we forward to the data class
-                        // for source-compat readers, but the builder ignores this
-                        // field and reconstitutes from packet.callsign on emit.
-                        senderCallsign = r.sender_callsign,
                         roomId = r.room_id,
                         roomName = r.room_name,
                         participants = r.participants.toList(),

@@ -954,7 +954,6 @@ public class CotXmlParser {
                 }
 
                 hasRoomData && cotTypeStr == "y-" -> {
-                    @Suppress("DEPRECATION")
                     TakPacketV2Data.Payload.TakTalkRoom(
                         roomId = roomDataId,
                         roomName = roomName,

@@ -779,19 +779,17 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalk : org/mesh
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom : org/meshtastic/tak/TakPacketV2Data$Payload {
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
-	public final fun component3 ()Ljava/lang/String;
-	public final fun component4 ()Ljava/util/List;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom;
-	public static synthetic fun copy$default (Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom;
+	public static synthetic fun copy$default (Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getParticipants ()Ljava/util/List;
 	public final fun getRoomId ()Ljava/lang/String;
 	public final fun getRoomName ()Ljava/lang/String;
-	public final fun getSenderCallsign ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
