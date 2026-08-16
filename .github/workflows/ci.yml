@@ -49,14 +49,16 @@ jobs:
         # targets, so BCV skips them and trusts the committed dump; the full
         # 12-target klib dump is regenerated on macOS via `./gradlew apiDump`.
         run: ./gradlew apiCheck --stacktrace
-      - name: Test (JVM + JS + Wasm/JS + Linux native)
+      - name: Test (JVM + JS + Wasm/JS + Wasm/WASI + Linux native)
         working-directory: kotlin
         # KMP has no top-level `test` task — each target has its own `<target>Test`.
         # The common suites (RoundTrip/Resilience/Decode via InlinedFixtures) are
         # compiled per target but only execute when their task is invoked, so run
         # every target this Linux runner can build: jvmTest + jsTest + wasmJsTest
-        # + linuxX64Test. The Apple/native targets run on the macOS leg below.
-        run: ./gradlew jvmTest jsTest wasmJsTest linuxX64Test --stacktrace
+        # + wasmWasiTest + linuxX64Test. wasmWasi runs via the same nodejs()
+        # runner as wasmJs (see kotlin { wasmWasi { nodejs() } }), so it needs no
+        # extra CI setup. The Apple/native targets run on the macOS leg below.
+        run: ./gradlew jvmTest jsTest wasmJsTest wasmWasiTest linuxX64Test --stacktrace
       - name: Coverage report (Kover XML)
         working-directory: kotlin
         run: ./gradlew koverXmlReport
