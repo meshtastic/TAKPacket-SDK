@@ -375,7 +375,7 @@ public data class TakPacketV2Data(
 
         /**
          * User-drawn tactical graphic: circle, rectangle, polygon, polyline,
-         * telestration, ranging circle, or bullseye.
+         * telestration, ranging circle, bullseye, ellipse, Vehicle2D, or Vehicle3D.
          *
          * Maps to the `DrawnShape` protobuf message at payload_variant tag 34.
          * See atak.proto for the full field-by-field documentation.
