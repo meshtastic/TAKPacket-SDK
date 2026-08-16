@@ -458,12 +458,12 @@ public class CotXmlBuilder {
 
             // TAKTALK room/membership broadcast (CoT type y-).
             is TakPacketV2Data.Payload.TakTalkRoom -> {
-                // Reconstitute <sender-callsign> from the envelope callsign,
-                // not from payload.senderCallsign (deprecated in v0.3.2 —
-                // always equals packet.callsign in valid packets, so the
-                // duplicate wire byte was redundant). The parser now routes
-                // <sender-callsign>'s body into packet.callsign on the way in;
-                // here we route it back out.
+                // Reconstitute <sender-callsign> from the envelope callsign —
+                // TakTalkRoom carries no sender-callsign field of its own
+                // (the wire byte was redundant since it always equalled
+                // packet.callsign). The parser routes <sender-callsign>'s
+                // body into packet.callsign on the way in; here we route it
+                // back out.
                 if (packet.callsign.isNotEmpty()) {
                     sb
                         .append("    <sender-callsign>")

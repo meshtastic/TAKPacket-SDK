@@ -288,21 +288,14 @@ public data class TakPacketV2Data(
          * [TakTalk.chatroomId] and [Chat.roomId]) to a friendly name +
          * roster for display.
          *
-         * Note: [senderCallsign] is DEPRECATED in v0.3.2. The sender's
-         * callsign is always equal to [TakPacketV2Data.callsign] (the
-         * envelope-level field), so the duplicate wire byte is redundant.
-         * The builder reconstitutes the `<sender-callsign>` XML element
-         * from the envelope callsign on emit; the parser still reads the
-         * element so v0.3.1-encoded packets decode cleanly. To be removed
-         * outright in v0.4.x.
+         * Note: the sender's callsign is always equal to
+         * [TakPacketV2Data.callsign] (the envelope-level field) — the
+         * `<sender-callsign>` XML element is reconstituted from and parsed
+         * into that envelope field, not carried as a separate wire byte here.
+         * (Pre-v0.3.2 wire had a redundant `senderCallsign` field on this
+         * class; it was removed once past its v0.4.x deprecation window.)
          */
         public data class TakTalkRoom(
-            @Deprecated(
-                "Always equals TakPacketV2Data.callsign in valid packets; the builder " +
-                    "reconstitutes <sender-callsign> from the envelope callsign. " +
-                    "Field will be removed in v0.4.x.",
-            )
-            val senderCallsign: String = "",
             /** Room UUID being broadcast. */
             val roomId: String = "",
             /** Human-friendly room name for display. */

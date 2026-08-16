@@ -859,7 +859,7 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
         }
 
         final class TakTalkRoom : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom|null[0]
-            constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin.collections/List<kotlin/String> = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.collections.List<kotlin.String>){}[0]
+            constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin.collections/List<kotlin/String> = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.<init>|<init>(kotlin.String;kotlin.String;kotlin.collections.List<kotlin.String>){}[0]
 
             final val participants // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.participants|{}participants[0]
                 final fun <get-participants>(): kotlin.collections/List<kotlin/String> // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.participants.<get-participants>|<get-participants>(){}[0]
@@ -867,14 +867,11 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
                 final fun <get-roomId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.roomId.<get-roomId>|<get-roomId>(){}[0]
             final val roomName // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.roomName|{}roomName[0]
                 final fun <get-roomName>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.roomName.<get-roomName>|<get-roomName>(){}[0]
-            final val senderCallsign // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.senderCallsign|{}senderCallsign[0]
-                final fun <get-senderCallsign>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.senderCallsign.<get-senderCallsign>|<get-senderCallsign>(){}[0]
 
             final fun component1(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.component1|component1(){}[0]
             final fun component2(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.component2|component2(){}[0]
-            final fun component3(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.component3|component3(){}[0]
-            final fun component4(): kotlin.collections/List<kotlin/String> // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.component4|component4(){}[0]
-            final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin.collections/List<kotlin/String> = ...): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.collections.List<kotlin.String>){}[0]
+            final fun component3(): kotlin.collections/List<kotlin/String> // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.component3|component3(){}[0]
+            final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin.collections/List<kotlin/String> = ...): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.copy|copy(kotlin.String;kotlin.String;kotlin.collections.List<kotlin.String>){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.hashCode|hashCode(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.toString|toString(){}[0]

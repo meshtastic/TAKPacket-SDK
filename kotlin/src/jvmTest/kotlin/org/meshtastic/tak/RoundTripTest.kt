@@ -726,11 +726,10 @@ class RoundTripTest {
         val xml = loadFixture("taktalk_room_data.xml")
         val packet = parser.parse(xml)
         assertEquals(CotTypeMapper.COTTYPE_Y_DASH, packet.cotTypeId)
-        // v0.3.2 routes <sender-callsign> into the envelope packet.callsign,
-        // not payload.senderCallsign. The proto field
-        // TakTalkRoomData.sender_callsign is deprecated and no longer
-        // written by the builder — it's reconstituted from envelope callsign
-        // on emit, eliminating the duplicate wire byte.
+        // <sender-callsign> routes into the envelope packet.callsign, not a
+        // per-payload field — TakTalkRoom carries no sender-callsign of its
+        // own; it's reconstituted from the envelope callsign on emit,
+        // eliminating the duplicate wire byte.
         assertEquals(
             "ASPEN",
             packet.callsign,
