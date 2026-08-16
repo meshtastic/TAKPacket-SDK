@@ -381,7 +381,7 @@ public data class TakPacketV2Data(
          * See atak.proto for the full field-by-field documentation.
          */
         public data class DrawnShape(
-            /** One of the Kind_* constants (1..7); see atak.proto. */
+            /** One of the Kind_* constants (1..10); see atak.proto. */
             val kind: Int = 0,
             /**
              * Explicit stroke/fill/both discriminator. One of:

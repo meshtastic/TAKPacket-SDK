@@ -15,6 +15,10 @@ package org.meshtastic.tak
  * live HERE, above the codec, so every target shares one framing implementation.
  */
 public class TakCompressor(
+    // NOTE: kzstd's pure-Kotlin encoder treats this as a documented no-op —
+    // a single fixed strategy regardless of value (see Zstd.DEFAULT_LEVEL in
+    // org.meshtastic:kzstd). Accepted for call-site familiarity and forward
+    // compatibility; the libzstd-based Swift/Python/TS/C# bindings do honor it.
     private val compressionLevel: Int = 19,
 ) {
     public companion object {

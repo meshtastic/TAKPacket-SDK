@@ -41,7 +41,7 @@ Frame slimming (v0.4.0, -8B): compress with dictID/contentSize/checksum OFF, the
   all 5 bindings (NOT zstd native magicless — zstd-napi can't). On-wire body has no magic.
 Skip-compress (v0.4.0): if raw protobuf <= zstd body, emit [0xFF][raw protobuf]
 Max decompressed size = 4096 bytes
-Compression level = 19
+Compression level = 19 (Kotlin's kzstd encoder treats this as a no-op; only the libzstd-based bindings honor it)
 Coordinates: degrees * 1e7 (sfixed32)
 Speed: cm/s (uint32), Course: degrees * 100 (uint32)   # course UNCHANGED in v0.4.0
 ```
