@@ -4,6 +4,8 @@ kotlin/build/
 kotlin/out/
 kotlin/local.properties
 *.class
+# JVM crash logs (e.g. from a Kotlin/Native linker crash) land in the cwd, not build/
+hs_err_pid*.log
 # Keep gradle-wrapper.jar (conventional to commit)
 !kotlin/gradle/wrapper/gradle-wrapper.jar
 
