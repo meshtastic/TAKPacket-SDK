@@ -497,9 +497,10 @@ plugins.withType<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin> {
         resolution("serialize-javascript", "7.0.5") // RCE (< 7.0.3) + CPU-exhaustion DoS (< 7.0.5)
         resolution("webpack", "5.104.1") // buildHttp allow-list bypasses (< 5.104.1)
         resolution("diff", "8.0.3") // parsePatch/applyPatch DoS (< 8.0.3)
-        resolution("brace-expansion", "2.1.2") // Dependabot HIGH ReDoS (< 1.1.16 / < 2.1.2)
-        resolution("fast-uri", "3.1.4") // Dependabot HIGH (< 3.1.3 / < 3.1.4)
-        resolution("js-yaml", "4.3.0") // Dependabot HIGH (< 4.3.0)
+        resolution("brace-expansion", "2.1.4") // Dependabot HIGH ReDoS + OOM DoS (< 2.1.4)
+        resolution("fast-uri", "3.1.5") // Dependabot HIGH host confusion (< 3.1.5)
+        resolution("js-yaml", "4.3.1") // Dependabot HIGH quadratic CPU in !!omap (< 4.3.1)
         resolution("body-parser", "1.20.6") // Dependabot LOW (< 1.20.6)
+        resolution("socket.io-parser", "4.2.7") // Dependabot HIGH memory-exhaustion DoS (< 4.2.7)
     }
 }
