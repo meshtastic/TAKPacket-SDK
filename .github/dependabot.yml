@@ -1,0 +1,17 @@
+# kotlin/kotlin-js-store/yarn.lock is generated and owned by the Kotlin Gradle
+# plugin (./gradlew kotlinUpgradeYarnLock) — Dependabot cannot regenerate it, so
+# its npm_and_yarn security-update jobs fail repeatedly. This entry claims the
+# npm ecosystem for that directory and turns everything off: open-pull-requests-limit
+# 0 disables version-update PRs, and the wildcard ignore suppresses security-update
+# PRs too. Security floors for the JS test harness are instead pinned as yarn
+# resolutions in kotlin/build.gradle.kts. Renovate handles all other dependency
+# updates (including /typescript).
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/kotlin/kotlin-js-store"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
