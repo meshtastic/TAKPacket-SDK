@@ -1,24 +1,13 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    ":dependencyDashboard",
-    ":semanticCommitTypeAll(chore)",
-    "group:recommended"
-  ],
-  "commitMessageTopic": "{{depName}}",
-  "labels": [
-    "dependencies"
-  ],
+  "description": "Extends the org-wide policy for published KMP libraries (automerge baseline, 3-day soak, kotlin-toolchain and first-party holds — see meshtastic/.github:kmp-library.json for rationale). Local rules below cover what is specific to this repo: the protobufs git submodule and the typedoc-imposed typescript ceiling.",
+  "extends": ["local>meshtastic/.github:kmp-library"],
   "git-submodules": {
-    "enabled": true
-  },
-  "vulnerabilityAlerts": {
     "enabled": true
   },
   "packageRules": [
     {
-      "description": "Track meshtastic/protobufs submodule and link the diff in PR bodies. The SDK owns Wire codegen for atak.proto (issue #6) so submodule bumps land here first, then Renovate-bumps the SDK release in downstream consumers. Weekly schedule: upstream commits near-daily (~12 digest PRs in June/July 2026) but atak.proto rarely changes; a weekly batch keeps the submodule fresh without the churn.",
+      "description": "Track meshtastic/protobufs submodule and link the diff in PR bodies. The SDK owns Wire codegen for atak.proto (issue #6) so submodule bumps land here first, then Renovate-bumps the SDK release in downstream consumers. Weekly schedule: upstream commits near-daily (~12 digest PRs in June/July 2026) but atak.proto rarely changes; a weekly batch keeps the submodule fresh without the churn. The preset's org.meshtastic hold does not apply here — a submodule's packageName is its git URL, not a Maven coordinate — so this pointer stays repo-governed by design.",
       "matchPackageNames": [
         "https://github.com/meshtastic/protobufs.git"
       ],
@@ -29,23 +18,6 @@
       "description": "Hold typescript at <7 until a stable typedoc supports it. typedoc 0.28.x peer-requires typescript 5.x-6.0.x and only 1.0.0-dev prereleases target 7.x, so the ts7 PR can never go green (npm ERESOLVE). Drop this rule when typedoc 1.0 ships.",
       "matchPackageNames": ["typescript"],
       "allowedVersions": "<7"
-    },
-    {
-      "description": "Automerge non-major dependency updates",
-      "matchUpdateTypes": [
-        "minor",
-        "patch",
-        "pin",
-        "digest"
-      ],
-      "automerge": true
-    },
-    {
-      "description": "Disable automerge for major updates",
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "automerge": false
     }
   ]
 }
