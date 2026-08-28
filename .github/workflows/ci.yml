@@ -166,7 +166,13 @@ jobs:
     name: Publish Snapshot
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [kotlin, kotlin-native, swift, python, typescript, csharp]
-    runs-on: macos-latest
+    # This job only publishes Kotlin artifacts, and Kotlin/Native cross-compiles
+    # the Apple klibs from any host — verified on 2.4.10, where a Linux
+    # publishToMavenLocal emits the same 14 artifacts Maven Central holds for
+    # 0.9.1, iOS/tvOS/macOS klibs included. The Apple *tests* it depends on
+    # already ran on macOS in `kotlin-native` and `swift`, which `needs` above
+    # makes a hard precondition, so nothing here needs a macOS runner.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -175,6 +181,14 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - name: Cache Konan (Kotlin/Native toolchain)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('kotlin/gradle/libs.versions.toml', 'kotlin/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            konan-${{ runner.os }}-
+
       - name: Compute snapshot version
         id: version
         run: |
