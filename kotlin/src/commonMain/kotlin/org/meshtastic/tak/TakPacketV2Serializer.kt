@@ -104,30 +104,33 @@ public object TakPacketV2Serializer {
                 // being non-null; an empty marker becomes an explicit empty string ("").
                 // Receiver parsers treat "present but empty" as the marker case.
                 chatField =
-                    GeoChat(
-                        message = payload.message,
-                        to = payload.to,
-                        to_callsign = payload.toCallsign,
-                        receipt_for_uid = payload.receiptForUid,
-                        receipt_type =
-                            GeoChat.ReceiptType.fromValue(payload.receiptType)
-                                ?: GeoChat.ReceiptType.ReceiptType_None,
-                        lang = payload.lang.ifEmpty { null },
-                        room_id = payload.roomId.ifEmpty { null },
-                        // Distinguish "present but empty" (marker) from "absent" — emit the
-                        // empty string only when hasVoiceProfile was explicitly set.
-                        voice_profile_id = if (payload.hasVoiceProfile) payload.voiceProfileId else null,
-                    )
+                    GeoChat
+                        .Builder()
+                        .also { wb ->
+                            wb.message = payload.message
+                            wb.to = payload.to
+                            wb.to_callsign = payload.toCallsign
+                            wb.receipt_for_uid = payload.receiptForUid
+                            wb.receipt_type = GeoChat.ReceiptType.fromValue(payload.receiptType)
+                                ?: GeoChat.ReceiptType.ReceiptType_None
+                            wb.lang = payload.lang.ifEmpty { null }
+                            wb.room_id = payload.roomId.ifEmpty { null }
+                            // Distinguish "present but empty" (marker) from "absent" — emit the
+                            // empty string only when hasVoiceProfile was explicitly set.
+                            wb.voice_profile_id = if (payload.hasVoiceProfile) payload.voiceProfileId else null
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.TakTalk -> {
                 takTalkField =
-                    TakTalkMessage(
-                        text = payload.text,
-                        chatroom_id = payload.chatroomId,
-                        lang = payload.lang,
-                        from_voice = payload.fromVoice,
-                    )
+                    TakTalkMessage
+                        .Builder()
+                        .also { wb ->
+                            wb.text = payload.text
+                            wb.chatroom_id = payload.chatroomId
+                            wb.lang = payload.lang
+                            wb.from_voice = payload.fromVoice
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.TakTalkRoom -> {
@@ -137,27 +140,31 @@ public object TakPacketV2Serializer {
                 // wire bytes per y- packet. The proto field remains for one
                 // release to keep v0.3.1-encoded packets decodable.
                 takTalkRoomField =
-                    TakTalkRoomData(
-                        sender_callsign = "",
-                        room_id = payload.roomId,
-                        room_name = payload.roomName,
-                        participants = payload.participants,
-                    )
+                    TakTalkRoomData
+                        .Builder()
+                        .also { wb ->
+                            wb.sender_callsign = ""
+                            wb.room_id = payload.roomId
+                            wb.room_name = payload.roomName
+                            wb.participants = payload.participants
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.Aircraft -> {
                 aircraftField =
-                    AircraftTrack(
-                        icao = payload.icao,
-                        registration = payload.registration,
-                        flight = payload.flight,
-                        aircraft_type = payload.aircraftType,
-                        squawk = payload.squawk,
-                        category = payload.category,
-                        rssi_x10 = payload.rssiX10,
-                        gps = payload.gps,
-                        cot_host_id = payload.cotHostId,
-                    )
+                    AircraftTrack
+                        .Builder()
+                        .also { wb ->
+                            wb.icao = payload.icao
+                            wb.registration = payload.registration
+                            wb.flight = payload.flight
+                            wb.aircraft_type = payload.aircraftType
+                            wb.squawk = payload.squawk
+                            wb.category = payload.category
+                            wb.rssi_x10 = payload.rssiX10
+                            wb.gps = payload.gps
+                            wb.cot_host_id = payload.cotHostId
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.RawDetail -> {
@@ -166,185 +173,193 @@ public object TakPacketV2Serializer {
 
             is TakPacketV2Data.Payload.DrawnShape -> {
                 shapeField =
-                    DrawnShape(
-                        kind =
-                            DrawnShape.Kind.fromValue(payload.kind)
-                                ?: DrawnShape.Kind.Kind_Unspecified,
-                        style =
-                            DrawnShape.StyleMode.fromValue(payload.style)
-                                ?: DrawnShape.StyleMode.StyleMode_Unspecified,
-                        major_cm = payload.majorCm,
-                        minor_cm = payload.minorCm,
-                        angle_deg = payload.angleDeg,
-                        stroke_color =
-                            Team.fromValue(payload.strokeColor)
-                                ?: Team.Unspecifed_Color,
-                        stroke_argb = payload.strokeArgb,
-                        stroke_weight_x10 = payload.strokeWeightX10,
-                        fill_color =
-                            Team.fromValue(payload.fillColor)
-                                ?: Team.Unspecifed_Color,
-                        fill_argb = payload.fillArgb,
-                        labels_on = payload.labelsOn,
-                        // Vertices are delta-encoded from the event anchor (see
-                        // atak.proto) into two PACKED parallel sint32 columns. The
-                        // parser stores absolutes in the payload, so we subtract the
-                        // anchor here to get the wire-form deltas. Packing pays the
-                        // field framing once per column instead of once per vertex.
-                        vertex_lat_deltas = payload.vertices.map { it.latI - data.latitudeI },
-                        vertex_lon_deltas = payload.vertices.map { it.lonI - data.longitudeI },
-                        truncated = payload.truncated,
-                        bullseye_distance_dm = payload.bullseyeDistanceDm,
-                        bullseye_bearing_ref = payload.bullseyeBearingRef,
-                        bullseye_flags = payload.bullseyeFlags,
-                        bullseye_uid_ref = payload.bullseyeUidRef,
-                    )
+                    DrawnShape
+                        .Builder()
+                        .also { wb ->
+                            wb.kind = DrawnShape.Kind.fromValue(payload.kind)
+                                ?: DrawnShape.Kind.Kind_Unspecified
+                            wb.style = DrawnShape.StyleMode.fromValue(payload.style)
+                                ?: DrawnShape.StyleMode.StyleMode_Unspecified
+                            wb.major_cm = payload.majorCm
+                            wb.minor_cm = payload.minorCm
+                            wb.angle_deg = payload.angleDeg
+                            wb.stroke_color = Team.fromValue(payload.strokeColor)
+                                ?: Team.Unspecifed_Color
+                            wb.stroke_argb = payload.strokeArgb
+                            wb.stroke_weight_x10 = payload.strokeWeightX10
+                            wb.fill_color = Team.fromValue(payload.fillColor)
+                                ?: Team.Unspecifed_Color
+                            wb.fill_argb = payload.fillArgb
+                            wb.labels_on = payload.labelsOn
+                            // Vertices are delta-encoded from the event anchor (see
+                            // atak.proto) into two PACKED parallel sint32 columns. The
+                            // parser stores absolutes in the payload, so we subtract the
+                            // anchor here to get the wire-form deltas. Packing pays the
+                            // field framing once per column instead of once per vertex.
+                            wb.vertex_lat_deltas = payload.vertices.map { it.latI - data.latitudeI }
+                            wb.vertex_lon_deltas = payload.vertices.map { it.lonI - data.longitudeI }
+                            wb.truncated = payload.truncated
+                            wb.bullseye_distance_dm = payload.bullseyeDistanceDm
+                            wb.bullseye_bearing_ref = payload.bullseyeBearingRef
+                            wb.bullseye_flags = payload.bullseyeFlags
+                            wb.bullseye_uid_ref = payload.bullseyeUidRef
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.Marker -> {
                 markerField =
-                    Marker(
-                        kind =
-                            Marker.Kind.fromValue(payload.kind)
-                                ?: Marker.Kind.Kind_Unspecified,
-                        color = Team.fromValue(payload.color) ?: Team.Unspecifed_Color,
-                        color_argb = payload.colorArgb,
-                        readiness = payload.readiness,
-                        parent_uid = payload.parentUid,
-                        parent_type = payload.parentType,
-                        parent_callsign = payload.parentCallsign,
-                        iconset = payload.iconset,
-                    )
+                    Marker
+                        .Builder()
+                        .also { wb ->
+                            wb.kind = Marker.Kind.fromValue(payload.kind)
+                                ?: Marker.Kind.Kind_Unspecified
+                            wb.color = Team.fromValue(payload.color) ?: Team.Unspecifed_Color
+                            wb.color_argb = payload.colorArgb
+                            wb.readiness = payload.readiness
+                            wb.parent_uid = payload.parentUid
+                            wb.parent_type = payload.parentType
+                            wb.parent_callsign = payload.parentCallsign
+                            wb.iconset = payload.iconset
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.RangeAndBearing -> {
                 rabField =
-                    RangeAndBearing(
-                        anchor =
-                            CotGeoPoint(
-                                lat_delta_i = payload.anchorLatI - data.latitudeI,
-                                lon_delta_i = payload.anchorLonI - data.longitudeI,
-                            ),
-                        anchor_uid = payload.anchorUid,
-                        range_cm = payload.rangeCm,
-                        bearing_cdeg = payload.bearingCdeg,
-                        stroke_color =
-                            Team.fromValue(payload.strokeColor)
-                                ?: Team.Unspecifed_Color,
-                        stroke_argb = payload.strokeArgb,
-                        stroke_weight_x10 = payload.strokeWeightX10,
-                    )
+                    RangeAndBearing
+                        .Builder()
+                        .also { wb ->
+                            wb.anchor =
+                                CotGeoPoint
+                                    .Builder()
+                                    .also { wb ->
+                                        wb.lat_delta_i = payload.anchorLatI - data.latitudeI
+                                        wb.lon_delta_i = payload.anchorLonI - data.longitudeI
+                                    }.build()
+                            wb.anchor_uid = payload.anchorUid
+                            wb.range_cm = payload.rangeCm
+                            wb.bearing_cdeg = payload.bearingCdeg
+                            wb.stroke_color = Team.fromValue(payload.strokeColor)
+                                ?: Team.Unspecifed_Color
+                            wb.stroke_argb = payload.strokeArgb
+                            wb.stroke_weight_x10 = payload.strokeWeightX10
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.Route -> {
                 routeField =
-                    Route(
-                        method =
-                            Route.Method.fromValue(payload.method)
-                                ?: Route.Method.Method_Unspecified,
-                        direction =
-                            Route.Direction.fromValue(payload.direction)
-                                ?: Route.Direction.Direction_Unspecified,
-                        prefix = payload.prefix,
-                        stroke_weight_x10 = payload.strokeWeightX10,
-                        links =
-                            payload.links.map { link ->
-                                Route.Link(
-                                    point =
-                                        CotGeoPoint(
-                                            lat_delta_i = link.latI - data.latitudeI,
-                                            lon_delta_i = link.lonI - data.longitudeI,
-                                        ),
-                                    uid = link.uid,
-                                    callsign = link.callsign,
-                                    link_type = link.linkType,
-                                )
-                            },
-                        truncated = payload.truncated,
-                    )
+                    Route
+                        .Builder()
+                        .also { wb ->
+                            wb.method = Route.Method.fromValue(payload.method)
+                                ?: Route.Method.Method_Unspecified
+                            wb.direction = Route.Direction.fromValue(payload.direction)
+                                ?: Route.Direction.Direction_Unspecified
+                            wb.prefix = payload.prefix
+                            wb.stroke_weight_x10 = payload.strokeWeightX10
+                            wb.links =
+                                payload.links.map { link ->
+                                    Route.Link
+                                        .Builder()
+                                        .also { wb ->
+                                            wb.point =
+                                                CotGeoPoint
+                                                    .Builder()
+                                                    .also { wb ->
+                                                        wb.lat_delta_i = link.latI - data.latitudeI
+                                                        wb.lon_delta_i = link.lonI - data.longitudeI
+                                                    }.build()
+                                            wb.uid = link.uid
+                                            wb.callsign = link.callsign
+                                            wb.link_type = link.linkType
+                                        }.build()
+                                }
+                            wb.truncated = payload.truncated
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.CasevacReport -> {
                 casevacField =
-                    CasevacReport(
-                        precedence =
-                            CasevacReport.Precedence.fromValue(payload.precedence)
-                                ?: CasevacReport.Precedence.Precedence_Unspecified,
-                        equipment_flags = payload.equipmentFlags,
-                        litter_patients = payload.litterPatients,
-                        ambulatory_patients = payload.ambulatoryPatients,
-                        security =
-                            CasevacReport.Security.fromValue(payload.security)
-                                ?: CasevacReport.Security.Security_Unspecified,
-                        hlz_marking =
-                            CasevacReport.HlzMarking.fromValue(payload.hlzMarking)
-                                ?: CasevacReport.HlzMarking.HlzMarking_Unspecified,
-                        zone_marker = payload.zoneMarker,
-                        us_military = payload.usMilitary,
-                        us_civilian = payload.usCivilian,
-                        non_us_military = payload.nonUsMilitary,
-                        non_us_civilian = payload.nonUsCivilian,
-                        epw = payload.epw,
-                        child = payload.child,
-                        terrain_flags = payload.terrainFlags,
-                        frequency = payload.frequency,
-                        // v2.x medline extensions
-                        title = payload.title,
-                        medline_remarks = payload.medlineRemarks,
-                        urgent_count = payload.urgentCount,
-                        urgent_surgical_count = payload.urgentSurgicalCount,
-                        priority_count = payload.priorityCount,
-                        routine_count = payload.routineCount,
-                        convenience_count = payload.convenienceCount,
-                        equipment_detail = payload.equipmentDetail,
-                        zone_protected_coord = payload.zoneProtectedCoord,
-                        terrain_slope_dir = payload.terrainSlopeDir,
-                        terrain_other_detail = payload.terrainOtherDetail,
-                        marked_by = payload.markedBy,
-                        obstacles = payload.obstacles,
-                        winds_are_from = payload.windsAreFrom,
-                        friendlies = payload.friendlies,
-                        enemy = payload.enemy,
-                        hlz_remarks = payload.hlzRemarks,
-                        zmist =
-                            payload.zmist.map { entry ->
-                                ZMistEntry(
-                                    title = entry.title,
-                                    z = entry.z,
-                                    m = entry.m,
-                                    i = entry.i,
-                                    s = entry.s,
-                                    t = entry.t,
-                                )
-                            },
-                    )
+                    CasevacReport
+                        .Builder()
+                        .also { wb ->
+                            wb.precedence = CasevacReport.Precedence.fromValue(payload.precedence)
+                                ?: CasevacReport.Precedence.Precedence_Unspecified
+                            wb.equipment_flags = payload.equipmentFlags
+                            wb.litter_patients = payload.litterPatients
+                            wb.ambulatory_patients = payload.ambulatoryPatients
+                            wb.security = CasevacReport.Security.fromValue(payload.security)
+                                ?: CasevacReport.Security.Security_Unspecified
+                            wb.hlz_marking = CasevacReport.HlzMarking.fromValue(payload.hlzMarking)
+                                ?: CasevacReport.HlzMarking.HlzMarking_Unspecified
+                            wb.zone_marker = payload.zoneMarker
+                            wb.us_military = payload.usMilitary
+                            wb.us_civilian = payload.usCivilian
+                            wb.non_us_military = payload.nonUsMilitary
+                            wb.non_us_civilian = payload.nonUsCivilian
+                            wb.epw = payload.epw
+                            wb.child = payload.child
+                            wb.terrain_flags = payload.terrainFlags
+                            wb.frequency = payload.frequency
+                            // v2.x medline extensions
+                            wb.title = payload.title
+                            wb.medline_remarks = payload.medlineRemarks
+                            wb.urgent_count = payload.urgentCount
+                            wb.urgent_surgical_count = payload.urgentSurgicalCount
+                            wb.priority_count = payload.priorityCount
+                            wb.routine_count = payload.routineCount
+                            wb.convenience_count = payload.convenienceCount
+                            wb.equipment_detail = payload.equipmentDetail
+                            wb.zone_protected_coord = payload.zoneProtectedCoord
+                            wb.terrain_slope_dir = payload.terrainSlopeDir
+                            wb.terrain_other_detail = payload.terrainOtherDetail
+                            wb.marked_by = payload.markedBy
+                            wb.obstacles = payload.obstacles
+                            wb.winds_are_from = payload.windsAreFrom
+                            wb.friendlies = payload.friendlies
+                            wb.enemy = payload.enemy
+                            wb.hlz_remarks = payload.hlzRemarks
+                            wb.zmist =
+                                payload.zmist.map { entry ->
+                                    ZMistEntry
+                                        .Builder()
+                                        .also { wb ->
+                                            wb.title = entry.title
+                                            wb.z = entry.z
+                                            wb.m = entry.m
+                                            wb.i = entry.i
+                                            wb.s = entry.s
+                                            wb.t = entry.t
+                                        }.build()
+                                }
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.EmergencyAlert -> {
                 emergencyField =
-                    EmergencyAlert(
-                        type =
-                            EmergencyAlert.Type.fromValue(payload.type)
-                                ?: EmergencyAlert.Type.Type_Unspecified,
-                        authoring_uid = payload.authoringUid,
-                        cancel_reference_uid = payload.cancelReferenceUid,
-                    )
+                    EmergencyAlert
+                        .Builder()
+                        .also { wb ->
+                            wb.type = EmergencyAlert.Type.fromValue(payload.type)
+                                ?: EmergencyAlert.Type.Type_Unspecified
+                            wb.authoring_uid = payload.authoringUid
+                            wb.cancel_reference_uid = payload.cancelReferenceUid
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.TaskRequest -> {
                 taskField =
-                    TaskRequest(
-                        task_type = payload.taskType,
-                        target_uid = payload.targetUid,
-                        assignee_uid = payload.assigneeUid,
-                        priority =
-                            TaskRequest.Priority.fromValue(payload.priority)
-                                ?: TaskRequest.Priority.Priority_Unspecified,
-                        status =
-                            TaskRequest.Status.fromValue(payload.status)
-                                ?: TaskRequest.Status.Status_Unspecified,
-                        note = payload.note,
-                    )
+                    TaskRequest
+                        .Builder()
+                        .also { wb ->
+                            wb.task_type = payload.taskType
+                            wb.target_uid = payload.targetUid
+                            wb.assignee_uid = payload.assigneeUid
+                            wb.priority = TaskRequest.Priority.fromValue(payload.priority)
+                                ?: TaskRequest.Priority.Priority_Unspecified
+                            wb.status = TaskRequest.Status.fromValue(payload.status)
+                                ?: TaskRequest.Status.Status_Unspecified
+                            wb.note = payload.note
+                        }.build()
             }
 
             is TakPacketV2Data.Payload.None -> { /* all oneof fields stay null */ }
@@ -366,62 +381,62 @@ public object TakPacketV2Serializer {
         val martiField: Marti? =
             data.marti
                 .takeIf { it.isNotEmpty() }
-                ?.let { Marti(dest_callsign = it) }
+                ?.let { Marti.Builder().also { wb -> wb.dest_callsign = it }.build() }
 
         // Enum .fromValue() returns null for out-of-range values — fall back
         // to the "unspecified" sentinel for each enum. See the class KDoc.
         val packet =
-            TAKPacketV2(
-                cot_type_id = CotType.fromValue(data.cotTypeId) ?: CotType.CotType_Other,
-                how = CotHow.fromValue(data.how) ?: CotHow.CotHow_Unspecified,
-                callsign = data.callsign,
-                team = Team.fromValue(data.team) ?: Team.Unspecifed_Color,
-                role = MemberRole.fromValue(data.role) ?: MemberRole.Unspecifed,
-                latitude_i = data.latitudeI,
-                longitude_i = data.longitudeI,
-                altitude = data.altitude,
-                speed = data.speed,
-                course = data.course,
-                battery = data.battery,
-                geo_src =
-                    GeoPointSource.fromValue(data.geoSrc)
-                        ?: GeoPointSource.GeoPointSource_Unspecified,
-                alt_src =
-                    GeoPointSource.fromValue(data.altSrc)
-                        ?: GeoPointSource.GeoPointSource_Unspecified,
-                uid = data.uid,
-                device_callsign = data.deviceCallsign,
-                stale_seconds = data.staleSeconds,
-                tak_version = data.takVersion,
-                tak_device = data.takDevice,
-                tak_platform = data.takPlatform,
-                tak_os = data.takOs,
-                endpoint = data.endpoint,
-                phone = data.phone,
-                cot_type_str = data.cotTypeStr ?: "",
-                remarks = data.remarks,
-                // Payload-agnostic annotations (optional proto3 fields; null when
-                // the source packet had no <environment> / <sensor> element).
-                environment = environmentField,
-                sensor_fov = sensorFovField,
-                // Directed-routing recipients (<marti><dest callsign='X'/>…</marti>).
-                // null = broadcast; non-null Marti carries 1+ dest callsigns.
-                marti = martiField,
-                // Oneof payload_variant — at most one non-null. PLI sets NONE of
-                // them (implicit position payload); decoded back to Pli below.
-                chat = chatField,
-                aircraft = aircraftField,
-                raw_detail = rawDetailField,
-                shape = shapeField,
-                marker = markerField,
-                rab = rabField,
-                route = routeField,
-                casevac = casevacField,
-                emergency = emergencyField,
-                task = taskField,
-                taktalk = takTalkField,
-                taktalk_room = takTalkRoomField,
-            )
+            TAKPacketV2
+                .Builder()
+                .also { wb ->
+                    wb.cot_type_id = CotType.fromValue(data.cotTypeId) ?: CotType.CotType_Other
+                    wb.how = CotHow.fromValue(data.how) ?: CotHow.CotHow_Unspecified
+                    wb.callsign = data.callsign
+                    wb.team = Team.fromValue(data.team) ?: Team.Unspecifed_Color
+                    wb.role = MemberRole.fromValue(data.role) ?: MemberRole.Unspecifed
+                    wb.latitude_i = data.latitudeI
+                    wb.longitude_i = data.longitudeI
+                    wb.altitude = data.altitude
+                    wb.speed = data.speed
+                    wb.course = data.course
+                    wb.battery = data.battery
+                    wb.geo_src = GeoPointSource.fromValue(data.geoSrc)
+                        ?: GeoPointSource.GeoPointSource_Unspecified
+                    wb.alt_src = GeoPointSource.fromValue(data.altSrc)
+                        ?: GeoPointSource.GeoPointSource_Unspecified
+                    wb.uid = data.uid
+                    wb.device_callsign = data.deviceCallsign
+                    wb.stale_seconds = data.staleSeconds
+                    wb.tak_version = data.takVersion
+                    wb.tak_device = data.takDevice
+                    wb.tak_platform = data.takPlatform
+                    wb.tak_os = data.takOs
+                    wb.endpoint = data.endpoint
+                    wb.phone = data.phone
+                    wb.cot_type_str = data.cotTypeStr ?: ""
+                    wb.remarks = data.remarks
+                    // Payload-agnostic annotations (optional proto3 fields; null when
+                    // the source packet had no <environment> / <sensor> element).
+                    wb.environment = environmentField
+                    wb.sensor_fov = sensorFovField
+                    // Directed-routing recipients (<marti><dest callsign='X'/>…</marti>).
+                    // null = broadcast; non-null Marti carries 1+ dest callsigns.
+                    wb.marti = martiField
+                    // Oneof payload_variant — at most one non-null. PLI sets NONE of
+                    // them (implicit position payload); decoded back to Pli below.
+                    wb.chat = chatField
+                    wb.aircraft = aircraftField
+                    wb.raw_detail = rawDetailField
+                    wb.shape = shapeField
+                    wb.marker = markerField
+                    wb.rab = rabField
+                    wb.route = routeField
+                    wb.casevac = casevacField
+                    wb.emergency = emergencyField
+                    wb.task = taskField
+                    wb.taktalk = takTalkField
+                    wb.taktalk_room = takTalkRoomField
+                }.build()
 
         return TAKPacketV2.ADAPTER.encode(packet)
     }
@@ -723,11 +738,13 @@ public object TakPacketV2Serializer {
     // XML element name — only the proto/wire type name changed.
 
     private fun TakPacketV2Data.EnvironmentData.toWire(): TAKEnvironment =
-        TAKEnvironment(
-            temperature_c_x10 = temperatureCelsius?.let { (it * 10).roundToInt() } ?: 0,
-            wind_direction_deg = windDirectionDeg ?: 0,
-            wind_speed_cm_s = windSpeedMetersPerSec?.let { (it * 100).roundToInt() } ?: 0,
-        )
+        TAKEnvironment
+            .Builder()
+            .also { wb ->
+                wb.temperature_c_x10 = temperatureCelsius?.let { (it * 10).roundToInt() } ?: 0
+                wb.wind_direction_deg = windDirectionDeg ?: 0
+                wb.wind_speed_cm_s = windSpeedMetersPerSec?.let { (it * 100).roundToInt() } ?: 0
+            }.build()
 
     private fun TAKEnvironment.toData(): TakPacketV2Data.EnvironmentData {
         // Wire scalars are always present (proto3 defaults to 0). Treat an
@@ -752,18 +769,19 @@ public object TakPacketV2Serializer {
     // -- SensorFov <-> wire bridge --------------------------------------------
 
     private fun TakPacketV2Data.SensorFovData.toWire(): SensorFov =
-        SensorFov(
-            type =
-                SensorFov.SensorType.fromValue(type.value)
-                    ?: SensorFov.SensorType.SensorType_Unspecified,
-            azimuth_deg = azimuthDeg,
-            range_m = rangeMeters,
-            fov_horizontal_deg = fovHorizontalDeg,
-            fov_vertical_deg = fovVerticalDeg ?: 0,
-            elevation_deg = elevationDeg,
-            roll_deg = rollDeg ?: 0,
-            model = model ?: "",
-        )
+        SensorFov
+            .Builder()
+            .also { wb ->
+                wb.type = SensorFov.SensorType.fromValue(type.value)
+                    ?: SensorFov.SensorType.SensorType_Unspecified
+                wb.azimuth_deg = azimuthDeg
+                wb.range_m = rangeMeters
+                wb.fov_horizontal_deg = fovHorizontalDeg
+                wb.fov_vertical_deg = fovVerticalDeg ?: 0
+                wb.elevation_deg = elevationDeg
+                wb.roll_deg = rollDeg ?: 0
+                wb.model = model ?: ""
+            }.build()
 
     private fun SensorFov.toData(): TakPacketV2Data.SensorFovData =
         TakPacketV2Data.SensorFovData(
