@@ -1,6 +1,6 @@
 [versions]
 kotlin = "2.4.10"
-protobufs = "2.8.1-buildersonly-SNAPSHOT"
+protobufs = "2.8.0.85-ge319346-SNAPSHOT"
 xmlutil = "1.0.2"
 kzstd = "0.2.0"
 dokka = "2.2.0"
