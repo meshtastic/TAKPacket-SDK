@@ -26,7 +26,7 @@ Fill out the sections below. Delete any that don't apply.
 - [ ] Tests pass across the affected bindings (Kotlin `jvmTest`, Swift, Python, TypeScript, C#).
 - [ ] If wire behavior, the proto schema, or a dictionary changed, I regenerated the Kotlin goldens (`.pb` / `.bin`) and the compression report, then re-ran all binding suites against them.
 - [ ] Wire payloads remain byte-interoperable (decodable + within size tolerance) across all five bindings.
-- [ ] CHANGELOG / release notes updated if this is a user-facing change.
+- [ ] [`CHANGELOG.md`](../CHANGELOG.md) `## [Unreleased]` entry added if a consumer would notice this — see [CONTRIBUTING.md → Changelog](../CONTRIBUTING.md#changelog). An `api/*.api` move always needs one.
 - [ ] No PII (real coords, ANDROID IDs, private IPs, callsigns) in any added/changed fixture.
 
 ## How was this verified?

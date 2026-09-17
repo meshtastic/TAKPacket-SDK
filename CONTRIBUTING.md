@@ -118,13 +118,49 @@ the **PyPI** long description, and **DocC** Quick Help in Xcode.
 > **One-time setup:** to publish the Pages site, a repo admin must set **Settings → Pages →
 > Source = "GitHub Actions"**. This can't be automated from a PR.
 
+## Changelog
+
+[`CHANGELOG.md`](CHANGELOG.md) lives at the repo root and covers **all five bindings**, because
+one `VERSION` produces one tag and one GitHub Release. It is hand-written in
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) form; the JetBrains
+[gradle-changelog-plugin](https://github.com/JetBrains/gradle-changelog-plugin) parses and renders
+it and never generates an entry from a commit.
+
+Add an entry under `## [Unreleased]` for anything a consumer would notice — a new or changed
+public API in any binding, a behaviour change, a fix to something they could have hit, a security
+property, a wire-format or dictionary change. Refactors, test-only changes and CI work need none.
+
+Two rules on top of that:
+
+- **A change that moves `kotlin/api/takpacket-sdk.api` or `kotlin/api/takpacket-sdk.klib.api`
+  always needs an entry**, and it goes under `### Breaking` if a consumer has to change code
+  rather than just recompile.
+- **A change that lands in more than one binding gets one entry**, naming the bindings. The
+  bindings ship together; describing the same change five times is how the descriptions diverge.
+
+Groups, in order: `Breaking`, `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+`Breaking` leads because the SDK carries committed ABI dumps — the first thing a consumer needs
+to know is whether recompiling is enough.
+
 ## Releasing
 
-The [`release.yml`](.github/workflows/release.yml) workflow (manual dispatch) reads `VERSION` /
-`kotlin/gradle.properties:VERSION_NAME`, tests all platforms, publishes the Kotlin artifacts to
-**Maven Central**, and cuts a GitHub Release. npm / PyPI / NuGet publishing follows each
-ecosystem's standard flow. Dictionary retraining is wire-incompatible — batch it into a minor
-version bump.
+The [`bump-version.yml`](.github/workflows/bump-version.yml) workflow (manual dispatch) stamps the
+new version into all five coordinates via [`scripts/bump-version.sh`](scripts/bump-version.sh),
+runs `./kotlin/gradlew -p kotlin patchChangelog` to cut `## [Unreleased]` into a dated `## [x.y.z]` section with
+comparison links, and opens a PR. Review the changelog diff in that PR: it is what the GitHub
+Release page will say.
+
+Then the [`release.yml`](.github/workflows/release.yml) workflow (manual dispatch, or a `v*` tag)
+reads `VERSION` / `kotlin/gradle.properties:VERSION_NAME`, checks all five version sources **and
+the changelog section** agree, tests all platforms, publishes the Kotlin artifacts to **Maven
+Central**, and cuts a GitHub Release whose body is `./kotlin/gradlew -p kotlin getChangelog` — not GitHub's
+generated commit list, which would describe the release a second time and drift from the
+hand-written one. A version with no `## [x.y.z]` section fails the workflow before it publishes:
+`getChangelog` silently falls back to the most recent released section, so the check is explicit
+rather than left to the plugin.
+
+npm / PyPI / NuGet publishing follows each ecosystem's standard flow. Dictionary retraining is
+wire-incompatible — batch it into a minor version bump.
 
 ## Commit conventions
 

@@ -13,6 +13,11 @@ plugins {
     alias(libs.plugins.kover)
     alias(libs.plugins.spotless)
     alias(libs.plugins.detekt)
+    // Manages the repo-root CHANGELOG.md, which stays hand-written: the plugin
+    // parses and renders it and never generates an entry from a commit.
+    // `patchChangelog` cuts a release section, `getChangelog` is what release.yml
+    // reads for the GitHub Release body.
+    alias(libs.plugins.changelog)
 }
 
 group = "org.meshtastic"
@@ -23,6 +28,33 @@ repositories {
     maven("https://central.sonatype.com/repository/maven-snapshots/") {
         mavenContent { snapshotsOnly() }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHANGELOG.md lives at the REPO ROOT, not beside this build script: one VERSION
+// is stamped into all five bindings' coordinates, one tag is cut, and one GitHub
+// Release covers all five — so there is one changelog, and it is not the Kotlin
+// module's. The Gradle plugin is the only tool in the repo that can read it, so
+// it reaches up one directory.
+changelog {
+    path = rootProject.file("../CHANGELOG.md").canonicalPath
+    // The same property `scripts/bump-version.sh` stamps, so the heading
+    // `patchChangelog` cuts always agrees with the coordinate being published.
+    version = providers.gradleProperty("VERSION_NAME")
+    repositoryUrl = "https://github.com/meshtastic/TAKPacket-SDK"
+    // Breaking leads: the SDK carries committed ABI dumps and five cross-decoding
+    // bindings, so what a consumer needs first is whether recompiling is enough.
+    groups = listOf("Breaking", "Added", "Changed", "Deprecated", "Removed", "Fixed", "Security")
+    // `patchChangelog` rewrites everything between the title and the first section
+    // from this value, so anything that must survive a release lives here.
+    introduction =
+        """
+        All notable changes to TAKPacket-SDK are documented here.
+
+        The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+        One version covers all five bindings, so a release is a single tag and a single entry here, whichever bindings it touched.
+        """.trimIndent()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
