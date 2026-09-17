@@ -146,14 +146,14 @@ to know is whether recompiling is enough.
 
 The [`bump-version.yml`](.github/workflows/bump-version.yml) workflow (manual dispatch) stamps the
 new version into all five coordinates via [`scripts/bump-version.sh`](scripts/bump-version.sh),
-runs `./gradlew patchChangelog` to cut `## [Unreleased]` into a dated `## [x.y.z]` section with
+runs `./kotlin/gradlew -p kotlin patchChangelog` to cut `## [Unreleased]` into a dated `## [x.y.z]` section with
 comparison links, and opens a PR. Review the changelog diff in that PR: it is what the GitHub
 Release page will say.
 
 Then the [`release.yml`](.github/workflows/release.yml) workflow (manual dispatch, or a `v*` tag)
 reads `VERSION` / `kotlin/gradle.properties:VERSION_NAME`, checks all five version sources **and
 the changelog section** agree, tests all platforms, publishes the Kotlin artifacts to **Maven
-Central**, and cuts a GitHub Release whose body is `./gradlew getChangelog` — not GitHub's
+Central**, and cuts a GitHub Release whose body is `./kotlin/gradlew -p kotlin getChangelog` — not GitHub's
 generated commit list, which would describe the release a second time and drift from the
 hand-written one. A version with no `## [x.y.z]` section fails the workflow before it publishes:
 `getChangelog` silently falls back to the most recent released section, so the check is explicit

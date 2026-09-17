@@ -92,7 +92,7 @@ jobs:
           - \`csharp/src/Meshtastic.TAK/Meshtastic.TAK.csproj\`
 
           Plus \`CHANGELOG.md\`, whose \`## [Unreleased]\` entries this workflow cut into a
-          \`## [${V}]\` section with \`./gradlew patchChangelog\`. **Read that diff** — it is
+          \`## [${V}]\` section with \`./kotlin/gradlew -p kotlin patchChangelog\`. **Read that diff** — it is
           what the GitHub Release body will say, and the Release workflow refuses to
           publish a version with no section.
 
