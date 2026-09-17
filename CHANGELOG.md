@@ -1,8 +1,24 @@
 # Changelog
 
-All notable changes to the TAKPacket-SDK Kotlin module are documented here.
+All notable changes to TAKPacket-SDK are documented here.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+One version covers all five bindings, so a release is a single tag and a single entry here, whichever bindings it touched.
+
+## [Unreleased]
+
+## [0.9.1]
+
+Released before this file was plugin-managed. See the
+[GitHub Release](https://github.com/meshtastic/TAKPacket-SDK/releases/tag/v0.9.1)
+for the change list.
+
+## [0.9.0]
+
+Released before this file was plugin-managed. See the
+[GitHub Release](https://github.com/meshtastic/TAKPacket-SDK/releases/tag/v0.9.0)
+for the change list.
 
 ## [0.8.1] — CoT rebuild hygiene
 

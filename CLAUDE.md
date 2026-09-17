@@ -167,6 +167,13 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 - Commit messages should follow the existing style: imperative mood, detailed body explaining what + why
 - Do not auto-commit — stage changes and describe what you did so the user can commit
 
+## Changelog
+
+- `CHANGELOG.md` is at the **repo root** and covers **all five bindings** — one `VERSION`, one tag, one Release, one entry. It is hand-written; the `org.jetbrains.changelog` plugin (wired in `kotlin/build.gradle.kts`, reaching up one directory) only parses and renders it
+- Add an entry under `## [Unreleased]` for anything a consumer would notice. **A change that moves `kotlin/api/*.api` always needs one**, under `### Breaking` if a consumer must change code rather than just recompile. A change landing in several bindings gets ONE entry naming them
+- `./gradlew getChangelog --no-header --no-links` (run in `kotlin/`) is what `release.yml` puts in the Release body — GitHub's own `generate_release_notes` is deliberately off, so the release is described once. `release.yml` fails before publishing if the version has no `## [x.y.z]` section, because `getChangelog` otherwise falls back silently to the previous release's
+- See CONTRIBUTING.md → Changelog for the full policy
+
 ## CI/CD
 
 - **CI** (`.github/workflows/ci.yml`): all 5 platforms tested on push/PR to main/master

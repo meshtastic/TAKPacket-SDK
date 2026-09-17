@@ -12,6 +12,9 @@ junit-platform = "6.1.3"
 spotless = "8.10.0"
 ktlint = "1.8.0"
 detekt = "1.23.8"
+# JetBrains gradle-changelog-plugin: parses and renders the hand-written
+# CHANGELOG.md at the repo root. It never generates an entry from a commit.
+changelog = "2.5.0"
 
 [libraries]
 protobufs = { module = "org.meshtastic:protobufs", version.ref = "protobufs" }
@@ -34,3 +37,4 @@ binary-compat = { id = "org.jetbrains.kotlinx.binary-compatibility-validator", v
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
