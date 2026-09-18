@@ -8,6 +8,37 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ## [Unreleased]
 
+## [0.9.2]
+
+Maintenance release. The committed ABI dumps are unchanged from 0.9.1, and no
+CoT or TAKPacketV2 mapping changed, so decoded output is identical across all
+five language bindings.
+
+### Changed
+
+- `TakPacketV2Serializer` constructs proto types through Wire's `Builder`
+  rather than the generated all-args constructor. The constructor encodes every
+  field in its signature, so a consumer compiled against one protobufs version
+  fails against another with `NoSuchMethodError` while the wire format stays
+  compatible. A Builder property does not move when a field is added.
+- Snapshots publish from a Linux runner rather than macOS.
+- Gradle wrapper 9.7.0 and spotless 8.10.0.
+
+### Fixed
+
+- Raised the JS test-harness CVE floors and stopped Dependabot rewriting
+  `kotlin-js-store`. Test-only; nothing in the published packages changed.
+
+### Build
+
+- The changelog moved from `kotlin/` to the repo root, because a release covers
+  all five language coordinates and not just the Kotlin one.
+- A release now describes itself once, from this file: the workflow fails when
+  a version has no section here, and the release body is rendered from that
+  section instead of from commit titles.
+- The Gradle daemon is pinned to Java 21 so detekt 1.23.8 never sees a
+  `java.version` its shaded IntelliJ parser rejects.
+
 ## [0.9.1]
 
 Released before this file was plugin-managed. See the
