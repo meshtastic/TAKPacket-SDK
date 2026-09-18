@@ -42,6 +42,10 @@ changelog {
     // `patchChangelog` cuts always agrees with the coordinate being published.
     version = providers.gradleProperty("VERSION_NAME")
     repositoryUrl = "https://github.com/meshtastic/TAKPacket-SDK"
+    // An empty Unreleased fails the bump here, with the plugin's own message.
+    // The default skips the task green and leaves no heading, which the release
+    // gate would only catch one tag later.
+    patchEmpty = false
     // Breaking leads: the SDK carries committed ABI dumps and five cross-decoding
     // bindings, so what a consumer needs first is whether recompiling is enough.
     groups = listOf("Breaking", "Added", "Changed", "Deprecated", "Removed", "Fixed", "Security")
