@@ -16,6 +16,9 @@ five language bindings.
 
 ### Changed
 
+- `org.meshtastic:kzstd` 0.2.1. A maintenance release of the codec - its ABI is
+  byte-identical to 0.2.0, so nothing this SDK compiles against moved; it picks
+  up zstd-jni 1.5.7-16 on the JVM backend.
 - `TakPacketV2Serializer` constructs proto types through Wire's `Builder`
   rather than the generated all-args constructor. The constructor encodes every
   field in its signature, so a consumer compiled against one protobufs version
