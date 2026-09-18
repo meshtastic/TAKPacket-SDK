@@ -185,6 +185,47 @@ jobs:
           git push origin "v$VERSION"
           echo "::notice::Pushed tag v$VERSION → SPM consumers can now resolve this release."
 
+      - name: Render release notes
+        # The changelog section for this version IS the release notes. The
+        # alternative — `generate_release_notes: true` — describes the release a
+        # second time from commit titles, and the hand-written description and the
+        # generated one then drift. `getChangelog` reads the same CHANGELOG.md the
+        # "Verify version sources agree" step already proved has a section for this
+        # version, so the release page says exactly what the repo says.
+        env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          cat > release-notes.md <<EOF
+          ## TAKPacket-SDK v${VERSION}
+
+          Cross-platform CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic.
+
+          ### Artifacts
+
+          | Platform | File | Usage |
+          |----------|------|-------|
+          | **Kotlin** | \`.jar\` | \`implementation("org.meshtastic:takpacket-sdk:${VERSION}")\` via Maven Central |
+          | **Swift** | \`.zip\` | Add via SPM: point to this repo tag \`v${VERSION}\` |
+          | **Python** | \`.whl\` | \`pip install meshtastic_tak-*.whl\` |
+          | **TypeScript** | \`.tgz\` | \`npm install meshtastic-takpacket-sdk-*.tgz\` |
+          | **C#** | \`.nupkg\` | \`dotnet add package Meshtastic.TAK\` (or install local nupkg) |
+
+          ### Changes
+
+          EOF
+          # Capture first so a Gradle failure fails this step (a pipeline would
+          # hide it — GitHub's default shell sets -e but not -o pipefail).
+          NOTES=$(./kotlin/gradlew -p kotlin --console=plain -q getChangelog --no-header --no-links)
+          # `-q` silences task output, but Develocity still prints the build-scan
+          # URL on its own line. `sed` rather than `grep -v`: grep exits 1 when it
+          # filters everything, which would fail the step on an empty section.
+          printf '%s\n' "$NOTES" \
+            | sed -E '/^(Publishing build scan|https:\/\/community\.develocity\.cloud)/d' \
+            >> release-notes.md
+          echo "--- rendered release notes ---"
+          cat release-notes.md
+
       - name: Stage signed artifacts locally
         working-directory: kotlin
         env:
@@ -289,47 +330,6 @@ jobs:
           ls -lh release-artifacts/
 
       # ── Create release ──────────────────────────────────────────────────
-
-      - name: Render release notes
-        # The changelog section for this version IS the release notes. The
-        # alternative — `generate_release_notes: true` — describes the release a
-        # second time from commit titles, and the hand-written description and the
-        # generated one then drift. `getChangelog` reads the same CHANGELOG.md the
-        # "Verify version sources agree" step already proved has a section for this
-        # version, so the release page says exactly what the repo says.
-        env:
-          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          cat > release-notes.md <<EOF
-          ## TAKPacket-SDK v${VERSION}
-
-          Cross-platform CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic.
-
-          ### Artifacts
-
-          | Platform | File | Usage |
-          |----------|------|-------|
-          | **Kotlin** | \`.jar\` | \`implementation("org.meshtastic:takpacket-sdk:${VERSION}")\` via Maven Central |
-          | **Swift** | \`.zip\` | Add via SPM: point to this repo tag \`v${VERSION}\` |
-          | **Python** | \`.whl\` | \`pip install meshtastic_tak-*.whl\` |
-          | **TypeScript** | \`.tgz\` | \`npm install meshtastic-takpacket-sdk-*.tgz\` |
-          | **C#** | \`.nupkg\` | \`dotnet add package Meshtastic.TAK\` (or install local nupkg) |
-
-          ### Changes
-
-          EOF
-          # Capture first so a Gradle failure fails this step (a pipeline would
-          # hide it — GitHub's default shell sets -e but not -o pipefail).
-          NOTES=$(./kotlin/gradlew -p kotlin --console=plain -q getChangelog --no-header --no-links)
-          # `-q` silences task output, but Develocity still prints the build-scan
-          # URL on its own line. `sed` rather than `grep -v`: grep exits 1 when it
-          # filters everything, which would fail the step on an empty section.
-          printf '%s\n' "$NOTES" \
-            | sed -E '/^(Publishing build scan|https:\/\/community\.develocity\.cloud)/d' \
-            >> release-notes.md
-          echo "--- rendered release notes ---"
-          cat release-notes.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
