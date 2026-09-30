@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 protobufs = "2.8.0.85-ge319346-SNAPSHOT"
 xmlutil = "1.0.2.1"
 kzstd = "0.2.1"
