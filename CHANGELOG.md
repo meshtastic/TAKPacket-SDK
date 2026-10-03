@@ -8,6 +8,15 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ## [Unreleased]
 
+The first release on Maven Central since 0.9.1: 0.9.2 was tagged but never
+published, so this release carries its changes as well.
+
+### Changed
+
+- `org.meshtastic:protobufs` 2.8.1, a tagged release, replacing the
+  `2.8.0.85-ge319346-SNAPSHOT` pin. Maven Central rejects a release that
+  depends on a snapshot.
+
 ## [0.9.2]
 
 Maintenance release. The committed ABI dumps are unchanged from 0.9.1, and no
