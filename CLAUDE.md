@@ -23,7 +23,7 @@ testdata/
 kotlin/              Canonical implementation (full KMP: jvm + js + wasmJs + wasmWasi + 9 native — consumes published org.meshtastic:protobufs)
 swift/               Swift Package (SwiftProtobuf + CZstd)
 python/              Python package (protobuf + zstandard)
-typescript/          npm package (protobufjs + fzstd)
+typescript/          npm package (protobufjs + zstd-napi)
 csharp/              .NET 9 library (Google.Protobuf + ZstdSharp)
 ```
 
@@ -42,11 +42,11 @@ Plus per-platform: `DictionaryProvider` (loads zstd dicts from resources) and `T
 
 ## Kotlin is canonical
 
-- **The zstd codec is the pure-Kotlin `org.meshtastic:kzstd` library on EVERY target.** The engine that used to live in this repo's `internal.zstd` package (`PureZstdEncoder` / `PureZstdDecoder` + the Huffman/FSE machinery) was extracted into the standalone **kzstd** library (https://github.com/meshtastic/kzstd; `org.meshtastic:kzstd` on Maven Central) so the codec lives and is tested in exactly ONE place — there is no longer a near-identical second copy to keep in sync. The SDK consumes it as a `commonMain implementation` dependency (version pinned in `kotlin/build.gradle.kts` via `libs.kzstd`); the thin `ZstdCodec` object wraps kzstd's one-shot `Zstd` API + its digested, immutable `ZstdDictionary` (which is why the SDK no longer needs `atomicfu` — two `@Volatile` digest holders replace the old reference-keyed caches). ONE codec on jvm, all 9 native targets, js, wasmJs, and wasmWasi — no `zstd-jni`, no native `libzstd` cinterop, no `@bokuweb/zstd-wasm`; native targets need no `libzstd` at all. It is interoperable **in both directions**: our decoder reads real libzstd frames (proven by decoding every golden) and our encoder's frames are read by real libzstd (proven by the libzstd-based Swift/Python/TS/C# bindings + kzstd's OWN libzstd interop suite). The `.bin` goldens are pure-Kotlin-generated; swapping the vendored engine for kzstd left BOTH `.bin` and `.pb` byte-identical (it is the same engine). `zstd-jni` is GONE entirely — the both-directions interop gate now lives in kzstd's test suite, not here, so the SDK no longer depends on it even in jvmTest; the SDK keeps only a golden-decode integration oracle (`GoldenDecodeCommonTest`) over its own dicts + wire frames. `kzstd` ships transitively in the published POM/metadata (alongside `protobufs`).
+- **The zstd codec is the pure-Kotlin `org.meshtastic:kzstd` library on every target** (https://github.com/meshtastic/kzstd), so the codec lives and is tested in one place. The SDK consumes it as a `commonMain implementation` dependency (`libs.kzstd`, version in `kotlin/gradle/libs.versions.toml`); the thin `ZstdCodec` object wraps kzstd's one-shot `Zstd` API and its digested, immutable `ZstdDictionary`. One codec on jvm, all 9 native targets, js, wasmJs and wasmWasi: no `zstd-jni`, no native `libzstd` cinterop, no `@bokuweb/zstd-wasm`. It interoperates with libzstd in both directions: our decoder reads every golden, and the libzstd-based Swift/Python/TS/C# bindings plus kzstd's own libzstd interop suite read our frames. That interop gate lives in kzstd's test suite; the SDK keeps a golden-decode oracle (`GoldenDecodeCommonTest`) over its own dicts and wire frames. `kzstd` ships transitively in the published POM/metadata alongside `protobufs`.
 - Kotlin generates all golden `.pb` and `.bin` files via `CompressionTest.generate compression report`
 - Other platforms validate AGAINST those goldens; they don't generate them
-- When adding a new fixture: drop `.xml` in `testdata/cot_xml/`, run `gradle jvmTest` (auto-discovers via `TestFixtures.kt`), commit the generated goldens
-- Proto types come from the published `org.meshtastic:protobufs` KMP artifact (version pinned in `kotlin/build.gradle.kts`, declared as a `commonMain implementation` dependency) — they are not generated in this repo. (It used to be `compileOnly` while the module was jvm-only; the full-KMP migration switched it to `implementation` because Native/JS/Wasm cannot link a `compileOnly` dep, so protobufs now ships transitively in the published POM/metadata. Android consumers already bring the same artifact and own its version.) That artifact is Wire-generated upstream with `boxOneOfsMinSize = 5000` (flattens oneofs to nullable fields), which is why the serializer sees nullable oneof arms.
+- When adding a new fixture: drop `.xml` in `testdata/cot_xml/`, run `./gradlew jvmTest` from `kotlin/` (auto-discovers via `TestFixtures.kt`), commit the generated goldens
+- Proto types come from the published `org.meshtastic:protobufs` KMP artifact (version in `kotlin/gradle/libs.versions.toml`, declared as a `commonMain implementation` dependency because Native/JS/Wasm cannot link a `compileOnly` one) — they are not generated in this repo. It ships transitively in the published POM/metadata; Android consumers bring the same artifact and own its version. That artifact is Wire-generated upstream with `boxOneOfsMinSize = 5000` (flattens oneofs to nullable fields), which is why the serializer sees nullable oneof arms.
 - Published to **Maven Central** (primary) via the vanniktech maven-publish plugin: `org.meshtastic:takpacket-sdk-jvm:<version>`. **JitPack** remains a fallback: `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm:<tag>`.
 
 **Environment prerequisites (these cost real time when missed):**
@@ -83,8 +83,8 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 - **Wire payload:** `[1 byte flags][N bytes zstd body]`
 - **Flags byte:** bits 0-5 = dictionary ID, bits 6-7 = reserved (ignore on receive, zero on send)
 - **Dict IDs:** 0 = non-aircraft (512KB proto-trained dict), 1 = aircraft (4KB dict), 0xFF = uncompressed raw protobuf
-- **Frame slimming (v0.4.0, −8 B/packet):** compress with `dictID` / `contentSize` / `checksum` all OFF, then **strip the 4-byte zstd magic** (`28 B5 2F FD`) on encode and re-prepend it on decode. Done **manually and uniformly in all 5 bindings** (NOT zstd native "magicless" — `zstd-napi` in TS can't do that). The on-wire body has no magic number. The magic is a compile-time constant, so this stays fully stateless.
-- **Skip-compress (v0.4.0):** if the raw protobuf ≤ the zstd body, emit `[0xFF][raw protobuf]` instead. Tiny/incompressible packets never expand (worst case = raw + 1 flags byte). The `0xFF` path already existed on decode in all bindings.
+- **Frame slimming (−8 B/packet):** compress with `dictID` / `contentSize` / `checksum` all OFF, then **strip the 4-byte zstd magic** (`28 B5 2F FD`) on encode and re-prepend it on decode. Done **manually and uniformly in all 5 bindings** (NOT zstd native "magicless" — `zstd-napi` in TS can't do that). The on-wire body has no magic number. The magic is a compile-time constant, so this stays fully stateless.
+- **Skip-compress:** if the raw protobuf ≤ the zstd body, emit `[0xFF][raw protobuf]` instead. Tiny/incompressible packets never expand (worst case = raw + 1 flags byte). The `0xFF` path already existed on decode in all bindings.
 - **Max decompressed size:** 4,096 bytes (security guard, reject anything larger)
 - **Compression level:** 19 requested everywhere, but the Kotlin binding's `org.meshtastic:kzstd` encoder treats `level` as a documented no-op (single fixed strategy) — only the libzstd-based Swift/Python/TS/C# encoders actually vary output with it
 - **Aircraft classification:** 3rd atom of CoT type string = "A" (e.g. `a-n-A-C-F`)
@@ -93,16 +93,16 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 
 ## Key data model patterns
 
-- **`TakPacketV2Data`** has 26 envelope fields + `Payload` sealed class with 13 oneof variants (Chat, Aircraft, RawDetail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest, TakTalk, TakTalkRoom). **PLI is implicit** (v0.4.0): the `bool pli` oneof arm was removed — a packet with NO payload variant + an `a-f-*` cot type IS a PLI. Proto tag 30 is reserved.
+- **`TakPacketV2Data`** has 26 envelope fields + `Payload` sealed class with 13 oneof variants (Chat, Aircraft, RawDetail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest, TakTalk, TakTalkRoom). **PLI is implicit**: there is no PLI oneof arm — a packet with NO payload variant + an `a-f-*` cot type IS a PLI. Proto tag 30 is reserved.
 - **`EnvironmentData`** and **`SensorFovData`** are optional top-level annotations (not payload variants) — they attach to any event type
-- **Delta encoding:** Route waypoints (`Route.Link.point`) and R&B anchor use `CotGeoPoint` lat/lon deltas. **DrawnShape vertices (v0.4.0)** are two PACKED `repeated sint32` columns — `vertex_lat_deltas` (tag 18) + `vertex_lon_deltas` (tag 19), zigzag deltas from the envelope `latitude_i`/`longitude_i`. Old `repeated CotGeoPoint vertices = 12` is reserved. (CotGeoPoint still exists for Route/R&B.)
+- **Delta encoding:** Route waypoints (`Route.Link.point`) and R&B anchor use `CotGeoPoint` lat/lon deltas. **DrawnShape vertices** are two PACKED `repeated sint32` columns — `vertex_lat_deltas` (tag 18) + `vertex_lon_deltas` (tag 19), zigzag deltas from the envelope `latitude_i`/`longitude_i`. Old `repeated CotGeoPoint vertices = 12` is reserved. (CotGeoPoint still exists for Route/R&B.)
 - **Dual color encoding:** Every color field carries both a `Team` palette enum (compact) and an exact `_argb` int32 (lossless fallback)
 - **Remarks fallback:** `compressWithRemarksFallback()` tries with remarks, strips them if over MTU, returns null if still too big
 
 ## Proto schema management
 
-- Schema lives in the `protobufs` git submodule (`meshtastic/protobufs` repo, branch `master`). Package: `meshtastic`, java_package: `org.meshtastic.proto`. The submodule is the schema source of truth and is consumed directly by the Swift/Python/TypeScript/C# bindings; **Kotlin no longer codegens from it** — there is no Wire plugin in this repo, so nothing is generated into `build/generated/source/wire/`.
-- When editing proto: commit + push in the submodule first, then bump the submodule ref in the SDK repo. **For Kotlin, additionally** publish a new `org.meshtastic:protobufs` release and bump its version in `kotlin/build.gradle.kts` — Kotlin gets its proto types from that published artifact, not from local codegen.
+- Schema lives in the `protobufs` git submodule (`meshtastic/protobufs` repo, branch `master`). Package: `meshtastic`, java_package: `org.meshtastic.proto`. The submodule is the schema source of truth and is consumed directly by the Swift/Python/TypeScript/C# bindings; **Kotlin does not codegen from it** — there is no Wire plugin in this repo, so nothing is generated into `build/generated/source/wire/`.
+- When editing proto: commit + push in the submodule first, then bump the submodule ref in the SDK repo. **For Kotlin, additionally** publish a new `org.meshtastic:protobufs` release and bump its version in `kotlin/gradle/libs.versions.toml` — Kotlin gets its proto types from that published artifact, not from local codegen.
 - Swift proto bindings (`atak.pb.swift`) ARE checked in; regenerate with:
   `protoc --proto_path=../protobufs --swift_opt=Visibility=Public --swift_out=swift/Sources/MeshtasticTAK ../protobufs/meshtastic/atak.proto`
 - Python (`atak_pb2.py`) and C# (`Atak.cs`) bindings are also checked in and regenerated manually. TypeScript has no codegen step — it loads `protobufs/meshtastic/atak.proto` at runtime via protobufjs.
@@ -135,12 +135,12 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 - Aircraft fixtures use the same area at different altitudes
 - `delete_event.xml` uses 0,0 (intentional — delete events have no location)
 - Adding a fixture: just drop the `.xml` file; `TestFixtures.kt` auto-discovers from `testdata/cot_xml/`
-- After adding: run `gradle jvmTest` to regenerate goldens, then commit the new `.bin`, `.pb`, and updated `compression-report.md`
+- After adding: run `./gradlew jvmTest` from `kotlin/` to regenerate goldens, then commit the new `.bin`, `.pb`, and updated `compression-report.md`
 
 ## Dictionary retraining
 
 - Dictionaries are trained in a separate repo (`meshtastic/TAKPacket-ZTSD`)
-- **Train on PROTO bytes, not XML.** The SDK compresses serialized `TAKPacketV2`, so the dict must be trained on proto. Use `TAKPacket-ZTSD/train_proto.py` — it re-encodes the corpus XML through the Python SDK to proto, then trains. (The legacy `train.py` trains on raw CoT XML and underperforms badly — an XML-trained dict wastes its budget on XML structural tokens that never hit the wire. This proto-vs-XML mismatch was the single biggest compression win.)
+- **Train on PROTO bytes, not XML.** The SDK compresses serialized `TAKPacketV2`, so the dict must be trained on proto. Use `TAKPacket-ZTSD/train_proto.py` — it re-encodes the corpus XML through the Python SDK to proto, then trains. (`train.py` trains on raw CoT XML and underperforms: an XML-trained dict spends its budget on XML structural tokens that never hit the wire.)
 - Current dicts: **non-aircraft 512 KB + aircraft 4 KB**, zstd level 19, proto-trained. 512 KB is the measured "knee" of a 64 KB→1 MB sweep — 1 MB *overfits* (median/worst-case regress). Footprint is unconstrained (phones/Linux), so size at the knee, not the smallest.
 - **Deploy:** `cd TAKPacket-ZTSD && python train_proto.py` writes candidates; copy the chosen one to `output/dict_non_aircraft.zstd`, then `bash deploy.sh ../TAKPacket-SDK`. `deploy.sh` copies ONLY the two canonical filenames into each binding resource dir — it must NOT glob `output/*.zstd` (that leaks sweep candidates like `dict_non_aircraft_524288.zstd` into the shipped packages; deploy.sh is hardened against this).
 - **After deploy:** re-baseline Kotlin goldens (regen command below), then re-run all 5 suites. Run `train_proto.py` with the SDK's Python venv (`python/.venv`) — it needs both `protobuf` and `zstandard`; ZTSD's own venv lacks protobuf.
@@ -148,10 +148,10 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 
 ## Common pitfalls
 
-1. **Running `gradle test` instead of `gradle jvmTest`** — KMP has no root `test` task; use `jvmTest` for the JVM target
-2. **Forgetting `git submodule update --init --recursive`** — proto codegen fails without the protobufs submodule
-3. **Stale golden files after fixture changes** — first `gradle jvmTest` run regenerates goldens but `CompatibilityTest.all golden files exist` may fail; second run is steady state
-4. **Depend on the `-jvm` artifact, not the KMP parent** — Android consumers must depend on the JVM artifact directly (`org.meshtastic:takpacket-sdk-jvm` on Maven Central, or `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm` on the JitPack fallback), NOT the parent `takpacket-sdk` / `TAKPacket-SDK` coordinate. (As of v0.6.0 the codec is pure Kotlin, so the SDK no longer pulls `zstd-jni` and there is no `@aar`/`zstd-jni` exclusion to manage.) The Kotlin module is full KMP (jvm + js + wasmJs + wasmWasi + 9 native), but Android still consumes the JVM variant — iOS consumers use the `MeshtasticTAK` Swift package rather than the Kotlin/Native klibs.
+1. **Running `./gradlew test` instead of `./gradlew jvmTest`** — KMP has no root `test` task; use `jvmTest` for the JVM target
+2. **Forgetting `git submodule update --init --recursive`** — the TypeScript binding loads `protobufs/meshtastic/atak.proto` at runtime and the manual Swift/Python/C# regeneration reads it, so both fail without the submodule
+3. **Stale golden files after fixture changes** — first `./gradlew jvmTest` run regenerates goldens but `CompatibilityTest.all golden files exist` may fail; second run is steady state
+4. **Depend on the `-jvm` artifact, not the KMP parent** — Android consumers must depend on the JVM artifact directly (`org.meshtastic:takpacket-sdk-jvm` on Maven Central, or `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm` on the JitPack fallback), NOT the parent `takpacket-sdk` / `TAKPacket-SDK` coordinate. The Kotlin module is full KMP (jvm + js + wasmJs + wasmWasi + 9 native), but Android still consumes the JVM variant — iOS consumers use the `MeshtasticTAK` Swift package rather than the Kotlin/Native klibs.
 5. **Swift protoc visibility** — always pass `--swift_opt=Visibility=Public` or the generated types are internal and break downstream consumers
 6. **Negative speed/course from ATAK** — ATAK sends `speed="-1.0"` for stationary; the parser clamps negatives to 0 (uint32 field)
 7. **IEEE 754 rounding on longitude assertions** — use `roundToInt()` not `toInt()` when comparing `(lon * 1e7)` to `longitudeI`
@@ -182,7 +182,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 
 ## Downstream consumers
 
-- **Meshtastic-Android** (`core/takserver`): depends on `org.meshtastic:takpacket-sdk-jvm` via Maven Central (JitPack fallback), proto submodule at `core/proto/src/main/proto`. It also depends on the **same `org.meshtastic:protobufs` KMP artifact** directly. The SDK declares protobufs as a `commonMain implementation` dependency (the full-KMP migration could no longer use `compileOnly`, which Native/JS/Wasm can't link), so protobufs is now a transitive dependency in the SDK's POM; the consumer still owns/aligns its own protobufs version.
+- **Meshtastic-Android** (`core/model`, `core/takserver`): depends on the KMP `org.meshtastic:takpacket-sdk` coordinate (`takpacket-sdk-kmp` in its version catalog), and on the **same `org.meshtastic:protobufs` KMP artifact** directly; it has no proto submodule. protobufs is a transitive `commonMain implementation` dependency in the SDK's POM, and the consumer owns/aligns its own protobufs version.
 - **Meshtastic-Apple**: depends on `MeshtasticTAK` Swift package via remote SPM URL, proto submodule at `protobufs/`, regenerated `atak.pb.swift` at `MeshtasticProtobufs/Sources/meshtastic/`
 
 ## PII / sensitive-data handling — read before adding any fixture
@@ -212,7 +212,7 @@ hazard.
    grep -nE '\b\d{1,3}\.\d{5,}\b|ANDROID-[0-9a-f]{12,}|\b(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]+\.[0-9]+\b' /tmp/<file>.xml
    ```
    Hits on coords with 5+ decimal places, non-sequential ANDROID hex, or RFC 1918 IPs mean it's still dirty. (Sequential `ANDROID-0+\d+` is allowed — that's the test-fake convention.)
-4. Regenerate goldens via `gradle jvmTest --tests "CompressionTest.generate compression report" --rerun-tasks` so the derived `.pb` / `.bin` artifacts pick up the clean strings. The Kotlin test writes both into `testdata/golden/` and `testdata/protobuf/`.
+4. Regenerate goldens via `./gradlew jvmTest --tests "CompressionTest.generate compression report" --rerun-tasks` so the derived `.pb` / `.bin` artifacts pick up the clean strings. The Kotlin test writes both into `testdata/golden/` and `testdata/protobuf/`.
 
 **If a leak ships to master:**
 
