@@ -8,6 +8,8 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-10-03
+
 The first release on Maven Central since 0.9.1: 0.9.2 was tagged but never
 published, so this release carries its changes as well.
 
@@ -322,3 +324,13 @@ guard are all unchanged.
   stage it was detached because the non-host native `libzstd.a` archives were
   missing; once the codec became pure Kotlin those archives no longer exist, so the
   klib API surface is gated on every build.)
+
+[Unreleased]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.9.3...HEAD
+[0.9.3]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.9.2...v0.9.3
+[0.9.2]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.9.1...v0.9.2
+[0.9.1]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.9.0...v0.9.1
+[0.9.0]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.8.1...v0.9.0
+[0.8.1]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/meshtastic/TAKPacket-SDK/commits/v0.6.0
