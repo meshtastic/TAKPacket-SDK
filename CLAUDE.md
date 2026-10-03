@@ -151,7 +151,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 1. **Running `./gradlew test` instead of `./gradlew jvmTest`** — KMP has no root `test` task; use `jvmTest` for the JVM target
 2. **Forgetting `git submodule update --init --recursive`** — the TypeScript binding loads `protobufs/meshtastic/atak.proto` at runtime and the manual Swift/Python/C# regeneration reads it, so both fail without the submodule
 3. **Stale golden files after fixture changes** — first `./gradlew jvmTest` run regenerates goldens but `CompatibilityTest.all golden files exist` may fail; second run is steady state
-4. **Depend on the `-jvm` artifact, not the KMP parent** — Android consumers must depend on the JVM artifact directly (`org.meshtastic:takpacket-sdk-jvm` on Maven Central, or `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm` on the JitPack fallback), NOT the parent `takpacket-sdk` / `TAKPacket-SDK` coordinate. The Kotlin module is full KMP (jvm + js + wasmJs + wasmWasi + 9 native), but Android still consumes the JVM variant — iOS consumers use the `MeshtasticTAK` Swift package rather than the Kotlin/Native klibs.
+4. **Kotlin consumers take the KMP coordinate** — `org.meshtastic:takpacket-sdk`, which Gradle resolves to the matching variant (Android gets `jvm()`). The `-jvm` coordinate (`org.meshtastic:takpacket-sdk-jvm`, or `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm` on JitPack) is only for consumers without Gradle module metadata. iOS consumers use the `MeshtasticTAK` Swift package rather than the Kotlin/Native klibs.
 5. **Swift protoc visibility** — always pass `--swift_opt=Visibility=Public` or the generated types are internal and break downstream consumers
 6. **Negative speed/course from ATAK** — ATAK sends `speed="-1.0"` for stationary; the parser clamps negatives to 0 (uint32 field)
 7. **IEEE 754 rounding on longitude assertions** — use `roundToInt()` not `toInt()` when comparing `(lon * 1e7)` to `longitudeI`
@@ -212,7 +212,7 @@ hazard.
    grep -nE '\b\d{1,3}\.\d{5,}\b|ANDROID-[0-9a-f]{12,}|\b(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01]))\.[0-9]+\.[0-9]+\b' /tmp/<file>.xml
    ```
    Hits on coords with 5+ decimal places, non-sequential ANDROID hex, or RFC 1918 IPs mean it's still dirty. (Sequential `ANDROID-0+\d+` is allowed — that's the test-fake convention.)
-4. Regenerate goldens via `./gradlew jvmTest --tests "CompressionTest.generate compression report" --rerun-tasks` so the derived `.pb` / `.bin` artifacts pick up the clean strings. The Kotlin test writes both into `testdata/golden/` and `testdata/protobuf/`.
+4. Regenerate goldens from `kotlin/` via `./gradlew jvmTest --tests "CompressionTest.generate compression report" --rerun-tasks` so the derived `.pb` / `.bin` artifacts pick up the clean strings. The Kotlin test writes both into `testdata/golden/` and `testdata/protobuf/`.
 
 **If a leak ships to master:**
 
