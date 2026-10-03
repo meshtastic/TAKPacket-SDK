@@ -18,18 +18,19 @@ native `libzstd`.
 
 ## Install
 
-Published to **Maven Central**. Android / JVM consumers depend on the **`-jvm`** artifact:
+Published to **Maven Central**. Depend on the KMP coordinate; Gradle resolves the variant for
+your target (Android and JVM get `jvm()`):
 
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("org.meshtastic:takpacket-sdk-jvm:0.8.0")
+    implementation("org.meshtastic:takpacket-sdk:0.9.3")
 }
 ```
 
-> **Depend on `takpacket-sdk-jvm`, not the parent `takpacket-sdk` coordinate.** The parent is the
-> KMP metadata module. The `org.meshtastic:protobufs` artifact ships transitively; align its
-> version with your app if you already use it.
+> `org.meshtastic:takpacket-sdk-jvm` is only for consumers without Gradle module metadata. The
+> `org.meshtastic:protobufs` artifact ships transitively; align its version with your app if you
+> already use it.
 
 **JitPack** is a fallback channel:
 `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm:<tag>`.
@@ -84,7 +85,7 @@ Requires **JDK 21**:
 export JAVA_HOME=/path/to/jdk21
 ./gradlew jvmTest                         # JVM unit tests
 ./gradlew dokkaGeneratePublicationHtml    # API docs → build/dokka/html
-./gradlew publishToMavenLocal             # local publish (resolves as org.meshtastic:takpacket-sdk[-jvm]:0.8.0)
+./gradlew publishToMavenLocal             # local publish (resolves as org.meshtastic:takpacket-sdk:<VERSION_NAME>)
 ```
 
 See the repository [CONTRIBUTING guide](https://github.com/meshtastic/TAKPacket-SDK/blob/main/CONTRIBUTING.md)
