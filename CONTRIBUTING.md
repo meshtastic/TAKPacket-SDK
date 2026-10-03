@@ -122,9 +122,9 @@ the **PyPI** long description, and **DocC** Quick Help in Xcode.
 
 [`CHANGELOG.md`](CHANGELOG.md) lives at the repo root and covers **all five bindings**, because
 one `VERSION` produces one tag and one GitHub Release. It is hand-written in
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) form; the JetBrains
-[gradle-changelog-plugin](https://github.com/JetBrains/gradle-changelog-plugin) parses and renders
-it and never generates an entry from a commit.
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) form, and nothing generates an entry
+from a commit. [`scripts/changelog.sh`](scripts/changelog.sh) cuts and reads sections without
+re-rendering the file, so prose under any heading survives a release.
 
 Add an entry under `## [Unreleased]` for anything a consumer would notice — a new or changed
 public API in any binding, a behaviour change, a fix to something they could have hit, a security
@@ -144,23 +144,16 @@ to know is whether recompiling is enough.
 
 ## Releasing
 
-The [`bump-version.yml`](.github/workflows/bump-version.yml) workflow (manual dispatch) stamps the
-new version into all five coordinates via [`scripts/bump-version.sh`](scripts/bump-version.sh),
-runs `./kotlin/gradlew -p kotlin patchChangelog` to cut `## [Unreleased]` into a dated `## [x.y.z]` section with
-comparison links, and opens a PR. Review the changelog diff in that PR: it is what the GitHub
-Release page will say.
+The [`bump-version.yml`](.github/workflows/bump-version.yml) workflow stamps the new version into
+all five coordinates, cuts `## [Unreleased]` into a dated `## [x.y.z]` section, and opens a PR.
+Review the changelog diff in that PR: it is the GitHub Release body, verbatim. After it merges,
+dispatch [`release.yml`](.github/workflows/release.yml) with that version. It gates on `main`,
+the version sources, the changelog section and green CI, publishes the Kotlin artifacts to
+**Maven Central**, pushes the tag, and attaches the Python wheel and sdist, npm tarball, NuGet
+package, Swift source zip and JVM jar to the GitHub Release. Nothing publishes to PyPI, npm or
+NuGet. [RELEASING.md](RELEASING.md) has the steps and every gate.
 
-Then the [`release.yml`](.github/workflows/release.yml) workflow (manual dispatch, or a `v*` tag)
-reads `VERSION` / `kotlin/gradle.properties:VERSION_NAME`, checks all five version sources **and
-the changelog section** agree, tests all platforms, publishes the Kotlin artifacts to **Maven
-Central**, and cuts a GitHub Release whose body is `./kotlin/gradlew -p kotlin getChangelog` — not GitHub's
-generated commit list, which would describe the release a second time and drift from the
-hand-written one. A version with no `## [x.y.z]` section fails the workflow before it publishes:
-`getChangelog` silently falls back to the most recent released section, so the check is explicit
-rather than left to the plugin.
-
-npm / PyPI / NuGet publishing follows each ecosystem's standard flow. Dictionary retraining is
-wire-incompatible — batch it into a minor version bump.
+Dictionary retraining is wire-incompatible, so batch it into a minor version bump.
 
 ## Commit conventions
 

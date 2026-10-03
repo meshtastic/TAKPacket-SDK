@@ -1,53 +1,86 @@
 name: Release
 
+# Dispatch from main with the version a merged bump-version PR set, or push its tag.
+# Every gate runs before the tag is pushed, so a refused release leaves no tag behind.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. 0.9.3 (must match VERSION)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Run every gate and build every artifact, but tag, publish and release nothing'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: release-${{ github.event_name == 'push' && github.ref_name || format('v{0}', inputs.version) }}
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
   release:
-    name: Test, Build & Release
+    name: Gate, publish to Maven Central & release
+    # macOS because `swift test` needs it. The green-CI gate can wait 45 minutes and the
+    # consistency check polls Maven Central for 25, on top of five test suites and a
+    # signed all-target publish.
     runs-on: macos-latest
-
+    timeout-minutes: 180
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      checks: read
+      statuses: read
+    env:
+      DRY_RUN: ${{ inputs.dry_run || false }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
 
-      - name: Read version
+      - name: Resolve version
         id: version
-        run: echo "version=$(cat VERSION | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
-
-      - name: Verify version sources agree
-        # The repo has FIVE per-language package coordinates plus the
-        # top-level VERSION file that MUST all match:
-        #   * VERSION                                       → workflow tag, release title, artifact filenames
-        #   * kotlin/gradle.properties:VERSION_NAME         → Maven Central artifact coordinate
-        #   * python/pyproject.toml:version                 → wheel + sdist filename, PyPI coordinate
-        #   * typescript/package.json:version               → npm tarball filename, npm coordinate
-        #   * csharp/.../Meshtastic.TAK.csproj:<Version>    → NuGet package filename, NuGet coordinate
-        # A mismatch silently ships a partial release (e.g. Kotlin 0.3.3 jar
-        # alongside a TypeScript 0.1.0 tarball). Fail loudly here so the
-        # workflow never gets to publish in a misaligned state.
+        env:
+          REQUESTED: ${{ inputs.version || github.ref_name }}
         run: |
-          VERSION_FILE="${{ steps.version.outputs.version }}"
+          # A dispatch takes the bare version so the concurrency group above is canonical.
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "${REQUESTED#v}" != "$REQUESTED" ]; then
+            echo "::error::pass the version without a leading v: ${REQUESTED#v}"
+            exit 1
+          fi
+          echo "version=${REQUESTED#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Release from main only
+        if: env.DRY_RUN != 'true'
+        run: |
+          git fetch --quiet origin main
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::$GITHUB_REF is not on main; release from main (dry_run may run anywhere)"
+            exit 1
+          fi
+
+      - name: Verify the version sources agree
+        # One version is stamped into five package coordinates by scripts/bump-version.sh,
+        # and a mismatch would ship, say, a Kotlin 0.9.3 jar beside a TypeScript 0.9.2 tarball.
+        env:
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          VERSION_FILE=$(tr -d '[:space:]' < VERSION)
           VERSION_GRADLE=$(grep -E "^VERSION_NAME=" kotlin/gradle.properties | cut -d'=' -f2 | tr -d '[:space:]')
           VERSION_PYTHON=$(grep -E '^version\s*=' python/pyproject.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
           VERSION_NPM=$(grep -E '^\s*"version"\s*:' typescript/package.json | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
           VERSION_CSHARP=$(grep -oE '<Version>[^<]+</Version>' csharp/src/Meshtastic.TAK/Meshtastic.TAK.csproj | head -1 | sed -E 's|<Version>([^<]+)</Version>|\1|')
 
-          echo "VERSION file:                 $VERSION_FILE"
+          echo "requested:                    $V"
+          echo "VERSION:                      $VERSION_FILE"
           echo "kotlin/gradle.properties:     $VERSION_GRADLE"
           echo "python/pyproject.toml:        $VERSION_PYTHON"
           echo "typescript/package.json:      $VERSION_NPM"
@@ -61,53 +94,66 @@ jobs:
                         "csharp/Meshtastic.TAK.csproj:$VERSION_CSHARP"; do
             FILE="${SOURCE%%:*}"
             VER="${SOURCE##*:}"
-            if [ "$VER" != "$VERSION_FILE" ]; then
-              echo "::error::Version mismatch — $FILE is '$VER' but VERSION file is '$VERSION_FILE'"
+            if [ "$VER" != "$V" ]; then
+              echo "::error::releasing $V, but $FILE is '$VER'"
               FAIL=1
             fi
           done
           if [ $FAIL -ne 0 ]; then
-            echo "::error::Sync all five version sources before releasing."
+            echo "::error::run scripts/bump-version.sh $V (or the Bump version workflow) and merge it first"
             exit 1
           fi
-          echo "✓ All five version sources agree: $VERSION_FILE"
 
-          # The changelog is the sixth source. `getChangelog` does NOT fail when
-          # the declared version has no section — it silently returns the most
-          # recent released one, which would ship the PREVIOUS release's notes as
-          # this release's body. Check the heading exists here instead.
-          #
-          # awk, not grep -E: the version is a literal, and its dots are ERE
-          # wildcards. `index($0, v) == 1` is "this line starts with exactly this
-          # string", with no escaping to get wrong.
-          if ! awk -v v="## [$VERSION_FILE]" 'index($0, v) == 1 { found = 1 } END { exit !found }' CHANGELOG.md; then
-            echo "::error::CHANGELOG.md has no '## [$VERSION_FILE]' section — run './kotlin/gradlew -p kotlin patchChangelog' and commit it before releasing."
-            exit 1
+          git fetch --quiet origin "refs/tags/v$V:refs/tags/v$V" 2>/dev/null || true
+          if git rev-parse --quiet --verify "v$V^{commit}" >/dev/null &&
+             [ "$(git rev-parse "v$V^{commit}")" != "$(git rev-parse HEAD)" ]; then
+            if [ "$DRY_RUN" = true ]; then
+              echo "::warning::v$V already exists on another commit; a real release would stop here"
+            else
+              echo "::error::v$V already exists on another commit"
+              exit 1
+            fi
           fi
-          echo "✓ CHANGELOG.md has a section for $VERSION_FILE"
+          echo "releasing $V from $(git rev-parse --short HEAD)"
 
-      - name: Resolve tag state on origin
-        # Centralizes "does the v$VERSION tag exist on origin?" so the
-        # tag-push and Maven-Central-publish steps below can be idempotent.
-        # Run for both push:tags (where the tag is guaranteed to exist —
-        # it triggered the workflow) and workflow_dispatch (where the tag
-        # may or may not exist yet).
-        id: tag_state
+      - name: Render release notes
+        # The CHANGELOG.md section is the Release body verbatim; changelog.sh fails on a
+        # missing or empty section.
+        env:
+          V: ${{ steps.version.outputs.version }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          # Pull the tag from origin into the local ref if it exists there.
-          # `|| true` because a missing tag is a normal case, not an error.
-          git fetch origin "refs/tags/v$VERSION:refs/tags/v$VERSION" 2>/dev/null || true
-          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Tag v$VERSION already on origin — tag-push step will no-op."
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+          NOTES=$(scripts/changelog.sh notes "$V")
+          cat > release-notes.md <<EOF
+          ## TAKPacket-SDK v${V}
 
-      # ── Setup all runtimes ──────────────────────────────────────────────
+          Cross-platform CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic.
 
-      - name: Setup JDK 17
+          ### Artifacts
+
+          | Platform | File | Usage |
+          |----------|------|-------|
+          | **Kotlin** | \`.jar\` | \`implementation("org.meshtastic:takpacket-sdk:${V}")\` via Maven Central |
+          | **Swift** | \`.zip\` | Add via SPM: point to this repo tag \`v${V}\` |
+          | **Python** | \`.whl\` | \`pip install meshtastic_tak-*.whl\` |
+          | **TypeScript** | \`.tgz\` | \`npm install meshtastic-takpacket-sdk-*.tgz\` |
+          | **C#** | \`.nupkg\` | \`dotnet add package Meshtastic.TAK\` (or install local nupkg) |
+
+          ### Changes
+
+          EOF
+          printf '%s\n' "$NOTES" >> release-notes.md
+          cat release-notes.md
+
+      # CI does not run on tags, so the five suites the main ruleset requires are only
+      # guaranteed by those checks having passed on this exact commit.
+      - name: Require green CI on the commit being released
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/release-checks.sh green-ci "$(git rev-parse HEAD)"
+
+      # ── Set up every runtime ────────────────────────────────────────────
+
+      - name: Setup JDK 25
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
@@ -121,17 +167,17 @@ jobs:
           restore-keys: |
             konan-${{ runner.os }}-
 
-      - name: Setup Python
+      - name: Setup Python 3.14
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.14"
 
-      - name: Setup Node.js
+      - name: Setup Node.js 24
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
 
-      - name: Setup .NET
+      - name: Setup .NET 10
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: "10.0.x"
@@ -168,115 +214,19 @@ jobs:
         working-directory: csharp
         run: dotnet test --verbosity quiet
 
-      # ── Publish to Maven Central ─────────────────────────────────────────
-
-      - name: Push release tag to origin
-        # The tag is the canonical "release was attempted" marker — pushed
-        # AFTER tests pass (so we don't tag a broken commit) but BEFORE
-        # Maven Central publish (so Apple SPM consumers can always resolve
-        # the release even if the Maven step fails or anything else aborts).
-        # No-op if the tag already exists on origin (retry / push:tags trigger).
-        if: github.event_name == 'workflow_dispatch' && steps.tag_state.outputs.exists == 'false'
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$VERSION" -m "Release v$VERSION"
-          git push origin "v$VERSION"
-          echo "::notice::Pushed tag v$VERSION → SPM consumers can now resolve this release."
-
-      - name: Render release notes
-        # The changelog section for this version IS the release notes. The
-        # alternative — `generate_release_notes: true` — describes the release a
-        # second time from commit titles, and the hand-written description and the
-        # generated one then drift. `getChangelog` reads the same CHANGELOG.md the
-        # "Verify version sources agree" step already proved has a section for this
-        # version, so the release page says exactly what the repo says.
-        env:
-          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          cat > release-notes.md <<EOF
-          ## TAKPacket-SDK v${VERSION}
-
-          Cross-platform CoT XML to TAKPacketV2 conversion and zstd dictionary compression for Meshtastic.
-
-          ### Artifacts
-
-          | Platform | File | Usage |
-          |----------|------|-------|
-          | **Kotlin** | \`.jar\` | \`implementation("org.meshtastic:takpacket-sdk:${VERSION}")\` via Maven Central |
-          | **Swift** | \`.zip\` | Add via SPM: point to this repo tag \`v${VERSION}\` |
-          | **Python** | \`.whl\` | \`pip install meshtastic_tak-*.whl\` |
-          | **TypeScript** | \`.tgz\` | \`npm install meshtastic-takpacket-sdk-*.tgz\` |
-          | **C#** | \`.nupkg\` | \`dotnet add package Meshtastic.TAK\` (or install local nupkg) |
-
-          ### Changes
-
-          EOF
-          # Capture first so a Gradle failure fails this step (a pipeline would
-          # hide it — GitHub's default shell sets -e but not -o pipefail).
-          NOTES=$(./kotlin/gradlew -p kotlin --console=plain -q getChangelog --no-header --no-links)
-          # `-q` silences task output, but Develocity still prints the build-scan
-          # URL on its own line. `sed` rather than `grep -v`: grep exits 1 when it
-          # filters everything, which would fail the step on an empty section.
-          printf '%s\n' "$NOTES" \
-            | sed -E '/^(Publishing build scan|https:\/\/community\.develocity\.cloud)/d' \
-            >> release-notes.md
-          echo "--- rendered release notes ---"
-          cat release-notes.md
+      # ── Stage and check the Maven artifacts ─────────────────────────────
 
       - name: Stage signed artifacts locally
         working-directory: kotlin
         env:
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
           ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
-        run: ./gradlew publishToMavenLocal --stacktrace
+        run: ./gradlew publishToMavenLocal --no-configuration-cache --stacktrace
 
-      - name: Collect Maven artifacts for attestation
-        run: |
-          mkdir -p maven-attestation
-          find ~/.m2/repository/org/meshtastic -type f \
-            \( -name "*.jar" -o -name "*.pom" -o -name "*.module" -o -name "*.klib" \) \
-            -exec cp {} maven-attestation/ \;
-          echo "Maven artifacts to attest:"
-          ls -lh maven-attestation/
+      - name: Refuse a -SNAPSHOT dependency
+        run: scripts/release-checks.sh no-snapshots "${{ steps.version.outputs.version }}"
 
-      - name: Attest Maven artifacts
-        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        with:
-          subject-path: maven-attestation/*
-
-      - name: Check Maven Central state
-        # Probe whether v$VERSION is already on Maven Central. If yes, the
-        # publish step below skips — Sonatype rejects re-uploads with
-        # "component already exists" which is a fatal workflow error
-        # without this guard. Lets the workflow recover safely from any
-        # partial-publish state (e.g. tag pushed + publish failed + retry).
-        id: mc_check
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          HTTP=$(curl -sS -o /dev/null -w "%{http_code}" \
-            "https://repo1.maven.org/maven2/org/meshtastic/takpacket-sdk-jvm/$VERSION/takpacket-sdk-jvm-$VERSION.pom")
-          echo "Maven Central POM probe for v$VERSION: HTTP $HTTP"
-          if [ "$HTTP" = "200" ]; then
-            echo "already_published=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::v$VERSION already on Maven Central — skipping publish step."
-          else
-            echo "already_published=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Publish to Maven Central
-        if: steps.mc_check.outputs.already_published == 'false'
-        working-directory: kotlin
-        env:
-          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
-        run: ./gradlew publishAllPublicationsToMavenCentralRepository --stacktrace
-
-      # ── Build artifacts ─────────────────────────────────────────────────
+      # ── Build the packages attached to the Release ──────────────────────
 
       - name: Build Kotlin JAR
         working-directory: kotlin
@@ -303,35 +253,89 @@ jobs:
           zip -rq meshtastic-tak-swift-${{ steps.version.outputs.version }}.zip swift/ \
             -x "swift/.build/*" "swift/.swiftpm/*"
 
-      # ── Collect artifacts ───────────────────────────────────────────────
-
       - name: Collect release artifacts
+        env:
+          V: ${{ steps.version.outputs.version }}
         run: |
           mkdir -p release-artifacts
-          VERSION="${{ steps.version.outputs.version }}"
 
-          # Kotlin JAR — select only the main artifact, not -sources or -javadoc
-          cp "kotlin/build/libs/takpacket-sdk-jvm-${VERSION}.jar" "release-artifacts/meshtastic-tak-${VERSION}.jar"
-
-          # Python wheel + sdist
-          cp python/dist/*.whl release-artifacts/
-          cp python/dist/*.tar.gz release-artifacts/
-
-          # TypeScript tarball
+          # Kotlin JAR: the main artifact, not -sources or -javadoc
+          cp "kotlin/build/libs/takpacket-sdk-jvm-${V}.jar" "release-artifacts/meshtastic-tak-${V}.jar"
+          cp python/dist/*.whl python/dist/*.tar.gz release-artifacts/
           cp typescript/*.tgz release-artifacts/
-
-          # C# NuGet
           cp csharp/src/Meshtastic.TAK/bin/Release/*.nupkg release-artifacts/
-
-          # Swift zip
           cp meshtastic-tak-swift-*.zip release-artifacts/
 
-          echo "Release artifacts:"
           ls -lh release-artifacts/
 
-      # ── Create release ──────────────────────────────────────────────────
+      - name: Collect every staged artifact for attestation
+        env:
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p maven-attestation
+          find ~/.m2/repository/org/meshtastic -path "*/$V/*" -type f \
+            \( -name '*.jar' -o -name '*.klib' -o -name '*.pom' -o -name '*.module' \) \
+            -exec cp {} maven-attestation/ \;
+          ls -1 maven-attestation
 
-      - name: Create GitHub Release
+      - name: Attest the staged and attached artifacts
+        if: env.DRY_RUN != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            maven-attestation/*
+            release-artifacts/*
+
+      - name: Check Maven Central state
+        # Sonatype rejects a re-upload, so a re-run after a partial release skips the publish.
+        id: central
+        env:
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          # Only a 404 means unpublished; anything else stops the release rather than guess.
+          for _ in 1 2 3 4 5; do
+            HTTP=$(curl -sS -o /dev/null -w "%{http_code}" \
+              "https://repo1.maven.org/maven2/org/meshtastic/takpacket-sdk-jvm/$V/takpacket-sdk-jvm-$V.pom" || echo 000)
+            echo "Maven Central POM probe for $V: HTTP $HTTP"
+            case "$HTTP" in
+              200) echo "published=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              404) echo "published=false" >> "$GITHUB_OUTPUT"; exit 0 ;;
+            esac
+            sleep 20
+          done
+          echo "::error::Maven Central did not answer 200 or 404 for $V"
+          exit 1
+
+      # ── Tag, publish, release ───────────────────────────────────────────
+
+      - name: Push the release tag
+        # After every gate and the Central probe, so a refused release leaves no tag, and
+        # before the publish, so SPM consumers resolve every version Central has.
+        if: env.DRY_RUN != 'true'
+        env:
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          if git rev-parse --quiet --verify "v$V" >/dev/null; then
+            echo "v$V already on origin"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$V" -m "v$V"
+          git push origin "v$V"
+
+      - name: Publish to Maven Central
+        if: env.DRY_RUN != 'true' && steps.central.outputs.published != 'true'
+        working-directory: kotlin
+        env:
+          DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.OSSRH_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.OSSRH_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+        run: ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache --stacktrace
+
+      - name: Create or update the GitHub Release
+        if: env.DRY_RUN != 'true'
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: v${{ steps.version.outputs.version }}
@@ -339,70 +343,37 @@ jobs:
           body_path: release-notes.md
           files: release-artifacts/*
 
-      # ── Verify release consistency ──────────────────────────────────────
-      #
-      # Backstop against the failure mode that motivated this hardening: a
-      # successful Maven Central publish whose v$VERSION git tag never made
-      # it to origin (or vice versa), leaving Apple SPM consumers stuck on
-      # the previous release while Kotlin/Android Gradle consumers see the
-      # new one. Both halves MUST be present — fail the workflow loudly if
-      # either is missing so we never silently ship a partial release.
-
+      # Both halves must be present: the tag for SPM consumers, the POM for Gradle ones.
+      # A missing tag fails the job; a POM still missing after 25 minutes is Central
+      # Portal to repo1.maven.org propagation, so it warns.
       - name: Verify release consistency
+        if: env.DRY_RUN != 'true'
+        env:
+          V: ${{ steps.version.outputs.version }}
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          FAIL=0
-
-          echo "=== Tag check ==="
-          # Re-fetch in case the tag landed via softprops/action-gh-release@v3.
-          git fetch origin "refs/tags/v$VERSION:refs/tags/v$VERSION" 2>/dev/null || true
-          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-            SHA=$(git rev-parse "v$VERSION")
-            echo "✓ Tag v$VERSION on origin (points at $SHA)"
+          git fetch origin "refs/tags/v$V:refs/tags/v$V" 2>/dev/null || true
+          if git rev-parse --quiet --verify "v$V" >/dev/null; then
+            echo "ok   tag v$V on origin ($(git rev-parse "v$V^{commit}"))"
           else
-            echo "✗ Tag v$VERSION MISSING on origin — Apple SPM consumers will not resolve this release"
-            FAIL=1
-          fi
-
-          echo ""
-          echo "=== Maven Central check (with retry — Sonatype→repo1 sync lag is normal) ==="
-          # By the time this step runs, the "Publish to Maven Central" step above
-          # ALREADY succeeded (it's an earlier step in this same job; a failed
-          # Gradle publish fails the job before we get here). So a 404 below means
-          # the deployment is still propagating from the Sonatype Central Portal
-          # to repo1.maven.org — NOT that the publish failed. With
-          # automaticRelease=true that propagation is guaranteed; it just routinely
-          # takes 10–25 min (occasionally more). So we poll generously and, on
-          # timeout, emit a WARNING rather than fail the release red — a false
-          # "PARTIAL" here (v0.5.0 synced at ~14 min, past the old 10-min window)
-          # blocks downstream consumers from a release that is actually complete.
-          # A genuinely partial release (publish failed, or tag missing) is caught
-          # by the publish step itself / the tag check above.
-          HTTP=000
-          for i in $(seq 1 25); do
-            HTTP=$(curl -sS -o /dev/null -w "%{http_code}" \
-              "https://repo1.maven.org/maven2/org/meshtastic/takpacket-sdk-jvm/$VERSION/takpacket-sdk-jvm-$VERSION.pom")
-            if [ "$HTTP" = "200" ]; then
-              echo "✓ Maven Central POM for v$VERSION reachable (attempt $i)"
-              break
-            fi
-            echo "  attempt $i/25: HTTP $HTTP — retrying in 60s"
-            sleep 60
-          done
-          if [ "$HTTP" != "200" ]; then
-            echo "::warning::Maven Central POM for v$VERSION not yet synced after 25 min. The publish step succeeded and the tag is on origin, so this is Sonatype→repo1.maven.org propagation lag, not a failed publish. Verify https://repo1.maven.org/maven2/org/meshtastic/takpacket-sdk-jvm/$VERSION/ resolves within ~30–60 min before Gradle/Android consumers bump; if it never does, check the Sonatype Central Portal deployment status."
-          fi
-
-          # Only a MISSING TAG is a hard partial-release failure (Apple SPM can't
-          # resolve it, and tags are pushed before publish so a missing tag means
-          # something is badly wrong). Maven sync lag is a warning (see above).
-          if [ $FAIL -ne 0 ]; then
-            echo "::error::Release v$VERSION is PARTIAL — the git tag is missing on origin, so Apple SPM consumers cannot resolve it. Investigate before downstream consumers (Meshtastic-Android, Meshtastic-Apple) bump."
+            echo "::error::v$V is missing on origin, so SPM consumers cannot resolve this release"
             exit 1
           fi
-          echo ""
-          if [ "$HTTP" = "200" ]; then
-            echo "✓ Release v$VERSION verified end-to-end: tag on origin + POM on Maven Central"
-          else
-            echo "✓ Release v$VERSION: tag on origin + GitHub release published. Maven Central sync still pending (see warning) — expected to resolve shortly."
+
+          POM="https://repo1.maven.org/maven2/org/meshtastic/takpacket-sdk-jvm/$V/takpacket-sdk-jvm-$V.pom"
+          HTTP=000
+          for i in $(seq 1 25); do
+            HTTP=$(curl -sS -o /dev/null -w "%{http_code}" "$POM")
+            if [ "$HTTP" = 200 ]; then
+              echo "ok   $POM (attempt $i)"
+              break
+            fi
+            echo "wait $POM: HTTP $HTTP (attempt $i/25)"
+            sleep 60
+          done
+          if [ "$HTTP" != 200 ]; then
+            echo "::warning::$POM has not synced after 25 minutes. The publish step succeeded, so this is Central Portal propagation; confirm it resolves before downstream consumers bump."
           fi
+
+      - name: Dry-run summary
+        if: env.DRY_RUN == 'true'
+        run: echo "dry run passed every gate for ${{ steps.version.outputs.version }}; nothing was tagged, attested, published or released"

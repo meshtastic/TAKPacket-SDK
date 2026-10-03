@@ -47,7 +47,7 @@ Plus per-platform: `DictionaryProvider` (loads zstd dicts from resources) and `T
 - Other platforms validate AGAINST those goldens; they don't generate them
 - When adding a new fixture: drop `.xml` in `testdata/cot_xml/`, run `./gradlew jvmTest` from `kotlin/` (auto-discovers via `TestFixtures.kt`), commit the generated goldens
 - Proto types come from the published `org.meshtastic:protobufs` KMP artifact (version in `kotlin/gradle/libs.versions.toml`, declared as a `commonMain implementation` dependency because Native/JS/Wasm cannot link a `compileOnly` one) — they are not generated in this repo. It ships transitively in the published POM/metadata; Android consumers bring the same artifact and own its version. That artifact is Wire-generated upstream with `boxOneOfsMinSize = 5000` (flattens oneofs to nullable fields), which is why the serializer sees nullable oneof arms.
-- Published to **Maven Central** (primary) via the vanniktech maven-publish plugin: `org.meshtastic:takpacket-sdk-jvm:<version>`. **JitPack** remains a fallback: `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm:<tag>`.
+- Published to **Maven Central** (primary) via the vanniktech maven-publish plugin: `org.meshtastic:takpacket-sdk:<version>`, which Gradle resolves to the matching target variant. **JitPack** remains a fallback: `com.github.meshtastic.TAKPacket-SDK:takpacket-sdk-jvm:<tag>`.
 
 **Environment prerequisites (these cost real time when missed):**
 - **Kotlin/Gradle needs JDK 21.** Export before any Gradle call, and use `./gradlew` (not a system `gradle`):
@@ -169,15 +169,16 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 
 ## Changelog
 
-- `CHANGELOG.md` is at the **repo root** and covers **all five bindings** — one `VERSION`, one tag, one Release, one entry. It is hand-written; the `org.jetbrains.changelog` plugin (wired in `kotlin/build.gradle.kts`, reaching up one directory) only parses and renders it
+- `CHANGELOG.md` is at the **repo root** and covers **all five bindings**: one `VERSION`, one tag, one Release, one entry. It is hand-written; `scripts/changelog.sh` cuts and reads it without re-rendering any other line
 - Add an entry under `## [Unreleased]` for anything a consumer would notice. **A change that moves `kotlin/api/*.api` always needs one**, under `### Breaking` if a consumer must change code rather than just recompile. A change landing in several bindings gets ONE entry naming them
-- `./kotlin/gradlew -p kotlin getChangelog --no-header --no-links` (there is no root wrapper; from inside `kotlin/` it is the bare `./gradlew`) is what `release.yml` puts in the Release body — GitHub's own `generate_release_notes` is deliberately off, so the release is described once. `release.yml` fails before publishing if the version has no `## [x.y.z]` section, because `getChangelog` otherwise falls back silently to the previous release's
+- `scripts/changelog.sh notes X.Y.Z` is what `release.yml` puts in the Release body, and GitHub's own `generate_release_notes` is off, so the release is described once. It fails on a missing or empty section, which stops the release before anything is tagged. `scripts/changelog.sh cut X.Y.Z` is what the Bump version workflow runs
 - See CONTRIBUTING.md → Changelog for the full policy
 
 ## CI/CD
 
 - **CI** (`.github/workflows/ci.yml`): all 5 platforms tested on push/PR to main/master
-- **Release** (`.github/workflows/release.yml`): manual dispatch, reads `VERSION` / `kotlin/gradle.properties:VERSION_NAME`, tests all platforms, **publishes the Kotlin artifacts to Maven Central** (vanniktech `publishAllPublicationsToMavenCentralRepository`, `automaticRelease = true`), and creates a GitHub Release. It probes repo1.maven.org first, so a re-run skips an already-published version.
+- **Bump version** (`.github/workflows/bump-version.yml`): manual dispatch with a version; stamps all five version sources via `scripts/bump-version.sh`, cuts the changelog, and opens the release PR.
+- **Release** (`.github/workflows/release.yml`): dispatch with `version` (and optional `dry_run`) on `main`, or push a `vX.Y.Z` tag on `main`. Gates on `main`, all five version sources equal to the requested version, the changelog section, green required CI on the commit (`scripts/release-checks.sh green-ci`) and no `-SNAPSHOT` in the staged POMs (`no-snapshots`), then tests all platforms, **publishes `org.meshtastic:takpacket-sdk` to Maven Central** (`publishAndReleaseToMavenCentral`), pushes the tag, and creates or updates the GitHub Release with the per-language packages attached. It probes repo1.maven.org first, so a re-run skips an already-published version. A dry run tags, publishes and releases nothing. Steps in `RELEASING.md`.
 - **JitPack** (`jitpack.yml`): fallback channel, triggered by git tags — runs `publishToMavenLocal` and serves the artifacts under `com.github.meshtastic:TAKPacket-SDK:<tag>`. Cold build ~120-150s; trigger URL: `https://jitpack.io/com/github/meshtastic/TAKPacket-SDK/<tag>/TAKPacket-SDK-<tag>.pom`
 
 ## Downstream consumers
