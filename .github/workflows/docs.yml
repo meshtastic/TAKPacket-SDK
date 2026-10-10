@@ -62,7 +62,7 @@ jobs:
           # and no other step in this job needs the credential.
           DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
         run: ./gradlew dokkaGeneratePublicationHtml --quiet
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-kotlin
           path: kotlin/build/dokka/html
@@ -92,7 +92,7 @@ jobs:
         # archive. The deploy job untars it; Pages' own upload-pages-artifact also
         # tars, so serving the ":" files works fine.
         run: tar -czf docc-swift.tgz -C docc-out .
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-swift
           path: docc-swift.tgz
@@ -113,7 +113,7 @@ jobs:
       - name: Build TypeDoc
         working-directory: typescript
         run: npm run docs
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-typescript
           path: typescript/docs
@@ -132,7 +132,7 @@ jobs:
         run: pip install -e "./python[dev]"
       - name: Build pdoc
         run: pdoc meshtastic_tak -o site-python -d google
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-python
           path: site-python
@@ -154,7 +154,7 @@ jobs:
       - name: Build DocFX site
         working-directory: csharp
         run: docfx docfx.json
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: docs-csharp
           path: csharp/_site
