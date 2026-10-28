@@ -37,11 +37,20 @@ internal object StartEpoch {
     /**
      * How far ahead of the receiver's clock a reconstructed start may be.
      *
-     * Only clock skew should ever put a start in the future, so this is tight.
-     * It is also the side where a boundary artefact would land, so a loose
-     * value here would let one through.
+     * This guards CLOCK SKEW and nothing else. Transit only ever makes a report
+     * older, so a start ahead of the receiver means the two clocks disagree, and a
+     * sender whose clock runs consistently fast still orders its own reports
+     * correctly because the offset cancels. Rejecting such a start loses that
+     * ordering outright, and the fallback to decode time is silent, so this is
+     * deliberately generous rather than tight.
+     *
+     * It does NOT guard a wrong-window reconstruction. Nearest-candidate selection is
+     * exact at a window boundary, and an out-of-window value lands a full [MODULUS]
+     * away, so any bound far below that catches it. (An earlier revision of this file
+     * claimed otherwise; that was left over from a bit-splice implementation whose
+     * error really did land just ahead of the clock.)
      */
-    const val FUTURE_TOLERANCE_SECONDS: Long = 5L
+    const val FUTURE_TOLERANCE_SECONDS: Long = 60L
 
     /**
      * How far behind the receiver's clock a reconstructed start may be.

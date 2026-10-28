@@ -238,9 +238,14 @@ public class CotXmlBuilder {
                 .toLong()
                 .coerceAtLeast(45)
                 .seconds
-        // An honest `start` must not cost visibility: a transit longer than the event's
-        // own lifetime would otherwise arrive already expired and never be displayed.
-        val stale = maxOf(start + staleWindow, now + 45.seconds)
+        // `stale` stays measured from ARRIVAL, deliberately unchanged by this field.
+        // Deriving it from `start` instead would cut an event's visibility by however
+        // long it spent in transit, and for one that took longer than its own window it
+        // would arrive nearly expired. ATAK pads static types generously before sending,
+        // but not PLI or chat, which are exactly the ones whose transit can exceed their
+        // window. Only `time`/`start` become honest here; lifetime after arrival does not
+        // change.
+        val stale = now + staleWindow
         val staleStr = stale.toString()
 
         val cotType = packet.cotTypeString()

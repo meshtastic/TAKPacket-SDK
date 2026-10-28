@@ -73,13 +73,22 @@ class StartRoundTripCommonTest {
     }
 
     @Test
-    fun `stale is never emitted in the past for an old start`() {
-        // start + staleSeconds can already have elapsed; the event must still be
-        // visible on arrival rather than dead on delivery.
+    fun `stale is measured from arrival rather than the recovered start`() {
+        // An honest `start` must not shorten the event's life. This one spent ten
+        // minutes in transit against a 60 s window, so deriving `stale` from `start`
+        // would arrive long expired and never display. ATAK pads static types before
+        // sending but not PLI or chat, which are exactly the types whose transit can
+        // exceed their own window, so the full window has to run from arrival.
+        val window = 60L
         val start = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - 600L)
-        val packet = parser.parse(cotWithStart(start, start.plusSeconds(60)))
+        val packet = parser.parse(cotWithStart(start, start.plusSeconds(window)))
+        val before = Clock.System.now().epochSeconds
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
         val stale = Instant.parse(Regex("""stale="([^"]+)"""").find(rebuilt)!!.groupValues[1])
+
+        // Roughly now + window, NOT start + window (which is already 540 s in the past).
+        val fromArrival = stale.epochSeconds - before
+        assertTrue(fromArrival in (window - 5)..(window + 10), "stale is not arrival-measured: $fromArrival s")
         assertTrue(stale > Clock.System.now(), "stale is already in the past: $stale")
     }
 
