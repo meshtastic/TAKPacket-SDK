@@ -2,6 +2,7 @@ package org.meshtastic.tak
 
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * Reconstructs a CoT (Cursor-on-Target) XML event string from a [TakPacketV2Data].
@@ -223,13 +224,23 @@ public class CotXmlBuilder {
         // DateTimeFormatter.ISO_INSTANT output and re-parseable by the parser's
         // Instant.parse on the receive side.
         val now = Clock.System.now()
-        val timeStr = now.toString()
-        val stale =
-            now +
-                packet.staleSeconds
-                    .toLong()
-                    .coerceAtLeast(45)
-                    .seconds
+        // Prefer the sender's own `start`. Without it every packet decodes as current,
+        // so a report delayed on the mesh outranks a newer one that arrived promptly,
+        // and nothing downstream can order two reports for one UID.
+        val start =
+            packet.startEpochLo14
+                ?.let { StartEpoch.reconstruct(it, now.epochSeconds) }
+                ?.let { Instant.fromEpochSeconds(it) }
+                ?: now
+        val timeStr = start.toString()
+        val staleWindow =
+            packet.staleSeconds
+                .toLong()
+                .coerceAtLeast(45)
+                .seconds
+        // An honest `start` must not cost visibility: a transit longer than the event's
+        // own lifetime would otherwise arrive already expired and never be displayed.
+        val stale = maxOf(start + staleWindow, now + 45.seconds)
         val staleStr = stale.toString()
 
         val cotType = packet.cotTypeString()

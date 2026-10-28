@@ -39,6 +39,12 @@ package org.meshtastic.tak
  * @property altSrc altitude source as a `GeoPointSource` enum int.
  * @property uid the CoT event UID (kept as a string — never packed to raw bytes).
  * @property deviceCallsign device identifier from `<uid Droid="…"/>`.
+ * @property startEpochLo14 the low 14 bits of the event's `start` as epoch
+ *   seconds, or null when the sender did not supply one. Carried so a receiver
+ *   can tell how old a report actually is: without it the builder has nothing to
+ *   rebuild `start` from and stamps the decode time, which makes every packet
+ *   look equally fresh however long it spent in transit. See [StartEpoch] for
+ *   the reconstruction, which is not a plain bit-splice.
  * @property staleSeconds seconds from the event's `time` to its `stale`
  *   timestamp; the builder floors this at 45 s on emit.
  * @property takVersion TAK client version string.
@@ -101,6 +107,13 @@ public data class TakPacketV2Data(
      */
     val marti: List<String> = emptyList(),
     val payload: Payload = Payload.None,
+    // Deliberately last rather than beside staleSeconds, where it reads better. This is
+    // a data class, so a parameter inserted in the middle shifts every componentN()
+    // after it and rewrites the all-args constructor signature, which breaks a consumer
+    // compiled against the previous version at runtime rather than at build time. Three
+    // products pin this library. Appending also matches the proto, where the field is
+    // tag 43, the highest.
+    val startEpochLo14: Int? = null,
 ) {
     /**
      * Weather annotation from a CoT `<environment>` detail element.

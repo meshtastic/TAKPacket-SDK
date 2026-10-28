@@ -3,6 +3,7 @@ package org.meshtastic.tak
 import nl.adaptivity.xmlutil.EventType
 import nl.adaptivity.xmlutil.xmlStreaming
 import kotlin.math.roundToInt
+import kotlin.time.Clock
 import kotlin.time.Instant
 
 /**
@@ -38,6 +39,7 @@ public class CotXmlParser {
         var cotTypeStr = ""
         var howStr = ""
         var timeStr = ""
+        var startStr = ""
         var staleStr = ""
         var lat = 0.0
         var lon = 0.0
@@ -239,6 +241,7 @@ public class CotXmlParser {
                                 cotTypeStr = reader.getAttributeValue(null, "type") ?: ""
                                 howStr = reader.getAttributeValue(null, "how") ?: ""
                                 timeStr = reader.getAttributeValue(null, "time") ?: ""
+                                startStr = reader.getAttributeValue(null, "start") ?: ""
                                 staleStr = reader.getAttributeValue(null, "stale") ?: ""
                                 isDeleteEvent = cotTypeStr == "t-x-d-d"
                             }
@@ -927,6 +930,11 @@ public class CotXmlParser {
         // Compute stale seconds
         val staleSeconds = computeStaleSeconds(timeStr, staleStr)
 
+        // Carry the event's `start` so a receiver can tell how old the report is.
+        // Falls back to `time`: ATAK sets the two equal on every event it emits, and a
+        // producer that supplies only `time` still means "generated then".
+        val startEpochLo14 = computeStartEpochLo14(startStr.ifEmpty { timeStr })
+
         // Determine CoT type enum
         val cotTypeId = CotTypeMapper.typeToEnum(cotTypeStr)
         val cotTypeStrField = if (cotTypeId == CotTypeMapper.COTTYPE_OTHER) cotTypeStr else null
@@ -1142,6 +1150,7 @@ public class CotXmlParser {
             uid = uid,
             deviceCallsign = deviceCallsign,
             staleSeconds = staleSeconds,
+            startEpochLo14 = startEpochLo14,
             takVersion = takVersion,
             takDevice = takDevice,
             takPlatform = takPlatform,
@@ -1154,6 +1163,33 @@ public class CotXmlParser {
             marti = martiDests.toList(),
             payload = payload,
         )
+    }
+
+    /**
+     * The low 14 bits of an ISO-8601 instant, for `TAKPacketV2.start_epoch_lo14`.
+     *
+     * Returns null for an absent or unparseable value rather than a sentinel: the
+     * field is optional on the wire precisely so "the sender did not supply one" is
+     * distinguishable from a legitimate zero, and a receiver that gets nothing falls
+     * back to its decode time.
+     *
+     * Returns null too when the instant is further from now than the window can
+     * express, because such a value would reconstruct silently as a plausible recent
+     * time in the wrong window. Sending nothing is the honest answer.
+     */
+    private fun computeStartEpochLo14(instant: String): Int? {
+        if (instant.isEmpty()) return null
+        return try {
+            val seconds = Instant.parse(instant).epochSeconds
+            val age = Clock.System.now().epochSeconds - seconds
+            if (age < -StartEpoch.FUTURE_TOLERANCE_SECONDS || age > StartEpoch.PAST_LIMIT_SECONDS) {
+                null
+            } else {
+                StartEpoch.truncate(seconds)
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     /**
