@@ -58,6 +58,13 @@ ACTUAL_SWIFT_GEN="$(protoc-gen-swift --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.
 if [ "$ACTUAL_SWIFT_GEN" != "$SWIFT_PROTOBUF_VERSION" ]; then
     echo "Error: protoc-gen-swift ${ACTUAL_SWIFT_GEN:-unknown} on PATH, expected ${SWIFT_PROTOBUF_VERSION}."
     echo "       That pin tracks swift/Package.swift; change both together or not at all."
+    # Printed because an unparseable version usually means the binary did not RUN, not
+    # that it reported something odd, and the two look identical from here. A Swift
+    # binary built inside a container and copied out needs the Swift runtime unless it
+    # was linked with --static-swift-stdlib, and fails in the dynamic loader with no
+    # version string at all.
+    echo "       It reported:"
+    protoc-gen-swift --version 2>&1 | sed 's/^/         /' | head -5 || true
     exit 1
 fi
 
