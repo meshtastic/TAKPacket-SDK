@@ -44,7 +44,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: true
-          persist-credentials: false
+          # Credentials ARE persisted, because the last step pushes with plain git the
+          # way bump-version.yml does. The firmware workflow this is modelled on sets
+          # persist-credentials: false and can afford to, because it pushes through
+          # peter-evans/create-pull-request with an explicit token instead.
 
       - name: Resolve protobufs branch
         id: resolve
@@ -57,6 +60,12 @@ jobs:
             BRANCH="$TRIGGER_BRANCH"
           else
             BRANCH="$INPUT_BRANCH"
+          fi
+          # This repo's trunk is `main`; protobufs' is `master`. Without this the
+          # default input dispatched from the default branch resolves to a branch
+          # protobufs does not have, so the common case always failed.
+          if [ "$BRANCH" = "main" ]; then
+            BRANCH="master"
           fi
           case "$BRANCH" in
             master | develop) ;;
@@ -108,8 +117,11 @@ jobs:
             cd /src
             swift build -c release --product protoc-gen-swift
             cp \"\$(swift build -c release --product protoc-gen-swift --show-bin-path)/protoc-gen-swift\" /out/
+            chmod 0755 /out/protoc-gen-swift
           "
-          chmod +x "${RUNNER_TEMP}/protoc-gen-swift"
+          # chmod inside the container deliberately: it runs as root, so the copy lands
+          # root-owned and the runner user cannot chmod it afterwards.
+          test -x "${RUNNER_TEMP}/protoc-gen-swift"
           echo "${RUNNER_TEMP}" >>"$GITHUB_PATH"
 
       - name: Regenerate
@@ -142,9 +154,16 @@ jobs:
           git commit -m "Update protobufs and regenerate classes"
           git push --force-with-lease origin "$BRANCH"
 
-          gh pr create --fill --head "$BRANCH" --base "$GITHUB_REF_NAME" \
+          # Checked rather than swallowed with a fallback: `|| echo notice` let any
+          # failed create look like an already-open PR and the run go green.
+          EXISTING="$(gh pr list --head "$BRANCH" --state open --json number --jq 'length')"
+          if [ "$EXISTING" != "0" ]; then
+            echo "::notice::A pull request for $BRANCH is already open; pushed to it instead."
+            exit 0
+          fi
+
+          gh pr create --head "$BRANCH" --base "$GITHUB_REF_NAME" \
             --title "Update protobufs and regenerate classes" \
             --body "Regenerated from \`meshtastic/protobufs@${SRC_BRANCH}\` by the Update protobufs workflow.
 
-          Review the generator version markers: a change to one without a schema change means the toolchain moved, not the schema." \
-            || echo "::notice::A pull request for $BRANCH already exists."
+          Review the generator version markers: a change to one without a schema change means the toolchain moved, not the schema."

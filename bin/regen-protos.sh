@@ -43,6 +43,27 @@ if [ "$ACTUAL_PROTOC" != "$PROTOC_VERSION" ]; then
     exit 1
 fi
 
+if ! have protoc-gen-swift; then
+    echo "Error: protoc-gen-swift not on PATH. Expected ${SWIFT_PROTOBUF_VERSION}."
+    echo "       It ships no prebuilt Linux binary; build it from the pinned tag, or"
+    echo "       use the Update protobufs workflow, which does that for you."
+    exit 1
+fi
+
+# Version-checked for the same reason protoc is: the generated file records the
+# generator, so a mismatch rewrites that marker with no schema change. This pin also
+# has to agree with the SwiftProtobuf the generated code links against, which is the
+# `from:` pin in swift/Package.swift.
+ACTUAL_SWIFT_GEN="$(protoc-gen-swift --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)"
+if [ "$ACTUAL_SWIFT_GEN" != "$SWIFT_PROTOBUF_VERSION" ]; then
+    echo "Error: protoc-gen-swift ${ACTUAL_SWIFT_GEN:-unknown} on PATH, expected ${SWIFT_PROTOBUF_VERSION}."
+    echo "       That pin tracks swift/Package.swift; change both together or not at all."
+    exit 1
+fi
+
+# Every tool is validated above, before the first mutation below. Pruning deletes
+# files, so a precondition discovered late would leave the tree worse than it was.
+
 # atak.proto AND its transitive imports, derived from the files rather than listed.
 #
 # Listing atak.proto alone was the original bug: it gained
@@ -83,14 +104,45 @@ if [ -z "$WELL_KNOWN" ] || [ ! -f "$WELL_KNOWN/google/protobuf/descriptor.proto"
 fi
 echo "Regenerating ${#PROTOS[@]} proto file(s) (${PROTOS[*]}) with protoc ${PROTOC_VERSION}..."
 
+# Drop generated files whose proto is no longer in the closure. Without this an
+# upstream import that goes away leaves its binding on disk, and since the workflow
+# stages whole directories, the stale file ships in the package.
+#
+# Identified by the generator's own marker rather than by filename, because in the C#
+# target generated and hand-written sources share a directory with no naming convention
+# between them: Atak.cs is generated, AtakPalette.cs is not.
+prune_stale() {
+    local dir="$1" pattern="$2" marker="$3"
+    shift 3
+    local keep=" $* "
+    local f base
+    for f in "$dir"/$pattern; do
+        [ -e "$f" ] || continue
+        base="$(basename "$f")"
+        case "$keep" in *" $base "*) continue ;; esac
+        if [ -n "$marker" ] && ! head -5 "$f" | grep -q "$marker"; then
+            continue
+        fi
+        echo "    removing stale $base"
+        rm -f "$f"
+    done
+}
+
+SWIFT_KEEP=() PY_KEEP=() CS_KEEP=()
+for rel in "${PROTOS[@]}"; do
+    stem="$(basename "$rel" .proto)"
+    SWIFT_KEEP+=("${stem}.pb.swift")
+    PY_KEEP+=("${stem}_pb2.py")
+    # protoc PascalCases the stem for C#: field_metadata.proto -> FieldMetadata.cs
+    CS_KEEP+=("$(echo "$stem" | awk -F_ '{for(i=1;i<=NF;i++) printf "%s%s", toupper(substr($i,1,1)), substr($i,2); print ""}').cs")
+done
+
+prune_stale "$ROOT/swift/Sources/MeshtasticTAK" '*.pb.swift' '' "${SWIFT_KEEP[@]}"
+prune_stale "$ROOT/python/src/meshtastic_tak" '*_pb2.py' '' "${PY_KEEP[@]}"
+prune_stale "$ROOT/csharp/src/Meshtastic.TAK" '*.cs' 'auto-generated' "${CS_KEEP[@]}"
+
 # ---------------------------------------------------------------- Swift
 echo "  Swift..."
-if ! have protoc-gen-swift; then
-    echo "Error: protoc-gen-swift not on PATH. Expected ${SWIFT_PROTOBUF_VERSION}."
-    echo "       It ships no prebuilt Linux binary; build it from the pinned tag, or"
-    echo "       use the Update protobufs workflow, which does that for you."
-    exit 1
-fi
 protoc \
     --swift_opt=Visibility=Public \
     --swift_out="$ROOT/swift/Sources/MeshtasticTAK" \
