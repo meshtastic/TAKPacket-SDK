@@ -1173,9 +1173,12 @@ public class CotXmlParser {
      * distinguishable from a legitimate zero, and a receiver that gets nothing falls
      * back to its decode time.
      *
-     * Returns null too when the instant is further from now than the window can
-     * express, because such a value would reconstruct silently as a plausible recent
-     * time in the wrong window. Sending nothing is the honest answer.
+     * Returns null too when the instant is further from now than
+     * [StartEpoch.PAST_LIMIT_SECONDS] (or [StartEpoch.FUTURE_TOLERANCE_SECONDS] ahead),
+     * which is an hour, not the width of the window. That gate is what keeps a receiver
+     * out of the band where reconstruction is wrongly accepted: see the note on those
+     * constants. Sending nothing is the honest answer, and the receiver falls back to
+     * its decode time.
      */
     private fun computeStartEpochLo14(instant: String): Int? {
         if (instant.isEmpty()) return null

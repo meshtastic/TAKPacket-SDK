@@ -64,12 +64,14 @@ class StartRoundTripCommonTest {
     }
 
     @Test
-    fun `a start older than the window is not encoded`() {
-        // The fixture case, asserted deliberately: refusing is correct, because an
-        // out-of-window value would reconstruct as a plausible recent time.
+    fun `a start past the sender gate is not encoded`() {
+        // 3660 s is well INSIDE the 8192 s window, so this exercises the sender gate,
+        // PAST_LIMIT_SECONDS, and not the window. Worth pinning in its own right: that
+        // gate is the only thing keeping a receiver out of the band where reconstruction
+        // is wrongly accepted. The fixture corpus takes this path too, being months old.
         val tooOld = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - StartEpoch.PAST_LIMIT_SECONDS - 60L)
         val packet = parser.parse(cotWithStart(tooOld, tooOld.plusSeconds(300)))
-        assertNull(packet.startEpochLo14, "an out-of-window start should not be encoded")
+        assertNull(packet.startEpochLo14, "a start past the sender gate should not be encoded")
     }
 
     @Test

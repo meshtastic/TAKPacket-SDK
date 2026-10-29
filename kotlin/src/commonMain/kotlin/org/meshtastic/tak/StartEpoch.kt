@@ -37,48 +37,51 @@ internal object StartEpoch {
     /**
      * How far ahead of the receiver's clock a reconstructed start may be.
      *
-     * This guards CLOCK SKEW and nothing else. Transit only ever makes a report
-     * older, so a start ahead of the receiver means the two clocks disagree, and a
-     * sender whose clock runs consistently fast still orders its own reports
-     * correctly because the offset cancels. Rejecting such a start loses that
-     * ordering outright, and the fallback to decode time is silent, so this is
-     * deliberately generous rather than tight. Note the comparison this field
-     * supports is only ever between reports from ONE sender, where a constant
-     * offset cancels, so a fast clock cannot let its owner outrank anyone else.
+     * Guards CLOCK SKEW. Transit only ever makes a report older, so a start ahead of
+     * the receiver means the clocks disagree, and the budget is spent by BOTH of them:
+     * a receiver 20 min slow reading a sender 20 min fast sees a 40 min apparent
+     * offset while neither is far off alone. So an hour is about half an hour of drift
+     * per device, which is the figure to reason about. A sender whose clock runs
+     * consistently fast still orders its own reports correctly, because a constant
+     * offset cancels, and rejecting those starts loses that ordering for nothing.
      *
-     * It does NOT guard a wrong-window reconstruction. Nearest-candidate selection is
-     * exact at a window boundary, and an out-of-window value lands a full [MODULUS]
-     * away, so any bound far below that catches it. (An earlier revision of this file
-     * claimed otherwise; that was left over from a bit-splice implementation whose
-     * error really did land just ahead of the clock.)
+     * This value also bounds how far a recovered `start` can pull CoT `time`, which
+     * [CotXmlBuilder] writes from it. That is the same exposure a TAK Server peer
+     * already has, since clients stamp their own `time`; here it is capped at an hour.
      */
     const val FUTURE_TOLERANCE_SECONDS: Long = 3600L
 
     /**
      * How far behind the receiver's clock a reconstructed start may be.
      *
-     * Loose for the same reason: a sender whose clock runs slow still orders its own
-     * reports correctly, and a tight bound here would discard all of its traffic.
+     * Loose for the same reason: a slow sender still orders its own reports correctly,
+     * and a tight bound here would discard all of its traffic.
      */
     const val PAST_LIMIT_SECONDS: Long = 3600L
 
     /*
-     * Why an hour each way is safe, and what to check before widening it.
+     * What the bounds actually protect, and why widening them costs double.
      *
-     * The field is `start` mod 16384 s, so the modulus spans 4.55 h. But the range a
-     * receiver resolves UNAMBIGUOUSLY is half of that in EACH direction: [HALF], or
-     * 2.27 h. Past that, nearest-candidate picks the adjacent window and returns a
-     * plausible recent time wrong by a full [MODULUS], undetectably.
+     * Reconstruction is exact while the true age is under [HALF]. Past that it lands a
+     * full [MODULUS] out, which does NOT simply get rejected: a true age `d` in
+     * [HALF, MODULUS) reconstructs as `d - MODULUS`, i.e. in the future, so the future
+     * bound catches it only until `d` reaches `MODULUS - FUTURE_TOLERANCE_SECONDS`.
+     * Measured, at an hour each way:
      *
-     * An hour therefore leaves about 1.28 h of margin per side. Note the hour is spent
-     * by BOTH clocks, not just the sender's: a receiver 20 min slow reading a sender
-     * 20 min fast sees a 40 min apparent offset while neither device is far off on its
-     * own. So an hour tolerates roughly half an hour of drift per device, plus transit,
-     * and that per-device figure is the one to reason about rather than the hour.
+     *     true age        0 ..  3600 s   exact
+     *     true age     3601 .. 12783 s   rejected, caller falls back to decode time
+     *     true age    12784 .. 19984 s   WRONGLY ACCEPTED, off by a full MODULUS
      *
-     * At two hours each way the margin falls to roughly 16 minutes, where two drifting
-     * clocks plus transit could cross the boundary. So the figure to check a wider
-     * bound against is [HALF], not [MODULUS].
+     * so the band is [MODULUS - FUTURE_TOLERANCE_SECONDS, MODULUS + PAST_LIMIT_SECONDS]
+     * and it cannot be closed from the receiver alone.
+     *
+     * What keeps it unreachable is the SENDER gate: [CotXmlParser] will not encode a
+     * `start` older than [PAST_LIMIT_SECONDS], so arriving in that band takes transit
+     * (net of skew) of `MODULUS - 2 * bound`. At an hour that is 9184 s, 2.55 h, which
+     * no mesh delivers. Note both gates use the same constant, so widening costs margin
+     * twice over: at two hours each way the required transit falls to 1984 s, 33 min,
+     * which is no longer implausible. Check a wider bound against that figure, not
+     * against [HALF].
      */
 
     /** The low 14 bits of [epochSeconds], which is what goes on the wire. */

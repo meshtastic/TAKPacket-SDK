@@ -17,9 +17,11 @@ import kotlin.time.Instant
  * Multiplatform: built only on `kotlin.time` and `StringBuilder`, so it runs on
  * every KMP target. Stateless and safe to reuse across calls.
  *
- * Lossy by design where CoT carries fields the wire format drops: the
- * `time` / `start` / `stale` timestamps are regenerated from the wall clock at
- * build time (the wire carries only `stale_seconds`), and a few elements ATAK
+ * Lossy by design where CoT carries fields the wire format drops: `stale` is
+ * regenerated from the wall clock at build time (the wire carries `stale_seconds`, a
+ * duration), `time` / `start` come from the sender's `start_epoch_lo14` when it
+ * supplied one and it reconstructs plausibly and are otherwise regenerated too, and a
+ * few elements ATAK
  * requires for rendering (e.g. route `<strokeColor>`/`<contact>`) are
  * synthesized from defaults rather than echoed from the source.
  */
@@ -204,9 +206,12 @@ public class CotXmlBuilder {
     /**
      * Build a complete CoT XML `<event>` document from [packet].
      *
-     * The `time` and `start` attributes are set to the current wall-clock
-     * instant; `stale` is that instant plus `packet.staleSeconds` (floored at
-     * 45 s). Units are converted back to ATAK's conventions on the way out —
+     * The `time` and `start` attributes carry the sender's own `start` when
+     * [TakPacketV2Data.startEpochLo14] is present and reconstructs plausibly, so a
+     * report that spent time in transit is not presented as current; they fall back to
+     * the current wall-clock instant otherwise. `stale` is unaffected by that and stays
+     * measured from arrival, the decode instant plus `packet.staleSeconds` (floored at
+     * 45 s), so an honest `start` never shortens an event's life. Units are converted back to ATAK's conventions on the way out —
      * `speed` cm/s → m/s, `course` degrees×100 → degrees, shape radii cm → m —
      * and palette/ARGB colors are resolved via [AtakPalette]. A packet with no
      * payload variant ([TakPacketV2Data.Payload.None] / an implicit PLI) emits

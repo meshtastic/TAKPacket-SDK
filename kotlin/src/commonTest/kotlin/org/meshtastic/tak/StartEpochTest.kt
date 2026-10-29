@@ -2,6 +2,7 @@ package org.meshtastic.tak
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 /**
@@ -58,6 +59,34 @@ class StartEpochTest {
         val now = b + 8000L
         val old = now - StartEpoch.PAST_LIMIT_SECONDS
         assertEquals(old, StartEpoch.reconstruct(StartEpoch.truncate(old), now))
+    }
+
+    @Test
+    fun `documents the band where reconstruction is wrongly accepted`() {
+        // Not a wish, a fact: a true age in [MODULUS - FUTURE, MODULUS + PAST] comes back
+        // off by a full MODULUS and passes both bounds, because it reconstructs as a
+        // near-future time. The receiver cannot detect it; only the sender gate keeps it
+        // unreachable, by refusing to encode a start older than PAST_LIMIT_SECONDS.
+        // Pinned so the band moves visibly if either bound is widened.
+        val now = StartEpoch.MODULUS * 109_000L + 5_000L
+        val bandStart = StartEpoch.MODULUS - StartEpoch.FUTURE_TOLERANCE_SECONDS
+        val bandEnd = StartEpoch.MODULUS + StartEpoch.PAST_LIMIT_SECONDS
+
+        // just below the band: still rejected
+        val safe = now - (bandStart - 1L)
+        assertNull(StartEpoch.reconstruct(StartEpoch.truncate(safe), now))
+
+        // inside it: accepted, and wrong by exactly one MODULUS
+        for (age in listOf(bandStart, (bandStart + bandEnd) / 2, bandEnd)) {
+            val trueStart = now - age
+            val got = StartEpoch.reconstruct(StartEpoch.truncate(trueStart), now)
+            assertNotNull(got, "age $age should be (wrongly) accepted")
+            assertEquals(StartEpoch.MODULUS, got - trueStart, "age $age should be off by one MODULUS")
+        }
+
+        // just past it: rejected again
+        val beyond = now - (bandEnd + 1L)
+        assertNull(StartEpoch.reconstruct(StartEpoch.truncate(beyond), now))
     }
 
     @Test
