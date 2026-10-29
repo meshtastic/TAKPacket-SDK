@@ -31,6 +31,46 @@ One version covers all five bindings, so a release is a single tag and a single 
   golden frames are unchanged and an older peer simply ignores it. Implemented
   in the Kotlin binding; Swift, Python, TypeScript and C# to follow.
 
+- `CotXmlBuilder.buildWithOrigin`, returning the CoT XML together with a
+  `StartRecovery` case and the sender's own `start` when there is one.
+
+  `build` cannot express the difference. It stamps the decode instant whenever
+  it has nothing better, and that fallback is indistinguishable from a genuine
+  `start` once it is in the XML while reading as maximally fresh, so a consumer
+  reading the attribute back out would let an unorderable copy win every
+  comparison. `build` is unchanged and now delegates, so one computation backs
+  both and the reported instant can never disagree with the emitted attribute.
+
+  `RECOVERED`, `ABSENT` and `REFUSED` are three cases rather than a nullable
+  because a consumer that discards a report over an unusable timestamp needs
+  the last two separated: `ABSENT` means the sender populated nothing, while
+  `REFUSED` means it populated a value its own clock certified and the receiver
+  disagreed by more than the bound, which accuses a clock rather than reporting
+  an old event. What to do about `REFUSED` stays with the caller, since a bad
+  clock does not impeach the uid, type or position.
+
+  The reference instant is a parameter, defaulting to now. Rebuilding a stored
+  capture against the current clock would refuse every carried `start` by
+  construction, so passing the original decode instant is what makes a
+  recording decodable.
+
+### Changed
+
+- Both `start_epoch_lo14` bounds are an hour, in either direction, up from a few
+  seconds on the future side. The skew budget is spent by BOTH clocks, so a
+  receiver twenty minutes slow reading a sender twenty minutes fast presents a
+  forty minute apparent offset while neither device is far off alone.
+
+### Fixed
+
+- Documentation: the guidance said the sender gate made the wrong-window band
+  unreachable and attributed the required 2.55 hours to transit. The gate bounds
+  a `start` against the SENDER's own clock and says nothing about the two clocks
+  disagreeing, which is what actually carries an offset into the band; transit
+  contributes seconds. The band is an accepted risk, reachable only by a clock
+  wrong by hours, and the guidance now says so and states that the timestamps
+  are UTC.
+
 ## [0.9.3] - 2026-10-03
 
 The first release on Maven Central since 0.9.1: 0.9.2 was tagged but never
