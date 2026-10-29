@@ -25,8 +25,8 @@ class StartRoundTripCommonTest {
     private val compressor = TakCompressor()
 
     // Split so the Kotlin raw string does not have to nest a quote next to its terminator.
-    private val STARTED_AT = "start=\""
-    private val QUOTE = "\""
+    private val startedAt = "start=\""
+    private val quote = "\""
 
     private fun cotWithStart(
         start: Instant,
@@ -207,7 +207,7 @@ class StartRoundTripCommonTest {
         assertEquals(start, built.originStart)
         // The reported instant and the emitted attribute must be the same value: one
         // computation, so a caller cannot act on an origin time the map never saw.
-        assertTrue(built.xml.contains(STARTED_AT + start + QUOTE), "xml disagrees: ${built.xml}")
+        assertTrue(built.xml.contains(startedAt + start + quote), "xml disagrees: ${built.xml}")
         // The convenience overload must agree on the fields the recovery governs. Not on
         // `stale`, which is `now + window` and so differs by however long the two calls are
         // apart; only `time` and `start` come from the recovered value.

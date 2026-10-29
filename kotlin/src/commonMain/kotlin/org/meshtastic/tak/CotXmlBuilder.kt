@@ -246,6 +246,10 @@ public class CotXmlBuilder {
      *         [StartRecovery.REFUSED] is the caller's: this is a codec, and the position, uid and
      *         type are unaffected by a bad clock.
      */
+    // These three were carried by `build` in the detekt baseline before its body moved here.
+    // Relocated rather than newly incurred, and stated inline so the debt is visible at the
+    // code: this renders every CoT payload variant in one pass.
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
     public fun buildWithOrigin(
         packet: TakPacketV2Data,
         now: Instant = Clock.System.now(),
