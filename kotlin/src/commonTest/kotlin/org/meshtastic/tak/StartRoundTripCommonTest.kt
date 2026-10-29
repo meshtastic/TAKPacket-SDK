@@ -161,6 +161,39 @@ class StartRoundTripCommonTest {
     }
 
     @Test
+    fun `a present but out-of-range start falls back rather than being used or dropped`() {
+        // The receiver-side counterpart to the sender gate above, and the one path the
+        // unit tests on reconstruct cannot show: a field that IS present, that the
+        // receiver refuses, travelling all the way through the builder.
+        //
+        // Two ways to get here, and the receiver cannot tell them apart: clock
+        // disagreement between the two devices, since the hour is spent by both, or a
+        // transit longer than an hour, which a mesh does not deliver. Either way the
+        // answer is to fall back to decode time and deliver. NOT to use the value, which
+        // would be wrong by an unknown amount, and NOT to drop the CoT: uid, type and
+        // position round-trip faithfully and are not impeached by a bad clock, so
+        // dropping would hide a sound position behind an unsound timestamp and make a
+        // node with a wrong clock permanently invisible.
+        //
+        // 7200 s out is inside the 8192 s half-window, so this exercises the BOUND and
+        // not the wrap: reconstruct resolves the instant exactly and then refuses it.
+        val nowSec = Clock.System.now().epochSeconds
+        val outOfRange =
+            TakPacketV2Data(
+                uid = "ATOM-OUT-OF-RANGE",
+                cotTypeStr = "a-f-G-U-C",
+                startEpochLo14 = StartEpoch.truncate(nowSec - 7200L),
+            )
+        assertNotNull(outOfRange.startEpochLo14, "fixture should carry a present field")
+
+        val rebuilt = builder.build(outOfRange)
+        val emitted = Regex("""start="([^"]+)"""").find(rebuilt)?.groupValues?.get(1)
+        assertNotNull(emitted, "no start emitted, the event must still be built")
+        val delta = Instant.parse(emitted).epochSeconds - nowSec
+        assertTrue(delta in 0L..10L, "out-of-range start was used, not the decode instant: $emitted")
+    }
+
+    @Test
     fun `stale is measured from arrival rather than the recovered start`() {
         // An honest `start` must not shorten the event's life. This one spent ten
         // minutes in transit against a 60 s window, so deriving `stale` from `start`
