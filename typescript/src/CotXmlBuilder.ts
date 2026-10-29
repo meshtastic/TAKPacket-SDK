@@ -1,4 +1,5 @@
 import { typeToString, howToString } from "./CotTypeMapper.js";
+import { reconstruct } from "./StartEpoch.js";
 import { resolveColor } from "./AtakPalette.js";
 import type {
   TAKPacketV2, GeoChat, AircraftTrack, DrawnShape, Marker,
@@ -118,7 +119,9 @@ function argbToSigned(argb: number): number {
  * (degrees×1e7) become decimal degrees, `speed` (cm/s) and `course`
  * (degrees×100) are divided by 100, and shape radii / ranges (cm) by 100.
  * Because the wire format does not carry timestamps, `time`/`start` are set to
- * "now" and `stale` to now + `staleSeconds` (with a 45-second floor), so output
+ * the sender's own `start` when `startEpochLo14` is present and reconstructs
+ * plausibly and to "now" otherwise, while `stale` is always now + `staleSeconds`
+ * (with a 45-second floor) so an honest `start` never shortens an event's life, so output
  * is not byte-identical to the original XML across a round trip — but the
  * structural content is. Color fields resolve through the `AtakPalette` helpers
  * (palette enum first, exact `_argb` fallback otherwise). The `<contact>`
@@ -143,8 +146,21 @@ function argbToSigned(argb: number): number {
  * ```
  */
 export function buildCotXml(packet: TAKPacketV2): string {
-  const now = new Date().toISOString();
+  // Prefer the sender's own `start`. Without it every packet decodes as current, so
+  // a report delayed on the mesh outranks a newer one that arrived promptly, and
+  // nothing downstream can order two reports for one UID. `now` keeps its name
+  // because it is still the fallback and is what the rest of the document uses.
+  const nowMs = Date.now();
+  const recovered =
+    packet.startEpochLo14 === undefined
+      ? undefined
+      : reconstruct(packet.startEpochLo14, Math.floor(nowMs / 1000));
+  const now = new Date(recovered === undefined ? nowMs : recovered * 1000).toISOString();
   const staleSecs = Math.max(packet.staleSeconds ?? 0, 45);
+  // `stale` stays measured from ARRIVAL, deliberately unaffected by the recovered
+  // start. Deriving it from `start` would cut an event's visibility by however long
+  // it spent in transit, and one that took longer than its own window would arrive
+  // nearly expired. Only `time`/`start` become honest here.
   const stale = new Date(Date.now() + staleSecs * 1000).toISOString();
 
   const cotType = typeToString(packet.cotTypeId ?? 0) ?? packet.cotTypeStr ?? "";

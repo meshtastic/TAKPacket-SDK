@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { FUTURE_TOLERANCE_SECONDS, PAST_LIMIT_SECONDS, truncate } from "./StartEpoch.js";
 import { typeToEnum, howToEnum, COTTYPE_OTHER } from "./CotTypeMapper.js";
 import { argbToTeam } from "./AtakPalette.js";
 import type {
@@ -511,6 +512,11 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
     if (s > t) staleSeconds = Math.round((s - t) / 1000);
   }
 
+  // Carry the event's `start` so a receiver can tell how old the report is.
+  // Falls back to `time`: ATAK sets the two equal on every event it emits, and a
+  // producer that supplies only `time` still means "generated then".
+  const startEpochLo14 = computeStartEpochLo14((event["@_start"] ?? "") || timeStr);
+
   const latitudeI = scaleLatitudeI(parseFloat(point["@_lat"] ?? "0"));
   const longitudeI = scaleLongitudeI(parseFloat(point["@_lon"] ?? "0"));
 
@@ -543,6 +549,10 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
     uid: event["@_uid"] ?? "",
     deviceCallsign: uidElem["@_Droid"] ?? "",
     staleSeconds,
+    // Spread so the key is ABSENT rather than explicitly undefined when there is
+    // no trustworthy start: protobufjs treats a present key as a value to encode,
+    // and an explicit zero must stay distinguishable from nothing at all.
+    ...(startEpochLo14 === undefined ? {} : { startEpochLo14 }),
     takVersion: takv["@_version"] ?? "",
     takDevice: takv["@_device"] ?? "",
     takPlatform: takv["@_platform"] ?? "",
@@ -1131,4 +1141,34 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   }
 
   return stripZeros(pkt);
+}
+
+/**
+ * The low 14 bits of an ISO-8601 instant, for `TAKPacketV2.start_epoch_lo14`.
+ *
+ * Returns `undefined` for an absent or unparseable value rather than a sentinel:
+ * the field is optional on the wire precisely so "the sender did not supply one"
+ * is distinguishable from a legitimate zero, and a receiver that gets nothing
+ * falls back to its decode time.
+ *
+ * Returns `undefined` too when the instant is further from now than
+ * {@link PAST_LIMIT_SECONDS} (or {@link FUTURE_TOLERANCE_SECONDS} ahead), which is
+ * an hour, not the width of the window. That gate is what keeps a receiver out of
+ * the band where reconstruction is wrongly accepted.
+ *
+ * A timestamp with no zone designator is refused. ATAK's own parser would read it
+ * as GMT; inventing a zone is how a local-time stamp becomes a silent multi-hour
+ * error, so nothing is the honest answer.
+ */
+function computeStartEpochLo14(instant: string): number | undefined {
+  if (!instant) return undefined;
+  // `Date` would happily read "2026-10-29T12:00:00" as LOCAL time, so the
+  // designator is required explicitly rather than left to the parser.
+  if (!/(?:Z|[+-]\d{2}:?\d{2})$/.test(instant.trim())) return undefined;
+  const ms = new Date(instant).getTime();
+  if (!Number.isFinite(ms)) return undefined;
+  const seconds = Math.floor(ms / 1000);
+  const age = Math.floor(Date.now() / 1000) - seconds;
+  if (age < -FUTURE_TOLERANCE_SECONDS || age > PAST_LIMIT_SECONDS) return undefined;
+  return truncate(seconds);
 }

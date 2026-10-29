@@ -46,4 +46,5 @@ export * from "./TakCompressor.js";
 export * from "./CotMeshSanitizer.js";
 export * from "./CotXmlParser.js";
 export * from "./CotXmlBuilder.js";
+export * as StartEpoch from "./StartEpoch.js";
 export * from "./proto.js";

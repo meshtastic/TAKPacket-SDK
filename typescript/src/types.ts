@@ -433,6 +433,15 @@ export interface TAKPacketV2 {
   deviceCallsign?: string;
   /** Seconds from event time to stale time (`stale − time`), varint-encoded. */
   staleSeconds?: number;
+  /**
+   * Low 14 bits of the event's `start` as epoch seconds UTC, or `undefined` when
+   * the sender populated nothing.
+   *
+   * Optional on purpose: `start` mod 16384 is 0 for one second in every 16384, so
+   * a legitimate zero has to stay distinguishable from an absent field. See
+   * {@link StartEpoch}.
+   */
+  startEpochLo14?: number;
   /** TAK client version string. */
   takVersion?: string;
   /** TAK device model. */
