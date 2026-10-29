@@ -24,6 +24,10 @@ class StartRoundTripCommonTest {
     private val builder = CotXmlBuilder()
     private val compressor = TakCompressor()
 
+    // Split so the Kotlin raw string does not have to nest a quote next to its terminator.
+    private val STARTED_AT = "start=\""
+    private val QUOTE = "\""
+
     private fun cotWithStart(
         start: Instant,
         stale: Instant,
@@ -191,6 +195,79 @@ class StartRoundTripCommonTest {
         assertNotNull(emitted, "no start emitted, the event must still be built")
         val delta = Instant.parse(emitted).epochSeconds - nowSec
         assertTrue(delta in 0L..10L, "out-of-range start was used, not the decode instant: $emitted")
+    }
+
+    @Test
+    fun `buildWithOrigin reports a recovered start and agrees with the xml`() {
+        val start = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - 90L)
+        val packet = parser.parse(cotWithStart(start, start.plusSeconds(300)))
+        val built = builder.buildWithOrigin(compressor.decompress(compressor.compress(packet)))
+
+        assertEquals(StartRecovery.RECOVERED, built.recovery)
+        assertEquals(start, built.originStart)
+        // The reported instant and the emitted attribute must be the same value: one
+        // computation, so a caller cannot act on an origin time the map never saw.
+        assertTrue(built.xml.contains(STARTED_AT + start + QUOTE), "xml disagrees: ${built.xml}")
+        // The convenience overload must agree on the fields the recovery governs. Not on
+        // `stale`, which is `now + window` and so differs by however long the two calls are
+        // apart; only `time` and `start` come from the recovered value.
+        val viaBuild = builder.build(compressor.decompress(compressor.compress(packet)))
+        for (attr in listOf("time", "start")) {
+            val a = Regex("""$attr="([^"]+)"""").find(built.xml)?.groupValues?.get(1)
+            val b = Regex("""$attr="([^"]+)"""").find(viaBuild)?.groupValues?.get(1)
+            assertEquals(a, b, "build and buildWithOrigin disagree on $attr")
+        }
+        // Given a fixed reference instant the output is byte-identical, which the `now`
+        // parameter is what makes testable at all.
+        val fixed = Instant.fromEpochSeconds(start.epochSeconds + 30L)
+        assertEquals(
+            builder.buildWithOrigin(packet, fixed).xml,
+            builder.buildWithOrigin(packet, fixed).xml,
+        )
+    }
+
+    @Test
+    fun `buildWithOrigin separates an absent start from a refused one`() {
+        val nowSec = Clock.System.now().epochSeconds
+
+        // Nothing sent: no accusation, and the xml still falls back to the decode instant.
+        val absent = builder.buildWithOrigin(TakPacketV2Data(uid = "A", cotTypeStr = "a-f-G-U-C"))
+        assertEquals(StartRecovery.ABSENT, absent.recovery)
+        assertNull(absent.originStart)
+
+        // Sent and refused. 7200 s is inside the 8192 s half-window, so this is the bound
+        // rather than the wrap. This is the case a consumer may discard the report over,
+        // and the only reason the two are separate values.
+        val refused = builder.buildWithOrigin(
+            TakPacketV2Data(
+                uid = "B",
+                cotTypeStr = "a-f-G-U-C",
+                startEpochLo14 = StartEpoch.truncate(nowSec - 7200L),
+            ),
+        )
+        assertEquals(StartRecovery.REFUSED, refused.recovery)
+        assertNull(refused.originStart)
+        // Still built. The codec does not get to decide; uid, type and position are fine.
+        assertTrue(refused.xml.contains("uid=\"B\""), "the event must still be produced")
+    }
+
+    @Test
+    fun `an explicit reference instant lets a stored capture decode`() {
+        // Why buildWithOrigin takes `now`. Replaying a recording an hour later would refuse
+        // every carried start against the current clock, so the original decode instant has
+        // to be passable. Without this, a capture is undecodable by construction.
+        val recordedAt = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - 86_400L)
+        val start = recordedAt.plusSeconds(-30)
+        val packet = TakPacketV2Data(
+            uid = "ATOM-REPLAY",
+            cotTypeStr = "a-f-G-U-C",
+            startEpochLo14 = StartEpoch.truncate(start.epochSeconds),
+        )
+
+        assertEquals(StartRecovery.REFUSED, builder.buildWithOrigin(packet).recovery)
+        val asRecorded = builder.buildWithOrigin(packet, recordedAt)
+        assertEquals(StartRecovery.RECOVERED, asRecorded.recovery)
+        assertEquals(start, asRecorded.originStart)
     }
 
     @Test

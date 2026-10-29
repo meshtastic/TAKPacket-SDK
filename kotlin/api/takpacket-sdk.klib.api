@@ -6,14 +6,36 @@
 // - Show declarations: true
 
 // Library unique name: <org.meshtastic:takpacket-sdk>
+final enum class org.meshtastic.tak/StartRecovery : kotlin/Enum<org.meshtastic.tak/StartRecovery> { // org.meshtastic.tak/StartRecovery|null[0]
+    enum entry ABSENT // org.meshtastic.tak/StartRecovery.ABSENT|null[0]
+    enum entry RECOVERED // org.meshtastic.tak/StartRecovery.RECOVERED|null[0]
+    enum entry REFUSED // org.meshtastic.tak/StartRecovery.REFUSED|null[0]
+
+    final val entries // org.meshtastic.tak/StartRecovery.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<org.meshtastic.tak/StartRecovery> // org.meshtastic.tak/StartRecovery.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): org.meshtastic.tak/StartRecovery // org.meshtastic.tak/StartRecovery.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<org.meshtastic.tak/StartRecovery> // org.meshtastic.tak/StartRecovery.values|values#static(){}[0]
+}
+
 abstract fun interface org.meshtastic.tak/Logger { // org.meshtastic.tak/Logger|null[0]
     abstract fun log(kotlin/String) // org.meshtastic.tak/Logger.log|log(kotlin.String){}[0]
+}
+
+final class org.meshtastic.tak/BuiltCot { // org.meshtastic.tak/BuiltCot|null[0]
+    final val originStart // org.meshtastic.tak/BuiltCot.originStart|{}originStart[0]
+        final fun <get-originStart>(): kotlin.time/Instant? // org.meshtastic.tak/BuiltCot.originStart.<get-originStart>|<get-originStart>(){}[0]
+    final val recovery // org.meshtastic.tak/BuiltCot.recovery|{}recovery[0]
+        final fun <get-recovery>(): org.meshtastic.tak/StartRecovery // org.meshtastic.tak/BuiltCot.recovery.<get-recovery>|<get-recovery>(){}[0]
+    final val xml // org.meshtastic.tak/BuiltCot.xml|{}xml[0]
+        final fun <get-xml>(): kotlin/String // org.meshtastic.tak/BuiltCot.xml.<get-xml>|<get-xml>(){}[0]
 }
 
 final class org.meshtastic.tak/CotXmlBuilder { // org.meshtastic.tak/CotXmlBuilder|null[0]
     constructor <init>() // org.meshtastic.tak/CotXmlBuilder.<init>|<init>(){}[0]
 
     final fun build(org.meshtastic.tak/TakPacketV2Data): kotlin/String // org.meshtastic.tak/CotXmlBuilder.build|build(org.meshtastic.tak.TakPacketV2Data){}[0]
+    final fun buildWithOrigin(org.meshtastic.tak/TakPacketV2Data, kotlin.time/Instant = ...): org.meshtastic.tak/BuiltCot // org.meshtastic.tak/CotXmlBuilder.buildWithOrigin|buildWithOrigin(org.meshtastic.tak.TakPacketV2Data;kotlin.time.Instant){}[0]
 }
 
 final class org.meshtastic.tak/CotXmlParser { // org.meshtastic.tak/CotXmlParser|null[0]
