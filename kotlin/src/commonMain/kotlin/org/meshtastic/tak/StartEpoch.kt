@@ -75,13 +75,26 @@ internal object StartEpoch {
      * so the band is [MODULUS - FUTURE_TOLERANCE_SECONDS, MODULUS + PAST_LIMIT_SECONDS]
      * and it cannot be closed from the receiver alone.
      *
-     * What keeps it unreachable is the SENDER gate: [CotXmlParser] will not encode a
-     * `start` older than [PAST_LIMIT_SECONDS], so arriving in that band takes transit
-     * (net of skew) of `MODULUS - 2 * bound`. At an hour that is 9184 s, 2.55 h, which
-     * no mesh delivers. Note both gates use the same constant, so widening costs margin
-     * twice over: at two hours each way the required transit falls to 1984 s, 33 min,
-     * which is no longer implausible. Check a wider bound against that figure, not
-     * against [HALF].
+     * That band is an ACCEPTED RISK, not a hole the gates close, and it is reached by
+     * sender-to-receiver clock DISAGREEMENT rather than by transit. The SENDER gate in
+     * [CotXmlParser] will not encode a `start` older than [PAST_LIMIT_SECONDS], but
+     * that bounds the start against the sender's OWN clock and says nothing about the
+     * two clocks disagreeing. Transit contributes seconds. So the gate supplies at most
+     * an hour of the 12784 s gap: it buys margin, not closure. Both gates read the same
+     * constant, so widening spends that margin twice over.
+     *
+     * It is acceptable because drift cannot get there. Breaking reconstruction at all
+     * takes 2.28 h of disagreement, being wrongly accepted takes 3.55 h, and a device
+     * reporting a live GNSS position has GNSS time by construction, since the fix
+     * solves for time. What DOES get there is a whole-hour offset from stamping local
+     * time as if it were UTC: for a fresh `start`, 4 h and 5 h land inside the band
+     * while 3 h and 6 h are merely rejected. GNSS accuracy is no protection against a
+     * timezone applied after the fix, so a producer must stamp `start` in UTC.
+     *
+     * The resulting harm is sign-dependent. A value reconstructed a full [MODULUS]
+     * EARLY never clobbers, but makes every later report from that sender look older
+     * than an already-delivered one. Reconstructed a [MODULUS] LATE it wins every
+     * comparison for as long as the offset persists.
      */
 
     /** The low 14 bits of [epochSeconds], which is what goes on the wire. */
