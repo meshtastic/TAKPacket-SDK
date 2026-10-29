@@ -6,6 +6,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 
 /**
@@ -26,12 +27,67 @@ class StartRoundTripCommonTest {
     private fun cotWithStart(
         start: Instant,
         stale: Instant,
+    ): String = cotWithRawStart(start.toString(), stale.toString())
+
+    /** As [cotWithStart], but the caller controls the textual form of the instants. */
+    private fun cotWithRawStart(
+        start: String,
+        stale: String,
     ): String =
         """<?xml version="1.0" encoding="UTF-8"?>""" +
             """<event version="2.0" uid="ATOM-START-RT" type="a-f-G-U-C" how="m-g" """ +
             """time="$start" start="$start" stale="$stale">""" +
             """<point lat="38.8895" lon="-77.0353" hae="0.0" ce="9999999.0" le="9999999.0"/>""" +
             """<detail><contact callsign="ALPHA-1"/></detail></event>"""
+
+    @Test
+    fun `the rebuilt start and time are UTC`() {
+        // The whole field is epoch seconds, so every instant on this path is zone-free
+        // by construction and the only place a zone could be asserted is the text we
+        // emit. ATAK's own CoT formatter is pinned to TimeZone UTC with a literal Z, and
+        // its parser reads fixed character positions as GMT, so UTC is the ecosystem
+        // invariant rather than a choice this library gets to make. Pinned here so a
+        // future change to a local-zone formatter fails loudly instead of shifting every
+        // reconstructed start by the formatting device's offset.
+        val start = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - 90L)
+        val packet = parser.parse(cotWithStart(start, start.plusSeconds(300)))
+        val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
+        for (attr in listOf("time", "start", "stale")) {
+            val v = Regex("""$attr="([^"]+)"""").find(rebuilt)?.groupValues?.get(1)
+            assertNotNull(v, "no $attr emitted")
+            assertTrue(v.endsWith("Z"), "$attr is not UTC: $v")
+        }
+    }
+
+    @Test
+    fun `an offset-bearing start is converted rather than read positionally`() {
+        // Same instant, written with a +04:00 offset instead of Z. We must encode the
+        // same 14 bits for both, which holds because the parser resolves the instant
+        // instead of reading fixed character positions the way ATAK's fast path does.
+        // Worth pinning precisely because we are STRICTER than ATAK here: that strictness
+        // is what turns a malformed timestamp into a safe null rather than a wrong time.
+        val start = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - 90L)
+        val asOffset = (start + 4.hours).toString().removeSuffix("Z") + "+04:00"
+        val stale = start.plusSeconds(300)
+
+        val fromZ = parser.parse(cotWithStart(start, stale))
+        val fromOffset = parser.parse(cotWithRawStart(asOffset, stale.toString()))
+        assertNotNull(fromOffset.startEpochLo14, "offset form was not encoded")
+        assertEquals(fromZ.startEpochLo14, fromOffset.startEpochLo14, "offset form encoded a different instant")
+    }
+
+    @Test
+    fun `a start with no zone designator is not guessed at`() {
+        // ATAK's fixed-position parser would read this as GMT. We refuse it instead and
+        // fall back, because a producer that omits the designator has told us nothing
+        // trustworthy, and inventing a zone is how a local-time stamp becomes a silent
+        // multi-hour error. Null is the honest answer and arbitration fails open on it.
+        val start = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - 90L)
+        val noZone = start.toString().removeSuffix("Z")
+        val packet = parser.parse(cotWithRawStart(noZone, start.plusSeconds(300).toString()))
+        assertNull(packet.startEpochLo14, "a zone-less start should not be encoded")
+    }
+
 
     @Test
     fun `a recent start survives the full wire round trip`() {
