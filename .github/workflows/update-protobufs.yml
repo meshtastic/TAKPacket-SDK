@@ -1,0 +1,150 @@
+name: Update protobufs and regenerate classes
+
+# Shaped after meshtastic/firmware's update_protobufs.yml: dispatch only, point the
+# submodule at a branch, provision a checksum-pinned generator, run bin/regen-protos.sh,
+# and open a pull request with the result. Two deliberate departures, both to match this
+# repo rather than that one: actions are SHA-pinned as everywhere else here, and the pull
+# request is opened with the gh CLI the way bump-version.yml does it, rather than with
+# peter-evans/create-pull-request.
+#
+# Dispatch-only, and not a check on every pull request, for the reason the firmware has
+# it that way: generating needs protoc at an exact version plus protoc-gen-swift, which
+# ships no Linux binary. Asking a contributor to reproduce that locally is how the
+# generated tree silently fell behind the schema in the first place.
+
+on:
+  workflow_dispatch:
+    inputs:
+      protobufs_branch:
+        description: Branch of meshtastic/protobufs to generate from
+        required: true
+        type: choice
+        default: same-as-this-branch
+        options:
+          - same-as-this-branch
+          - master
+          - develop
+
+permissions: read-all
+
+concurrency:
+  group: update-protobufs-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  update-protobufs:
+    name: Regenerate & open PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+
+      - name: Resolve protobufs branch
+        id: resolve
+        env:
+          INPUT_BRANCH: ${{ inputs.protobufs_branch }}
+          TRIGGER_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [ "$INPUT_BRANCH" = "same-as-this-branch" ]; then
+            BRANCH="$TRIGGER_BRANCH"
+          else
+            BRANCH="$INPUT_BRANCH"
+          fi
+          case "$BRANCH" in
+            master | develop) ;;
+            *)
+              echo "::error::Refusing to generate from branch '$BRANCH'"
+              exit 1
+              ;;
+          esac
+          echo "branch=$BRANCH" >>"$GITHUB_OUTPUT"
+
+      - name: Update submodule
+        working-directory: protobufs
+        env:
+          GIT_BRANCH: ${{ steps.resolve.outputs.branch }}
+        run: |
+          set -euo pipefail
+          git fetch --prune origin "+refs/heads/${GIT_BRANCH}:refs/remotes/origin/${GIT_BRANCH}"
+          git checkout --detach "refs/remotes/origin/${GIT_BRANCH}"
+          git rev-parse HEAD
+
+      - name: Download protoc
+        # Must match PROTOC_VERSION in bin/regen-protos.sh, which refuses to run against
+        # anything else: the generated files carry the generator version, so a mismatch
+        # rewrites that marker across the tree even when the schema has not moved.
+        env:
+          PROTOC_VERSION: 33.2
+          PROTOC_SHA256: b24b53f87c151bfd48b112fe4c3a6e6574e5198874f38036aff41df3456b8caf
+        run: |
+          set -euo pipefail
+          ZIP="protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          wget -q "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/${ZIP}"
+          echo "${PROTOC_SHA256}  ${ZIP}" | sha256sum -c -
+          unzip -q "$ZIP" -d "${RUNNER_TEMP}/protoc"
+          echo "${RUNNER_TEMP}/protoc/bin" >>"$GITHUB_PATH"
+          rm -f "$ZIP"
+
+      - name: Build protoc-gen-swift
+        # swift-protobuf publishes no prebuilt Linux binary, so this is built from the
+        # pinned tag inside the official Swift image rather than checksum-verified like
+        # protoc above. The version tracks the `from:` pin in swift/Package.swift, so the
+        # generator and the runtime the generated code links against cannot diverge.
+        env:
+          SWIFT_PROTOBUF_VERSION: 1.39.0
+        run: |
+          set -euo pipefail
+          docker run --rm -v "${RUNNER_TEMP}:/out" swift:6.1 bash -eu -c "
+            git clone --depth 1 --branch ${SWIFT_PROTOBUF_VERSION} \
+              https://github.com/apple/swift-protobuf.git /src
+            cd /src
+            swift build -c release --product protoc-gen-swift
+            cp \"\$(swift build -c release --product protoc-gen-swift --show-bin-path)/protoc-gen-swift\" /out/
+          "
+          chmod +x "${RUNNER_TEMP}/protoc-gen-swift"
+          echo "${RUNNER_TEMP}" >>"$GITHUB_PATH"
+
+      - name: Regenerate
+        run: ./bin/regen-protos.sh
+
+      - name: Commit to a branch & open PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SRC_BRANCH: ${{ steps.resolve.outputs.branch }}
+        run: |
+          set -euo pipefail
+          BRANCH="update-protobufs/${GITHUB_REF_NAME}-from-${SRC_BRANCH}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+
+          # Scoped the way firmware's add-paths is: the submodule pointer and the
+          # generated trees, so a stray edit elsewhere in the workspace cannot ride along.
+          git add protobufs \
+                  swift/Sources/MeshtasticTAK \
+                  python/src/meshtastic_tak \
+                  csharp/src/Meshtastic.TAK
+
+          if git diff --cached --quiet; then
+            echo "::notice::Generated code already matches protobufs/${SRC_BRANCH}, nothing to do."
+            exit 0
+          fi
+
+          git commit -m "Update protobufs and regenerate classes"
+          git push --force-with-lease origin "$BRANCH"
+
+          gh pr create --fill --head "$BRANCH" --base "$GITHUB_REF_NAME" \
+            --title "Update protobufs and regenerate classes" \
+            --body "Regenerated from \`meshtastic/protobufs@${SRC_BRANCH}\` by the Update protobufs workflow.
+
+          Review the generator version markers: a change to one without a schema change means the toolchain moved, not the schema." \
+            || echo "::notice::A pull request for $BRANCH already exists."
