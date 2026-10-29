@@ -325,8 +325,8 @@ public final class org/meshtastic/tak/TakPacketSdk {
 
 public final class org/meshtastic/tak/TakPacketV2Data {
 	public fun <init> ()V
-	public fun <init> (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;)V
-	public synthetic fun <init> (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;)V
+	public synthetic fun <init> (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component10 ()I
 	public final fun component11 ()I
@@ -348,6 +348,7 @@ public final class org/meshtastic/tak/TakPacketV2Data {
 	public final fun component26 ()Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;
 	public final fun component27 ()Ljava/util/List;
 	public final fun component28 ()Lorg/meshtastic/tak/TakPacketV2Data$Payload;
+	public final fun component29 ()Ljava/lang/Integer;
 	public final fun component3 ()I
 	public final fun component4 ()Ljava/lang/String;
 	public final fun component5 ()I
@@ -355,8 +356,8 @@ public final class org/meshtastic/tak/TakPacketV2Data {
 	public final fun component7 ()I
 	public final fun component8 ()I
 	public final fun component9 ()I
-	public final fun copy (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;)Lorg/meshtastic/tak/TakPacketV2Data;
-	public static synthetic fun copy$default (Lorg/meshtastic/tak/TakPacketV2Data;ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;ILjava/lang/Object;)Lorg/meshtastic/tak/TakPacketV2Data;
+	public final fun copy (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;)Lorg/meshtastic/tak/TakPacketV2Data;
+	public static synthetic fun copy$default (Lorg/meshtastic/tak/TakPacketV2Data;ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;ILjava/lang/Object;)Lorg/meshtastic/tak/TakPacketV2Data;
 	public final fun cotTypeString ()Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAltSrc ()I
@@ -381,6 +382,7 @@ public final class org/meshtastic/tak/TakPacketV2Data {
 	public final fun getSensorFov ()Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;
 	public final fun getSpeed ()I
 	public final fun getStaleSeconds ()I
+	public final fun getStartEpochLo14 ()Ljava/lang/Integer;
 	public final fun getTakDevice ()Ljava/lang/String;
 	public final fun getTakOs ()Ljava/lang/String;
 	public final fun getTakPlatform ()Ljava/lang/String;

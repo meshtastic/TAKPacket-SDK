@@ -8,6 +8,29 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ## [Unreleased]
 
+### Added
+
+- `TAKPacketV2.start_epoch_lo14`: the low 14 bits of a CoT event's `start` as
+  epoch seconds, so a receiver can tell how old a report actually is.
+
+  The format previously carried no origin time at all. `CotXmlParser` read
+  `time` and `stale` only to derive `stale_seconds` and never read `start`, so
+  `CotXmlBuilder` had nothing to rebuild it from and stamped the decode instant.
+  Every packet therefore decoded as current however long it spent in transit,
+  which made two reports for one UID impossible to order.
+
+  14 bits because a value below 16384 fits a two-byte varint where a full
+  epoch-seconds value needs five, and the 4.55 hour window it implies is far
+  wider than any plausible transit. Receivers rebuild the full value by picking
+  the candidate nearest their own clock, which is exact in both directions at a
+  window boundary; a plain bit-splice is not. Senders omit the field when
+  `start` is further from transmission than the window can express, because an
+  out-of-range value would reconstruct silently as a plausible recent time.
+
+  Wire-compatible: the field is optional and omitted when absent, so all 47
+  golden frames are unchanged and an older peer simply ignores it. Implemented
+  in the Kotlin binding; Swift, Python, TypeScript and C# to follow.
+
 ## [0.9.3] - 2026-10-03
 
 The first release on Maven Central since 0.9.1: 0.9.2 was tagged but never

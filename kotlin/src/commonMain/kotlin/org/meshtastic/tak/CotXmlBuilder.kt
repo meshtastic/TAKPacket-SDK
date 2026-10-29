@@ -2,6 +2,7 @@ package org.meshtastic.tak
 
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 /**
  * Reconstructs a CoT (Cursor-on-Target) XML event string from a [TakPacketV2Data].
@@ -16,9 +17,11 @@ import kotlin.time.Duration.Companion.seconds
  * Multiplatform: built only on `kotlin.time` and `StringBuilder`, so it runs on
  * every KMP target. Stateless and safe to reuse across calls.
  *
- * Lossy by design where CoT carries fields the wire format drops: the
- * `time` / `start` / `stale` timestamps are regenerated from the wall clock at
- * build time (the wire carries only `stale_seconds`), and a few elements ATAK
+ * Lossy by design where CoT carries fields the wire format drops: `stale` is
+ * regenerated from the wall clock at build time (the wire carries `stale_seconds`, a
+ * duration), `time` / `start` come from the sender's `start_epoch_lo14` when it
+ * supplied one and it reconstructs plausibly and are otherwise regenerated too, and a
+ * few elements ATAK
  * requires for rendering (e.g. route `<strokeColor>`/`<contact>`) are
  * synthesized from defaults rather than echoed from the source.
  */
@@ -203,9 +206,12 @@ public class CotXmlBuilder {
     /**
      * Build a complete CoT XML `<event>` document from [packet].
      *
-     * The `time` and `start` attributes are set to the current wall-clock
-     * instant; `stale` is that instant plus `packet.staleSeconds` (floored at
-     * 45 s). Units are converted back to ATAK's conventions on the way out —
+     * The `time` and `start` attributes carry the sender's own `start` when
+     * [TakPacketV2Data.startEpochLo14] is present and reconstructs plausibly, so a
+     * report that spent time in transit is not presented as current; they fall back to
+     * the current wall-clock instant otherwise. `stale` is unaffected by that and stays
+     * measured from arrival, the decode instant plus `packet.staleSeconds` (floored at
+     * 45 s), so an honest `start` never shortens an event's life. Units are converted back to ATAK's conventions on the way out —
      * `speed` cm/s → m/s, `course` degrees×100 → degrees, shape radii cm → m —
      * and palette/ARGB colors are resolved via [AtakPalette]. A packet with no
      * payload variant ([TakPacketV2Data.Payload.None] / an implicit PLI) emits
@@ -223,13 +229,28 @@ public class CotXmlBuilder {
         // DateTimeFormatter.ISO_INSTANT output and re-parseable by the parser's
         // Instant.parse on the receive side.
         val now = Clock.System.now()
-        val timeStr = now.toString()
-        val stale =
-            now +
-                packet.staleSeconds
-                    .toLong()
-                    .coerceAtLeast(45)
-                    .seconds
+        // Prefer the sender's own `start`. Without it every packet decodes as current,
+        // so a report delayed on the mesh outranks a newer one that arrived promptly,
+        // and nothing downstream can order two reports for one UID.
+        val start =
+            packet.startEpochLo14
+                ?.let { StartEpoch.reconstruct(it, now.epochSeconds) }
+                ?.let { Instant.fromEpochSeconds(it) }
+                ?: now
+        val timeStr = start.toString()
+        val staleWindow =
+            packet.staleSeconds
+                .toLong()
+                .coerceAtLeast(45)
+                .seconds
+        // `stale` stays measured from ARRIVAL, deliberately unchanged by this field.
+        // Deriving it from `start` instead would cut an event's visibility by however
+        // long it spent in transit, and for one that took longer than its own window it
+        // would arrive nearly expired. ATAK pads static types generously before sending,
+        // but not PLI or chat, which are exactly the ones whose transit can exceed their
+        // window. Only `time`/`start` become honest here; lifetime after arrival does not
+        // change.
+        val stale = now + staleWindow
         val staleStr = stale.toString()
 
         val cotType = packet.cotTypeString()

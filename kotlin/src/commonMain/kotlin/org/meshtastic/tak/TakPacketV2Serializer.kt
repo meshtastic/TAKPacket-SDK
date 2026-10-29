@@ -407,6 +407,7 @@ public object TakPacketV2Serializer {
                     wb.uid = data.uid
                     wb.device_callsign = data.deviceCallsign
                     wb.stale_seconds = data.staleSeconds
+                    wb.start_epoch_lo14 = data.startEpochLo14
                     wb.tak_version = data.takVersion
                     wb.tak_device = data.takDevice
                     wb.tak_platform = data.takPlatform
@@ -707,6 +708,7 @@ public object TakPacketV2Serializer {
             uid = proto.uid,
             deviceCallsign = proto.device_callsign,
             staleSeconds = proto.stale_seconds,
+            startEpochLo14 = proto.start_epoch_lo14,
             takVersion = proto.tak_version,
             takDevice = proto.tak_device,
             takPlatform = proto.tak_platform,
