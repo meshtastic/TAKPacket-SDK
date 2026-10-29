@@ -130,6 +130,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var chatToCallsign: String?
     private var timeStr = ""
     private var staleStr = ""
+    private var startStr = ""
     private var inRemarks = false
 
     // --- TAKTALK m-t-t accumulators -----------------------------------
@@ -328,7 +329,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         icao = ""; registration = ""; flight = ""; aircraftType = ""
         squawk = 0; category = ""; rssiX10 = 0; gps = false; cotHostId = ""
         chatTo = nil; chatToCallsign = nil
-        timeStr = ""; staleStr = ""
+        timeStr = ""; staleStr = ""; startStr = ""
         inRemarks = false
         // --- Reset TAKTALK accumulators ---
         hasTakTalkData = false
@@ -445,6 +446,16 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
         // Compute stale seconds
         packet.staleSeconds = computeStaleSeconds(timeStr, staleStr)
+
+        // Carry the event's `start` so a receiver can tell how old the report is.
+        // Falls back to `time`: ATAK sets the two equal on every event it emits, and a
+        // producer that supplies only `time` still means "generated then".
+        if let lo14 = computeStartEpochLo14(startStr.isEmpty ? timeStr : startStr) {
+            // Assigned only when present, so "the sender did not populate this" stays
+            // distinguishable from a legitimate zero. `start` mod 16384 is 0 for one
+            // second in every 16384, so that zero does occur.
+            packet.startEpochLo14 = lo14
+        }
 
         // Derive the stroke/fill/both discriminator from what we observed.
         let shapeStyle: DrawnShape.StyleMode
@@ -810,6 +821,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             packet.how = CotTypeMapper.howToEnum(attributes["how"] ?? "")
             timeStr = attributes["time"] ?? ""
             staleStr = attributes["stale"] ?? ""
+            startStr = attributes["start"] ?? ""
 
         case "point":
             let lat = Double(attributes["lat"] ?? "0") ?? 0
@@ -1384,6 +1396,34 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             return Data()
         }
         return Data(cotXml[innerRange].utf8)
+    }
+
+    /// The low 14 bits of an ISO-8601 instant, for `TAKPacketV2.start_epoch_lo14`.
+    ///
+    /// Returns `nil` for an absent or unparseable value rather than a sentinel: the
+    /// field is optional on the wire precisely so "the sender did not supply one" is
+    /// distinguishable from a legitimate zero, and a receiver that gets nothing falls
+    /// back to its decode time.
+    ///
+    /// Returns `nil` too when the instant is further from now than
+    /// `StartEpoch.pastLimitSeconds` (or `futureToleranceSeconds` ahead), which is an
+    /// hour, not the width of the window. That gate is what keeps a receiver out of the
+    /// band where reconstruction is wrongly accepted.
+    ///
+    /// A timestamp with no zone designator is refused. ATAK's own parser would read it
+    /// as GMT; inventing a zone is how a local-time stamp becomes a silent multi-hour
+    /// error, so nothing is the honest answer. `ISO8601DateFormatter` rejects such a
+    /// string outright with these options, so no extra guard is needed.
+    private func computeStartEpochLo14(_ instant: String) -> UInt32? {
+        guard !instant.isEmpty else { return nil }
+        guard let date = Self.isoFmtFrac.date(from: instant)
+                ?? Self.isoFmtNoFrac.date(from: instant) else { return nil }
+        let seconds = Int64(date.timeIntervalSince1970.rounded(.down))
+        let age = Int64(Date().timeIntervalSince1970.rounded(.down)) - seconds
+        if age < -StartEpoch.futureToleranceSeconds || age > StartEpoch.pastLimitSeconds {
+            return nil
+        }
+        return StartEpoch.truncate(seconds)
     }
 
     private func computeStaleSeconds(_ timeStr: String, _ staleStr: String) -> UInt32 {
