@@ -64,6 +64,36 @@ class StartRoundTripCommonTest {
     }
 
     @Test
+    fun `a lo14 of zero survives the wire as present rather than absent`() {
+        // `start` mod 16384 is 0 for one second in every 16384, i.e. once every 4.55 h,
+        // and that second is the only one where a genuine value collides with proto3's
+        // default. Explicit presence is what separates them, which is why the field is
+        // `optional` even though the v0.4.0 altitude experiment found `optional`
+        // net-negative: a genuine 0 m altitude is common, this is one second in 16384.
+        //
+        // Drop the `optional` and nothing fails loudly. For one second every 4.55 h a
+        // real start reads as absent, the receiver falls back to its decode time and
+        // arbitration fails open for that one report. The fixture corpus cannot catch
+        // it: every fixture is months old and takes the not-encoded path regardless.
+        //
+        // The arithmetic for this value is covered in StartEpochTest, whose boundary
+        // constant IS a window boundary and so truncates to exactly 0. Only presence
+        // across the serializer is at stake here.
+        val atBoundary = TakPacketV2Data(uid = "ATOM-LO14-ZERO", cotTypeStr = "a-f-G-U-C", startEpochLo14 = 0)
+        val rt = compressor.decompress(compressor.compress(atBoundary))
+        assertNotNull(rt.startEpochLo14, "a lo14 of 0 came back as absent: presence was lost")
+        assertEquals(0, rt.startEpochLo14)
+
+        // The other direction, so this pins presence rather than just non-nullness:
+        // a sender that supplied nothing must not arrive looking like a boundary start.
+        val absent = TakPacketV2Data(uid = "ATOM-LO14-ABSENT", cotTypeStr = "a-f-G-U-C")
+        assertNull(
+            compressor.decompress(compressor.compress(absent)).startEpochLo14,
+            "an absent start came back as 0: presence was lost the other way",
+        )
+    }
+
+    @Test
     fun `a start past the sender gate is not encoded`() {
         // 3660 s is well INSIDE the 8192 s window, so this exercises the sender gate,
         // PAST_LIMIT_SECONDS, and not the window. Worth pinning in its own right: that
