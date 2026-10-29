@@ -107,6 +107,12 @@ jobs:
         # pinned tag inside the official Swift image rather than checksum-verified like
         # protoc above. The version tracks the `from:` pin in swift/Package.swift, so the
         # generator and the runtime the generated code links against cannot diverge.
+        #
+        # --static-swift-stdlib is load-bearing, not an optimisation. The binary is built
+        # in the container and then run by protoc on the RUNNER, which has no Swift
+        # runtime: a default build links 13 libraries out of /usr/lib/swift/linux and
+        # cannot start outside the image. Statically linked it needs only libc, libm and
+        # libstdc++.
         env:
           SWIFT_PROTOBUF_VERSION: 1.39.0
         run: |
@@ -115,8 +121,8 @@ jobs:
             git clone --depth 1 --branch ${SWIFT_PROTOBUF_VERSION} \
               https://github.com/apple/swift-protobuf.git /src
             cd /src
-            swift build -c release --product protoc-gen-swift
-            cp \"\$(swift build -c release --product protoc-gen-swift --show-bin-path)/protoc-gen-swift\" /out/
+            swift build -c release --static-swift-stdlib --product protoc-gen-swift
+            cp \"\$(swift build -c release --static-swift-stdlib --product protoc-gen-swift --show-bin-path)/protoc-gen-swift\" /out/
             chmod 0755 /out/protoc-gen-swift
           "
           # chmod inside the container deliberately: it runs as root, so the copy lands
