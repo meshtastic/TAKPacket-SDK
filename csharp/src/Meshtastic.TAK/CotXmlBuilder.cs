@@ -177,8 +177,24 @@ public class CotXmlBuilder
     {
         var now = DateTimeOffset.UtcNow;
         var staleSecs = Math.Max((int)pkt.StaleSeconds, 45);
+        // `stale` stays measured from ARRIVAL, deliberately unaffected by the recovered
+        // start. Deriving it from `start` would cut an event's visibility by however long
+        // it spent in transit, and one that took longer than its own window would arrive
+        // nearly expired. Only `time`/`start` become honest here.
         var stale = now.AddSeconds(staleSecs);
-        var timeStr = now.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        // Prefer the sender's own `start`. Without it every packet decodes as current, so
+        // a report delayed on the mesh outranks a newer one that arrived promptly, and
+        // nothing downstream can order two reports for one UID.
+        var start = now;
+        if (pkt.HasStartEpochLo14)
+        {
+            var recovered = StartEpoch.Reconstruct(pkt.StartEpochLo14, now.ToUnixTimeSeconds());
+            if (recovered.HasValue)
+            {
+                start = DateTimeOffset.FromUnixTimeSeconds(recovered.Value);
+            }
+        }
+        var timeStr = start.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         var staleStr = stale.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
         var cotType = CotTypeMapper.TypeToString((int)pkt.CotTypeId) ?? pkt.CotTypeStr ?? "";
