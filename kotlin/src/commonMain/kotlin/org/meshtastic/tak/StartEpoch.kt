@@ -42,7 +42,9 @@ internal object StartEpoch {
      * sender whose clock runs consistently fast still orders its own reports
      * correctly because the offset cancels. Rejecting such a start loses that
      * ordering outright, and the fallback to decode time is silent, so this is
-     * deliberately generous rather than tight.
+     * deliberately generous rather than tight. Note the comparison this field
+     * supports is only ever between reports from ONE sender, where a constant
+     * offset cancels, so a fast clock cannot let its owner outrank anyone else.
      *
      * It does NOT guard a wrong-window reconstruction. Nearest-candidate selection is
      * exact at a window boundary, and an out-of-window value lands a full [MODULUS]
@@ -50,17 +52,34 @@ internal object StartEpoch {
      * claimed otherwise; that was left over from a bit-splice implementation whose
      * error really did land just ahead of the clock.)
      */
-    const val FUTURE_TOLERANCE_SECONDS: Long = 60L
+    const val FUTURE_TOLERANCE_SECONDS: Long = 3600L
 
     /**
      * How far behind the receiver's clock a reconstructed start may be.
      *
-     * Loose, because a sender whose clock runs slow still orders its own
-     * reports correctly and a tight bound here would discard all of its
-     * traffic. Kept well inside [HALF] so it cannot be confused with a
-     * wrong-window reconstruction.
+     * Loose for the same reason: a sender whose clock runs slow still orders its own
+     * reports correctly, and a tight bound here would discard all of its traffic.
      */
     const val PAST_LIMIT_SECONDS: Long = 3600L
+
+    /*
+     * Why an hour each way is safe, and what to check before widening it.
+     *
+     * The field is `start` mod 16384 s, so the modulus spans 4.55 h. But the range a
+     * receiver resolves UNAMBIGUOUSLY is half of that in EACH direction: [HALF], or
+     * 2.27 h. Past that, nearest-candidate picks the adjacent window and returns a
+     * plausible recent time wrong by a full [MODULUS], undetectably.
+     *
+     * An hour therefore leaves about 1.28 h of margin per side. Note the hour is spent
+     * by BOTH clocks, not just the sender's: a receiver 20 min slow reading a sender
+     * 20 min fast sees a 40 min apparent offset while neither device is far off on its
+     * own. So an hour tolerates roughly half an hour of drift per device, plus transit,
+     * and that per-device figure is the one to reason about rather than the hour.
+     *
+     * At two hours each way the margin falls to roughly 16 minutes, where two drifting
+     * clocks plus transit could cross the boundary. So the figure to check a wider
+     * bound against is [HALF], not [MODULUS].
+     */
 
     /** The low 14 bits of [epochSeconds], which is what goes on the wire. */
     fun truncate(epochSeconds: Long): Int = epochSeconds.mod(MODULUS).toInt()
