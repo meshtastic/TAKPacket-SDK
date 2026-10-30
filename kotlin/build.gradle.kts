@@ -3,6 +3,7 @@ import com.vanniktech.maven.publish.KotlinMultiplatform
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.jetbrains.dokka.gradle.engine.parameters.VisibilityModifier
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Base64
 
 plugins {
@@ -57,6 +58,21 @@ detekt {
 }
 
 kotlin {
+    // Compile with a JDK 21 toolchain, but emit Java 17 bytecode for the jvm target below.
+    //
+    // The jvm target otherwise inherits this toolchain and publishes class file version 65, which
+    // a consumer on a Java 17 runtime cannot load. The failure is an UnsupportedClassVersionError
+    // that does not name the jar, so it is slower to diagnose than it should be, and a host with a
+    // fixed Java 17 runtime cannot work around it at all.
+    //
+    // Nothing here needs 21. The codec is the pure-Kotlin kzstd library on every target, and the
+    // jvm artifact references no API newer than 17: no java.lang.foreign, no virtual threads, no
+    // sequenced collections, no jdk.internal, no native loading. The class file version was only
+    // ever a consequence of the toolchain declaration.
+    //
+    // Lowering it is a compatibility improvement rather than a trade: a class 61 jar runs on 17 and
+    // on every later release, so no existing consumer is affected. Same change as
+    // meshtastic/kzstd#122, which this library depends on.
     jvmToolchain(21)
     explicitApi()
 
@@ -69,7 +85,15 @@ kotlin {
         progressiveMode.set(true)
     }
 
-    jvm()
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+            // The part that makes this real rather than cosmetic: `jvmTarget` alone still compiles
+            // against the toolchain's newer class library, so a post-17 API would link cleanly and
+            // then fail at runtime on 17, moving the error from load time to first call.
+            freeCompilerArgs.add("-Xjdk-release=17")
+        }
+    }
 
     // The codec is the pure-Kotlin `org.meshtastic:kzstd` library on EVERY
     // target, so the js / wasmJs / wasmWasi targets need NO JS dependency:
