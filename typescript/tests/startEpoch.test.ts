@@ -93,8 +93,11 @@ describe("StartEpoch arithmetic", () => {
       expect(got, `age ${age} should be (wrongly) accepted`).toBeDefined();
       expect(got).toBe(trueStart + StartEpoch.MODULUS);
     }
-    // Just outside the band is rejected rather than wrong.
+    // Just outside the band is rejected rather than wrong, on BOTH sides. The far edge
+    // is the one a widened bound would walk into, so pinning only the near edge leaves
+    // the comment above unenforced.
     expect(StartEpoch.reconstruct(StartEpoch.truncate(now - (low - 1)), now)).toBeUndefined();
+    expect(StartEpoch.reconstruct(StartEpoch.truncate(now - (high + 1)), now)).toBeUndefined();
   });
 });
 
@@ -194,6 +197,29 @@ describe("StartEpoch round trip", () => {
     const noZone = iso(start).replace("Z", "");
     const pkt = parseCotXml(cot(noZone, iso(start + 300)));
     expect(pkt.startEpochLo14 ?? undefined).toBeUndefined();
+  });
+
+  it("does not guess at one with a space separator either", () => {
+    // The same stamp with a space rather than a 'T'. Worth pinning separately: the C#
+    // binding searched the text for a designator and keyed its check off the position of
+    // 'T', so that shape slipped through there while the 'T' form was caught. An anchored
+    // regex does not care about the separator, and this says so.
+    const start = Math.floor(Date.now() / 1000) - 90;
+    const noZone = iso(start).replace("Z", "").replace("T", " ");
+    const pkt = parseCotXml(cot(noZone, iso(start + 300)));
+    expect(pkt.startEpochLo14 ?? undefined).toBeUndefined();
+  });
+
+  it("accepts a lowercase zulu designator", () => {
+    // RFC 3339 section 5.6 permits either case and `new Date` accepts both, so matching
+    // only the uppercase form discarded the sender's start for any producer that spells
+    // it lowercase. It must agree with the uppercase form, not merely be present.
+    const start = Math.floor(Date.now() / 1000) - 90;
+    const lower = iso(start).replace("Z", "z");
+    const fromLower = parseCotXml(cot(lower, iso(start + 300)));
+    expect(fromLower.startEpochLo14, `${lower} was refused`).toBeDefined();
+    const fromUpper = parseCotXml(cot(iso(start), iso(start + 300)));
+    expect(fromLower.startEpochLo14).toBe(fromUpper.startEpochLo14);
   });
 
   it("measures stale from arrival rather than the recovered start", () => {

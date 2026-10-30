@@ -1164,7 +1164,9 @@ function computeStartEpochLo14(instant: string): number | undefined {
   if (!instant) return undefined;
   // `Date` would happily read "2026-10-29T12:00:00" as LOCAL time, so the
   // designator is required explicitly rather than left to the parser.
-  if (!/(?:Z|[+-]\d{2}:?\d{2})$/.test(instant.trim())) return undefined;
+  // `[Zz]` rather than `Z`: RFC 3339 section 5.6 permits either case, and `new Date` accepts
+  // both, so matching only the uppercase form refused a perfectly good UTC stamp.
+  if (!/(?:[Zz]|[+-]\d{2}:?\d{2})$/.test(instant.trim())) return undefined;
   const ms = new Date(instant).getTime();
   if (!Number.isFinite(ms)) return undefined;
   const seconds = Math.floor(ms / 1000);
