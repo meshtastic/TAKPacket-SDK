@@ -7,6 +7,7 @@ from xml.sax.saxutils import escape
 from . import atak_pb2
 from . import atak_palette
 from .cot_type_mapper import CotTypeMapper
+from . import start_epoch
 
 _TEAM_ENUM_TO_NAME = {
     1: "White", 2: "Yellow", 3: "Orange", 4: "Magenta",
@@ -96,8 +97,10 @@ class CotXmlBuilder:
 
         Emits the ``<event>`` envelope, ``<point>``, and a ``<detail>`` block
         whose children depend on the packet's payload variant. ``time`` and
-        ``start`` are stamped at "now" and ``stale`` is derived from "now" plus
-        ``stale_seconds`` (with a 45-second floor). Colors are emitted in
+        ``start`` carry the sender's own ``start`` when ``start_epoch_lo14`` is
+        present and reconstructs plausibly, falling back to "now" otherwise, and
+        ``stale`` is derived from "now" plus ``stale_seconds`` (with a 45-second
+        floor) regardless, so an honest ``start`` never shortens an event's life. Colors are emitted in
         ATAK's signed-int32 form, resolving the palette ``Team`` enum to its
         canonical ARGB and falling back to the exact ``_argb`` bits for custom
         colors. Default TAK endpoints and TAK-Talk ``how="null"`` conventions
@@ -114,8 +117,22 @@ class CotXmlBuilder:
         """
         now = datetime.now(timezone.utc)
         stale_secs = max(packet.stale_seconds, 45)
+        # `stale` stays measured from ARRIVAL, deliberately unaffected by the recovered
+        # start. Deriving it from `start` instead would cut an event's visibility by
+        # however long it spent in transit, and one that took longer than its own
+        # window would arrive nearly expired. Only `time`/`start` become honest here.
         stale = now + timedelta(seconds=stale_secs)
-        time_str = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        # Prefer the sender's own `start`. Without it every packet decodes as current,
+        # so a report delayed on the mesh outranks a newer one that arrived promptly,
+        # and nothing downstream can order two reports for one UID.
+        start = now
+        if packet.HasField("start_epoch_lo14"):
+            recovered = start_epoch.reconstruct(
+                packet.start_epoch_lo14, int(now.timestamp())
+            )
+            if recovered is not None:
+                start = datetime.fromtimestamp(recovered, timezone.utc)
+        time_str = start.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         stale_str = stale.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
         cot_type = CotTypeMapper.type_to_string(packet.cot_type_id) or packet.cot_type_str or ""

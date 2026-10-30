@@ -292,6 +292,19 @@ public class CotXmlParser
         var staleStr = evt.Attribute("stale")?.Value ?? "";
         pkt.StaleSeconds = ComputeStaleSeconds(timeStr, staleStr);
 
+        // Carry the event's `start` so a receiver can tell how old the report is.
+        // Falls back to `time`: ATAK sets the two equal on every event it emits, and a
+        // producer that supplies only `time` still means "generated then".
+        var startAttr = evt.Attribute("start")?.Value ?? "";
+        var startLo14 = ComputeStartEpochLo14(string.IsNullOrEmpty(startAttr) ? timeStr : startAttr);
+        if (startLo14.HasValue)
+        {
+            // Assigned only when present, so "the sender did not populate this" stays
+            // distinguishable from a legitimate zero. `start` mod 16384 is 0 for one
+            // second in every 16384, so that zero does occur.
+            pkt.StartEpochLo14 = startLo14.Value;
+        }
+
         var point = evt.Element("point");
         if (point != null)
         {
@@ -1177,6 +1190,57 @@ public class CotXmlParser
         var match = DetailRegex.Match(cotXml);
         if (!match.Success) return Array.Empty<byte>();
         return System.Text.Encoding.UTF8.GetBytes(match.Groups[1].Value);
+    }
+
+    /// <summary>
+    /// The low 14 bits of an ISO-8601 instant, for <c>TAKPacketV2.start_epoch_lo14</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Returns <c>null</c> for an absent or unparseable value rather than a
+    /// sentinel: the field is optional on the wire precisely so "the sender did not
+    /// supply one" is distinguishable from a legitimate zero, and a receiver that gets
+    /// nothing falls back to its decode time.</para>
+    /// <para>Returns <c>null</c> too when the instant is further from now than
+    /// <see cref="StartEpoch.PastLimitSeconds"/> (or
+    /// <see cref="StartEpoch.FutureToleranceSeconds"/> ahead), which is an hour, not the
+    /// width of the window. That gate is what keeps a receiver out of the band where
+    /// reconstruction is wrongly accepted.</para>
+    /// <para>A timestamp with no zone designator is refused. ATAK's own parser would read
+    /// it as GMT; inventing a zone is how a local-time stamp becomes a silent multi-hour
+    /// error, so nothing is the honest answer.</para>
+    /// </remarks>
+    private static uint? ComputeStartEpochLo14(string instant)
+    {
+        if (string.IsNullOrEmpty(instant)) return null;
+        // Parsed as DateTime, not DateTimeOffset, so the presence of a designator can be
+        // read off Kind instead of guessed from the text. RoundtripKind yields Utc for a
+        // Z form, Local for an offset-bearing one, and Unspecified only when there was no
+        // designator at all, which is the one case to refuse. DateTimeOffset cannot do
+        // this: it has no Kind, RoundtripKind is silently ignored on it, and an unzoned
+        // stamp simply comes back carrying the host's offset, indistinguishable from a
+        // stamp that really meant that offset.
+        if (!DateTime.TryParse(
+                instant,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind,
+                out var parsedDateTime))
+        {
+            return null;
+        }
+        if (parsedDateTime.Kind == DateTimeKind.Unspecified)
+        {
+            // No designator. AssumeUniversal is deliberately NOT set, and inventing the
+            // host zone is exactly the silent multi-hour error this refuses.
+            return null;
+        }
+        var parsed = new DateTimeOffset(parsedDateTime.ToUniversalTime(), TimeSpan.Zero);
+        var seconds = parsed.ToUnixTimeSeconds();
+        var age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - seconds;
+        if (age < -StartEpoch.FutureToleranceSeconds || age > StartEpoch.PastLimitSeconds)
+        {
+            return null;
+        }
+        return StartEpoch.Truncate(seconds);
     }
 
     private static uint ComputeStaleSeconds(string timeStr, string staleStr)

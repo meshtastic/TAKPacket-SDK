@@ -78,9 +78,12 @@ public class CotXmlBuilder {
     /// becomes the `<event>`/`<point>` attributes (lat/lon scaled from ×1e7,
     /// `hae` from meters HAE, which may be negative), and the single
     /// `payload_variant` (or its absence — an implicit PLI) drives the
-    /// `<detail>` children. `time`/`start` are stamped at call time and `stale`
-    /// is `now + max(staleSeconds, 45)`, so successive rebuilds of the same
-    /// packet differ only in those timestamps.
+    /// `<detail>` children. `time`/`start` carry the sender's own `start` when
+    /// `startEpochLo14` is present and reconstructs within range, falling back to
+    /// the call instant only when it is absent or refused; `stale` is
+    /// `now + max(staleSeconds, 45)`. So successive rebuilds of a packet that
+    /// carries a start are now stable in `time`/`start` and differ only in
+    /// `stale`, where before they differed in all three.
     ///
     /// Reconstruction is semantically faithful but not byte-identical to the
     /// original capture; see the type-level discussion of the ATAK-specific
@@ -90,9 +93,24 @@ public class CotXmlBuilder {
     /// - Parameter packet: The decoded packet to render.
     /// - Returns: A CoT XML event string ready to hand to a TAK client.
     public func build(_ packet: TAKPacketV2) -> String {
-        let now = Self.isoFmt.string(from: Date())
+        // Prefer the sender's own `start`. Without it every packet decodes as current,
+        // so a report delayed on the mesh outranks a newer one that arrived promptly,
+        // and nothing downstream can order two reports for one UID.
+        let decodeDate = Date()
+        var startDate = decodeDate
+        if packet.hasStartEpochLo14,
+           let recovered = StartEpoch.reconstruct(
+               Int64(packet.startEpochLo14),
+               Int64(decodeDate.timeIntervalSince1970.rounded(.down))) {
+            startDate = Date(timeIntervalSince1970: TimeInterval(recovered))
+        }
+        let now = Self.isoFmt.string(from: startDate)
         let staleSecs = max(Int(packet.staleSeconds), 45)
-        let stale = Self.isoFmt.string(from: Date().addingTimeInterval(TimeInterval(staleSecs)))
+        // `stale` stays measured from ARRIVAL, deliberately unaffected by the recovered
+        // start. Deriving it from `start` would cut an event's visibility by however
+        // long it spent in transit, and one that took longer than its own window would
+        // arrive nearly expired. Only `time`/`start` become honest here.
+        let stale = Self.isoFmt.string(from: decodeDate.addingTimeInterval(TimeInterval(staleSecs)))
 
         let cotType = CotTypeMapper.typeToString(packet.cotTypeID) ?? packet.cotTypeStr
         // For most CoT types, missing/Unspecified how falls back to "m-g".

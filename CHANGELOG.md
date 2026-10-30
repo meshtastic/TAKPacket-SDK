@@ -29,7 +29,10 @@ One version covers all five bindings, so a release is a single tag and a single 
 
   Wire-compatible: the field is optional and omitted when absent, so all 47
   golden frames are unchanged and an older peer simply ignores it. Implemented
-  in the Kotlin binding; Swift, Python, TypeScript and C# to follow.
+  in all five bindings. Each carries its own nearest-candidate reconstruction
+  rather than sharing one, since the bindings share no runtime, and all five
+  reproduce the same ten test vectors including both window-boundary cases where
+  a bit-splice errs in opposite directions.
 
 - `CotXmlBuilder.buildWithOrigin`, returning the CoT XML together with a
   `StartRecovery` case and the sender's own `start` when there is one.

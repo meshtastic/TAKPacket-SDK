@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from . import atak_pb2
 from . import atak_palette
 from .cot_type_mapper import CotTypeMapper
+from . import start_epoch
 
 _TEAM_NAME_TO_ENUM = {
     "White": 1, "Yellow": 2, "Orange": 3, "Magenta": 4,
@@ -23,6 +24,11 @@ _ROLE_NAME_TO_ENUM = {
 }
 
 _GEO_SRC_MAP = {"GPS": 1, "USER": 2, "NETWORK": 3}
+
+# A trailing Zulu designator, in either case. RFC 3339 section 5.6 permits both,
+# and ``datetime.fromisoformat`` accepts neither, so it has to be rewritten to an
+# explicit offset before parsing.
+_TRAILING_ZULU = re.compile(r"[Zz]$")
 
 
 def _scale_latitude_i(lat: float) -> int:
@@ -258,6 +264,16 @@ class CotXmlParser:
         time_str = root.get("time", "")
         stale_str = root.get("stale", "")
         pkt.stale_seconds = self._compute_stale_seconds(time_str, stale_str)
+
+        # Carry the event's `start` so a receiver can tell how old the report is.
+        # Falls back to `time`: ATAK sets the two equal on every event it emits, and
+        # a producer that supplies only `time` still means "generated then".
+        start_lo14 = self._compute_start_epoch_lo14(root.get("start", "") or time_str)
+        if start_lo14 is not None:
+            # Assigned only when present, so "the sender did not populate this" stays
+            # distinguishable from a legitimate zero. `start` mod 16384 is 0 for one
+            # second in every 16384, so that zero does occur.
+            pkt.start_epoch_lo14 = start_lo14
 
         # Point
         point = root.find("point")
@@ -1106,6 +1122,49 @@ class CotXmlParser:
         if not match:
             return b""
         return match.group(1).encode("utf-8")
+
+    @staticmethod
+    def _compute_start_epoch_lo14(instant: str) -> int | None:
+        """Compute the low 14 bits of an ISO-8601 instant for ``start_epoch_lo14``.
+
+        Returns ``None`` for an absent or unparseable value rather than a sentinel:
+        the field is optional on the wire precisely so "the sender did not supply
+        one" is distinguishable from a legitimate zero, and a receiver that gets
+        nothing falls back to its decode time.
+
+        Returns ``None`` too when the instant is further from now than
+        :data:`~meshtastic_tak.start_epoch.PAST_LIMIT_SECONDS` (or
+        :data:`~meshtastic_tak.start_epoch.FUTURE_TOLERANCE_SECONDS` ahead), which is
+        an hour, not the width of the window. That gate is what keeps a receiver out
+        of the band where reconstruction is wrongly accepted. Sending nothing is the
+        honest answer.
+
+        Args:
+            instant: The CoT ``start`` (or ``time``) timestamp, ISO-8601.
+
+        Returns:
+            The low 14 bits of the instant's epoch seconds, or ``None``.
+        """
+        if not instant:
+            return None
+        try:
+            # Anchored and case-insensitive. ``replace("Z", ...)`` would substitute a
+            # 'Z' anywhere in the string, and would miss the lowercase 'z' that RFC
+            # 3339 section 5.6 permits; ``fromisoformat`` rejects that form, so it used
+            # to come back as a refusal of a perfectly good UTC stamp.
+            parsed = datetime.fromisoformat(_TRAILING_ZULU.sub("+00:00", instant))
+            if parsed.tzinfo is None:
+                # No designator means we were told nothing trustworthy. ATAK's own
+                # parser would read it as GMT; we decline instead, because inventing a
+                # zone is how a local-time stamp becomes a silent multi-hour error.
+                return None
+            seconds = int(parsed.timestamp())
+            age = int(datetime.now(timezone.utc).timestamp()) - seconds
+            if age < -start_epoch.FUTURE_TOLERANCE_SECONDS or age > start_epoch.PAST_LIMIT_SECONDS:
+                return None
+            return start_epoch.truncate(seconds)
+        except (ValueError, TypeError, OverflowError, OSError):
+            return None
 
     @staticmethod
     def _compute_stale_seconds(time_str: str, stale_str: str) -> int:
