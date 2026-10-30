@@ -217,26 +217,66 @@ public class CotXmlBuilder {
      * payload variant ([TakPacketV2Data.Payload.None] / an implicit PLI) emits
      * just the envelope (`<point>` + standard `<detail>` children).
      *
+     * This overload cannot tell you WHICH of those happened, and the fallback is
+     * indistinguishable from a genuine `start` once it is in the XML while reading as
+     * maximally fresh. Anything that orders two copies of one event wants
+     * [buildWithOrigin] instead.
+     *
      * @param packet the decoded data model to render.
      * @return a pretty-printed, multi-line CoT XML string with an `<?xml?>`
      *         prologue. (Callers transmitting on a TAK TCP stream should pass it
      *         through [CotMeshSanitizer.normalizeCotXml] first.)
      */
-    public fun build(packet: TakPacketV2Data): String {
+    public fun build(packet: TakPacketV2Data): String = buildWithOrigin(packet).xml
+
+    /**
+     * As [build], but also reports what became of the packet's `start`.
+     *
+     * Use this wherever the recovered origin time matters, which is anywhere two copies of one
+     * event have to be ordered. [build] cannot express the difference: it writes [now] into
+     * `start` whenever it has nothing better, and that fallback is indistinguishable from a
+     * genuine value once it is in the XML, while reading as maximally fresh.
+     *
+     * [now] is the reference instant, defaulting to the current one. Pass the original decode
+     * instant when rebuilding a stored capture, otherwise every carried `start` is refused as out
+     * of range against a clock hours ahead of the one that recorded it.
+     *
+     * @return the XML, which is always produced, plus the [StartRecovery] case and the sender's
+     *         own `start` when there is one. Deciding what to do about
+     *         [StartRecovery.REFUSED] is the caller's: this is a codec, and the position, uid and
+     *         type are unaffected by a bad clock.
+     *
+     * The three suppressions below were carried by [build] in the detekt baseline before its body
+     * moved here. Relocated rather than newly incurred, and stated at the code rather than in a
+     * file nobody opens: this renders every CoT payload variant in one pass.
+     */
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
+    public fun buildWithOrigin(
+        packet: TakPacketV2Data,
+        now: Instant = Clock.System.now(),
+    ): BuiltCot {
         val sb = StringBuilder()
         // kotlin.time.Instant.toString() emits the ISO-8601 instant form ATAK
         // expects (e.g. 2026-06-13T19:00:00.123456789Z), matching the old
         // DateTimeFormatter.ISO_INSTANT output and re-parseable by the parser's
         // Instant.parse on the receive side.
-        val now = Clock.System.now()
         // Prefer the sender's own `start`. Without it every packet decodes as current,
         // so a report delayed on the mesh outranks a newer one that arrived promptly,
         // and nothing downstream can order two reports for one UID.
-        val start =
-            packet.startEpochLo14
-                ?.let { StartEpoch.reconstruct(it, now.epochSeconds) }
-                ?.let { Instant.fromEpochSeconds(it) }
-                ?: now
+        val carried = packet.startEpochLo14
+        val recovered = carried?.let { StartEpoch.reconstruct(it, now.epochSeconds) }
+        val recovery =
+            when {
+                recovered != null -> StartRecovery.RECOVERED
+
+                carried == null -> StartRecovery.ABSENT
+
+                // Populated and refused. Kept distinct from ABSENT because it accuses the
+                // sender's clock rather than reporting that it said nothing.
+                else -> StartRecovery.REFUSED
+            }
+        val originStart = recovered?.let { Instant.fromEpochSeconds(it) }
+        val start = originStart ?: now
         val timeStr = start.toString()
         val staleWindow =
             packet.staleSeconds
@@ -937,7 +977,7 @@ public class CotXmlBuilder {
         sb.append("  </detail>\n")
         sb.append("</event>")
 
-        return sb.toString()
+        return BuiltCot(sb.toString(), recovery, originStart)
     }
 
     /**

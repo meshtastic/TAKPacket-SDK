@@ -6,7 +6,6 @@
     <ID>ComplexCondition:CotXmlBuilder.kt$CotXmlBuilder$packet.remarks.isNotEmpty() &amp;&amp; packet.payload !is TakPacketV2Data.Payload.Chat &amp;&amp; packet.payload !is TakPacketV2Data.Payload.Aircraft &amp;&amp; packet.payload !is TakPacketV2Data.Payload.Route &amp;&amp; packet.payload !is TakPacketV2Data.Payload.TakTalk &amp;&amp; packet.payload !is TakPacketV2Data.Payload.TakTalkRoom</ID>
     <ID>ComplexCondition:CotXmlBuilder.kt$CotXmlBuilder$routePayload != null &amp;&amp; packet.latitudeI == 0 &amp;&amp; packet.longitudeI == 0 &amp;&amp; routePayload.links.isNotEmpty()</ID>
     <ID>ComplexCondition:CotXmlParser.kt$CotXmlParser$!isStyleLink &amp;&amp; linkUidAttr != null &amp;&amp; relation == "p-p" &amp;&amp; linkType.isNotEmpty()</ID>
-    <ID>CyclomaticComplexMethod:CotXmlBuilder.kt$CotXmlBuilder$public fun build(packet: TakPacketV2Data): String</ID>
     <ID>CyclomaticComplexMethod:CotXmlParser.kt$CotXmlParser$@Throws(IllegalArgumentException::class) public fun parse(cotXml: String): TakPacketV2Data</ID>
     <ID>CyclomaticComplexMethod:CotXmlParser.kt$CotXmlParser.Companion$internal fun inferSensorType(model: String?): TakPacketV2Data.SensorFovData.SensorType</ID>
     <ID>CyclomaticComplexMethod:CotXmlParser.kt$CotXmlParser.Companion$private fun markerKindFromCotType( cotType: String, iconset: String, ): Int</ID>
@@ -20,7 +19,6 @@
     <ID>LargeClass:CotXmlParser.kt$CotXmlParser</ID>
     <ID>LargeClass:RoundTripTest.kt$RoundTripTest</ID>
     <ID>LongMethod:CompressionTest.kt$CompressionTest$@Test fun `generate compression report`()</ID>
-    <ID>LongMethod:CotXmlBuilder.kt$CotXmlBuilder$public fun build(packet: TakPacketV2Data): String</ID>
     <ID>LongMethod:CotXmlParser.kt$CotXmlParser$@Throws(IllegalArgumentException::class) public fun parse(cotXml: String): TakPacketV2Data</ID>
     <ID>LongMethod:DictionaryTrainingTest.kt$DictionaryTrainingTest$@Test fun `generate training corpus`()</ID>
     <ID>LongMethod:RoundTripTest.kt$RoundTripTest$@ParameterizedTest(name = "{0}") @MethodSource("org.meshtastic.tak.TestFixtures#allFixtureFilenames") fun `full round-trip preserves fields`(fixture: String)</ID>
@@ -91,7 +89,6 @@
     <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$7</ID>
     <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$8</ID>
     <ID>MagicNumber:WasmWasiCodecTest.kt$WasmWasiCodecTest$9</ID>
-    <ID>NestedBlockDepth:CotXmlBuilder.kt$CotXmlBuilder$public fun build(packet: TakPacketV2Data): String</ID>
     <ID>NestedBlockDepth:CotXmlParser.kt$CotXmlParser$@Throws(IllegalArgumentException::class) public fun parse(cotXml: String): TakPacketV2Data</ID>
     <ID>ReturnCount:CotXmlParser.kt$CotXmlParser.Companion$private fun parseCasevacEnum( raw: String?, nameMap: Map&lt;String, Int>, maxValue: Int, ): Int</ID>
     <ID>ReturnCount:DictionaryProvider.kt$DictionaryProvider$public fun selectDictId( cotTypeId: Int, cotTypeStr: String?, ): Int</ID>

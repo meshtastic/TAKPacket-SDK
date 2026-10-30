@@ -9,6 +9,30 @@ package org.meshtastic.tak
  * (4.55 hour) window that implies is far wider than any plausible mesh
  * transit, so a receiver rebuilds the full value from its own clock.
  *
+ * ## Every instant here is UTC
+ *
+ * Stated explicitly because the field is the one place a zone error would be invisible:
+ * it carries bare seconds, so a timestamp that was built in the wrong zone arrives as a
+ * perfectly well-formed value that is simply wrong by whole hours, and no bound below
+ * can tell that from clock skew.
+ *
+ * UTC is the ecosystem invariant rather than this library's choice. ATAK's
+ * `CoordinatedTime` formats CoT instants with `TimeZone.getTimeZone("UTC")` and a
+ * LITERAL `Z`, fixed in a static initializer rather than read from device settings, so a
+ * handset's timezone cannot perturb it. Its parser reads fixed character positions into
+ * a `GregorianCalendar` set to GMT and never interprets a zone offset, and both of its
+ * fallback formats require that literal `Z`. So a producer stamping local time, or
+ * omitting the designator, is already broken against every ATAK client and not only
+ * against us.
+ *
+ * This library is deliberately STRICTER than that. [CotXmlParser] resolves the instant
+ * with `Instant.parse`, which requires a designator and converts a real offset
+ * correctly, so an offset-bearing `start` encodes the same bits as its `Z` form and a
+ * zone-less one encodes nothing at all. Do NOT relax this to match ATAK's positional
+ * leniency: that strictness is what turns a malformed timestamp into a null the caller
+ * fails open on, instead of a confident time that is hours wrong. Pinned by tests in
+ * `StartRoundTripCommonTest`.
+ *
  * ## Reconstruction picks the NEAREST candidate
  *
  * Splicing the low bits onto the receiver's current window, as
@@ -75,13 +99,26 @@ internal object StartEpoch {
      * so the band is [MODULUS - FUTURE_TOLERANCE_SECONDS, MODULUS + PAST_LIMIT_SECONDS]
      * and it cannot be closed from the receiver alone.
      *
-     * What keeps it unreachable is the SENDER gate: [CotXmlParser] will not encode a
-     * `start` older than [PAST_LIMIT_SECONDS], so arriving in that band takes transit
-     * (net of skew) of `MODULUS - 2 * bound`. At an hour that is 9184 s, 2.55 h, which
-     * no mesh delivers. Note both gates use the same constant, so widening costs margin
-     * twice over: at two hours each way the required transit falls to 1984 s, 33 min,
-     * which is no longer implausible. Check a wider bound against that figure, not
-     * against [HALF].
+     * That band is an ACCEPTED RISK, not a hole the gates close, and it is reached by
+     * sender-to-receiver clock DISAGREEMENT rather than by transit. The SENDER gate in
+     * [CotXmlParser] will not encode a `start` older than [PAST_LIMIT_SECONDS], but
+     * that bounds the start against the sender's OWN clock and says nothing about the
+     * two clocks disagreeing. Transit contributes seconds. So the gate supplies at most
+     * an hour of the 12784 s gap: it buys margin, not closure. Both gates read the same
+     * constant, so widening spends that margin twice over.
+     *
+     * It is acceptable because drift cannot get there. Breaking reconstruction at all
+     * takes 2.28 h of disagreement, being wrongly accepted takes 3.55 h, and a device
+     * reporting a live GNSS position has GNSS time by construction, since the fix
+     * solves for time. What DOES get there is a whole-hour offset from stamping local
+     * time as if it were UTC: for a fresh `start`, 4 h and 5 h land inside the band
+     * while 3 h and 6 h are merely rejected. GNSS accuracy is no protection against a
+     * timezone applied after the fix, so a producer must stamp `start` in UTC.
+     *
+     * The resulting harm is sign-dependent. A value reconstructed a full [MODULUS]
+     * EARLY never clobbers, but makes every later report from that sender look older
+     * than an already-delivered one. Reconstructed a [MODULUS] LATE it wins every
+     * comparison for as long as the offset persists.
      */
 
     /** The low 14 bits of [epochSeconds], which is what goes on the wire. */
