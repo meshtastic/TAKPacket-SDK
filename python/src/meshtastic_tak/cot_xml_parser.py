@@ -25,6 +25,11 @@ _ROLE_NAME_TO_ENUM = {
 
 _GEO_SRC_MAP = {"GPS": 1, "USER": 2, "NETWORK": 3}
 
+# A trailing Zulu designator, in either case. RFC 3339 section 5.6 permits both,
+# and ``datetime.fromisoformat`` accepts neither, so it has to be rewritten to an
+# explicit offset before parsing.
+_TRAILING_ZULU = re.compile(r"[Zz]$")
+
 
 def _scale_latitude_i(lat: float) -> int:
     """Scale a latitude degree value into protobuf's ``sfixed32 latitude_i = lat * 1e7``,
@@ -1143,7 +1148,11 @@ class CotXmlParser:
         if not instant:
             return None
         try:
-            parsed = datetime.fromisoformat(instant.replace("Z", "+00:00"))
+            # Anchored and case-insensitive. ``replace("Z", ...)`` would substitute a
+            # 'Z' anywhere in the string, and would miss the lowercase 'z' that RFC
+            # 3339 section 5.6 permits; ``fromisoformat`` rejects that form, so it used
+            # to come back as a refusal of a perfectly good UTC stamp.
+            parsed = datetime.fromisoformat(_TRAILING_ZULU.sub("+00:00", instant))
             if parsed.tzinfo is None:
                 # No designator means we were told nothing trustworthy. ATAK's own
                 # parser would read it as GMT; we decline instead, because inventing a

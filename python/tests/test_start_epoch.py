@@ -13,6 +13,8 @@ from __future__ import annotations
 import re
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from meshtastic_tak import atak_pb2, start_epoch
 from meshtastic_tak.cot_xml_builder import CotXmlBuilder
 from meshtastic_tak.cot_xml_parser import CotXmlParser
@@ -205,14 +207,40 @@ def test_an_offset_bearing_start_is_converted_rather_than_read_positionally():
     assert from_z.start_epoch_lo14 == from_offset.start_epoch_lo14
 
 
-def test_a_start_with_no_zone_designator_is_not_guessed_at():
+@pytest.mark.parametrize(
+    "fmt",
+    [
+        "%Y-%m-%dT%H:%M:%S.%f",
+        "%Y-%m-%dT%H:%M:%S",
+        # Space rather than 'T'. Both shapes are caught by the same tzinfo check, so
+        # this is cheap to pin; the C# binding guessed from the text instead and let
+        # this one through, which is what prompted covering it everywhere.
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M:%S.%f",
+    ],
+)
+def test_a_start_with_no_zone_designator_is_not_guessed_at(fmt):
     # ATAK's fixed-position parser would read this as GMT. We refuse instead, because
     # a producer that omits the designator has told us nothing trustworthy, and
     # inventing a zone is how a local-time stamp becomes a silent multi-hour error.
     start = (datetime.now(timezone.utc) - timedelta(seconds=90)).replace(microsecond=0)
-    no_zone = start.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
+    no_zone = start.strftime(fmt)
     pkt = CotXmlParser().parse(_cot(no_zone, _iso(start + timedelta(seconds=300))))
-    assert not pkt.HasField("start_epoch_lo14")
+    assert not pkt.HasField("start_epoch_lo14"), f"{no_zone!r} was encoded anyway"
+
+
+def test_a_lowercase_zulu_designator_is_accepted():
+    # RFC 3339 section 5.6 permits both cases. `fromisoformat` accepts neither, so the
+    # designator is rewritten to an explicit offset first; doing that with a plain
+    # str.replace("Z", ...) missed the lowercase form and refused a good UTC stamp.
+    # It must agree with the uppercase form rather than merely be present.
+    start = (datetime.now(timezone.utc) - timedelta(seconds=90)).replace(microsecond=0)
+    stale = _iso(start + timedelta(seconds=300))
+    lower = start.strftime("%Y-%m-%dT%H:%M:%S") + "z"
+    from_lower = CotXmlParser().parse(_cot(lower, stale))
+    assert from_lower.HasField("start_epoch_lo14"), f"{lower!r} was refused"
+    from_upper = CotXmlParser().parse(_cot(_iso(start), stale))
+    assert from_lower.start_epoch_lo14 == from_upper.start_epoch_lo14
 
 
 def test_stale_is_measured_from_arrival_rather_than_the_recovered_start():
