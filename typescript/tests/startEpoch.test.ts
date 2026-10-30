@@ -93,8 +93,11 @@ describe("StartEpoch arithmetic", () => {
       expect(got, `age ${age} should be (wrongly) accepted`).toBeDefined();
       expect(got).toBe(trueStart + StartEpoch.MODULUS);
     }
-    // Just outside the band is rejected rather than wrong.
+    // Just outside the band is rejected rather than wrong, on BOTH sides. The far edge
+    // is the one a widened bound would walk into, so pinning only the near edge leaves
+    // the comment above unenforced.
     expect(StartEpoch.reconstruct(StartEpoch.truncate(now - (low - 1)), now)).toBeUndefined();
+    expect(StartEpoch.reconstruct(StartEpoch.truncate(now - (high + 1)), now)).toBeUndefined();
   });
 });
 
