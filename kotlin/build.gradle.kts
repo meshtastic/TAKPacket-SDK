@@ -491,7 +491,12 @@ mavenPublishing {
 // kotlin-js-store/yarn.lock). Dev-time only — nothing here ships in published
 // artifacts. Each pin clears an open Dependabot alert; drop a resolution once
 // the transitive tree requires at least that version on its own.
-// After changing these, regenerate the lock: ./gradlew kotlinUpgradeYarnLock
+// After changing these, regenerate the lock:
+//   ./gradlew kotlinUpgradeYarnLock --rerun-tasks
+// --rerun-tasks is required, not optional: :rootPackageJson does not treat these
+// resolution() calls as inputs, so it reports UP-TO-DATE, the new floors never reach
+// the generated package.json, and the lock is rewritten unchanged while the command
+// exits zero.
 plugins.withType<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin> {
     the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().apply {
         resolution("ws", "8.21.0") // GHSA memory-exhaustion DoS (< 8.21.0)
