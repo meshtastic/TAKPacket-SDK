@@ -124,8 +124,11 @@ public class StartEpochTests
             Assert.NotNull(got);
             Assert.Equal(trueStart + StartEpoch.Modulus, got);
         }
-        // Just outside the band is rejected rather than wrong.
+        // Just outside the band is rejected rather than wrong, on BOTH sides. The far
+        // edge is the one a widened bound would walk into, so pinning only the near edge
+        // leaves the comment above unenforced.
         Assert.Null(StartEpoch.Reconstruct(StartEpoch.Truncate(now - (low - 1)), now));
+        Assert.Null(StartEpoch.Reconstruct(StartEpoch.Truncate(now - (high + 1)), now));
     }
 
     // -------------------------------------------------------------- round trip
@@ -236,16 +239,41 @@ public class StartEpochTests
         Assert.Equal(fromZ.StartEpochLo14, fromOffset.StartEpochLo14);
     }
 
-    [Fact]
-    public void AStartWithNoZoneDesignatorIsNotGuessedAt()
+    [Theory]
+    [InlineData("yyyy-MM-ddTHH:mm:ss.fff")]
+    [InlineData("yyyy-MM-ddTHH:mm:ss")]
+    // Space rather than 'T'. Regression: the designator check used to be a text search
+    // for 'Z'/'+'/a trailing '-', and on this shape IndexOf('T') is -1, so the final
+    // comparison was false, the guard never fired, and TryParse had already applied the
+    // host zone. Under TZ=America/New_York that encoded a value 14400 s off, silently.
+    // Detection now reads DateTime.Kind, which does not depend on the separator.
+    [InlineData("yyyy-MM-dd HH:mm:ss")]
+    [InlineData("yyyy-MM-dd HH:mm:ss.fff")]
+    public void AStartWithNoZoneDesignatorIsNotGuessedAt(string format)
     {
         // TryParse would apply the HOST's local zone, so this would be wrong by the
         // runner's offset, silently and differently per machine. ATAK would read it as
         // GMT. We refuse either way.
         var start = NowSec() - 90;
-        var noZone = DateTimeOffset.FromUnixTimeSeconds(start).ToString("yyyy-MM-ddTHH:mm:ss.fff");
+        var noZone = DateTimeOffset.FromUnixTimeSeconds(start).ToString(format);
         var pkt = new CotXmlParser().Parse(Cot(noZone, Iso(start + 300)));
-        Assert.False(pkt.HasStartEpochLo14);
+        Assert.False(pkt.HasStartEpochLo14, $"'{noZone}' ({format}) was encoded anyway");
+    }
+
+    [Fact]
+    public void ALowercaseZIsAValidDesignatorAndIsAccepted()
+    {
+        // The other half of the same regression: the old text search looked for an
+        // uppercase 'Z' only, so a lowercase one fell through to the trailing-'-' test
+        // and a perfectly good UTC stamp was refused. Reading Kind accepts it, and it
+        // must agree with the uppercase form rather than merely be non-null.
+        var start = NowSec() - 90;
+        var lower = DateTimeOffset.FromUnixTimeSeconds(start)
+            .ToString("yyyy-MM-ddTHH:mm:ss.fff") + "z";
+        var fromLower = new CotXmlParser().Parse(Cot(lower, Iso(start + 300)));
+        Assert.True(fromLower.HasStartEpochLo14, $"'{lower}' was refused");
+        var fromUpper = new CotXmlParser().Parse(Cot(Iso(start), Iso(start + 300)));
+        Assert.Equal(fromUpper.StartEpochLo14, fromLower.StartEpochLo14);
     }
 
     [Fact]

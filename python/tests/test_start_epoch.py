@@ -104,8 +104,11 @@ def test_documents_the_band_where_reconstruction_is_wrongly_accepted():
         got = start_epoch.reconstruct(start_epoch.truncate(true_start), now)
         assert got is not None, f"age {age} should be (wrongly) accepted"
         assert got == true_start + start_epoch.MODULUS, "off by exactly one modulus"
-    # Just outside the band on the near side is rejected rather than wrong.
+    # Just outside the band is rejected rather than wrong, on BOTH sides. The far edge
+    # is the one a widened bound would walk into, so pinning only the near edge leaves
+    # the comment above unenforced.
     assert start_epoch.reconstruct(start_epoch.truncate(now - (low - 1)), now) is None
+    assert start_epoch.reconstruct(start_epoch.truncate(now - (high + 1)), now) is None
 
 
 # ----------------------------------------------------------------- round trip

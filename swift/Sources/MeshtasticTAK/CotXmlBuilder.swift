@@ -78,9 +78,12 @@ public class CotXmlBuilder {
     /// becomes the `<event>`/`<point>` attributes (lat/lon scaled from ×1e7,
     /// `hae` from meters HAE, which may be negative), and the single
     /// `payload_variant` (or its absence — an implicit PLI) drives the
-    /// `<detail>` children. `time`/`start` are stamped at call time and `stale`
-    /// is `now + max(staleSeconds, 45)`, so successive rebuilds of the same
-    /// packet differ only in those timestamps.
+    /// `<detail>` children. `time`/`start` carry the sender's own `start` when
+    /// `startEpochLo14` is present and reconstructs within range, falling back to
+    /// the call instant only when it is absent or refused; `stale` is
+    /// `now + max(staleSeconds, 45)`. So successive rebuilds of a packet that
+    /// carries a start are now stable in `time`/`start` and differ only in
+    /// `stale`, where before they differed in all three.
     ///
     /// Reconstruction is semantically faithful but not byte-identical to the
     /// original capture; see the type-level discussion of the ATAK-specific

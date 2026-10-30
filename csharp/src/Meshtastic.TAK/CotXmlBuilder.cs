@@ -165,7 +165,9 @@ public class CotXmlBuilder
     /// <remarks>
     /// <para>The <c>type</c> attribute comes from the packet's CoT type enum, falling
     /// back to <c>cot_type_str</c> for types the enum doesn't know. The <c>time</c> and
-    /// <c>start</c> are stamped at the current UTC instant and <c>stale</c> is derived
+    /// <c>start</c> carry the sender's own <c>start</c> when <c>start_epoch_lo14</c> is
+    /// present and reconstructs within range, and fall back to the current UTC instant
+    /// only when it is absent or refused; <c>stale</c> is derived
     /// from <c>stale_seconds</c> (floored at 45s). The detail body is reconstructed from
     /// the packet's payload variant; an empty payload with an <c>a-f-*</c> type round-trips
     /// as an implicit PLI (a bare position report with no payload-specific detail).</para>

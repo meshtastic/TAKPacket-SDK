@@ -109,8 +109,11 @@ private func nowSec() -> Int64 { Int64(Date().timeIntervalSince1970.rounded(.dow
         let got = StartEpoch.reconstruct(Int64(StartEpoch.truncate(trueStart)), now)
         #expect(got == trueStart + StartEpoch.modulus, "age \(age) should be wrongly accepted")
     }
-    // Just outside the band is rejected rather than wrong.
+    // Just outside the band is rejected rather than wrong, on BOTH sides. The far edge
+    // is the one a widened bound would walk into, so pinning only the near edge leaves
+    // the comment above unenforced.
     #expect(StartEpoch.reconstruct(Int64(StartEpoch.truncate(now - (low - 1))), now) == nil)
+    #expect(StartEpoch.reconstruct(Int64(StartEpoch.truncate(now - (high + 1))), now) == nil)
 }
 
 // MARK: Round trip

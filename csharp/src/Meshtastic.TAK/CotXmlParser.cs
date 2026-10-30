@@ -1212,22 +1212,28 @@ public class CotXmlParser
     private static uint? ComputeStartEpochLo14(string instant)
     {
         if (string.IsNullOrEmpty(instant)) return null;
-        // AssumeUniversal is deliberately NOT set: a stamp with no designator must be
-        // refused rather than silently read as UTC or as the host's local zone.
-        if (!DateTimeOffset.TryParse(
+        // Parsed as DateTime, not DateTimeOffset, so the presence of a designator can be
+        // read off Kind instead of guessed from the text. RoundtripKind yields Utc for a
+        // Z form, Local for an offset-bearing one, and Unspecified only when there was no
+        // designator at all, which is the one case to refuse. DateTimeOffset cannot do
+        // this: it has no Kind, RoundtripKind is silently ignored on it, and an unzoned
+        // stamp simply comes back carrying the host's offset, indistinguishable from a
+        // stamp that really meant that offset.
+        if (!DateTime.TryParse(
                 instant,
                 System.Globalization.CultureInfo.InvariantCulture,
                 System.Globalization.DateTimeStyles.RoundtripKind,
-                out var parsed))
+                out var parsedDateTime))
         {
             return null;
         }
-        if (instant.IndexOf('Z') < 0 && instant.IndexOf('+') < 0
-            && instant.LastIndexOf('-') <= instant.IndexOf('T'))
+        if (parsedDateTime.Kind == DateTimeKind.Unspecified)
         {
-            // No designator at all; TryParse would have applied the local zone.
+            // No designator. AssumeUniversal is deliberately NOT set, and inventing the
+            // host zone is exactly the silent multi-hour error this refuses.
             return null;
         }
+        var parsed = new DateTimeOffset(parsedDateTime.ToUniversalTime(), TimeSpan.Zero);
         var seconds = parsed.ToUnixTimeSeconds();
         var age = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - seconds;
         if (age < -StartEpoch.FutureToleranceSeconds || age > StartEpoch.PastLimitSeconds)
