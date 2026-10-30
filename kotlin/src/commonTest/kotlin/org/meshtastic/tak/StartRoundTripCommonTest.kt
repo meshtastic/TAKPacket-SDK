@@ -92,7 +92,6 @@ class StartRoundTripCommonTest {
         assertNull(packet.startEpochLo14, "a zone-less start should not be encoded")
     }
 
-
     @Test
     fun `a recent start survives the full wire round trip`() {
         // 90 s old: comfortably inside the window, and far enough from now that a
@@ -238,13 +237,14 @@ class StartRoundTripCommonTest {
         // Sent and refused. 7200 s is inside the 8192 s half-window, so this is the bound
         // rather than the wrap. This is the case a consumer may discard the report over,
         // and the only reason the two are separate values.
-        val refused = builder.buildWithOrigin(
-            TakPacketV2Data(
-                uid = "B",
-                cotTypeStr = "a-f-G-U-C",
-                startEpochLo14 = StartEpoch.truncate(nowSec - 7200L),
-            ),
-        )
+        val refused =
+            builder.buildWithOrigin(
+                TakPacketV2Data(
+                    uid = "B",
+                    cotTypeStr = "a-f-G-U-C",
+                    startEpochLo14 = StartEpoch.truncate(nowSec - 7200L),
+                ),
+            )
         assertEquals(StartRecovery.REFUSED, refused.recovery)
         assertNull(refused.originStart)
         // Still built. The codec does not get to decide; uid, type and position are fine.
@@ -258,11 +258,12 @@ class StartRoundTripCommonTest {
         // to be passable. Without this, a capture is undecodable by construction.
         val recordedAt = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - 86_400L)
         val start = recordedAt.plusSeconds(-30)
-        val packet = TakPacketV2Data(
-            uid = "ATOM-REPLAY",
-            cotTypeStr = "a-f-G-U-C",
-            startEpochLo14 = StartEpoch.truncate(start.epochSeconds),
-        )
+        val packet =
+            TakPacketV2Data(
+                uid = "ATOM-REPLAY",
+                cotTypeStr = "a-f-G-U-C",
+                startEpochLo14 = StartEpoch.truncate(start.epochSeconds),
+            )
 
         assertEquals(StartRecovery.REFUSED, builder.buildWithOrigin(packet).recovery)
         val asRecorded = builder.buildWithOrigin(packet, recordedAt)

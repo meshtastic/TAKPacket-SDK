@@ -245,10 +245,11 @@ public class CotXmlBuilder {
      *         own `start` when there is one. Deciding what to do about
      *         [StartRecovery.REFUSED] is the caller's: this is a codec, and the position, uid and
      *         type are unaffected by a bad clock.
+     *
+     * The three suppressions below were carried by [build] in the detekt baseline before its body
+     * moved here. Relocated rather than newly incurred, and stated at the code rather than in a
+     * file nobody opens: this renders every CoT payload variant in one pass.
      */
-    // These three were carried by `build` in the detekt baseline before its body moved here.
-    // Relocated rather than newly incurred, and stated inline so the debt is visible at the
-    // code: this renders every CoT payload variant in one pass.
     @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
     public fun buildWithOrigin(
         packet: TakPacketV2Data,
@@ -267,7 +268,9 @@ public class CotXmlBuilder {
         val recovery =
             when {
                 recovered != null -> StartRecovery.RECOVERED
+
                 carried == null -> StartRecovery.ABSENT
+
                 // Populated and refused. Kept distinct from ABSENT because it accuses the
                 // sender's clock rather than reporting that it said nothing.
                 else -> StartRecovery.REFUSED
