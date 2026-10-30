@@ -491,17 +491,32 @@ mavenPublishing {
 // kotlin-js-store/yarn.lock). Dev-time only — nothing here ships in published
 // artifacts. Each pin clears an open Dependabot alert; drop a resolution once
 // the transitive tree requires at least that version on its own.
-// After changing these, regenerate the lock: ./gradlew kotlinUpgradeYarnLock
+// After changing these, regenerate the lock:
+//   ./gradlew kotlinUpgradeYarnLock --rerun-tasks
+// --rerun-tasks is required, not optional: :rootPackageJson does not treat these
+// resolution() calls as inputs, so it reports UP-TO-DATE, the new floors never reach
+// the generated package.json, and the lock is rewritten unchanged while the command
+// exits zero.
 plugins.withType<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnPlugin> {
     the<org.jetbrains.kotlin.gradle.targets.js.yarn.YarnRootExtension>().apply {
         resolution("ws", "8.21.0") // GHSA memory-exhaustion DoS (< 8.21.0)
-        resolution("serialize-javascript", "7.0.5") // RCE (< 7.0.3) + CPU-exhaustion DoS (< 7.0.5)
         resolution("webpack", "5.104.1") // buildHttp allow-list bypasses (< 5.104.1)
         resolution("diff", "8.0.3") // parsePatch/applyPatch DoS (< 8.0.3)
-        resolution("brace-expansion", "2.1.4") // Dependabot HIGH ReDoS + OOM DoS (< 2.1.4)
-        resolution("fast-uri", "3.1.5") // Dependabot HIGH host confusion (< 3.1.5)
-        resolution("js-yaml", "4.3.1") // Dependabot HIGH quadratic CPU in !!omap (< 4.3.1)
-        resolution("body-parser", "1.20.6") // Dependabot LOW (< 1.20.6)
         resolution("socket.io-parser", "4.2.7") // Dependabot HIGH memory-exhaustion DoS (< 4.2.7)
+
+        // Raised: the advisory moved past the floor these already carried.
+        resolution("brace-expansion", "2.1.7") // was 2.1.4; HIGH x2 then MEDIUM (< 2.1.7)
+        resolution("fast-uri", "3.1.9") // was 3.1.5; six advisories, HIGH to LOW (< 3.1.9)
+        resolution("js-yaml", "4.3.2") // was 4.3.1; HIGH (< 4.3.2)
+        resolution("body-parser", "1.20.9") // was 1.20.6; HIGH (< 1.20.9)
+        resolution("serialize-javascript", "7.1.3") // was 7.0.5; LOW (< 7.1.3)
+
+        // New: not previously pinned.
+        resolution("qs", "6.16.1") // MEDIUM x3, incl. arrayFormat 'comma' TypeError (<= 6.16.0)
+        resolution("browserslist", "4.28.7") // HIGH (<= 4.28.6)
+        resolution("engine.io", "6.6.10") // HIGH (< 6.6.10)
+        resolution("follow-redirects", "1.16.1") // HIGH (< 1.16.1)
+        resolution("source-map-js", "1.2.2") // HIGH (< 1.2.2)
+        resolution("baseline-browser-mapping", "2.11.0") // MEDIUM (< 2.11.0)
     }
 }
