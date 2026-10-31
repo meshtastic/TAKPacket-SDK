@@ -59,6 +59,10 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ### Changed
 
+- The Kotlin JVM artifact is Java 17 bytecode (class file 61), so it loads on a
+  Java 17 runtime, and it pins `org.meshtastic:kzstd` 0.2.2, the first kzstd
+  release that is Java 17 bytecode too. With kzstd 0.2.1 a Java 17 consumer
+  still failed with `UnsupportedClassVersionError` on the codec.
 - Both `start_epoch_lo14` bounds are an hour, in either direction, up from a few
   seconds on the future side. The skew budget is spent by BOTH clocks, so a
   receiver twenty minutes slow reading a sender twenty minutes fast presents a
