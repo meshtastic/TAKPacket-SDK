@@ -2,7 +2,7 @@
 kotlin = "2.4.21"
 protobufs = "2.8.2"
 xmlutil = "1.0.2.1"
-kzstd = "0.2.1"
+kzstd = "0.2.2"
 dokka = "2.2.0"
 binary-compat = "0.18.2"
 kover = "0.9.11"
