@@ -8,6 +8,8 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-31
+
 ### Added
 
 - `TAKPacketV2.start_epoch_lo14`: the low 14 bits of a CoT event's `start` as
@@ -395,7 +397,8 @@ guard are all unchanged.
   missing; once the codec became pure Kotlin those archives no longer exist, so the
   klib API surface is gated on every build.)
 
-[Unreleased]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/meshtastic/TAKPacket-SDK/compare/v0.9.0...v0.9.1
