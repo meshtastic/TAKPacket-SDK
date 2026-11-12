@@ -73,6 +73,11 @@ At K ≤ 16, a true fountain code and an MDS code converge. We get the fountain 
 ## 4. Constraints this has to respect
 
 - **Frame size.** `mesh.options` caps `Data.payload` at **233 B** (`DATA_PAYLOAD_LEN = 233`). The SDK and `WIRE_FORMAT.md` use 237 B as "the LoRa MTU". Fragments should fill frames, so the fragmenter takes `maxFrameBytes` as a parameter defaulting to **233**. *The 237 vs 233 difference is worth reconciling separately (see §12).*
+- **Encrypted direct messages are smaller.** A DM sent with Meshtastic's public-key encryption carries 12 extra bytes, an 8-byte authentication tag plus a 4-byte nonce, so a 233-byte fragment would not fit. `maxFrameBytes` therefore depends on the destination:
+  - **233 B** for channel broadcasts;
+  - **221 B** (233 − 12) for PKI-encrypted DMs.
+
+  Senders pick it per message, and the slice size follows (§5.2). Receivers don't care, because they learn the slice size from the fragments themselves. The same budget applies to today's single-frame path: a single-frame DM must also fit in 221 B. The exact overhead constant should be confirmed against the firmware before release.
 - **Resilience invariant:** no cross-packet compression state, one-shot zstd only, static dictionary. Still true here: the whole message is compressed once, and the reassembler only buffers bytes (§7).
 - **Firmware nanopb pools** (`atak.options`): `Route.links max_count:16`, 32 vertices, `GeoChat.message max_size:200`, `raw_detail max_size:220`. Firmware only ever decodes uncompressed `0xFF` frames (e.g. TAK_TRACKER), and it cannot decode `0xFE` fragments, so the pools constrain single `0xFF` frames only. See §8.
 - **Airtime.** One full frame is about 2.2 s on LongFast, 0.64 s on MediumFast and 9.3 s on LongSlow, per hop, before rebroadcasts. Firmware also throttles on channel utilization. Multi-frame messages must be rare, user-initiated events, never periodic traffic.
@@ -281,7 +286,7 @@ With an MDS code, a message decodes when at least K of its K+R frames arrive: `P
 Recommendation:
 
 - **Broadcasts:** R = max(1, ⌈K/4⌉) by default, so K=5 gets 2 repair fragments and K=10 gets 3.
-- **DMs with `want_ack`:** firmware already retries each frame, so R=0 or 1.
+- **DMs with `want_ack`:** firmware already retries each frame, so R=0 or 1. Use the 221 B DM frame budget (§4).
 - **Adaptive senders** can append more repair fragments after the burst, with fresh ESIs and without re-sending anything. They arrive in time if they land within receivers' idle deadline, or when they answer a repair request (§10).
 
 ## 7. Resilience invariant, restated
@@ -308,7 +313,7 @@ Concretely:
 ```kotlin
 /** Splits one wire payload into frames. Pure function of (inner, msgId, config): byte-identical across bindings. */
 public class TakFragmenter(
-    public val maxFrameBytes: Int = 233,
+    public val maxFrameBytes: Int = 233,             // 221 for PKI-encrypted DMs (§4)
     public val maxSourceFragments: Int = 8,           // policy cap; protocol max is 16; 0 = DISABLED
     public val repairPolicy: (k: Int) -> Int = { k -> maxOf(1, (k + 3) / 4) },  // K + R clamped to 32
     private val msgIds: MessageIdSource = MessageIdSource.random(),
