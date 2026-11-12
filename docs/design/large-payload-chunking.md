@@ -9,7 +9,7 @@
 2. **Compress first, then chunk.** Serialize and compress the whole packet once with the one-shot zstd API (as today), then split the resulting wire payload into fragments. Measured, this needs about half the airtime of splitting the content into many small independent packets (§3).
 3. **Mark fragments with flags byte `0xFE` on the same port (78).** Older receivers read `0xFE & 0x3F = 0x3E`, an unknown dictionary, and drop the frame cleanly, so no new port number or firmware change is needed.
 4. **5-byte fragment header:** `[0xFE][msg_id:16][code:4 | K-1:4][esi]`. A message has up to 16 *source* fragments, about 3.6 KB of compressed payload or about 35 s of airtime per hop on LongFast. The cap is deliberate.
-5. **Fountain-style erasure coding.** The sender transmits the K source fragments unchanged, then any number R of *repair* fragments. A receiver decodes from **any K distinct fragments**, whichever ones arrive. The code is a systematic MDS code over GF(256), built from a Cauchy matrix (§5.3). Its first repair fragment is exactly an XOR parity. At 90% per-frame delivery, a 5-fragment message goes from 59% delivered with no repair to 89% with one repair fragment and 97% with two.
+5. **Fountain-style erasure coding.** The sender transmits the K source fragments unchanged, then any number R of *repair* fragments. A receiver decodes from **any K distinct fragments**, whichever ones arrive. The code is a systematic MDS code over GF(256), built from a Cauchy matrix (§5.3). Its first repair fragment is exactly an XOR parity. At 90% per-frame delivery, a 5-fragment message goes from 59% delivered with no repair to 89% with one repair fragment and 97% with two. **The same codec also serves file transfer** (§5.5, §10a): a TAK message is just its one-block case.
 6. **A CRC-32 per message.** It catches mis-assembled messages, such as a reused `msg_id` or spliced fragments.
 7. **Reassembly is bounded and stateless across messages.** Losing fragments costs only that message. It never affects decoding of any other message, which is the resilience invariant restated for multi-frame messages (§7).
 
@@ -64,9 +64,9 @@ A `TAKPacketV2` has no useful partial form: half a route or half a `raw_detail` 
 | None | all K | 35% delivery for K=10 at p=0.9. |
 | Single XOR parity | any K of K+1 | One loss only. |
 | **LT code** (classic fountain) | measured mean **+50–58%** over K at K=5–16; 95th percentile +130% | LT codes are near-optimal only for K in the hundreds or more. At our K they waste airtime, so they're rejected for this size class (see §10a for where they fit). |
-| **RaptorQ** (RFC 6330) | ≈K (fails ~1% of the time at exactly K) | Excellent, but a large spec to implement identically in five languages. It also has IPR declarations on file at the IETF that would need checking. Overkill for K ≤ 16. |
+| **RaptorQ** (RFC 6330) | ≈K: per the RFC, decoding fails under 1% of the time at exactly K, under 0.01% at K+1, under 0.0001% at K+2 | The strongest candidate for *one code at every size*: a single source block holds up to 56,403 symbols, so files need no blocking. But it is a large spec. Implementations exist in pure Kotlin Multiplatform ([raptorq-kotlin](https://klibs.io/project/andreypfau/raptorq-kotlin)), Rust, Go and C/C++; I found none for Swift, C# or TypeScript, so those bindings would need ports or native bindings. Qualcomm has filed several [IETF IPR disclosures](https://datatracker.ietf.org/ipr/1958/) on it under licensing terms, not a clear royalty-free grant, which needs review before an open-source SDK ships it. At K ≤ 16 it is strictly weaker than the Cauchy code, because it is not MDS. |
 | Random linear code over GF(256) | ≈K (fails ~0.4% of the time at exactly K) | Simple, but probabilistic. |
-| **Systematic Cauchy code over GF(256)** ✅ | **exactly K, guaranteed** | MDS: *any* K distinct fragments decode. It is rateless in practice (up to 256−K repair fragments per message). Decoding is a ≤16×16 Gauss–Jordan solve: microseconds, and about 60 lines per binding. XOR parity is its first repair row, so the earlier single-parity design is just the R=1 case. |
+| **Systematic Cauchy code over GF(256)** ✅ | **exactly K, guaranteed** | MDS: *any* K distinct fragments decode. It is rateless in practice (up to 256−K repair fragments per message). Decoding is a ≤16×16 Gauss–Jordan solve: microseconds, and about 60 lines per binding. XOR parity is its first repair row, so the earlier single-parity design is just the R=1 case. It **also scales to file transfer** by splitting a file into source blocks of up to 128 symbols (§5.5). |
 
 At K ≤ 16, a true fountain code and an MDS code converge. We get the fountain properties that matter here: rateless repair, no per-receiver feedback, any K suffice, and repair fragments mintable by any node that has decoded (§10). And we get them without LT's overhead or RaptorQ's complexity.
 
@@ -150,6 +150,42 @@ From the prototype, with a 233 B frame budget:
 | 3,400 B | 15 | 3,480 | 80 B | 16 / 17 |
 
 Header overhead is under 5% (prototype measured with a 4-byte header; numbers above are recomputed for the 5-byte header). The real cost is the R repair frames, and those are what buy loss tolerance.
+
+### 5.5 One codec for small messages and file transfer
+
+The erasure code is packaged as a standalone codec, separate from the TAK fragment framing, so a future file-transfer protocol (§10a) uses the same implementation, tables and test vectors. A TAK message is the single-block case.
+
+```
+FecCodec  (code 0 = systematic Cauchy over GF(256), §5.3)
+  partition(objectLength, S, maxBlockK) -> [K_0, K_1, ...]   // balanced: sizes differ by at most 1 (RFC 6330 style)
+  encodeSymbol(block: List<ByteArray>, esi: Int): ByteArray  // esi < K_b: source symbol; K_b..255: repair
+  BlockDecoder(K_b, S).add(esi, symbol): Boolean             // true once any K_b distinct ESIs are held
+  BlockDecoder.result(): List<ByteArray>
+```
+
+| | TAK messages (this design) | File transfer (§10a, future) |
+|---|---|---|
+| Object | `inner ‖ CRC32 ‖ 0x80` | `file ‖ CRC32 ‖ 0x80` (or a hash in a manifest frame) |
+| Symbol size S | 228 (233 − 5-byte header) | maxFrame − that protocol's header |
+| Max block size | 16 symbols, so always one block | 128 symbols, so several blocks |
+| Repair per block | protocol caps a burst at K + R ≤ 32 | up to 256 − K_b (≥ 128) |
+| Framing | port 78, `0xFE` header (§5.1) | its own port; header carries object ID, source block number (SBN) and ESI |
+
+**Why 128-symbol blocks for files.** Cauchy rows need K + R ≤ 256 distinct field elements, and 128 leaves room for 100% repair in every block.
+
+- **Decode cost per block:** a ≤128×128 elimination, plus about m × K_b × S table lookups for m missing source symbols. That is a few million lookups, milliseconds on a phone. The prototype decodes any 128 of 256 correctly.
+- **Size ceiling:** a 1-byte SBN allows 256 blocks of 128 symbols, about 7 MB, far beyond what LoRa can usefully move.
+
+**What blocking costs** compared with an ideal single-block fountain code, such as RaptorQ. Measured for a 100 KB file (about 440 symbols) at a 99% delivery target, as total frames sent with no feedback at all:
+
+| Per-frame delivery p | One ideal block | Blocks ≤ 64 | Blocks ≤ 128 | Blocks ≤ 200 |
+|---|---:|---:|---:|---:|
+| 0.9 | 507 | 559 | 536 (+6%) | 527 |
+| 0.8 | 578 | 657 | 624 (+8%) | 610 |
+
+So blocking costs about 6–8% more airtime when receivers cannot ask for anything. With repair-on-demand by count, per block (§10), each receiver asks only the blocks it is short on for exactly what it lacks, and the gap closes to the cost of the requests. Transfers of that size take many minutes per hop, so they need that feedback anyway.
+
+**What a single codec buys.** One implementation of about 150 lines per binding: the GF(256) tables, the coefficient formula, partitioning, and one Gauss–Jordan decoder. It also means one conformance suite (table checksums, coefficient vectors, MDS property, any-K decode) shared across all five bindings, so every TAK-fragment test also exercises the file-transfer codec's core. The `code` nibble (§5.1) leaves room to add RaptorQ as `code 1` later, should feedback-free broadcast of large files ever become a core requirement.
 
 ## 6. Procedures
 
@@ -317,15 +353,15 @@ This design deliberately does not cover those payloads:
 
 - **Size class.** Files are tens of KB to MB. 100 KB is about 430 frames, roughly 16 minutes of airtime per hop on LongFast, against this design's cap of 16 source frames / about 3.6 KB.
 - **No compression gain.** JPEGs and zips are already compressed, so the TAK dictionary adds nothing.
-- **Different coding regime.** At K in the hundreds to thousands, a true fountain code is the right tool. RaptorQ (RFC 6330), or LT/online codes, become efficient there, and a K×K Cauchy solve does not scale. Bulk transfer also needs resumable, sender-cached delivery, and probably DM-only, explicit opt-in.
+- **Different delivery model.** Bulk transfer needs resumable, sender-cached delivery, repair-on-demand per block, and probably DM-only, explicit opt-in. That is a protocol of its own, even though the **erasure code is shared**. Split into 128-symbol source blocks, the same Cauchy GF(256) codec handles files (§5.5), so no second FEC implementation is needed.
 
-If mesh file transfer is wanted, it should be a separate bulk-transfer protocol, likely on its own portnum with wider K/ESI fields. It could reuse this design's ideas (CRC per message, keying by sender and message ID, repair-on-demand by count, bounded reassembly) but not its frame layout or caps. The `b-f-t-r` notice itself is small CoT and already fits a single frame. A receiving app could show it as "file offered, not reachable over mesh" rather than offering a dead URL.
+If mesh file transfer is wanted, it should be a separate bulk-transfer protocol, likely on its own portnum with wider K/ESI fields. It would reuse the **`FecCodec` from §5.5 unchanged**, plus this design's ideas (CRC per object, keying by sender and object ID, repair-on-demand by count, bounded reassembly), but not its frame layout or caps. The `b-f-t-r` notice itself is small CoT and already fits a single frame. A receiving app could show it as "file offered, not reachable over mesh" rather than offering a dead URL.
 
 ## 11. Testing plan
 
 - **Golden fragment sets** in `testdata/fragment/`, generated by Kotlin from a new `testdata/cot_xml_large/` fixture set. Fixtures: a large freehand, a 40-waypoint route, long remarks, an inner payload of exactly `maxFrame + 1`, and a highly compressible packet whose protobuf exceeds 4,096 B but fits one frame (the K=1 forced path). They live in a separate directory so the existing "100% of fixtures under MTU" assertion and the compression report stay as they are.
 - **Fragmenting is byte-identical across bindings.** Slicing and repair symbols are deterministic given the inner bytes, `msg_id` and R, so each binding encodes the golden `.bin` and must match the Kotlin frames exactly, including every repair fragment. That is a stronger check than the zstd layer allows. Compressed bytes still differ per binding, so end-to-end cross-language tests assert decodability plus the size tolerance, as today.
-- **GF(256) vectors:** shared log/exp table checksums, `coef(e, j, K)` spot values, `coef(K, j, K) == 1`, and an MDS property test over all K×K subsets for small K (sampled for K ≥ 9).
+- **Codec conformance suite** (shared with any future file transfer, §5.5): partition sizes, blocks of K_b up to 128 (any-K decode sampled), and GF(256) vectors: shared log/exp table checksums, `coef(e, j, K)` spot values, `coef(K, j, K) == 1`, and an MDS property test over all K×K subsets for small K (sampled for K ≥ 9).
 - **Reassembly matrix in every binding:** every K-subset of K+R (sampled for large K), shuffled order, duplicates, loss of the last slice, fewer than K (waits, then times out), CRC mismatch, `K`/`code` conflict, unknown `code`, a truncated header, the per-sender and global caps, idle-deadline extension by a long repair run, ceiling expiry, and a forced `msg_id` collision (CRC rejects, no other message affected).
 - **Sender policy:** `DISABLED` never emits `0xFE`, and an oversized periodic packet is dropped with a failure result rather than sent.
 - **Malformed-input fuzzing** of the reassembler, alongside the existing `testdata/malformed/` suite.
@@ -344,3 +380,4 @@ If mesh file transfer is wanted, it should be a separate bulk-transfer protocol,
 4. **Should truncation stay the default** (fragmentation opt-in per call) for the first release, so app teams can roll it out deliberately?
 5. **Large-mode parser limits:** 512 vertices and 64 links are placeholders. What do ATAK users actually draw?
 6. **Repair on demand (§10):** worth building in v1.x, or wait for field data on loss rates?
+7. **One codec at every size:** Cauchy GF(256) with source blocks (recommended, §5.5), or RaptorQ for both? RaptorQ removes the 6–8% blocking cost for feedback-free file broadcast. Against that, it is not MDS at small K, it has no Swift/C#/TypeScript implementation, and its licensing needs review.
