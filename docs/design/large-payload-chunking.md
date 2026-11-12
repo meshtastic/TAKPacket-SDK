@@ -230,16 +230,20 @@ Maintainers of open-source RaptorQ libraries say the same thing. The Rust crate'
        if remarks available and packet has remarks:
            drop remarks, mark used, go to 2
        if singleFrameLimits available:
-           re-parse with single-frame limits (truncate + `truncated=true`), mark used, go to 2
+           re-parse with single-frame limits (truncate + `truncated=true`), keeping remarks
+           dropped if the remarks fallback already ran; mark used, go to 2
        return failure                                           // each fallback runs at most once
 6. emit K source fragments + R repair fragments (R from policy, §6.3) with a fresh msg_id
 7. send with backpressure:
        before each frame, wait for free space in the radio's outgoing queue (`QueueStatus.free`);
        if a frame is rejected (`QueueStatus.res` ≠ OK), retry it after a short delay;
-       if the set cannot be fully queued in time, give up on the message and report failure
+       the gap between two consecutive fragments MUST stay under the receivers' idle budget
+       (§6.2), and the whole burst under its absolute ceiling; if queueing would exceed either,
+       stop sending this message and report failure (receivers time out on their own)
 ```
 
-- **Each fallback runs at most once**, so the loop always terminates.
+- **Each fallback runs at most once**, so the loop always terminates. The fallbacks accumulate: when the single-frame re-parse runs after remarks were dropped, the re-parsed packet has its remarks dropped too. This applies equally to the `DISABLED` path, which uses the same chain.
+- **Pacing is bounded by the receivers' timers.** Waiting on the radio queue or on firmware airtime throttling must never stretch a burst past what receivers will wait for. The sender uses the same preset airtime as the receivers to compute both limits, so a message is either delivered within them or abandoned cleanly.
 - **The radio queue is bounded.** Firmware reports `QueueStatus` (`free` / `maxlen` / `res`) after each packet it accepts from the phone. Pushing a whole fragment set without waiting can overflow the queue and lose several fragments before any of them reaches the air. Repair fragments are not meant to cover that loss.
 - **Never fragment PLI or other periodic traffic.** Fragmentation is a per-event-type policy: `DISABLED`, or enabled with a `maxSourceFragments` cap. Use `DISABLED` for PLI and other periodic traffic, and a small cap like 4–8 for shapes, routes and chat, lower on slow presets.
   - **With `DISABLED`, the sender never emits a fragment.** A packet that cannot take step 3 goes through the same fallbacks: drop remarks, then single-frame limits. If it still doesn't fit, it is dropped and the call reports failure. The SDK never sends a single frame that receivers would reject for exceeding the 4,096-byte cap.
@@ -263,12 +267,12 @@ Reassembler rules:
 - **Completion:** the reassembler holds K distinct ESIs. It solves (§5.3), strips the padding and `0x80`, and checks the CRC.
 - **A CRC mismatch does not drop the message.** One bad or stale fragment among the K used (for example after a `msg_id` collision) makes the solve produce garbage, but the message may still be recoverable. The partial stays open, and each new ESI triggers a retry: with K + j fragments held, try leaving out one fragment at a time. That is at most K + j solves of at most 16×16, microseconds each, and it recovers from any single bad fragment. More than one bad fragment just runs out the deadline, and the message is dropped then.
 - **After completion,** remember `(N, msg_id)` until that message's absolute ceiling, so late fragments and repair frames do not open a new partial. (Fragments carry no CRC, so the key is the ID alone.) The cache is bounded, e.g. 256 entries with least-recently-used eviction. Losing an entry early only means a late duplicate is reassembled and delivered twice, and ATAK de-duplicates CoT by `uid`.
-- **Bounds:** at most 4 partial messages per sender and 32 in total, each at most 16 × 228 B; evict the oldest when full.
+- **Bounds:** at most 4 partial messages per sender and 32 in total; evict the oldest when full. Each partial stores at most **K + 4** distinct fragments, which is at most 20 × 228 B ≈ 4.5 KB. That covers the CRC-retry rule below, which needs only one more fragment than K per bad fragment. Further fragments for a partial that is already full are ignored.
 - **Timeouts come from the preset's airtime, and never depend on R.** The receiver cannot know how many repair fragments the sender chose, so its timers rely only on things it can see:
   - **Idle deadline:** `lastNewEsiAt + (L + 1) × frameAirtime(preset) × hopFactor + slack`. It is reset by every new ESI, so a long repair run of any length keeps the partial alive for as long as fragments keep arriving. L is the number of consecutive lost frames tolerated (default 4).
   - **Absolute ceiling**, for memory safety: `firstSeenAt + MAX_BURST × frameAirtime(preset) × hopFactor + slack`. The protocol bounds the initial burst: **a sender MUST send all fragments of a message as one burst (paced only by the radio queue), with K + R ≤ 32.** `MAX_BURST = 32` therefore covers every permitted sender policy.
   - **Defaults:** the app supplies the preset's frame airtime (about 2.2 s LongFast, 9.3 s LongSlow); hopFactor is 3 and slack is 30 s. On LongSlow, the ceiling is about 15 minutes and the idle gap about 2.8 minutes.
-  - **On-demand repair (§10)** later restarts the idle deadline when a receiver sends its request, and the ceiling is reset once per request.
+  - **On-demand repair (§10)** later restarts the idle deadline when a receiver sends its request, and the ceiling is reset once per request. That repair is outside the K + R ≤ 32 burst limit but capped separately, at K fragments per message (§10).
 - **Malformed input** never throws past the reassembler: `esi < K` with an oversize slice, a repair symbol whose length isn't S, a frame shorter than 6 B, a singular solve (impossible for valid input), and so on. Such frames are dropped and logged. The same "MUST NOT crash" rule as `WIRE_FORMAT.md` §10 applies.
 
 ### 6.3 Delivery odds
@@ -285,7 +289,7 @@ With an MDS code, a message decodes when at least K of its K+R frames arrive: `P
 Recommendation:
 
 - **Default:** R = max(1, ⌈K/4⌉), so K=5 gets 2 repair fragments and K=10 gets 3.
-- **Adaptive senders** can append more repair fragments after the burst, with fresh ESIs and without re-sending anything. They arrive in time if they land within receivers' idle deadline, or when they answer a repair request (§10).
+- **Adaptive senders** can append more repair fragments after the burst, with fresh ESIs and without re-sending anything. Unsolicited extras count against the same K + R ≤ 32 limit, and they help only if they arrive before receivers' idle deadline and absolute ceiling. A fragment arriving after its partial has expired opens a fresh partial that can never complete and simply times out. That costs bounded memory and nothing else. Extras sent in answer to a repair request follow §10 instead.
 
 **Consideration: losses are bursty, not independent.** The table assumes each frame is lost independently with the same probability. LoRa losses cluster instead: collisions, interference, hidden nodes, and a receiver briefly out of range. A fragment burst also competes with its own rebroadcasts on later hops, since fragment n+1 leaves the sender while neighbours are still relaying fragment n. So the effective p for a burst is probably lower than for an isolated packet, and the R=1–3 delivery figures above are best cases. Field tests should measure delivery for whole fragment sets rather than infer it from single-packet loss. Two levers to try:
 - **Spacing** fragments slightly apart in time. This reduces self-collision but stretches the burst.
