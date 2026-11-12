@@ -64,7 +64,7 @@ A `TAKPacketV2` has no useful partial form: half a route or half a `raw_detail` 
 | None | all K | 35% delivery for K=10 at p=0.9. |
 | Single XOR parity | any K of K+1 | One loss only. |
 | **LT code** (classic fountain) | measured mean **+50–58%** over K at K=5–16; 95th percentile +130% | LT codes are near-optimal only for K in the hundreds or more. At our K they waste airtime, so they're rejected for this size class (see §10a for where they fit). |
-| **RaptorQ** (RFC 6330) | ≈K: per the RFC, decoding fails under 1% of the time at exactly K, under 0.01% at K+1, under 0.0001% at K+2 | The strongest candidate for *one code at every size*: a single source block holds up to 56,403 symbols, so files need no blocking. But it is a large spec. Implementations exist in pure Kotlin Multiplatform ([raptorq-kotlin](https://klibs.io/project/andreypfau/raptorq-kotlin)), Rust, Go and C/C++; I found none for Swift, C# or TypeScript, so those bindings would need ports or native bindings. Qualcomm has filed several [IETF IPR disclosures](https://datatracker.ietf.org/ipr/1958/) on it under licensing terms, not a clear royalty-free grant, which needs review before an open-source SDK ships it. At K ≤ 16 it is strictly weaker than the Cauchy code, because it is not MDS. |
+| **RaptorQ** (RFC 6330) | ≈K: per the RFC, decoding fails under 1% of the time at exactly K, under 0.01% at K+1, under 0.0001% at K+2 | The strongest candidate for *one code at every size*: a single source block holds up to 56,403 symbols, so files need no blocking. But it is a large spec. Implementations exist in pure Kotlin Multiplatform ([raptorq-kotlin](https://klibs.io/project/andreypfau/raptorq-kotlin)), Rust, Go and C/C++; I found none for Swift, C# or TypeScript, so those bindings would need ports or native bindings. **Patent terms likely exclude our main platform** (§5.6): Qualcomm's non-assert reportedly covers only devices that implement no wireless wide-area standard, and every phone running ATAK or a Meshtastic app implements one. At K ≤ 16 it is also strictly weaker than the Cauchy code, because it is not MDS. |
 | Random linear code over GF(256) | ≈K (fails ~0.4% of the time at exactly K) | Simple, but probabilistic. |
 | **Systematic Cauchy code over GF(256)** ✅ | **exactly K, guaranteed** | MDS: *any* K distinct fragments decode. It is rateless in practice (up to 256−K repair fragments per message). Decoding is a ≤16×16 Gauss–Jordan solve: microseconds, and about 60 lines per binding. XOR parity is its first repair row, so the earlier single-parity design is just the R=1 case. It **also scales to file transfer** by splitting a file into source blocks of up to 128 symbols (§5.5). |
 
@@ -185,7 +185,31 @@ FecCodec  (code 0 = systematic Cauchy over GF(256), §5.3)
 
 So blocking costs about 6–8% more airtime when receivers cannot ask for anything. With repair-on-demand by count, per block (§10), each receiver asks only the blocks it is short on for exactly what it lacks, and the gap closes to the cost of the requests. Transfers of that size take many minutes per hop, so they need that feedback anyway.
 
-**What a single codec buys.** One implementation of about 150 lines per binding: the GF(256) tables, the coefficient formula, partitioning, and one Gauss–Jordan decoder. It also means one conformance suite (table checksums, coefficient vectors, MDS property, any-K decode) shared across all five bindings, so every TAK-fragment test also exercises the file-transfer codec's core. The `code` nibble (§5.1) leaves room to add RaptorQ as `code 1` later, should feedback-free broadcast of large files ever become a core requirement.
+**What a single codec buys.** One implementation of about 150 lines per binding: the GF(256) tables, the coefficient formula, partitioning, and one Gauss–Jordan decoder. It also means one conformance suite (table checksums, coefficient vectors, MDS property, any-K decode) shared across all five bindings, so every TAK-fragment test also exercises the file-transfer codec's core. The `code` nibble (§5.1) leaves room for another code later, should feedback-free broadcast of large files ever become a core requirement. RaptorQ is unlikely to be that code, for the patent reasons in §5.6.
+
+### 5.6 Patents: why not RaptorQ
+
+RaptorQ is patented, and the patents passed to Qualcomm when it acquired Digital Fountain. RFC 6330 is where those patents and this design meet. The RFC's own licence lets anyone copy its text, and its code under a BSD licence, but that licence says nothing about patents. Patent terms come only from the holder's IETF IPR disclosures, which the IETF publishes but does not evaluate. Implementing a code *from* RFC 6330 means implementing what those disclosures cover.
+
+**What Qualcomm disclosed.** The current statement for RFC 6330 is [IPR #2554](https://datatracker.ietf.org/ipr/2554/) (March 2015). It updates [#1958](https://datatracker.ietf.org/ipr/1958/) (2013), which updated [#1553](https://datatracker.ietf.org/ipr/1553/) (2011). This session's network policy blocks the IETF site, so the clauses below come from a third party quoting #2554 in [cberner/raptorq#116](https://github.com/cberner/raptorq/issues/116). **They must be checked against #2554 itself before anyone relies on them.** As quoted, Qualcomm will not assert its claims against a device that:
+
+> (a) "fully implements such adopted standards track or experimental document; and (b) does not implement any wireless wide-area standard"
+
+and it reserves the right:
+
+> to assert its patents "against any product or portion thereof that does not fully implement the IETF standards track or experimental document," and against any party that asserts a patent against Qualcomm products "(including the right to claim past royalties)."
+
+**What that means for this SDK.** This is a design reading, not legal advice.
+
+1. **Phones are outside the promise.** Every Android or iOS phone running ATAK, iTAK or a Meshtastic app implements cellular, a wireless wide-area standard. The SDK's main deployment target is therefore not covered by the non-assert.
+2. **Radios are unclear.** Meshtastic nodes don't run cellular, but whether LoRa-based hardware, especially hardware that can also bridge LoRaWAN (a "wide area network" by name), counts as implementing "a wireless wide-area standard" is a question for a lawyer.
+3. **Partial use is outside the promise.** Using RaptorQ's code inside our own fragment framing, rather than "fully implementing" RFC 6330's object-delivery scheme, may not qualify.
+4. **Defensive suspension.** Any organisation shipping it loses the non-assert if it ever asserts a patent against Qualcomm.
+5. **Expiry doesn't save us.** Secondary sources claim the original Raptor (RFC 5053) patents have expired, but that later RaptorQ patents run to about 2028–2030. These dates are unverified.
+
+Maintainers of open-source RaptorQ libraries say the same thing. The Rust crate's maintainer: "there are patents that apply to RaptorQ. If you plan to use it for commercial purposes, I recommend you consult a lawyer" ([cberner/raptorq#116](https://github.com/cberner/raptorq/issues/116)). OpenRQ's maintainers note only that Qualcomm has known about their implementation since 2013 and hasn't sued ([OpenRQ#8](https://github.com/openrq-team/OpenRQ/issues/8)), which is no licence.
+
+**The Cauchy GF(256) code is a different lineage.** It is a Reed–Solomon-family code built from a Cauchy matrix. Reed–Solomon codes date from 1960, and Cauchy-matrix erasure codes from mid-1990s work, so any patents on the basic construction expired long ago. The IETF's own Reed–Solomon FEC schemes (RFC 5510) sit in the same family. Nothing in §5.3 comes from RFC 6330. A quick freedom-to-operate check is still sensible before release, but the exposure is of a different order from RaptorQ's.
 
 ## 6. Procedures
 
@@ -380,4 +404,5 @@ If mesh file transfer is wanted, it should be a separate bulk-transfer protocol,
 4. **Should truncation stay the default** (fragmentation opt-in per call) for the first release, so app teams can roll it out deliberately?
 5. **Large-mode parser limits:** 512 vertices and 64 links are placeholders. What do ATAK users actually draw?
 6. **Repair on demand (§10):** worth building in v1.x, or wait for field data on loss rates?
-7. **One codec at every size:** Cauchy GF(256) with source blocks (recommended, §5.5), or RaptorQ for both? RaptorQ removes the 6–8% blocking cost for feedback-free file broadcast. Against that, it is not MDS at small K, it has no Swift/C#/TypeScript implementation, and its licensing needs review.
+7. **One codec at every size:** Cauchy GF(256) with source blocks (recommended, §5.5), or RaptorQ for both? RaptorQ removes the 6–8% blocking cost for feedback-free file broadcast. Against that, it is not MDS at small K, it has no Swift/C#/TypeScript implementation, and its non-assert appears to exclude phones (§5.6). **Unless Qualcomm grants a licence, RaptorQ is off the table**, and the `code 1` slot should not be reserved for it.
+8. **Verify IPR #2554 verbatim** (§5.6). The clauses here are third-party quotations, and someone with access to the IETF datatracker should confirm them.
