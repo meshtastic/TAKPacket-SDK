@@ -22,6 +22,14 @@ abstract fun interface org.meshtastic.tak/Logger { // org.meshtastic.tak/Logger|
     abstract fun log(kotlin/String) // org.meshtastic.tak/Logger.log|log(kotlin.String){}[0]
 }
 
+abstract fun interface org.meshtastic.tak/MessageIdSource { // org.meshtastic.tak/MessageIdSource|null[0]
+    abstract fun next(): kotlin/Int // org.meshtastic.tak/MessageIdSource.next|next(){}[0]
+
+    final object Companion { // org.meshtastic.tak/MessageIdSource.Companion|null[0]
+        final fun random(): org.meshtastic.tak/MessageIdSource // org.meshtastic.tak/MessageIdSource.Companion.random|random(){}[0]
+    }
+}
+
 final class org.meshtastic.tak/BuiltCot { // org.meshtastic.tak/BuiltCot|null[0]
     final val originStart // org.meshtastic.tak/BuiltCot.originStart|{}originStart[0]
         final fun <get-originStart>(): kotlin.time/Instant? // org.meshtastic.tak/BuiltCot.originStart.<get-originStart>|<get-originStart>(){}[0]
@@ -246,6 +254,24 @@ final class org.meshtastic.tak/TakCompressor { // org.meshtastic.tak/TakCompress
     final object Companion { // org.meshtastic.tak/TakCompressor.Companion|null[0]
         final const val MAX_DECOMPRESSED_SIZE // org.meshtastic.tak/TakCompressor.Companion.MAX_DECOMPRESSED_SIZE|{}MAX_DECOMPRESSED_SIZE[0]
             final fun <get-MAX_DECOMPRESSED_SIZE>(): kotlin/Int // org.meshtastic.tak/TakCompressor.Companion.MAX_DECOMPRESSED_SIZE.<get-MAX_DECOMPRESSED_SIZE>|<get-MAX_DECOMPRESSED_SIZE>(){}[0]
+    }
+}
+
+final class org.meshtastic.tak/TakFragmenter { // org.meshtastic.tak/TakFragmenter|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Function1<kotlin/Int, kotlin/Int> = ..., org.meshtastic.tak/MessageIdSource = ...) // org.meshtastic.tak/TakFragmenter.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Function1<kotlin.Int,kotlin.Int>;org.meshtastic.tak.MessageIdSource){}[0]
+
+    final val maxFrameBytes // org.meshtastic.tak/TakFragmenter.maxFrameBytes|{}maxFrameBytes[0]
+        final fun <get-maxFrameBytes>(): kotlin/Int // org.meshtastic.tak/TakFragmenter.maxFrameBytes.<get-maxFrameBytes>|<get-maxFrameBytes>(){}[0]
+    final val maxSourceFragments // org.meshtastic.tak/TakFragmenter.maxSourceFragments|{}maxSourceFragments[0]
+        final fun <get-maxSourceFragments>(): kotlin/Int // org.meshtastic.tak/TakFragmenter.maxSourceFragments.<get-maxSourceFragments>|<get-maxSourceFragments>(){}[0]
+    final val sliceSize // org.meshtastic.tak/TakFragmenter.sliceSize|{}sliceSize[0]
+        final fun <get-sliceSize>(): kotlin/Int // org.meshtastic.tak/TakFragmenter.sliceSize.<get-sliceSize>|<get-sliceSize>(){}[0]
+
+    final fun split(kotlin/ByteArray, kotlin/Int): kotlin.collections/List<kotlin/ByteArray>? // org.meshtastic.tak/TakFragmenter.split|split(kotlin.ByteArray;kotlin.Int){}[0]
+    final fun split(kotlin/ByteArray, kotlin/Int, kotlin/Int): kotlin.collections/List<kotlin/ByteArray>? // org.meshtastic.tak/TakFragmenter.split|split(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
+
+    final object Companion { // org.meshtastic.tak/TakFragmenter.Companion|null[0]
+        final fun defaultRepairCount(kotlin/Int): kotlin/Int // org.meshtastic.tak/TakFragmenter.Companion.defaultRepairCount|defaultRepairCount(kotlin.Int){}[0]
     }
 }
 
@@ -950,6 +976,28 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
     }
 }
 
+final class org.meshtastic.tak/TakReassembler { // org.meshtastic.tak/TakReassembler|null[0]
+    constructor <init>(kotlin/Long, kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ..., kotlin/Int = ..., kotlin/Int = ...) // org.meshtastic.tak/TakReassembler.<init>|<init>(kotlin.Long;kotlin.Int;kotlin.Int;kotlin.Long;kotlin.Int;kotlin.Int){}[0]
+
+    final val frameAirtimeMillis // org.meshtastic.tak/TakReassembler.frameAirtimeMillis|{}frameAirtimeMillis[0]
+        final fun <get-frameAirtimeMillis>(): kotlin/Long // org.meshtastic.tak/TakReassembler.frameAirtimeMillis.<get-frameAirtimeMillis>|<get-frameAirtimeMillis>(){}[0]
+    final val hopFactor // org.meshtastic.tak/TakReassembler.hopFactor|{}hopFactor[0]
+        final fun <get-hopFactor>(): kotlin/Int // org.meshtastic.tak/TakReassembler.hopFactor.<get-hopFactor>|<get-hopFactor>(){}[0]
+    final val maxPendingPerSender // org.meshtastic.tak/TakReassembler.maxPendingPerSender|{}maxPendingPerSender[0]
+        final fun <get-maxPendingPerSender>(): kotlin/Int // org.meshtastic.tak/TakReassembler.maxPendingPerSender.<get-maxPendingPerSender>|<get-maxPendingPerSender>(){}[0]
+    final val maxPendingTotal // org.meshtastic.tak/TakReassembler.maxPendingTotal|{}maxPendingTotal[0]
+        final fun <get-maxPendingTotal>(): kotlin/Int // org.meshtastic.tak/TakReassembler.maxPendingTotal.<get-maxPendingTotal>|<get-maxPendingTotal>(){}[0]
+    final val pendingCount // org.meshtastic.tak/TakReassembler.pendingCount|{}pendingCount[0]
+        final fun <get-pendingCount>(): kotlin/Int // org.meshtastic.tak/TakReassembler.pendingCount.<get-pendingCount>|<get-pendingCount>(){}[0]
+    final val slackMillis // org.meshtastic.tak/TakReassembler.slackMillis|{}slackMillis[0]
+        final fun <get-slackMillis>(): kotlin/Long // org.meshtastic.tak/TakReassembler.slackMillis.<get-slackMillis>|<get-slackMillis>(){}[0]
+    final val toleratedConsecutiveLosses // org.meshtastic.tak/TakReassembler.toleratedConsecutiveLosses|{}toleratedConsecutiveLosses[0]
+        final fun <get-toleratedConsecutiveLosses>(): kotlin/Int // org.meshtastic.tak/TakReassembler.toleratedConsecutiveLosses.<get-toleratedConsecutiveLosses>|<get-toleratedConsecutiveLosses>(){}[0]
+
+    final fun accept(kotlin/Long, kotlin/ByteArray, kotlin/Long): kotlin/ByteArray? // org.meshtastic.tak/TakReassembler.accept|accept(kotlin.Long;kotlin.ByteArray;kotlin.Long){}[0]
+    final fun evictExpired(kotlin/Long) // org.meshtastic.tak/TakReassembler.evictExpired|evictExpired(kotlin.Long){}[0]
+}
+
 final class org.meshtastic.tak/ZstdException : kotlin/RuntimeException { // org.meshtastic.tak/ZstdException|null[0]
     constructor <init>(kotlin/String, kotlin/Throwable? = ...) // org.meshtastic.tak/ZstdException.<init>|<init>(kotlin.String;kotlin.Throwable?){}[0]
 }
@@ -1267,6 +1315,27 @@ final object org.meshtastic.tak/DictionaryProvider { // org.meshtastic.tak/Dicti
 
 final object org.meshtastic.tak/NoOpLogger : org.meshtastic.tak/Logger { // org.meshtastic.tak/NoOpLogger|null[0]
     final fun log(kotlin/String) // org.meshtastic.tak/NoOpLogger.log|log(kotlin.String){}[0]
+}
+
+final object org.meshtastic.tak/TakFragment { // org.meshtastic.tak/TakFragment|null[0]
+    final const val CODE_CAUCHY // org.meshtastic.tak/TakFragment.CODE_CAUCHY|{}CODE_CAUCHY[0]
+        final fun <get-CODE_CAUCHY>(): kotlin/Int // org.meshtastic.tak/TakFragment.CODE_CAUCHY.<get-CODE_CAUCHY>|<get-CODE_CAUCHY>(){}[0]
+    final const val DEFAULT_MAX_FRAME_BYTES // org.meshtastic.tak/TakFragment.DEFAULT_MAX_FRAME_BYTES|{}DEFAULT_MAX_FRAME_BYTES[0]
+        final fun <get-DEFAULT_MAX_FRAME_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.DEFAULT_MAX_FRAME_BYTES.<get-DEFAULT_MAX_FRAME_BYTES>|<get-DEFAULT_MAX_FRAME_BYTES>(){}[0]
+    final const val HEADER_SIZE // org.meshtastic.tak/TakFragment.HEADER_SIZE|{}HEADER_SIZE[0]
+        final fun <get-HEADER_SIZE>(): kotlin/Int // org.meshtastic.tak/TakFragment.HEADER_SIZE.<get-HEADER_SIZE>|<get-HEADER_SIZE>(){}[0]
+    final const val MARKER // org.meshtastic.tak/TakFragment.MARKER|{}MARKER[0]
+        final fun <get-MARKER>(): kotlin/Int // org.meshtastic.tak/TakFragment.MARKER.<get-MARKER>|<get-MARKER>(){}[0]
+    final const val MAX_BURST // org.meshtastic.tak/TakFragment.MAX_BURST|{}MAX_BURST[0]
+        final fun <get-MAX_BURST>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_BURST.<get-MAX_BURST>|<get-MAX_BURST>(){}[0]
+    final const val MAX_REASSEMBLED_DECOMPRESSED_SIZE // org.meshtastic.tak/TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE|{}MAX_REASSEMBLED_DECOMPRESSED_SIZE[0]
+        final fun <get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE.<get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>|<get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>(){}[0]
+    final const val MAX_SOURCE_FRAGMENTS // org.meshtastic.tak/TakFragment.MAX_SOURCE_FRAGMENTS|{}MAX_SOURCE_FRAGMENTS[0]
+        final fun <get-MAX_SOURCE_FRAGMENTS>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_SOURCE_FRAGMENTS.<get-MAX_SOURCE_FRAGMENTS>|<get-MAX_SOURCE_FRAGMENTS>(){}[0]
+    final const val REPAIR_REQUEST_MARKER // org.meshtastic.tak/TakFragment.REPAIR_REQUEST_MARKER|{}REPAIR_REQUEST_MARKER[0]
+        final fun <get-REPAIR_REQUEST_MARKER>(): kotlin/Int // org.meshtastic.tak/TakFragment.REPAIR_REQUEST_MARKER.<get-REPAIR_REQUEST_MARKER>|<get-REPAIR_REQUEST_MARKER>(){}[0]
+
+    final fun isFragment(kotlin/ByteArray): kotlin/Boolean // org.meshtastic.tak/TakFragment.isFragment|isFragment(kotlin.ByteArray){}[0]
 }
 
 final object org.meshtastic.tak/TakPacketSdk { // org.meshtastic.tak/TakPacketSdk|null[0]
