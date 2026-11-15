@@ -228,7 +228,7 @@ Maintainers of open-source RaptorQ libraries say the same thing. The Rust crate'
 ### 6.1 Sender
 
 ```
-1. packet = parse(cotXml, limits = LARGE)                       // see §8
+1. packet = parse(cotXml, limits = fragmentIfOversize ? LARGE : SINGLE_FRAME)   // see §8
    fallbacks = {remarks: available, singleFrameLimits: available}
 2. proto  = serialize(packet); inner = compress(packet)         // unchanged one-shot path
 3. if inner.size <= maxFrame and proto.size <= 4096:
@@ -253,14 +253,14 @@ Maintainers of open-source RaptorQ libraries say the same thing. The Rust crate'
        stop sending this message and report failure (receivers time out on their own)
 ```
 
-- **Each fallback runs at most once**, so the loop always terminates. The fallbacks accumulate: when the single-frame re-parse runs after remarks were dropped, the re-parsed packet has its remarks dropped too. This applies equally to the `fragmentIfOversize = false` path, which uses the same chain.
+- **Each fallback runs at most once**, so the loop always terminates. The fallbacks accumulate: when the single-frame re-parse runs after remarks were dropped, the re-parsed packet has its remarks dropped too. The `fragmentIfOversize = false` path uses the same chain, but its packet was parsed with single-frame limits in step 1, so the single-frame fallback has nothing to cut. That leaves exactly today's `compressWithRemarksFallback` behaviour: a CoT with too much geometry is truncated to 32 vertices and keeps its remarks if it then fits, rather than keeping more vertices at the cost of its remarks.
 - **Pacing is bounded by the receivers' timers, as far as the sender can see.** The sender can only observe its own wait for the radio queue. It cannot observe when the radio actually transmits a queued frame, or how long relays take to forward it. So the rule above limits only queue wait: the gap between handing two fragments to the radio stays under the idle budget, and the whole hand-off under the ceiling. Delay after the radio accepts a frame (time on air, channel-busy backoff, firmware throttling, relay contention) is absorbed by the receivers' `hopFactor` and `slack` margins (§6.2). The guarantee is therefore conditional: a message is delivered within the receivers' timers only while that later delay stays inside those margins. Past them, the message is lost cleanly, which is the same outcome as a dropped fragment. Field tests should tune `hopFactor` and `slack` per preset.
 - **Never start a burst the duty cycle will cut off.** In regions with a duty-cycle limit, such as EU_868, firmware aborts a phone-originated send once the node's hourly airtime budget is spent. A burst that crosses that line is cut off partway, which wastes all the airtime already used. So before step 7 the sender compares the airtime the whole set needs, (K + R) × frame airtime, against what is left in the hour.
   - **What is left in the hour** is the region's limit, minus the radio's reported `air_util_tx` (the percentage of airtime used transmitting in the last hour, from its device metrics), minus the airtime of frames already handed to the radio but not yet sent. `air_util_tx` only counts frames that have been transmitted, so the sender also subtracts what is still queued, including fragments of other sets in flight. It can estimate that from `QueueStatus` (`maxlen − free` queued frames, each costing up to one frame airtime). Skip the check when the region has no limit or `override_duty_cycle` is set.
   - **If the set doesn't fit,** the call fails with a distinct "insufficient airtime" result, so the app can retry later instead of dropping the message.
 - **The radio queue is bounded.** Firmware reports `QueueStatus` (`free` / `maxlen` / `res`) after each packet it accepts from the phone. Pushing a whole fragment set without waiting can overflow the queue and lose several fragments before any of them reaches the air. Repair fragments are not meant to cover that loss.
 - **Fragmentation is opt-in, per CoT.** Each send carries a `fragmentIfOversize` flag, default `false`. With `false`, the SDK behaves exactly as today for that CoT and never emits a fragment. With `true`, an oversized CoT may be fragmented, up to a `maxSourceFragments` cap. The flag lives on the send call, not on the wire. The app or plugin sets it per CoT: for example `true` for a user-drawn shape, route or long chat message, and never for PLI or other periodic traffic.
-  - **With `fragmentIfOversize = false`, the sender never emits a fragment.** A packet that cannot take step 3 goes through the same fallbacks: drop remarks, then single-frame limits. If it still doesn't fit, it is dropped and the call reports failure. The SDK never sends a single frame that receivers would reject for exceeding the 4,096-byte cap.
+  - **With `fragmentIfOversize = false`, the sender never emits a fragment.** The CoT is parsed with single-frame limits, and a packet that cannot take step 3 drops its remarks. If it still doesn't fit, it is dropped and the call reports failure. The SDK never sends a single frame that receivers would reject for exceeding the 4,096-byte cap.
   - **That is today's behaviour, made explicit.** Today such a packet would be sent and then rejected by every receiver. Real PLI protobufs are about 100 B, so in practice this path never triggers for them.
   - **`maxSourceFragments = 1` is not the same as `fragmentIfOversize = false`.** It still allows a one-source-fragment set (plus repair) for a packet that compresses into one frame but whose protobuf is over 4,096 B.
 
@@ -370,9 +370,10 @@ public class TakReassembler(
 public fun decompress(wirePayload: ByteArray, maxDecompressedSize: Int = MAX_DECOMPRESSED_SIZE): TakPacketV2Data
 
 /** One-call send path: compress, bounded fallbacks, then fragment. Generalizes compressWithRemarksFallbackDetailed. */
-/** Takes the CoT XML, not a parsed packet: step 1 parses with LARGE limits, and the single-frame
- *  fallback (§6.1 step 5) re-parses the same XML with single-frame limits rather than truncating
- *  an already-parsed packet. */
+/** Takes the CoT XML: step 1 parses with LARGE limits when fragmentIfOversize is true, otherwise with
+ *  single-frame limits. The single-frame fallback (§6.1 step 5) cuts vertices and route links to the
+ *  single-frame limits, which gives the same packet as re-parsing the XML with them. An overload
+ *  takes an already-parsed packet. */
 public fun compressForMesh(
     cotXml: String,
     fragmenter: TakFragmenter,
