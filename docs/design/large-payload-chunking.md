@@ -256,7 +256,7 @@ Maintainers of open-source RaptorQ libraries say the same thing. The Rust crate'
 - **Each fallback runs at most once**, so the loop always terminates. The fallbacks accumulate: when the single-frame re-parse runs after remarks were dropped, the re-parsed packet has its remarks dropped too. This applies equally to the `fragmentIfOversize = false` path, which uses the same chain.
 - **Pacing is bounded by the receivers' timers, as far as the sender can see.** The sender can only observe its own wait for the radio queue. It cannot observe when the radio actually transmits a queued frame, or how long relays take to forward it. So the rule above limits only queue wait: the gap between handing two fragments to the radio stays under the idle budget, and the whole hand-off under the ceiling. Delay after the radio accepts a frame (time on air, channel-busy backoff, firmware throttling, relay contention) is absorbed by the receivers' `hopFactor` and `slack` margins (§6.2). The guarantee is therefore conditional: a message is delivered within the receivers' timers only while that later delay stays inside those margins. Past them, the message is lost cleanly, which is the same outcome as a dropped fragment. Field tests should tune `hopFactor` and `slack` per preset.
 - **Never start a burst the duty cycle will cut off.** In regions with a duty-cycle limit, such as EU_868, firmware aborts a phone-originated send once the node's hourly airtime budget is spent. A burst that crosses that line is cut off partway, which wastes all the airtime already used. So before step 7 the sender compares the airtime the whole set needs, (K + R) × frame airtime, against what is left in the hour.
-  - **What is left in the hour** is the region's limit minus the radio's reported `air_util_tx`, the percentage of airtime used transmitting in the last hour, from its device metrics. Skip the check when the region has no limit or `override_duty_cycle` is set.
+  - **What is left in the hour** is the region's limit, minus the radio's reported `air_util_tx` (the percentage of airtime used transmitting in the last hour, from its device metrics), minus the airtime of frames already handed to the radio but not yet sent. `air_util_tx` only counts frames that have been transmitted, so the sender also subtracts what is still queued, including fragments of other sets in flight. It can estimate that from `QueueStatus` (`maxlen − free` queued frames, each costing up to one frame airtime). Skip the check when the region has no limit or `override_duty_cycle` is set.
   - **If the set doesn't fit,** the call fails with a distinct "insufficient airtime" result, so the app can retry later instead of dropping the message.
 - **The radio queue is bounded.** Firmware reports `QueueStatus` (`free` / `maxlen` / `res`) after each packet it accepts from the phone. Pushing a whole fragment set without waiting can overflow the queue and lose several fragments before any of them reaches the air. Repair fragments are not meant to cover that loss.
 - **Fragmentation is opt-in, per CoT.** Each send carries a `fragmentIfOversize` flag, default `false`. With `false`, the SDK behaves exactly as today for that CoT and never emits a fragment. With `true`, an oversized CoT may be fragmented, up to a `maxSourceFragments` cap. The flag lives on the send call, not on the wire. The app or plugin sets it per CoT: for example `true` for a user-drawn shape, route or long chat message, and never for PLI or other periodic traffic.
@@ -280,7 +280,8 @@ Reassembler rules:
 - **An unknown `code`** means the frame is dropped (forward compatibility).
 - **Completion:** the reassembler holds K distinct ESIs. It solves (§5.3), strips the padding and `0x80`, and checks the CRC.
 - **A CRC mismatch does not drop the message.** One bad or stale fragment among the K used (for example after a `msg_id` collision) makes the solve produce garbage, but the message may still be recoverable. The partial stays open, and each new ESI triggers a retry: with K + j fragments held, try leaving out one fragment at a time. That is at most K + j solves of at most 16×16, microseconds each, and it recovers from any single bad fragment. More than one bad fragment just runs out the deadline, and the message is dropped then.
-- **After completion,** remember `(N, msg_id)` until that message's absolute ceiling, so late fragments and repair frames do not open a new partial. (Fragments carry no CRC, so the key is the ID alone.) The cache is bounded, e.g. 256 entries with least-recently-used eviction. Losing an entry early only means a late duplicate is reassembled and delivered twice, and ATAK de-duplicates CoT by `uid`.
+- **After completion,** remember `(N, msg_id)` until that message's absolute ceiling, so late fragments and repair frames do not open a new partial. (Fragments carry no CRC, so the key is the ID alone.) The cache is bounded, e.g. 256 entries with least-recently-used eviction. An entry lost early means a late duplicate can be reassembled again; the CRC cache below stops it being delivered twice.
+- **Redelivery is suppressed by content.** The receiver also keeps, per sender, the CRC-32s of recently delivered messages, for example the last 64 or the last hour. A reassembled message whose CRC is already in that cache is dropped instead of delivered. This costs 4 B per entry. It does not depend on how ATAK handles a second event with the same `uid`: an older copy arriving late must never overwrite newer state.
 - **Bounds:** at most 4 partial messages per sender and 32 in total; evict the oldest when full. Each partial stores at most **K + 4** distinct fragments, which is at most 20 × 220 B ≈ 4.4 KB. That covers the CRC-retry rule below, which needs only one more fragment than K per bad fragment. Further fragments for a partial that is already full are ignored.
 - **Timeouts come from the preset's airtime, and never depend on R.** The receiver cannot know how many repair fragments the sender chose, so its timers rely only on things it can see:
   - **Idle deadline:** `lastNewEsiAt + (L + 1) × frameAirtime(preset) × hopFactor + slack`. It is reset by every new ESI, so a long repair run of any length keeps the partial alive for as long as fragments keep arriving. L is the number of consecutive lost frames tolerated (default 4).
@@ -304,7 +305,7 @@ Recommendation:
 
 - **Default:** R = max(1, ⌈K/4⌉), so K=5 gets 2 repair fragments and K=10 gets 3.
 - **Adaptive senders** can append more repair fragments after the burst, with fresh ESIs and without re-sending anything. Unsolicited extras count against the same K + R ≤ 32 limit, and they help only if they arrive before receivers' idle deadline and absolute ceiling. A fragment arriving after its partial has expired opens a fresh partial. A single late fragment cannot complete it, so it just times out. That costs one partial slot until the idle deadline expires, within the per-sender and global caps.
-  - **K distinct late fragments can complete it,** for example after a store-and-forward or MQTT replay that outlasts the completed-message cache. The message is then reassembled and delivered a second time. Receivers accept that redelivery rather than trying to suppress it: the result is byte-identical to the first delivery, and ATAK already de-duplicates CoT by `uid` (§6.2). Extras sent in answer to a repair request follow §10 instead.
+  - **K distinct late fragments can complete it,** for example after a store-and-forward or MQTT replay that outlasts the completed-message cache. The message can then be reassembled again, but the per-sender CRC cache (§6.2) recognises it and drops it, so it is not delivered twice. If that cache has also lost the entry, the copy is delivered with its original `start` time (`start_epoch_lo14`), so ordering by `start` still treats it as old. Extras sent in answer to a repair request follow §10 instead.
 
 **Consideration: losses are bursty, not independent.** The table assumes each frame is lost independently with the same probability. LoRa losses cluster instead: collisions, interference, hidden nodes, and a receiver briefly out of range. A fragment burst also competes with its own rebroadcasts on later hops, since fragment n+1 leaves the sender while neighbours are still relaying fragment n. So the effective p for a burst is probably lower than for an isolated packet, and the R=1–3 delivery figures above are best cases. Field tests should measure delivery for whole fragment sets rather than infer it from single-packet loss. Two levers to try:
 - **Spacing** fragments slightly apart in time. This reduces self-collision but stretches the burst.
@@ -339,7 +340,11 @@ public class TakFragmenter(
     public val repairPolicy: (k: Int) -> Int = { k -> maxOf(1, (k + 3) / 4) },  // K + R clamped to 32
     private val msgIds: MessageIdSource = MessageIdSource.random(),
 ) {
-    /** [inner] unchanged if it fits; otherwise K source + R repair frames; null if K > [maxSourceFragments]. */
+    /**
+     * [inner] unchanged if it fits one frame AND [protobufSize] <= 4096; otherwise K source + R repair
+     * frames (K may be 1 when only the protobuf-size rule forces fragmenting, §5.2); null if
+     * K > [maxSourceFragments].
+     */
     public fun split(inner: ByteArray, protobufSize: Int): List<ByteArray>?
 
     /** Additional repair frames for a message already sent (fresh ESIs). Needs the original inner bytes. */
@@ -364,15 +369,28 @@ public class TakReassembler(
 public fun decompress(wirePayload: ByteArray, maxDecompressedSize: Int = MAX_DECOMPRESSED_SIZE): TakPacketV2Data
 
 /** One-call send path: compress, bounded fallbacks, then fragment. Generalizes compressWithRemarksFallbackDetailed. */
+/** Takes the CoT XML, not a parsed packet: step 1 parses with LARGE limits, and the single-frame
+ *  fallback (§6.1 step 5) re-parses the same XML with single-frame limits rather than truncating
+ *  an already-parsed packet. */
 public fun compressForMesh(
-    packet: TakPacketV2Data,
+    cotXml: String,
     fragmenter: TakFragmenter,
     fragmentIfOversize: Boolean = false,              // per-CoT opt-in (§6.1); false = today's behaviour
     airtimeLeftMillis: Long? = null,                   // remaining duty-cycle budget, null = no limit (§6.1)
 ): MeshEncodeResult
 public data class MeshEncodeResult(
-    val frames: List<ByteArray>?, val remarksStripped: Boolean, val truncated: Boolean, val fragmented: Boolean,
-)
+    val outcome: Outcome,
+    val frames: List<ByteArray>?,                      // non-null only for SINGLE_FRAME / FRAGMENTED
+    val remarksStripped: Boolean,
+    val truncated: Boolean,
+) {
+    public enum class Outcome {
+        SINGLE_FRAME,          // one frame, today's format
+        FRAGMENTED,            // a fragment set
+        TOO_LARGE,             // still over the limits after every fallback: drop
+        INSUFFICIENT_AIRTIME,  // fits, but not in this hour's duty-cycle budget: retry later
+    }
+}
 
 /** One-call receive path: routes 0xFE to the reassembler, everything else to decompress(). */
 public class TakMeshReceiver(compressor: TakCompressor, reassembler: TakReassembler) {
