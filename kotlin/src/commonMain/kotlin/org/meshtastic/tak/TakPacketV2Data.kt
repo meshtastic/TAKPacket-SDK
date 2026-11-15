@@ -415,7 +415,7 @@ public data class TakPacketV2Data(
             val fillArgb: Int = 0,
             /** Whether shape labels are shown on the map. */
             val labelsOn: Boolean = false,
-            /** Capped at MAX_VERTICES in the parser; sender sets [truncated] when exceeded. */
+            /** Capped by the parser's `CotXmlParser.Limits` (MAX_VERTICES by default); [truncated] is set when exceeded. */
             val vertices: List<Vertex> = emptyList(),
             val truncated: Boolean = false,
             /**
@@ -482,8 +482,9 @@ public data class TakPacketV2Data(
          * Named route consisting of ordered waypoints and control points.
          * Maps to `Route` at payload_variant tag 37.
          *
-         * Link count is capped at MAX_ROUTE_LINKS (16) by the parser; longer
-         * routes are truncated with [truncated] set true.
+         * Link count is capped by the parser's `CotXmlParser.Limits`
+         * (MAX_ROUTE_LINKS, 16, by default); longer routes are truncated with
+         * [truncated] set true.
          */
         public data class Route(
             /** Travel method: 0 unspec, 1 Driving, 2 Walking, 3 Flying, 4 Swimming, 5 Watercraft. */
@@ -494,9 +495,9 @@ public data class TakPacketV2Data(
             val prefix: String = "",
             /** Route line weight × 10 (e.g. 3.0 px → 30). */
             val strokeWeightX10: Int = 0,
-            /** Ordered route waypoints / control points (capped at MAX_ROUTE_LINKS). */
+            /** Ordered route waypoints / control points (capped by the parser's limits). */
             val links: List<Link> = emptyList(),
-            /** True if links were dropped because the route exceeded MAX_ROUTE_LINKS. */
+            /** True if links were dropped because the route exceeded the parser's limit. */
             val truncated: Boolean = false,
         ) : Payload() {
             /**

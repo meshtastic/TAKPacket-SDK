@@ -25,9 +25,34 @@ One version covers all five bindings, so a release is a single tag and a single 
 
   Nothing changes for existing callers: a payload that fits one frame comes
   back unchanged, and nothing fragments unless the app uses these classes. The
-  send and receive paths that pick fragmenting per CoT (`compressForMesh`,
-  `TakMeshReceiver`), and the other four bindings, follow separately. Golden
-  fragment sets for those bindings are in `testdata/fragment/`.
+  other four bindings follow separately; golden fragment sets for them are in
+  `testdata/fragment/`.
+
+- Kotlin: the send and receive paths for fragmented messages.
+  `TakCompressor.compressForMesh(cotXml or packet, fragmenter,
+  fragmentIfOversize, airtime)` returns the frames to send for one CoT, as a
+  `MeshEncodeResult` (`SINGLE_FRAME`, `FRAGMENTED`, `TOO_LARGE` or
+  `INSUFFICIENT_AIRTIME`). Fragmenting is opt-in per CoT. With
+  `fragmentIfOversize = false` (the default) the result matches
+  `compressWithRemarksFallbackDetailed`, except that a packet whose protobuf is
+  over 4,096 B is now reported as too large rather than sent to receivers that
+  would reject it. With `true`, an oversized CoT is fragmented, and the
+  remarks-then-truncate fallbacks run only when the fragment cap is exceeded.
+  `AirtimeBudget` blocks a fragment burst that wouldn't fit the hour's
+  duty-cycle budget, and can be built from the radio's `air_util_tx` and queue
+  depth.
+
+  `TakMeshReceiver.onPayload(sender, payload, now)` routes port-78 payloads:
+  fragments go to a `TakReassembler` and are decoded once complete, everything
+  else decodes as before.
+
+  Supporting additions: `CotXmlParser.parse(cotXml, limits)` with
+  `CotXmlParser.Limits.SINGLE_FRAME` (32 vertices, 16 route links; the default)
+  and `Limits.LARGE` (512 and 64). `TakCompressor.decompress(payload,
+  maxDecompressedSize)` takes a size cap, for reassembled messages up to
+  `TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE` (32 KB).
+  `TakFragmenter.sourceFragmentsFor(size)` reports K for a payload size, and
+  `split` returns null for a protobuf over 32 KB.
 
 ## [0.10.0] - 2026-10-31
 

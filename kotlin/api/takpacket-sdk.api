@@ -1,3 +1,22 @@
+public final class org/meshtastic/tak/AirtimeBudget {
+	public static final field Companion Lorg/meshtastic/tak/AirtimeBudget$Companion;
+	public fun <init> (JJ)V
+	public final fun allows (I)Z
+	public final fun component1 ()J
+	public final fun component2 ()J
+	public final fun copy (JJ)Lorg/meshtastic/tak/AirtimeBudget;
+	public static synthetic fun copy$default (Lorg/meshtastic/tak/AirtimeBudget;JJILjava/lang/Object;)Lorg/meshtastic/tak/AirtimeBudget;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFrameAirtimeMillis ()J
+	public final fun getRemainingMillis ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/AirtimeBudget$Companion {
+	public final fun fromDeviceMetrics (DDIJ)Lorg/meshtastic/tak/AirtimeBudget;
+}
+
 public final class org/meshtastic/tak/AtakPalette {
 	public static final field INSTANCE Lorg/meshtastic/tak/AtakPalette;
 	public static final field UNSPECIFIED I
@@ -203,7 +222,9 @@ public final class org/meshtastic/tak/CotXmlParser {
 	public static final field MARKER_KIND_UNSPECIFIED I
 	public static final field MARKER_KIND_WAYPOINT I
 	public static final field MAX_ROUTE_LINKS I
+	public static final field MAX_ROUTE_LINKS_LARGE I
 	public static final field MAX_VERTICES I
+	public static final field MAX_VERTICES_LARGE I
 	public static final field PRECEDENCE_CONVENIENCE I
 	public static final field PRECEDENCE_PRIORITY I
 	public static final field PRECEDENCE_ROUTINE I
@@ -247,9 +268,29 @@ public final class org/meshtastic/tak/CotXmlParser {
 	public fun <init> ()V
 	public final fun extractRawDetailBytes (Ljava/lang/String;)[B
 	public final fun parse (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data;
+	public final fun parse (Ljava/lang/String;Lorg/meshtastic/tak/CotXmlParser$Limits;)Lorg/meshtastic/tak/TakPacketV2Data;
 }
 
 public final class org/meshtastic/tak/CotXmlParser$Companion {
+}
+
+public final class org/meshtastic/tak/CotXmlParser$Limits {
+	public static final field Companion Lorg/meshtastic/tak/CotXmlParser$Limits$Companion;
+	public fun <init> (II)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun copy (II)Lorg/meshtastic/tak/CotXmlParser$Limits;
+	public static synthetic fun copy$default (Lorg/meshtastic/tak/CotXmlParser$Limits;IIILjava/lang/Object;)Lorg/meshtastic/tak/CotXmlParser$Limits;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMaxRouteLinks ()I
+	public final fun getMaxVertices ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/CotXmlParser$Limits$Companion {
+	public final fun getLARGE ()Lorg/meshtastic/tak/CotXmlParser$Limits;
+	public final fun getSINGLE_FRAME ()Lorg/meshtastic/tak/CotXmlParser$Limits;
 }
 
 public final class org/meshtastic/tak/DictionaryProvider {
@@ -269,6 +310,25 @@ public abstract interface class org/meshtastic/tak/Logger {
 
 public final class org/meshtastic/tak/LoggerKt {
 	public static final fun trace (Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class org/meshtastic/tak/MeshEncodeResult {
+	public fun <init> (Lorg/meshtastic/tak/MeshEncodeResult$Outcome;Ljava/util/List;ZZ)V
+	public final fun getFrames ()Ljava/util/List;
+	public final fun getOutcome ()Lorg/meshtastic/tak/MeshEncodeResult$Outcome;
+	public final fun getRemarksStripped ()Z
+	public final fun getTruncated ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/MeshEncodeResult$Outcome : java/lang/Enum {
+	public static final field FRAGMENTED Lorg/meshtastic/tak/MeshEncodeResult$Outcome;
+	public static final field INSUFFICIENT_AIRTIME Lorg/meshtastic/tak/MeshEncodeResult$Outcome;
+	public static final field SINGLE_FRAME Lorg/meshtastic/tak/MeshEncodeResult$Outcome;
+	public static final field TOO_LARGE Lorg/meshtastic/tak/MeshEncodeResult$Outcome;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/meshtastic/tak/MeshEncodeResult$Outcome;
+	public static fun values ()[Lorg/meshtastic/tak/MeshEncodeResult$Outcome;
 }
 
 public abstract interface class org/meshtastic/tak/MessageIdSource {
@@ -301,10 +361,15 @@ public final class org/meshtastic/tak/TakCompressor {
 	public fun <init> (I)V
 	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun compress (Lorg/meshtastic/tak/TakPacketV2Data;)[B
+	public final fun compressForMesh (Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public final fun compressForMesh (Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public static synthetic fun compressForMesh$default (Lorg/meshtastic/tak/TakCompressor;Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;ILjava/lang/Object;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public static synthetic fun compressForMesh$default (Lorg/meshtastic/tak/TakCompressor;Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;ILjava/lang/Object;)Lorg/meshtastic/tak/MeshEncodeResult;
 	public final fun compressWithRemarksFallback (Lorg/meshtastic/tak/TakPacketV2Data;I)[B
 	public final fun compressWithRemarksFallbackDetailed (Lorg/meshtastic/tak/TakPacketV2Data;I)Lorg/meshtastic/tak/TakCompressor$RemarksFallbackResult;
 	public final fun compressWithStats (Lorg/meshtastic/tak/TakPacketV2Data;)Lorg/meshtastic/tak/TakCompressor$CompressionResult;
 	public final fun decompress ([B)Lorg/meshtastic/tak/TakPacketV2Data;
+	public final fun decompress ([BI)Lorg/meshtastic/tak/TakPacketV2Data;
 }
 
 public final class org/meshtastic/tak/TakCompressor$Companion {
@@ -363,12 +428,21 @@ public final class org/meshtastic/tak/TakFragmenter {
 	public final fun getMaxFrameBytes ()I
 	public final fun getMaxSourceFragments ()I
 	public final fun getSliceSize ()I
+	public final fun sourceFragmentsFor (I)I
 	public final fun split ([BI)Ljava/util/List;
 	public final fun split ([BII)Ljava/util/List;
 }
 
 public final class org/meshtastic/tak/TakFragmenter$Companion {
 	public final fun defaultRepairCount (I)I
+}
+
+public final class org/meshtastic/tak/TakMeshReceiver {
+	public fun <init> (Lorg/meshtastic/tak/TakReassembler;Lorg/meshtastic/tak/TakCompressor;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakReassembler;Lorg/meshtastic/tak/TakCompressor;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun evictExpired (J)V
+	public final fun getReassembler ()Lorg/meshtastic/tak/TakReassembler;
+	public final fun onPayload (J[BJ)Lorg/meshtastic/tak/TakPacketV2Data;
 }
 
 public final class org/meshtastic/tak/TakPacketSdk {

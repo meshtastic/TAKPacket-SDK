@@ -115,6 +115,9 @@ public class TakFragmenter(
     /** Bytes of message data carried by each fragment. */
     public val sliceSize: Int get() = maxFrameBytes - TakFragment.HEADER_SIZE
 
+    /** Source fragments (K) needed for a wire payload of [innerSize] bytes, before any cap is applied. */
+    public fun sourceFragmentsFor(innerSize: Int): Int = (innerSize + BLOB_TRAILER_BYTES + sliceSize - 1) / sliceSize
+
     /** [split] with the next ID from this fragmenter's [MessageIdSource]. Only draws an ID when it fragments. */
     public fun split(
         inner: ByteArray,
@@ -135,7 +138,9 @@ public class TakFragmenter(
      * - Otherwise returns K source fragments followed by R repair fragments. K
      *   may be 1 when only the protobuf-size rule forces fragmenting (design doc
      *   §5.2).
-     * - Returns null if K would exceed [maxSourceFragments].
+     * - Returns null if K would exceed [maxSourceFragments], or if [protobufSize]
+     *   exceeds [TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE], since every
+     *   receiver would reject the reassembled message.
      */
     public fun split(
         inner: ByteArray,
@@ -144,7 +149,21 @@ public class TakFragmenter(
     ): List<ByteArray>? {
         require(inner.isNotEmpty()) { "inner payload is empty" }
         require(msgId in 0 until MSG_ID_LIMIT) { "msgId must fit 16 bits" }
-        return if (fitsOneFrame(inner, protobufSize)) listOf(inner) else fragment(inner, msgId)
+        return if (fitsOneFrame(inner, protobufSize)) listOf(inner) else fragment(inner, protobufSize, msgId)
+    }
+
+    /**
+     * Fragments [inner] even when it would fit one frame, drawing an ID from this
+     * fragmenter's [MessageIdSource]. Used by `compressForMesh` for an
+     * uncompressed packet whose geometry exceeds the firmware's single-frame
+     * pools (design doc §8). Returns null on the same caps as [split].
+     */
+    internal fun fragmentAlways(
+        inner: ByteArray,
+        protobufSize: Int,
+    ): List<ByteArray>? {
+        require(inner.isNotEmpty()) { "inner payload is empty" }
+        return fragment(inner, protobufSize, messageIds.next())
     }
 
     private fun fitsOneFrame(
@@ -154,12 +173,13 @@ public class TakFragmenter(
 
     private fun fragment(
         inner: ByteArray,
+        protobufSize: Int,
         msgId: Int,
     ): List<ByteArray>? {
         val s = sliceSize
+        val k = sourceFragmentsFor(inner.size)
+        if (k > maxSourceFragments || protobufSize > TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE) return null
         val blob = buildBlob(inner)
-        val k = (blob.size + s - 1) / s
-        if (k > maxSourceFragments) return null
         val r = repairPolicy(k).coerceIn(0, TakFragment.MAX_BURST - k)
 
         val shape = (TakFragment.CODE_CAUCHY shl CODE_SHIFT) or (k - 1)

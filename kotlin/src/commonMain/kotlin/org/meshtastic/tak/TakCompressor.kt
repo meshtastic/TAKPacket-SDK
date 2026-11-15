@@ -112,7 +112,22 @@ public class TakCompressor(
      *         (the original cause is preserved via `cause`).
      */
     @Throws(ZstdException::class, IllegalArgumentException::class)
-    public fun decompress(wirePayload: ByteArray): TakPacketV2Data {
+    public fun decompress(wirePayload: ByteArray): TakPacketV2Data = decompress(wirePayload, MAX_DECOMPRESSED_SIZE)
+
+    /**
+     * [decompress] with a caller-chosen cap on the protobuf size. Single frames
+     * use [MAX_DECOMPRESSED_SIZE]; a payload rebuilt from fragments uses
+     * [TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE] (design doc §8).
+     *
+     * @throws IllegalArgumentException if [maxDecompressedSize] is not positive,
+     *         and otherwise as for the single-argument [decompress].
+     */
+    @Throws(ZstdException::class, IllegalArgumentException::class)
+    public fun decompress(
+        wirePayload: ByteArray,
+        maxDecompressedSize: Int,
+    ): TakPacketV2Data {
+        require(maxDecompressedSize > 0) { "maxDecompressedSize must be positive" }
         require(wirePayload.size >= 2) { "Wire payload too short: ${wirePayload.size} bytes" }
 
         val flagsByte = wirePayload[0].toInt() and 0xFF
@@ -122,10 +137,8 @@ public class TakCompressor(
             if (flagsByte == DictionaryProvider.DICT_ID_UNCOMPRESSED) {
                 // Uncompressed raw protobuf (e.g. from TAK_TRACKER firmware). Enforce
                 // the decompressed-size cap here because there's no zstd pass to do it.
-                if (compressedBytes.size > MAX_DECOMPRESSED_SIZE) {
-                    throw IllegalArgumentException(
-                        "Uncompressed payload size ${compressedBytes.size} exceeds limit $MAX_DECOMPRESSED_SIZE",
-                    )
+                require(compressedBytes.size <= maxDecompressedSize) {
+                    "Uncompressed payload size ${compressedBytes.size} exceeds limit $maxDecompressedSize"
                 }
                 compressedBytes
             } else {
@@ -143,9 +156,9 @@ public class TakCompressor(
                     val restored = ByteArray(ZSTD_MAGIC.size + compressedBytes.size)
                     ZSTD_MAGIC.copyInto(restored, destinationOffset = 0)
                     compressedBytes.copyInto(restored, destinationOffset = ZSTD_MAGIC.size)
-                    // The codec's size-limited decompress guards the 4096B cap — a bomb
-                    // that expands past the limit throws inside the zstd library.
-                    ZstdCodec.decompressWithDict(restored, dictId, MAX_DECOMPRESSED_SIZE)
+                    // The codec's size-limited decompress guards the cap — a bomb that
+                    // expands past the limit throws inside the zstd library.
+                    ZstdCodec.decompressWithDict(restored, dictId, maxDecompressedSize)
                 } catch (e: ZstdException) {
                     // Preserve the typed codec exception so callers can catch it
                     // (re-wrapping in RuntimeException would defeat the contract).
@@ -260,6 +273,69 @@ public class TakCompressor(
 
         override fun hashCode(): Int = 31 * (wirePayload?.contentHashCode() ?: 0) + remarksStripped.hashCode()
     }
+
+    /**
+     * One-call send path for the mesh (design doc §6.1): parse [cotXml], compress
+     * it, and return the frames to send.
+     *
+     * With [fragmentIfOversize] false (the default) this never emits a fragment:
+     * the CoT is parsed with today's single-frame limits and behaves as
+     * [compressWithRemarksFallbackDetailed] at `fragmenter.maxFrameBytes`, except
+     * that a packet whose protobuf exceeds [MAX_DECOMPRESSED_SIZE] is reported as
+     * [MeshEncodeResult.Outcome.TOO_LARGE] instead of being sent to receivers that
+     * would reject it.
+     *
+     * With [fragmentIfOversize] true the CoT is parsed with
+     * [CotXmlParser.Limits.LARGE] and an oversized packet is fragmented, up to
+     * `fragmenter.maxSourceFragments`. See the [TakPacketV2Data] overload for
+     * the fallbacks and the airtime check.
+     *
+     * @throws IllegalArgumentException if [cotXml] cannot be parsed.
+     * @throws ZstdException if the zstd codec fails to compress.
+     */
+    @Throws(ZstdException::class, IllegalArgumentException::class)
+    public fun compressForMesh(
+        cotXml: String,
+        fragmenter: TakFragmenter,
+        fragmentIfOversize: Boolean = false,
+        airtime: AirtimeBudget? = null,
+    ): MeshEncodeResult {
+        val limits = if (fragmentIfOversize) CotXmlParser.Limits.LARGE else CotXmlParser.Limits.SINGLE_FRAME
+        return compressForMesh(CotXmlParser().parse(cotXml, limits), fragmenter, fragmentIfOversize, airtime)
+    }
+
+    /**
+     * One-call send path for an already parsed [packet]. Pass a packet parsed
+     * with [CotXmlParser.Limits.LARGE] to allow more geometry when fragmenting.
+     *
+     * 1. If the wire payload fits one frame, its protobuf is within
+     *    [MAX_DECOMPRESSED_SIZE], and it is not an uncompressed frame over the
+     *    firmware's single-frame pools: [MeshEncodeResult.Outcome.SINGLE_FRAME].
+     * 2. Otherwise, if [fragmentIfOversize] is true and the fragmenter's caps
+     *    allow it: [MeshEncodeResult.Outcome.FRAGMENTED], unless [airtime] is
+     *    given and the whole set does not fit it, which gives
+     *    [MeshEncodeResult.Outcome.INSUFFICIENT_AIRTIME].
+     * 3. Otherwise fall back and retry from step 1: first drop the remarks, then
+     *    cut vertices and route links to [CotXmlParser.Limits.SINGLE_FRAME].
+     *    Each fallback runs at most once, and they accumulate.
+     * 4. If nothing fits: [MeshEncodeResult.Outcome.TOO_LARGE].
+     *
+     * Fragment frames must be sent as one burst, paced against the radio's
+     * `QueueStatus`; pacing stays with the caller, which owns the radio link.
+     *
+     * @param fragmenter frame size, fragment caps, repair policy and message IDs.
+     *        Keep one per sender so message IDs keep rolling.
+     * @param airtime what is left of the hour's duty-cycle budget, or null when
+     *        the region has no limit.
+     * @throws ZstdException if the zstd codec fails to compress.
+     */
+    @Throws(ZstdException::class)
+    public fun compressForMesh(
+        packet: TakPacketV2Data,
+        fragmenter: TakFragmenter,
+        fragmentIfOversize: Boolean = false,
+        airtime: AirtimeBudget? = null,
+    ): MeshEncodeResult = MeshEncoder(this, fragmenter, fragmentIfOversize, airtime).encode(packet)
 
     /**
      * Compress and return both the wire payload and intermediate sizes for reporting.
