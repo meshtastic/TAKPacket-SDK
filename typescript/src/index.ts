@@ -3,7 +3,7 @@
  *
  * Converts ATAK Cursor-on-Target (CoT) XML into Meshtastic's `TAKPacketV2`
  * protobuf and compresses it with zstd dictionary compression for transport
- * over a LoRa mesh (237-byte MTU, Meshtastic port 78 / `ATAK_PLUGIN_V2`).
+ * over a LoRa mesh (225-byte MTU, Meshtastic port 78 / `ATAK_PLUGIN_V2`).
  * Frames emitted by this binding are cross-decodable with the Kotlin, Swift,
  * Python, and C# bindings of the same SDK.
  *
@@ -24,7 +24,7 @@
  * Supporting modules: the `AtakPalette` helpers (ARGB ↔ Team color enum) and
  * the `CotMeshSanitizer` helpers (pre-parse CoT-XML hygiene for mesh transport).
  *
- * **Wire format.** Every payload is `[1 byte flags][N bytes body]`, total ≤ 237
+ * **Wire format.** Every payload is `[1 byte flags][N bytes body]`, total ≤ 225
  * bytes. Flags bits 0–5 carry the dictionary ID (0 = non-aircraft, 1 =
  * aircraft); the special flags value `0xFF` means the body is raw,
  * uncompressed protobuf. The 4-byte zstd magic number is stripped on encode and

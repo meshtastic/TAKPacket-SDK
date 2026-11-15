@@ -27,7 +27,7 @@ var clean = CotMeshSanitizer.normalizeCotXml(cotXmlString)
 clean = CotMeshSanitizer.stripNonEssentialForMesh(clean)
 
 let packet = try parser.parse(clean)
-let wirePayload = try compressor.compress(packet)   // [flags byte][zstd body], ≤ 237 B
+let wirePayload = try compressor.compress(packet)   // [flags byte][zstd body], ≤ 225 B
 ```
 
 ## Decompress a received payload

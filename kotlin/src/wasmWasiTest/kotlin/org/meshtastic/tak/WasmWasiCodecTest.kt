@@ -50,7 +50,7 @@ class WasmWasiCodecTest {
 
         // Compress now works on wasmWasi (pure-Kotlin encoder), under the MTU.
         val wire = compressor.compress(packet)
-        assertTrue(wire.size <= 237, "wire payload ${wire.size}B exceeds MTU 237")
+        assertTrue(wire.size <= 225, "wire payload ${wire.size}B exceeds MTU 225")
 
         // And decompress round-trips the key fields.
         val decoded = compressor.decompress(wire)

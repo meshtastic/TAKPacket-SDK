@@ -2,7 +2,7 @@
 
 The .NET binding of [TAKPacket-SDK](https://github.com/meshtastic/TAKPacket-SDK): convert ATAK
 Cursor-on-Target (CoT) XML to Meshtastic's `TAKPacketV2` protobuf and compress it with zstd
-dictionary compression for LoRa mesh transport (237-byte MTU, port 78). Wire payloads are
+dictionary compression for LoRa mesh transport (225-byte MTU, port 78). Wire payloads are
 byte-interoperable with the Kotlin, Swift, Python, and TypeScript bindings.
 
 Targets **.NET 9**. Depends on `Google.Protobuf` and `ZstdSharp.Port`.
@@ -29,7 +29,7 @@ var clean = CotMeshSanitizer.NormalizeCotXml(cotXmlString);
 clean = CotMeshSanitizer.StripNonEssentialForMesh(clean);
 
 var packet = parser.Parse(clean);
-byte[] wirePayload = compressor.Compress(packet);   // [flags][zstd body], ≤ 237 B
+byte[] wirePayload = compressor.Compress(packet);   // [flags][zstd body], ≤ 225 B
 
 // Receive side
 var received = compressor.Decompress(wirePayload);

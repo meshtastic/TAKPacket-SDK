@@ -1,14 +1,14 @@
 # TAKPacket-SDK Compression Report
-Generated: 2026-10-29 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)
+Generated: 2026-11-15 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)
 
 ## Summary
 | Metric | Value |
 |--------|-------|
 | Total test messages | 47 |
-| 100% under 237B | YES |
+| 100% under 225B | YES |
 | Median compressed size | 89B |
 | Median compression ratio | 7.3x |
-| Worst case | 193B (81% of LoRa MTU) |
+| Worst case | 193B (85% of LoRa MTU) |
 
 ## Per-Message Results
 | Fixture | CoT Type | XML Size | Proto Size | Compressed | Ratio | Dict |
@@ -63,52 +63,52 @@ Generated: 2026-10-29 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-tra
 
 ## Size Distribution
 ```text
-marker_goto            33B |######
-pli_basic              42B |########
-delete_event           45B |#########
-waypoint               50B |##########
-drawing_ellipse        60B |############
-geochat_broadcast      61B |############
-geochat_dm             64B |#############
-taktalk_text           64B |#############
-geochat_simple         65B |#############
+marker_goto            33B |#######
+pli_basic              42B |#########
+delete_event           45B |##########
+waypoint               50B |###########
+drawing_ellipse        60B |#############
+geochat_broadcast      61B |#############
+geochat_dm             64B |##############
+taktalk_text           64B |##############
+geochat_simple         65B |##############
 task_engage            67B |##############
-marker_spot            70B |##############
-taktalk_voice          70B |##############
-drawing_circle         71B |##############
-marker_2525            71B |##############
-pli_itak               71B |##############
-emergency_911          72B |###############
-chat_receipt_delivered   75B |###############
-chat_receipt_read      75B |###############
-marker_tank            75B |###############
-emergency_cancel       78B |################
-ranging_circle         80B |################
-pli_takaware           88B |##################
-ranging_line           88B |##################
-marker_icon_set        89B |##################
-drawing_circle_large   90B |##################
-ranging_bullseye       93B |###################
-taktalk_room_data      94B |###################
-pli_full               95B |####################
-alert_tic              97B |####################
-drawing_rectangle      97B |####################
-drawing_freeform      109B |######################
-taktalk_voice_marti   110B |#######################
-pli_stationary        111B |#######################
-aircraft_adsb         112B |#######################
-pli_webtak            112B |#######################
-drawing_polygon       115B |########################
-pli_with_sensor       115B |########################
-drawing_rectangle_itak  117B |########################
-route_3wp             122B |#########################
-aircraft_hostile      123B |#########################
-casevac               130B |###########################
-chat_taktalk_dm       137B |############################
-marker_goto_itak      142B |#############################
-casevac_medline       163B |##################################
-chat_taktalk_voice_profile  165B |##################################
-route_itak_3wp        181B |######################################
-drawing_telestration  193B |########################################
-LoRa MTU              237B |##################################################
+marker_spot            70B |###############
+taktalk_voice          70B |###############
+drawing_circle         71B |###############
+marker_2525            71B |###############
+pli_itak               71B |###############
+emergency_911          72B |################
+chat_receipt_delivered   75B |################
+chat_receipt_read      75B |################
+marker_tank            75B |################
+emergency_cancel       78B |#################
+ranging_circle         80B |#################
+pli_takaware           88B |###################
+ranging_line           88B |###################
+marker_icon_set        89B |###################
+drawing_circle_large   90B |####################
+ranging_bullseye       93B |####################
+taktalk_room_data      94B |####################
+pli_full               95B |#####################
+alert_tic              97B |#####################
+drawing_rectangle      97B |#####################
+drawing_freeform      109B |########################
+taktalk_voice_marti   110B |########################
+pli_stationary        111B |########################
+aircraft_adsb         112B |########################
+pli_webtak            112B |########################
+drawing_polygon       115B |#########################
+pli_with_sensor       115B |#########################
+drawing_rectangle_itak  117B |##########################
+route_3wp             122B |###########################
+aircraft_hostile      123B |###########################
+casevac               130B |############################
+chat_taktalk_dm       137B |##############################
+marker_goto_itak      142B |###############################
+casevac_medline       163B |####################################
+chat_taktalk_voice_profile  165B |####################################
+route_itak_3wp        181B |########################################
+drawing_telestration  193B |##########################################
+LoRa MTU              225B |##################################################
 ```
