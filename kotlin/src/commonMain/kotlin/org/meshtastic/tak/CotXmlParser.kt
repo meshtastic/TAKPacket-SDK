@@ -1272,8 +1272,10 @@ public class CotXmlParser {
 
         public companion object {
             /**
-             * Today's caps, sized for one frame and for the firmware's nanopb
-             * pools. The default for [parse].
+             * Today's caps, sized so most shapes and routes fit one 225-byte
+             * frame. The default for [parse]. (Firmware forwards port-78
+             * payloads without decoding them; its nanopb limits only bound the
+             * PLI it builds itself in the TAK_TRACKER role.)
              */
             public val SINGLE_FRAME: Limits = Limits(MAX_VERTICES, MAX_ROUTE_LINKS)
 

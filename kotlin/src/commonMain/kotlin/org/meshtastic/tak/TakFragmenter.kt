@@ -152,20 +152,6 @@ public class TakFragmenter(
         return if (fitsOneFrame(inner, protobufSize)) listOf(inner) else fragment(inner, protobufSize, msgId)
     }
 
-    /**
-     * Fragments [inner] even when it would fit one frame, drawing an ID from this
-     * fragmenter's [MessageIdSource]. Used by `compressForMesh` for an
-     * uncompressed packet whose geometry exceeds the firmware's single-frame
-     * pools (design doc §8). Returns null on the same caps as [split].
-     */
-    internal fun fragmentAlways(
-        inner: ByteArray,
-        protobufSize: Int,
-    ): List<ByteArray>? {
-        require(inner.isNotEmpty()) { "inner payload is empty" }
-        return fragment(inner, protobufSize, messageIds.next())
-    }
-
     private fun fitsOneFrame(
         inner: ByteArray,
         protobufSize: Int,

@@ -308,9 +308,8 @@ public class TakCompressor(
      * One-call send path for an already parsed [packet]. Pass a packet parsed
      * with [CotXmlParser.Limits.LARGE] to allow more geometry when fragmenting.
      *
-     * 1. If the wire payload fits one frame, its protobuf is within
-     *    [MAX_DECOMPRESSED_SIZE], and it is not an uncompressed frame over the
-     *    firmware's single-frame pools: [MeshEncodeResult.Outcome.SINGLE_FRAME].
+     * 1. If the wire payload fits one frame and its protobuf is within
+     *    [MAX_DECOMPRESSED_SIZE]: [MeshEncodeResult.Outcome.SINGLE_FRAME].
      * 2. Otherwise, if [fragmentIfOversize] is true and the fragmenter's caps
      *    allow it: [MeshEncodeResult.Outcome.FRAGMENTED], unless [airtime] is
      *    given and the whole set does not fit it, which gives

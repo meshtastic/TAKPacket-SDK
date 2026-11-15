@@ -127,7 +127,7 @@ internal class MeshEncoder(
         val protobufSize = TakPacketV2Serializer.serialize(packet).size
         val inner = compressor.compress(packet)
         return when {
-            singleFrameAllowed(inner, protobufSize, packet) -> {
+            singleFrameAllowed(inner, protobufSize) -> {
                 result(MeshEncodeResult.Outcome.SINGLE_FRAME, listOf(inner))
             }
 
@@ -146,7 +146,7 @@ internal class MeshEncoder(
         inner: ByteArray,
         protobufSize: Int,
     ): MeshEncodeResult? {
-        val frames = fragmenter.fragmentAlways(inner, protobufSize)
+        val frames = fragmenter.split(inner, protobufSize)
         return when {
             frames == null -> {
                 null
@@ -163,21 +163,13 @@ internal class MeshEncoder(
     }
 
     /**
-     * Today's single-frame rule plus two receiver-side limits: the protobuf must
-     * be within the 4,096-byte single-frame cap, and an uncompressed (`0xFF`)
-     * frame must stay within the firmware's nanopb pools, since that is the only
-     * form firmware decodes (design doc §8).
+     * Today's single-frame rule plus the receivers' 4,096-byte single-frame
+     * protobuf cap. The same rule as `TakFragmenter.split`'s unchanged path.
      */
     private fun singleFrameAllowed(
         inner: ByteArray,
         protobufSize: Int,
-        packet: TakPacketV2Data,
-    ): Boolean {
-        val uncompressed = (inner[0].toInt() and BYTE_MASK) == DictionaryProvider.DICT_ID_UNCOMPRESSED
-        return inner.size <= fragmenter.maxFrameBytes &&
-            protobufSize <= TakCompressor.MAX_DECOMPRESSED_SIZE &&
-            !(uncompressed && exceedsSingleFrameLimits(packet))
-    }
+    ): Boolean = inner.size <= fragmenter.maxFrameBytes && protobufSize <= TakCompressor.MAX_DECOMPRESSED_SIZE
 
     private fun result(
         outcome: MeshEncodeResult.Outcome,

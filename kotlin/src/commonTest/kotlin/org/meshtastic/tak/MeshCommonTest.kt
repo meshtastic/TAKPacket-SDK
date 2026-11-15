@@ -257,9 +257,9 @@ class MeshCommonTest {
     }
 
     @Test
-    fun anUncompressedFrameOverThePoolsIsNeverSentAlone() {
+    fun anUncompressedFrameIsSentWholeWhateverItsGeometry() {
         // 33 vertices with small random deltas: zstd can't beat the raw protobuf,
-        // so it would go out as one uncompressed frame the firmware can't decode.
+        // so the encoder emits an uncompressed (0xFF) frame.
         val rnd = Random(33)
         var lat = 331_274_000
         var lon = -1_072_488_000
@@ -279,20 +279,18 @@ class MeshCommonTest {
         val inner = compressor.compress(packet)
         assertEquals(DictionaryProvider.DICT_ID_UNCOMPRESSED, inner[0].toInt() and 0xFF, "precondition: uncompressed")
         assertTrue(inner.size <= TakFragment.DEFAULT_MAX_FRAME_BYTES, "precondition: fits one frame")
-        assertTrue(MeshEncoder.exceedsSingleFrameLimits(packet))
+        assertTrue(vertices.size > CotXmlParser.MAX_VERTICES)
 
-        // Opted in: a one-source-fragment set, which firmware never tries to decode.
-        val opted = compressor.compressForMesh(packet, TakFragmenter(), fragmentIfOversize = true)
-        assertEquals(MeshEncodeResult.Outcome.FRAGMENTED, opted.outcome)
-        assertEquals(0, opted.frames!![0][3].toInt() and 0x1F, "K = 1")
-        assertFalse(opted.truncated)
-        assertEquals(packet, deliverAll(receiver(), opted.frames).single())
-
-        // Not opted in: cut to the pools and sent as one frame.
-        val plain = compressor.compressForMesh(packet, TakFragmenter())
-        assertEquals(MeshEncodeResult.Outcome.SINGLE_FRAME, plain.outcome)
-        assertTrue(plain.truncated)
-        assertEquals(CotXmlParser.MAX_VERTICES, shape(compressor.decompress(plain.frames!!.single())).vertices.size)
+        // Firmware forwards port-78 payloads without decoding them, so an
+        // uncompressed frame needs no geometry cap: it goes out as one frame,
+        // whole, with or without opt-in.
+        for (opt in listOf(false, true)) {
+            val r = compressor.compressForMesh(packet, TakFragmenter(), fragmentIfOversize = opt)
+            assertEquals(MeshEncodeResult.Outcome.SINGLE_FRAME, r.outcome)
+            assertContentEquals(inner, r.frames!!.single())
+            assertFalse(r.truncated)
+            assertEquals(packet, receiver().onPayload(1L, r.frames.single(), 0L))
+        }
     }
 
     @Test
