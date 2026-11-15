@@ -18,6 +18,7 @@ testdata/
   cot_xml/           47 CoT XML fixtures (input)
   golden/            47 .bin compressed wire payloads (Kotlin-generated)
   protobuf/          47 .pb intermediate protobuf bytes (Kotlin-generated)
+  fragment/          golden fragment sets: <case>.inner + <case>.frames + manifest.json (Kotlin-generated, FragmentGoldenTest)
   malformed/         malformed input test files
   compression-report.md   Auto-generated size report
 kotlin/              Canonical implementation (full KMP: jvm + js + wasmJs + wasmWasi + 9 native — consumes published org.meshtastic:protobufs)

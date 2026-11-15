@@ -8,6 +8,27 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ## [Unreleased]
 
+### Added
+
+- Kotlin: the wire core for fragmenting large `TAKPacketV2` messages across
+  several frames, following `docs/design/large-payload-chunking.md`.
+  `TakFragmenter` splits a wire payload that doesn't fit one frame into
+  fragments (flags byte `0xFE`, 5-byte header). `TakReassembler` rebuilds it
+  from any K of the fragments, in any order. `TakFragment` holds the wire
+  constants, and `MessageIdSource` supplies 16-bit message IDs.
+
+  Losses are recovered with a systematic Cauchy erasure code over GF(256): the
+  K source fragments are followed by repair fragments, and any K distinct
+  fragments decode. Each message carries a CRC-32. Reassembly is bounded per
+  partial message, per sender and in total, with timeouts derived from the
+  modem preset's airtime.
+
+  Nothing changes for existing callers: a payload that fits one frame comes
+  back unchanged, and nothing fragments unless the app uses these classes. The
+  send and receive paths that pick fragmenting per CoT (`compressForMesh`,
+  `TakMeshReceiver`), and the other four bindings, follow separately. Golden
+  fragment sets for those bindings are in `testdata/fragment/`.
+
 ## [0.10.0] - 2026-10-31
 
 ### Added
