@@ -74,7 +74,7 @@ At K ≤ 16, a true fountain code and an MDS code converge. We get the fountain 
 
 ## 4. Constraints this has to respect
 
-- **Frame size.** `mesh.options` caps `Data.payload` at **233 B** (`DATA_PAYLOAD_LEN = 233`). The SDK and `WIRE_FORMAT.md` use 237 B as "the LoRa MTU". Fragments should fill frames, so the fragmenter takes `maxFrameBytes` as a parameter defaulting to **233**. *The 237 vs 233 difference is worth reconciling separately (see §12).*
+- **Frame size.** `mesh.options` caps `Data.payload` at **233 B** (`DATA_PAYLOAD_LEN = 233`). The SDK and `WIRE_FORMAT.md` use 237 B as "the LoRa MTU". Fragments should fill frames, so the fragmenter takes `maxFrameBytes` as a parameter defaulting to **233**. *The SDK's 237 B constant and `WIRE_FORMAT.md` describe a frame that cannot be sent; they move to 233 B in a separate change, ahead of this design (see §12).*
 - **Broadcast only.** CoT traffic is always sent as a channel broadcast, never as a direct message, so every frame, fragment or repair request in this design is a broadcast and the budget is 233 B. `maxFrameBytes` stays a parameter anyway, because PKI-encrypted DMs add 12 B (an 8-byte authentication tag plus a 4-byte nonce) and would need 221 B. Receivers learn the slice size from the fragments, so they never need to know the sender's budget.
 - **Resilience invariant:** no cross-packet compression state, one-shot zstd only, static dictionary. Still true here: the whole message is compressed once, and the reassembler only buffers bytes (§7).
 - **Firmware nanopb pools** (`atak.options`): `Route.links max_count:16`, 32 vertices, `GeoChat.message max_size:200`, `raw_detail max_size:220`. Firmware only ever decodes uncompressed `0xFF` frames (e.g. TAK_TRACKER), and it cannot decode `0xFE` fragments, so the pools constrain single `0xFF` frames only. See §8.
@@ -413,7 +413,7 @@ Old decoders reject `0xFE` and `0xFD` frames by throwing their existing "unknown
 
 **Open questions**
 
-1. **233 vs 237.** `Data.payload` is 233 B per `mesh.options`. Should the SDK's MTU constant and `WIRE_FORMAT.md` move to 233 as well?
+1. ~~**233 vs 237.**~~ **Resolved: 233 B.** `mesh.options` caps `Data.payload` at 233 B, so 237 describes a frame that cannot be sent. The SDK's MTU constant and `WIRE_FORMAT.md` move to 233 in their own change, ahead of this one.
 2. **Source fragment cap of 16** (one nibble). That is already about 35 s per hop on LongFast. A larger cap mostly enables messages the mesh should not carry.
 3. **Default `maxSourceFragments` and repair policy per event type and modem preset.** Should the SDK ship a policy table, or leave it entirely to apps?
 4. **Should truncation stay the default** (fragmentation opt-in per call) for the first release, so app teams can roll it out deliberately?
