@@ -41,8 +41,13 @@ Total wire size MUST NOT exceed **237 bytes** (the LoRa maximum payload size).
 |----|------|-----------------|-------|
 | `0x00` | Non-aircraft | 524,288 bytes | PLI, GeoChat, ground units, shapes, markers, routes, ranging, alerts, casevac, emergency, task, TAKTALK, delete events |
 | `0x01` | Aircraft | 4,096 bytes | ADS-B tracks, military air, helicopters |
-| `0x02`-`0x3E` | Reserved | — | Reserved for future dictionary types |
+| `0x02`-`0x3C` | Reserved | — | Reserved for future dictionary types |
+| `0x3D`, `0x3E` | Never assigned | — | `0xFD` and `0xFE` mask to these with `& 0x3F`, so they must never name a dictionary |
+| `0xFD` | Repair request | — | Reserved for on-demand fragment repair; not sent by this version (see below) |
+| `0xFE` | Fragment | — | One fragment of a message too large for one frame (see below) |
 | `0xFF` | Uncompressed | — | Payload is raw TAKPacketV2 protobuf (no zstd compression) |
+
+Receivers MUST test for `0xFF`, `0xFE` and `0xFD` **before** masking with `& 0x3F`.
 
 ### Reserved Bits
 
@@ -54,6 +59,33 @@ Bits 6-7 are reserved for future use.
 ### Special Value: 0xFF (Uncompressed)
 
 When the flags byte is `0xFF`, the payload is a raw (uncompressed) TAKPacketV2 protobuf. This is used by TAK_TRACKER firmware devices that cannot perform zstd compression, and is also emitted by the SDK encoder's **skip-compress** path: when the raw protobuf is no larger than the compressed body, the encoder emits `[0xFF][raw protobuf]` instead of a compressed frame, so tiny packets never expand on the wire. Receivers detect this value before attempting decompression.
+
+### Special Values: 0xFE (Fragment) and 0xFD (Repair Request)
+
+A wire payload (`[flags][body]`) too large for one frame, or whose protobuf exceeds the 4,096-byte
+single-frame cap, can be sent as a set of fragment frames when the sender opts in. Each fragment
+starts with a 7-byte header:
+
+```
+[0xFE][msg_id: u32 little-endian][code:3 | K-1:5][esi][symbol data]
+```
+
+| Field | Size | Meaning |
+|-------|------|---------|
+| `0xFE` | 1 B | Fragment marker |
+| `msg_id` | 4 B | Random message ID; receivers key reassembly on it alone, not on the mesh packet's sender |
+| `code` | high 3 bits | `0` = systematic Cauchy erasure code over GF(256); `1`-`7` reserved, and receivers drop unknown codes |
+| `K-1` | low 5 bits | Number of source fragments K, minus 1 (K = 1..32) |
+| `esi` | 1 B | Encoding symbol ID: `0..K-1` are source fragments, `K..255` repair fragments |
+
+The fragments carry `wire payload || CRC32 || 0x80`, cut into equal slices, plus repair symbols so
+that any K distinct fragments rebuild the message. A rebuilt payload is decoded as in §9 with a
+decompression cap of 32,768 bytes instead of 4,096. `0xFD` is reserved for repair requests and is
+not sent by this version; receivers ignore it. The full specification is
+`docs/design/large-payload-chunking.md` §5-§6.
+
+Receivers without fragment support see an unknown dictionary (`0x3E` or `0x3D` after masking) and
+drop the frame, as §10 requires.
 
 ## 4. Payload
 
@@ -186,6 +218,9 @@ The legacy v1 protocol uses port 72 (`ATAK_PLUGIN`) with a different encoding (T
 1. Receive payload on port 78
 2. Validate payload length >= 2 bytes
 3. Read flags byte (byte 0)
+   - If flags == 0xFE: pass the frame to the reassembler; when a message completes,
+     continue at step 4 with the rebuilt payload and a 32,768-byte cap in step 5e
+   - If flags == 0xFD: ignore (repair requests are not used by this version)
 4. If flags == 0xFF:
      a. Payload bytes 1..N are raw TAKPacketV2 protobuf
 5. Else:
@@ -209,6 +244,7 @@ The legacy v1 protocol uses port 72 (`ATAK_PLUGIN`) with a different encoding (T
 | Invalid protobuf after decompression | SHOULD handle gracefully | Drop message, log error |
 | Decompressed size > 4096 bytes | MUST reject | Drop message, log warning |
 | Reserved bits set in flags byte | SHOULD ignore | Mask with `& 0x3F`, process normally |
+| Fragment with an unknown `code`, a frame over 233 bytes, or a length inconsistent with its set | MUST reject | Drop the frame; other fragments of the message are unaffected |
 | Wire payload > 237 bytes | MUST NOT send | Sender error |
 
 Implementations MUST NOT crash on any malformed input.

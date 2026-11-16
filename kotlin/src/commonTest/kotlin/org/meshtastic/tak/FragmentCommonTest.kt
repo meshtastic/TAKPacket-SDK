@@ -255,13 +255,16 @@ class FragmentCommonTest {
     }
 
     @Test
-    fun aDifferentKForTheSameIdRestartsThePartial() {
-        val a = assertNotNull(fragmenter().split(payload(1_500, seed = 1), protobufSize = 3_000, msgId = 77))
-        val bInner = payload(500, seed = 2)
-        val b = assertNotNull(fragmenter().split(bInner, protobufSize = 1_000, msgId = 77))
+    fun aFrameWithADifferentKForTheSameIdIsDroppedAndThePartialKept() {
+        val aInner = payload(1_500, seed = 1)
+        val a = assertNotNull(fragmenter().split(aInner, protobufSize = 3_000, msgId = 77))
+        val b = assertNotNull(fragmenter().split(payload(500, seed = 2), protobufSize = 1_000, msgId = 77))
         val r = reassembler()
         deliver(r, a.take(2))
-        assertContentEquals(bInner, deliver(r, b).single())
+        // B's frames disagree on K: all dropped, A's partial untouched.
+        assertTrue(deliver(r, b).isEmpty())
+        assertEquals(1, r.pendingCount)
+        assertContentEquals(aInner, deliver(r, a.drop(2)).single())
     }
 
     @Test

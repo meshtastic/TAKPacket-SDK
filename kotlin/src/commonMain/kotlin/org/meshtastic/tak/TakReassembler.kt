@@ -37,6 +37,10 @@ private fun fnv1a64(data: ByteArray): Long {
  * losing fragments of one message never affects another (§7). Malformed or
  * unexpected frames are dropped, never thrown. Not thread-safe.
  *
+ * Receivers accept any K the wire format allows (up to [TakFragment.MAX_SOURCE_FRAGMENTS], 32),
+ * even though [TakFragmenter] defaults to sending at most 8. This is deliberate: the sender's
+ * cap is a policy each app can raise, and a receiver must handle every sender's policy.
+ *
  * @param frameAirtimeMillis airtime of one full frame on the current modem preset.
  * @param hopFactor allowance for relaying, as a multiple of frame airtime.
  * @param toleratedConsecutiveLosses frames that may go missing in a row before the idle deadline passes.
@@ -134,20 +138,38 @@ public class TakReassembler(
         )
     }
 
-    /** The partial for [key], created (or restarted on a K/code change) as needed. Null if the caps evicted it at once. */
+    /**
+     * The partial for [key], created if new. Null if the frame disagrees with the partial's K or
+     * code, or if the cap evicted a new partial at once.
+     *
+     * A frame whose K or code disagrees with an existing partial is dropped and the partial kept.
+     * With random 32-bit message IDs a genuine clash between two messages is about one in four
+     * billion, so a mismatch is far more likely a bad frame than a new message, and dropping it
+     * keeps the progress already made. If it really is a new message, it waits until the old
+     * partial expires.
+     */
     private fun partialFor(
         key: Int,
         header: Header,
         nowMillis: Long,
     ): Partial? {
         val existing = partials[key]
-        if (existing != null && existing.k == header.k && existing.code == header.code) return existing
-        if (existing != null) trace { "TakReassembler: msg $key changed K/code, restarting" }
-        val fresh = Partial(header.k, header.code, nowMillis)
-        partials.remove(key)
-        partials[key] = fresh
-        enforceCap()
-        return partials[key]
+        return when {
+            existing == null -> {
+                partials[key] = Partial(header.k, header.code, nowMillis)
+                enforceCap()
+                partials[key]
+            }
+
+            existing.k == header.k && existing.code == header.code -> {
+                existing
+            }
+
+            else -> {
+                trace { "TakReassembler: msg $key frame disagrees on K/code, dropped" }
+                null
+            }
+        }
     }
 
     /** Adds the fragment to [p] if it is new, there is room, and its length fits the set. True if stored. */
@@ -274,7 +296,13 @@ internal object FragmentSetDecoder {
         return decodeSubset(k, s, held.take(k)) ?: leaveOneOut(k, s, held)
     }
 
-    /** Any single bad fragment among the first K held is skipped by one of these subsets. */
+    /**
+     * Any single bad fragment among the first K held is skipped by one of these subsets.
+     *
+     * Cost: while a partial keeps failing its CRC, every new fragment re-runs up to K decodes of
+     * at most 32 x 32. That is microseconds on a phone; ports to slower targets should keep it in
+     * mind (the partial holds at most K + 4 fragments, which bounds the retries).
+     */
     private fun leaveOneOut(
         k: Int,
         s: Int,
