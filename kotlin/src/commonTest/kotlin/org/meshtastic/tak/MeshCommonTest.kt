@@ -86,7 +86,7 @@ class MeshCommonTest {
     ): String {
         val rnd = Random(seed)
         val alphabet = "abcdefghijklmnopqrstuvwxyz0123456789 "
-        return String(CharArray(length) { alphabet[rnd.nextInt(alphabet.length)] })
+        return CharArray(length) { alphabet[rnd.nextInt(alphabet.length)] }.concatToString()
     }
 
     private fun deliverAll(
