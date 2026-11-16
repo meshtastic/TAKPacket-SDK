@@ -80,6 +80,23 @@ class JavaApiTest {
     }
 
     @Test
+    void voiceProfileIdSurvivesWithoutSettingTheFlag() {
+        TakPacketV2Data packet = envelope("b-t-f")
+                .payload(new TakPacketV2Data.Payload.Chat.Builder()
+                        .message("Copy, moving now")
+                        .voiceProfileId("")       // the empty <voice_profile_id/> marker
+                        .build())
+                .build();
+        TakPacketV2Data.Payload.Chat chat = (TakPacketV2Data.Payload.Chat) packet.getPayload();
+        assertTrue(chat.getHasVoiceProfile());
+
+        MeshEncodeResult result = compressor.compressForMesh(packet, new TakFragmenter());
+        TakPacketV2Data received = receive(result.getFrames());
+        assertTrue(((TakPacketV2Data.Payload.Chat) received.getPayload()).getHasVoiceProfile());
+        assertEquals(packet, received);
+    }
+
+    @Test
     void takTalkRoomRoundTrips() {
         TakPacketV2Data packet = envelope("y-")
                 .payload(new TakTalkRoom.Builder()

@@ -408,7 +408,8 @@ public data class TakPacketV2Data(
 
                 public fun roomId(roomId: String): Builder = apply { current = current.copy(roomId = roomId) }
 
-                public fun voiceProfileId(voiceProfileId: String): Builder = apply { current = current.copy(voiceProfileId = voiceProfileId) }
+                /** Sets the voice profile ID and marks it present: the serializer drops the ID unless [hasVoiceProfile] is true. */
+                public fun voiceProfileId(voiceProfileId: String): Builder = apply { current = current.copy(voiceProfileId = voiceProfileId, hasVoiceProfile = true) }
 
                 public fun hasVoiceProfile(hasVoiceProfile: Boolean): Builder = apply { current = current.copy(hasVoiceProfile = hasVoiceProfile) }
 
