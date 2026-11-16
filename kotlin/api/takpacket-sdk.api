@@ -940,17 +940,13 @@ public final class org/meshtastic/tak/TakPacketV2Serializer {
 }
 
 public final class org/meshtastic/tak/TakReassembler {
-	public static final field COMPLETED_CACHE_SIZE I
-	public static final field EXTRA_FRAGMENTS_KEPT I
-	public static final field RECENT_CRCS_PER_SENDER I
-	public fun <init> (JIIJII)V
-	public synthetic fun <init> (JIIJIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun accept (J[BJ)[B
+	public fun <init> (JIIJI)V
+	public synthetic fun <init> (JIIJIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun accept ([BJ)[B
 	public final fun evictExpired (J)V
 	public final fun getFrameAirtimeMillis ()J
 	public final fun getHopFactor ()I
-	public final fun getMaxPendingPerSender ()I
-	public final fun getMaxPendingTotal ()I
+	public final fun getMaxPending ()I
 	public final fun getPendingCount ()I
 	public final fun getSlackMillis ()J
 	public final fun getToleratedConsecutiveLosses ()I

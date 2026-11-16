@@ -39,9 +39,10 @@ class FragmentCommonTest {
     private fun deliver(
         r: TakReassembler,
         frames: List<ByteArray>,
-        sender: Long = 1L,
         now: Long = 0L,
-    ): List<ByteArray> = frames.mapNotNull { r.accept(sender, it, now) }
+    ): List<ByteArray> = frames.mapNotNull { r.accept(it, now) }
+
+    private fun kOf(frame: ByteArray): Int = (frame[HDR_SHAPE].toInt() and 0x1F) + 1
 
     // --- primitives ---------------------------------------------------------
 
@@ -107,16 +108,15 @@ class FragmentCommonTest {
     @Test
     fun oneByteOverAFrameFragmentsWithTwoSourceSlices() {
         val inner = payload(TakFragment.DEFAULT_MAX_FRAME_BYTES + 1)
-        val frames = assertNotNull(fragmenter().split(inner, protobufSize = 400, msgId = 0x1234))
+        val frames = assertNotNull(fragmenter().split(inner, protobufSize = 400, msgId = 0x12345678))
         // K = ceil((226 + 5) / 220) = 2, R = 1.
         assertEquals(3, frames.size)
         val f0 = frames[0]
         assertEquals(0xFE, f0[0].toInt() and 0xFF)
-        assertEquals(0x34, f0[1].toInt() and 0xFF)
-        assertEquals(0x12, f0[2].toInt() and 0xFF)
-        assertEquals(1, f0[3].toInt() and 0x1F, "K-1")
-        assertEquals(0, (f0[3].toInt() and 0xFF) ushr 5, "code")
-        assertEquals(listOf(0, 1, 2), frames.map { it[4].toInt() and 0xFF })
+        assertEquals(listOf(0x78, 0x56, 0x34, 0x12), (1..4).map { f0[it].toInt() and 0xFF }, "msg_id, little-endian")
+        assertEquals(1, f0[5].toInt() and 0x1F, "K-1")
+        assertEquals(0, (f0[5].toInt() and 0xFF) ushr 5, "code")
+        assertEquals(listOf(0, 1, 2), frames.map { it[6].toInt() and 0xFF })
         assertTrue(frames.all { it.size <= TakFragment.DEFAULT_MAX_FRAME_BYTES })
         assertEquals(TakFragment.DEFAULT_MAX_FRAME_BYTES, frames[0].size)
         assertEquals(TakFragment.DEFAULT_MAX_FRAME_BYTES, frames[2].size, "repair symbols are a full slice")
@@ -127,7 +127,7 @@ class FragmentCommonTest {
         val inner = payload(150)
         val frames = assertNotNull(fragmenter().split(inner, protobufSize = TakCompressor.MAX_DECOMPRESSED_SIZE + 1, msgId = 3))
         assertEquals(2, frames.size, "K = 1 plus one repair fragment")
-        assertEquals(0, frames[0][3].toInt() and 0x1F)
+        assertEquals(1, kOf(frames[0]))
         assertContentEquals(inner, deliver(reassembler(), frames).single())
     }
 
@@ -144,7 +144,7 @@ class FragmentCommonTest {
         val inner = payload(TakFragment.MAX_SOURCE_FRAGMENTS * s - 5)
         val frames = assertNotNull(fragmenter().split(inner, protobufSize = 9000, msgId = 9))
         assertEquals(TakFragment.MAX_SOURCE_FRAGMENTS + 8, frames.size)
-        assertEquals(31, frames[0][3].toInt() and 0x1F)
+        assertEquals(32, kOf(frames[0]))
         assertNull(fragmenter().split(payload(inner.size + 1), protobufSize = 9000, msgId = 9), "33 slices is over the wire limit")
     }
 
@@ -161,13 +161,13 @@ class FragmentCommonTest {
         val f =
             TakFragmenter(messageIds = {
                 calls++
-                42
+                -0x21524111 // 0xDEADBEEF
             })
         f.split(payload(100), protobufSize = 100)
         assertEquals(0, calls)
         val frames = assertNotNull(f.split(payload(600), protobufSize = 900))
         assertEquals(1, calls)
-        assertEquals(42, frames[0][1].toInt() and 0xFF)
+        assertEquals(listOf(0xEF, 0xBE, 0xAD, 0xDE), (1..4).map { frames[0][it].toInt() and 0xFF })
     }
 
     // --- reassembly ---------------------------------------------------------
@@ -177,7 +177,7 @@ class FragmentCommonTest {
         for (size in listOf(300, 700, 1_200, 2_260, 3_400)) {
             val inner = payload(size)
             val frames = assertNotNull(fragmenter(repair = { 3 }).split(inner, protobufSize = size * 2, msgId = size))
-            val k = (frames[0][3].toInt() and 0x1F) + 1
+            val k = kOf(frames[0])
             val rnd = Random(size)
             repeat(25) {
                 val chosen = frames.shuffled(rnd).take(k)
@@ -193,7 +193,7 @@ class FragmentCommonTest {
     fun aLostLastSliceIsRebuiltFromRepair() {
         val inner = payload(1_000)
         val frames = assertNotNull(fragmenter().split(inner, protobufSize = 2_000, msgId = 5))
-        val k = (frames[0][3].toInt() and 0x1F) + 1
+        val k = kOf(frames[0])
         val withoutLast = frames.filterIndexed { i, _ -> i != k - 1 }
         assertContentEquals(inner, deliver(reassembler(), withoutLast).single())
     }
@@ -202,7 +202,7 @@ class FragmentCommonTest {
     fun fewerThanKFragmentsWaitThenExpire() {
         val inner = payload(1_000)
         val frames = assertNotNull(fragmenter().split(inner, protobufSize = 2_000, msgId = 6))
-        val k = (frames[0][3].toInt() and 0x1F) + 1
+        val k = kOf(frames[0])
         val r = reassembler()
         assertTrue(deliver(r, frames.take(k - 1)).isEmpty())
         assertEquals(1, r.pendingCount)
@@ -217,7 +217,7 @@ class FragmentCommonTest {
         val corrupted = frames[1].copyOf().also { it[10] = (it[10].toInt() xor 0x5A).toByte() }
         frames[1] = corrupted
         val r = reassembler()
-        val k = (frames[0][3].toInt() and 0x1F) + 1
+        val k = kOf(frames[0])
         assertTrue(deliver(r, frames.take(k)).isEmpty(), "the CRC rejects the bad set")
         assertContentEquals(inner, deliver(r, frames.drop(k)).single(), "one more fragment lets it leave the bad one out")
     }
@@ -236,25 +236,25 @@ class FragmentCommonTest {
     fun malformedFramesAreDroppedNotThrown() {
         val r = reassembler()
         val good = assertNotNull(fragmenter().split(payload(600), protobufSize = 900, msgId = 4))
-        val unknownCode = good[0].copyOf().also { it[3] = ((1 shl 5) or (it[3].toInt() and 0x1F)).toByte() }
+        val unknownCode = good[0].copyOf().also { it[HDR_SHAPE] = ((1 shl 5) or (it[HDR_SHAPE].toInt() and 0x1F)).toByte() }
         val bad =
             listOf(
                 byteArrayOf(0xFE.toByte()),
-                byteArrayOf(0xFE.toByte(), 1, 2, 3, 4),
+                byteArrayOf(0xFE.toByte(), 1, 2, 3, 4, 5, 6),
                 unknownCode,
                 good[0].copyOf(100), // non-last source slice shorter than the slice size
             )
-        bad.forEach { assertNull(r.accept(1L, it, 0L)) }
+        bad.forEach { assertNull(r.accept(it, 0L)) }
         val rnd = Random(99)
         repeat(500) {
             val junk = rnd.nextBytes(rnd.nextInt(1, 240)).also { it[0] = 0xFE.toByte() }
-            r.accept(rnd.nextLong(4), junk, 0L)
+            r.accept(junk, 0L)
         }
     }
 
     @Test
     fun ordinaryFramesAreIgnored() {
-        assertNull(reassembler().accept(1L, payload(100), 0L))
+        assertNull(reassembler().accept(payload(100), 0L))
     }
 
     @Test
@@ -262,7 +262,7 @@ class FragmentCommonTest {
         val inner = payload(800)
         val frames = assertNotNull(fragmenter(repair = { 2 }).split(inner, protobufSize = 1_600, msgId = 12))
         val r = reassembler()
-        val k = (frames[0][3].toInt() and 0x1F) + 1
+        val k = kOf(frames[0])
         assertEquals(1, deliver(r, frames.take(k)).size)
         assertTrue(deliver(r, frames.drop(k)).isEmpty())
         assertEquals(0, r.pendingCount)
@@ -274,18 +274,20 @@ class FragmentCommonTest {
         val r = reassembler()
         assertEquals(1, deliver(r, assertNotNull(fragmenter().split(inner, protobufSize = 1_600, msgId = 20))).size)
         assertTrue(deliver(r, assertNotNull(fragmenter().split(inner, protobufSize = 1_600, msgId = 21))).isEmpty())
-        // The same bytes from a different sender are a different message.
-        assertEquals(1, deliver(r, assertNotNull(fragmenter().split(inner, protobufSize = 1_600, msgId = 21)), sender = 2L).size)
+        // Different bytes under a new ID are delivered.
+        assertEquals(1, deliver(r, assertNotNull(fragmenter().split(payload(800, seed = 5), protobufSize = 1_600, msgId = 22))).size)
     }
 
     @Test
-    fun perSenderCapEvictsTheOldestPartial() {
-        val r = TakReassembler(frameAirtimeMillis = airtime, maxPendingPerSender = 2, maxPendingTotal = 8)
-        for (id in 0 until 3) {
-            val frames = assertNotNull(fragmenter().split(payload(1_000, seed = id), protobufSize = 2_000, msgId = id))
-            r.accept(1L, frames[0], id.toLong())
-        }
+    fun thePendingCapEvictsTheOldestPartial() {
+        val r = TakReassembler(frameAirtimeMillis = airtime, maxPending = 2)
+        val sets = (0 until 3).map { id -> assertNotNull(fragmenter().split(payload(1_000, seed = id), protobufSize = 2_000, msgId = id)) }
+        sets.forEachIndexed { id, frames -> r.accept(frames[0], id.toLong()) }
         assertEquals(2, r.pendingCount)
+        // The oldest (ID 0) was evicted: its remaining fragments start over and fall short.
+        assertTrue(deliver(r, sets[0].drop(1).take(kOf(sets[0][0]) - 1), now = 3L).isEmpty())
+        // ID 2 is still held and completes.
+        assertEquals(1, deliver(r, sets[2].drop(1), now = 3L).size)
     }
 
     @Test
@@ -293,27 +295,27 @@ class FragmentCommonTest {
         // Small enough (K = 3) that the spread-out set still lands inside the absolute ceiling.
         val inner = payload(600)
         val frames = assertNotNull(fragmenter().split(inner, protobufSize = 1_200, msgId = 30))
-        val k = (frames[0][3].toInt() and 0x1F) + 1
+        val k = kOf(frames[0])
         val r = reassembler()
         val idle = 5 * airtime * 3 + 30_000
         var now = 0L
         // Each fragment lands just inside the idle budget of the previous one.
-        val out = frames.take(k).mapNotNull { f -> r.accept(1L, f, now).also { now += idle - 1 } }
+        val out = frames.take(k).mapNotNull { f -> r.accept(f, now).also { now += idle - 1 } }
         assertContentEquals(inner, out.single())
     }
 
     @Test
-    fun interleavedMessagesFromTwoSendersAreIndependent() {
+    fun interleavedMessagesAreIndependent() {
         val aInner = payload(1_400, seed = 10)
         val bInner = payload(1_100, seed = 11)
-        val a = assertNotNull(fragmenter(repair = { 0 }).split(aInner, protobufSize = 2_000, msgId = 1))
-        val b = assertNotNull(fragmenter(repair = { 0 }).split(bInner, protobufSize = 2_000, msgId = 1))
+        val a = assertNotNull(fragmenter(repair = { 0 }).split(aInner, protobufSize = 2_000, msgId = 0x0A0A0A0A))
+        val b = assertNotNull(fragmenter(repair = { 0 }).split(bInner, protobufSize = 2_000, msgId = 0x0B0B0B0B))
         val r = reassembler()
         val out = mutableListOf<ByteArray>()
         // Interleave, and lose one of A's fragments: A never completes, B is untouched.
         for (i in 0 until maxOf(a.size, b.size)) {
-            if (i < a.size && i != 2) r.accept(1L, a[i], i.toLong())?.let(out::add)
-            if (i < b.size) r.accept(2L, b[i], i.toLong())?.let(out::add)
+            if (i < a.size && i != 2) r.accept(a[i], i.toLong())?.let(out::add)
+            if (i < b.size) r.accept(b[i], i.toLong())?.let(out::add)
         }
         assertEquals(1, out.size)
         assertContentEquals(bInner, out[0])

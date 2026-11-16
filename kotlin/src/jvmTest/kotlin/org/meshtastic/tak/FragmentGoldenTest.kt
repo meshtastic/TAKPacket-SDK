@@ -74,12 +74,12 @@ class FragmentGoldenTest {
         val (freehand, freehandProto) = largeFreehand(200)
         val (remarks, remarksProto) = longRemarks(500)
         return listOf(
-            Case("freehand_200v", freehand, freehandProto, msgId = 0x0102),
-            Case("marker_remarks_500w", remarks, remarksProto, msgId = 0x0203),
-            Case("frame_plus_one", synthetic(TakFragment.DEFAULT_MAX_FRAME_BYTES + 1, 1), 400, msgId = 0x0304),
-            Case("forced_k1", synthetic(150, 2), TakCompressor.MAX_DECOMPRESSED_SIZE + 1, msgId = 0x0405),
-            Case("no_repair_k3", synthetic(600, 3), 1_200, msgId = 0x0506, repair = { 0 }),
-            Case("max_source_32", synthetic(TakFragment.MAX_SOURCE_FRAGMENTS * s - 5, 4), 9_000, msgId = 0xFFFF),
+            Case("freehand_200v", freehand, freehandProto, msgId = 0x01020304),
+            Case("marker_remarks_500w", remarks, remarksProto, msgId = 0x02030405),
+            Case("frame_plus_one", synthetic(TakFragment.DEFAULT_MAX_FRAME_BYTES + 1, 1), 400, msgId = 0x03040506),
+            Case("forced_k1", synthetic(150, 2), TakCompressor.MAX_DECOMPRESSED_SIZE + 1, msgId = 0x04050607),
+            Case("no_repair_k3", synthetic(600, 3), 1_200, msgId = 0x05060708, repair = { 0 }),
+            Case("max_source_32", synthetic(TakFragment.MAX_SOURCE_FRAGMENTS * s - 5, 4), 9_000, msgId = -1),
         )
     }
 
@@ -94,7 +94,7 @@ class FragmentGoldenTest {
             val frames = fragmenter(case).split(case.inner, case.protobufSize, case.msgId)!!
             assertTrue(frames.size > 1, "${case.name} should fragment")
             assertTrue(frames.all { it.size <= TakFragment.DEFAULT_MAX_FRAME_BYTES }, "${case.name}: every frame fits")
-            val k = (frames[0][3].toInt() and 0x1F) + 1
+            val k = (frames[0][HDR_SHAPE].toInt() and 0x1F) + 1
 
             File(fragmentDir, "${case.name}.inner").writeBytes(case.inner)
             val out = ByteArrayOutputStream()
@@ -105,7 +105,7 @@ class FragmentGoldenTest {
             }
             File(fragmentDir, "${case.name}.frames").writeBytes(out.toByteArray())
             manifest.append(
-                "    {\"name\": \"${case.name}\", \"msgId\": ${case.msgId}, \"protobufSize\": ${case.protobufSize}, " +
+                "    {\"name\": \"${case.name}\", \"msgId\": ${case.msgId.toUInt()}, \"protobufSize\": ${case.protobufSize}, " +
                     "\"innerSize\": ${case.inner.size}, \"k\": $k, \"repair\": ${frames.size - k}, \"frames\": ${frames.size}}" +
                     (if (i < all.size - 1) ",\n" else "\n"),
             )
@@ -118,11 +118,11 @@ class FragmentGoldenTest {
     fun `golden fragment sets reassemble from any K frames`() {
         for (case in cases()) {
             val frames = fragmenter(case).split(case.inner, case.protobufSize, case.msgId)!!
-            val k = (frames[0][3].toInt() and 0x1F) + 1
+            val k = (frames[0][HDR_SHAPE].toInt() and 0x1F) + 1
             val rnd = Random(case.msgId)
             repeat(20) {
                 val r = TakReassembler(frameAirtimeMillis = 2_200)
-                val got = frames.shuffled(rnd).take(k).mapNotNull { r.accept(7L, it, 0L) }
+                val got = frames.shuffled(rnd).take(k).mapNotNull { r.accept(it, 0L) }
                 assertEquals(1, got.size, case.name)
                 assertArrayEquals(case.inner, got[0], case.name)
             }
@@ -134,7 +134,7 @@ class FragmentGoldenTest {
         for (case in cases().take(2)) {
             val frames = fragmenter(case).split(case.inner, case.protobufSize, case.msgId)!!
             val r = TakReassembler(frameAirtimeMillis = 2_200)
-            val out = frames.mapNotNull { r.accept(1L, it, 0L) }.single()
+            val out = frames.mapNotNull { r.accept(it, 0L) }.single()
             val packet = compressor.decompress(out)
             assertEquals(case.protobufSize, TakPacketV2Serializer.serialize(packet).size, case.name)
         }

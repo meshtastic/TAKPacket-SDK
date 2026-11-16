@@ -7,17 +7,16 @@ import kotlin.random.Random
 internal const val BYTE_MASK: Int = 0xFF
 internal const val BYTE_BITS: Int = 8
 
-/** Header offsets: `[marker][msg_id lo][msg_id hi][code:3 | K-1:5][esi]`. */
-internal const val HDR_MSG_ID_LO: Int = 1
-internal const val HDR_MSG_ID_HI: Int = 2
-internal const val HDR_SHAPE: Int = 3
-internal const val HDR_ESI: Int = 4
+/** Header offsets: `[marker][msg_id: 4 bytes LE][code:3 | K-1:5][esi]`. */
+internal const val HDR_MSG_ID: Int = 1
+internal const val MSG_ID_BYTES: Int = 4
+internal const val HDR_SHAPE: Int = HDR_MSG_ID + MSG_ID_BYTES
+internal const val HDR_ESI: Int = HDR_SHAPE + 1
 
 /** `code` sits in the top 3 bits of the shape byte, `K - 1` in the low 5. */
 internal const val CODE_SHIFT: Int = 5
 internal const val K_MASK: Int = 0x1F
 
-internal const val MSG_ID_LIMIT: Int = 0x10000
 internal const val CRC_BYTES: Int = 4
 
 /** CRC plus the 0x80 end delimiter, appended after the inner payload. */
@@ -28,7 +27,7 @@ internal const val BLOB_TRAILER_BYTES: Int = CRC_BYTES + 1
  * `docs/design/large-payload-chunking.md` §5 for the full specification.
  *
  * ```
- * [0xFE][msg_id: u16 LE][code:3 | K-1:5][esi][symbol data]
+ * [0xFE][msg_id: u32 LE][code:3 | K-1:5][esi][symbol data]
  * ```
  */
 public object TakFragment {
@@ -39,9 +38,9 @@ public object TakFragment {
     public const val REPAIR_REQUEST_MARKER: Int = 0xFD
 
     /** Fragment header length in bytes. */
-    public const val HEADER_SIZE: Int = 5
+    public const val HEADER_SIZE: Int = 7
 
-    /** `code` value for the systematic Cauchy GF(256) scheme with the plain 5-byte header. */
+    /** `code` value for the systematic Cauchy GF(256) scheme with the plain 7-byte header. */
     public const val CODE_CAUCHY: Int = 0
 
     /** Largest number of source fragments the wire format can express (5-bit count). */
@@ -64,23 +63,17 @@ public object TakFragment {
 }
 
 /**
- * Source of 16-bit message IDs for fragment sets. A sender must not reuse an ID
- * while receivers may still be reassembling it (design doc §5.1).
+ * Source of 32-bit message IDs for fragment sets. Receivers key partial messages
+ * on the ID alone, not on the mesh sender, so IDs must be unlikely to repeat
+ * across every sender on the mesh, not just within one (design doc §5.1).
  */
 public fun interface MessageIdSource {
-    /** The next message ID, in `0..0xFFFF`. */
+    /** The next message ID: any 32-bit value, carried in an `Int`. */
     public fun next(): Int
 
     public companion object {
-        /** A rolling counter that starts at a random value, so a restart is unlikely to reuse an active ID. */
-        public fun random(): MessageIdSource {
-            var counter = Random.nextInt(MSG_ID_LIMIT)
-            return MessageIdSource {
-                val id = counter
-                counter = (counter + 1) % MSG_ID_LIMIT
-                id
-            }
-        }
+        /** A fresh random 32-bit ID per message. */
+        public fun random(): MessageIdSource = MessageIdSource { Random.nextInt() }
     }
 }
 
@@ -143,7 +136,6 @@ public class TakFragmenter(
         msgId: Int,
     ): List<ByteArray>? {
         require(inner.isNotEmpty()) { "inner payload is empty" }
-        require(msgId in 0 until MSG_ID_LIMIT) { "msgId must fit 16 bits" }
         return if (fitsOneFrame(inner, protobufSize)) listOf(inner) else fragment(inner, msgId)
     }
 
@@ -167,8 +159,7 @@ public class TakFragmenter(
         fun header(esi: Int): ByteArray {
             val h = ByteArray(TakFragment.HEADER_SIZE)
             h[0] = TakFragment.MARKER.toByte()
-            h[HDR_MSG_ID_LO] = msgId.toByte()
-            h[HDR_MSG_ID_HI] = (msgId ushr BYTE_BITS).toByte()
+            for (b in 0 until MSG_ID_BYTES) h[HDR_MSG_ID + b] = (msgId ushr (BYTE_BITS * b)).toByte()
             h[HDR_SHAPE] = shape.toByte()
             h[HDR_ESI] = esi.toByte()
             return h
