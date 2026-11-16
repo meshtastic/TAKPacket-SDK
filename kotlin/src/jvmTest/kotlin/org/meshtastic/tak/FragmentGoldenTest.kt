@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.zip.CRC32
@@ -14,12 +15,16 @@ import kotlin.random.Random
 /**
  * Fragment goldens and the heavier codec checks (design doc §11).
  *
- * `generate fragment goldens` writes `testdata/fragment/`, which the other four
- * bindings read: for each case, `<name>.inner` (the wire payload that was split)
- * and `<name>.frames` (every frame, each prefixed by its length as a little-endian
- * u16), plus `manifest.json` with the parameters. Fragmenting is deterministic
- * given those parameters, so every binding must reproduce the frames byte for
- * byte, unlike compressed bytes, which may differ between zstd encoders.
+ * `testdata/fragment/` holds, for each case, `<name>.inner` (the wire payload that
+ * was split) and `<name>.frames` (every frame, each prefixed by its length as a
+ * little-endian u16), plus `manifest.json` with the parameters. Fragmenting is
+ * deterministic given those parameters, so every binding must reproduce the frames
+ * byte for byte, unlike compressed bytes, which may differ between zstd encoders.
+ *
+ * `committed fragment goldens match the fragmenter` checks the checked-in files on
+ * every run, so a framing change fails here instead of silently rewriting them.
+ * Regenerating is opt-in, for a deliberate wire change:
+ * `REGENERATE_FRAGMENT_GOLDENS=1 ./gradlew jvmTest --tests "*FragmentGoldenTest*"`.
  */
 class FragmentGoldenTest {
     private val parser = CotXmlParser()
@@ -86,6 +91,7 @@ class FragmentGoldenTest {
     private fun fragmenter(case: Case) = TakFragmenter(maxSourceFragments = TakFragment.MAX_SOURCE_FRAGMENTS, repairPolicy = case.repair)
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "REGENERATE_FRAGMENT_GOLDENS", matches = "1")
     fun `generate fragment goldens`() {
         fragmentDir.mkdirs()
         val manifest = StringBuilder("{\n  \"maxFrameBytes\": ${TakFragment.DEFAULT_MAX_FRAME_BYTES},\n  \"cases\": [\n")
@@ -112,6 +118,50 @@ class FragmentGoldenTest {
         }
         manifest.append("  ]\n}\n")
         File(fragmentDir, "manifest.json").writeText(manifest.toString())
+    }
+
+    @Test
+    fun `committed fragment goldens match the fragmenter`() {
+        val manifest = File(fragmentDir, "manifest.json").readText()
+        val maxFrame = Regex("\"maxFrameBytes\": (\\d+)").find(manifest)!!.groupValues[1].toInt()
+        val entry =
+            Regex(
+                "\"name\": \"(\\w+)\", \"msgId\": (\\d+), \"protobufSize\": (\\d+), .*?\"repair\": (\\d+), \"frames\": (\\d+)",
+            )
+        val entries = entry.findAll(manifest).toList()
+        assertEquals(6, entries.size, "manifest cases")
+        for (m in entries) {
+            val g = m.groupValues
+            val name = g[1]
+            val msgId = g[2]
+            val protobufSize = g[3]
+            val repair = g[4]
+            val count = g[5]
+            val inner = File(fragmentDir, "$name.inner").readBytes()
+            val committed = readFrames(File(fragmentDir, "$name.frames").readBytes())
+            val fragmenter =
+                TakFragmenter(
+                    maxFrameBytes = maxFrame,
+                    maxSourceFragments = TakFragment.MAX_SOURCE_FRAGMENTS,
+                    repairPolicy = { repair.toInt() },
+                )
+            val frames = fragmenter.split(inner, protobufSize.toInt(), msgId.toLong().toInt())!!
+            assertEquals(count.toInt(), committed.size, "$name: committed frame count")
+            assertEquals(committed.size, frames.size, "$name: frame count")
+            frames.zip(committed).forEachIndexed { i, (got, want) -> assertArrayEquals(want, got, "$name frame $i") }
+        }
+    }
+
+    /** Splits a `.frames` file: each frame is prefixed by its length as a little-endian u16. */
+    private fun readFrames(bytes: ByteArray): List<ByteArray> {
+        val out = mutableListOf<ByteArray>()
+        var i = 0
+        while (i < bytes.size) {
+            val len = (bytes[i].toInt() and 0xFF) or ((bytes[i + 1].toInt() and 0xFF) shl 8)
+            out += bytes.copyOfRange(i + 2, i + 2 + len)
+            i += 2 + len
+        }
+        return out
     }
 
     @Test

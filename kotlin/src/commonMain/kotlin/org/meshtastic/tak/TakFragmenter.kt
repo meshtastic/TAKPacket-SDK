@@ -94,7 +94,8 @@ public fun interface MessageIdSource {
  *
  * @param maxFrameBytes largest frame the transport accepts (225 for today's clients).
  * @param maxSourceFragments policy cap on source fragments, `1..32`; [split] returns
- *        null for a payload that would need more.
+ *        null for a payload that would need more. The default of 8 is a sender policy:
+ *        [TakReassembler] deliberately accepts any K up to 32, so senders can raise it.
  * @param repairPolicy number of repair fragments to add for `k` source fragments.
  *        The result is clamped so the whole set stays within [TakFragment.MAX_BURST].
  * @param messageIds where message IDs come from when [split] is called without one.
