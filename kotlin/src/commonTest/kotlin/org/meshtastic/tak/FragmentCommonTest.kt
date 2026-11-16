@@ -4,6 +4,7 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -156,6 +157,37 @@ class FragmentCommonTest {
     }
 
     @Test
+    fun aProtobufOverTheReassembledCapIsRefused() {
+        val inner = payload(600)
+        assertNotNull(fragmenter().split(inner, protobufSize = TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE, msgId = 1))
+        assertNull(fragmenter().split(inner, protobufSize = TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE + 1, msgId = 1))
+    }
+
+    @Test
+    fun theFrameSizeIsBoundedByTheFirmwareCeiling() {
+        assertNotNull(TakFragmenter(maxFrameBytes = TakFragment.MAX_FRAME_BYTES))
+        assertFailsWith<IllegalArgumentException> { TakFragmenter(maxFrameBytes = TakFragment.MAX_FRAME_BYTES + 1) }
+        assertFailsWith<IllegalArgumentException> { TakFragmenter(maxFrameBytes = TakFragment.HEADER_SIZE) }
+    }
+
+    @Test
+    fun aReassembledProtobufOverFourKilobytesDecodesWithTheLargerCap() {
+        val packet =
+            TakPacketV2Data(
+                cotTypeId = CotTypeMapper.typeToEnum("b-t-f"),
+                callsign = "ALPHA-1",
+                payload = TakPacketV2Data.Payload.Chat(message = String(CharArray(6_000) { "abcdefghijklmnopqrstuvwxyz0123456789 "[Random(it).nextInt(37)] })),
+            )
+        val protobufSize = TakPacketV2Serializer.serialize(packet).size
+        assertTrue(protobufSize > TakCompressor.MAX_DECOMPRESSED_SIZE, "precondition: over the single-frame cap")
+        val inner = TakCompressor().compress(packet)
+        val frames = assertNotNull(fragmenter().split(inner, protobufSize, msgId = 0x600D))
+        val rebuilt = deliver(reassembler(), frames).single()
+        assertFailsWith<ZstdException> { TakCompressor().decompress(rebuilt) }
+        assertEquals(packet, TakCompressor().decompress(rebuilt, TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE))
+    }
+
+    @Test
     fun theMessageIdSourceIsUsedOnlyWhenFragmenting() {
         var calls = 0
         val f =
@@ -245,6 +277,10 @@ class FragmentCommonTest {
                 good[0].copyOf(100), // non-last source slice shorter than the slice size
             )
         bad.forEach { assertNull(r.accept(it, 0L)) }
+        // Over the firmware's frame ceiling (e.g. injected via MQTT): dropped before it is buffered.
+        val fresh = reassembler()
+        assertNull(fresh.accept(good[0] + ByteArray(1_000), 0L))
+        assertEquals(0, fresh.pendingCount)
         val rnd = Random(99)
         repeat(500) {
             val junk = rnd.nextBytes(rnd.nextInt(1, 240)).also { it[0] = 0xFE.toByte() }

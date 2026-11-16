@@ -414,6 +414,7 @@ public final class org/meshtastic/tak/TakFragment {
 	public static final field INSTANCE Lorg/meshtastic/tak/TakFragment;
 	public static final field MARKER I
 	public static final field MAX_BURST I
+	public static final field MAX_FRAME_BYTES I
 	public static final field MAX_REASSEMBLED_DECOMPRESSED_SIZE I
 	public static final field MAX_SOURCE_FRAGMENTS I
 	public static final field REPAIR_REQUEST_MARKER I

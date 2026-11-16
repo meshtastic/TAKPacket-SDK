@@ -1417,6 +1417,8 @@ final object org.meshtastic.tak/TakFragment { // org.meshtastic.tak/TakFragment|
         final fun <get-MARKER>(): kotlin/Int // org.meshtastic.tak/TakFragment.MARKER.<get-MARKER>|<get-MARKER>(){}[0]
     final const val MAX_BURST // org.meshtastic.tak/TakFragment.MAX_BURST|{}MAX_BURST[0]
         final fun <get-MAX_BURST>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_BURST.<get-MAX_BURST>|<get-MAX_BURST>(){}[0]
+    final const val MAX_FRAME_BYTES // org.meshtastic.tak/TakFragment.MAX_FRAME_BYTES|{}MAX_FRAME_BYTES[0]
+        final fun <get-MAX_FRAME_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_FRAME_BYTES.<get-MAX_FRAME_BYTES>|<get-MAX_FRAME_BYTES>(){}[0]
     final const val MAX_REASSEMBLED_DECOMPRESSED_SIZE // org.meshtastic.tak/TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE|{}MAX_REASSEMBLED_DECOMPRESSED_SIZE[0]
         final fun <get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE.<get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>|<get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>(){}[0]
     final const val MAX_SOURCE_FRAGMENTS // org.meshtastic.tak/TakFragment.MAX_SOURCE_FRAGMENTS|{}MAX_SOURCE_FRAGMENTS[0]

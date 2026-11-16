@@ -22,6 +22,11 @@ One version covers all five bindings, so a release is a single tag and a single 
   fragments decode. Each message carries a CRC-32. Reassembly keys messages on
   their ID alone, never on the mesh packet's sender, and is bounded per partial
   message and in total, with timeouts derived from the modem preset's airtime.
+  Frames over the firmware's 233 B `Data.payload` ceiling
+  (`TakFragment.MAX_FRAME_BYTES`) are dropped before they are buffered.
+  `TakCompressor.decompress(payload, maxDecompressedSize)` decodes a
+  reassembled payload with `TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE`
+  (32 KB), and `split` refuses a protobuf larger than that.
 
   Nothing changes for existing callers: a payload that fits one frame comes
   back unchanged, and nothing fragments unless the app uses these classes. The
@@ -48,11 +53,8 @@ One version covers all five bindings, so a release is a single tag and a single 
 
   Supporting additions: `CotXmlParser.parse(cotXml, limits)` with
   `CotXmlParser.Limits.SINGLE_FRAME` (32 vertices, 16 route links; the default)
-  and `Limits.LARGE` (512 and 64). `TakCompressor.decompress(payload,
-  maxDecompressedSize)` takes a size cap, for reassembled messages up to
-  `TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE` (32 KB).
-  `TakFragmenter.sourceFragmentsFor(size)` reports K for a payload size, and
-  `split` returns null for a protobuf over 32 KB.
+  and `Limits.LARGE` (512 and 64), and `TakFragmenter.sourceFragmentsFor(size)`,
+  which reports K for a payload size.
 
 ## [0.10.0] - 2026-10-31
 

@@ -52,6 +52,13 @@ public object TakFragment {
     /** What both Meshtastic clients cap a port-78 payload at (see WIRE_FORMAT.md). */
     public const val DEFAULT_MAX_FRAME_BYTES: Int = 225
 
+    /**
+     * The firmware's `Data.payload` ceiling. No frame can be larger on LoRa, so
+     * receivers drop anything bigger (from MQTT, say) before buffering it, and
+     * senders cannot be configured above it.
+     */
+    public const val MAX_FRAME_BYTES: Int = 233
+
     /** Decompression cap for a reassembled message (single frames keep `TakCompressor.MAX_DECOMPRESSED_SIZE`). */
     public const val MAX_REASSEMBLED_DECOMPRESSED_SIZE: Int = 32768
 
@@ -99,7 +106,9 @@ public class TakFragmenter(
     private val messageIds: MessageIdSource = MessageIdSource.random(),
 ) {
     init {
-        require(maxFrameBytes > TakFragment.HEADER_SIZE) { "maxFrameBytes must exceed the ${TakFragment.HEADER_SIZE}-byte header" }
+        require(maxFrameBytes in TakFragment.HEADER_SIZE + 1..TakFragment.MAX_FRAME_BYTES) {
+            "maxFrameBytes must be in ${TakFragment.HEADER_SIZE + 1}..${TakFragment.MAX_FRAME_BYTES}"
+        }
         require(maxSourceFragments in 1..TakFragment.MAX_SOURCE_FRAGMENTS) {
             "maxSourceFragments must be in 1..${TakFragment.MAX_SOURCE_FRAGMENTS}"
         }

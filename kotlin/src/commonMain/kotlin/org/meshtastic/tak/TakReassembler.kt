@@ -6,8 +6,18 @@ private const val EXTRA_FRAGMENTS_KEPT: Int = 4
 /** Completed msg_ids remembered, so late fragments don't reopen them. */
 private const val COMPLETED_CACHE_SIZE: Int = 256
 
-/** CRCs of recently delivered messages kept, to drop exact redeliveries. */
-private const val RECENT_CRCS: Int = 256
+/** Digests of recently delivered messages kept, to drop exact redeliveries. */
+private const val RECENT_DIGESTS: Int = 256
+
+private const val FNV64_OFFSET: Long = -0x340d631b7bdddcdbL // 0xcbf29ce484222325
+private const val FNV64_PRIME: Long = 0x100000001b3L
+
+/** 64-bit FNV-1a. Only used to recognise exact redeliveries, so it needs no cryptographic strength. */
+private fun fnv1a64(data: ByteArray): Long {
+    var h = FNV64_OFFSET
+    for (b in data) h = (h xor (b.toLong() and BYTE_MASK.toLong())) * FNV64_PRIME
+    return h
+}
 
 /**
  * Reassembles fragment sets ([TakFragment]) back into the wire payload they were
@@ -73,8 +83,8 @@ public class TakReassembler(
     /** Completed msg_ids -> expiry time, oldest first. */
     private val completed = LinkedHashMap<Int, Long>()
 
-    /** CRCs of recently delivered messages, oldest first. */
-    private val recentCrcs = ArrayDeque<Int>()
+    /** Digests (size + 64-bit FNV-1a) of recently delivered messages, oldest first. */
+    private val recentDigests = ArrayDeque<Pair<Int, Long>>()
 
     private val idleBudgetMillis: Long get() = (toleratedConsecutiveLosses + 1) * frameAirtimeMillis * hopFactor + slackMillis
     private val ceilingBudgetMillis: Long get() = TakFragment.MAX_BURST * frameAirtimeMillis * hopFactor + slackMillis
@@ -111,6 +121,7 @@ public class TakReassembler(
     private fun parseHeader(frame: ByteArray): Header? {
         if (!TakFragment.isFragment(frame)) return null
         if (frame.size <= TakFragment.HEADER_SIZE) return drop("frame shorter than header + 1 byte")
+        if (frame.size > TakFragment.MAX_FRAME_BYTES) return drop("frame larger than ${TakFragment.MAX_FRAME_BYTES} bytes")
         val shape = frame[HDR_SHAPE].toInt() and BYTE_MASK
         val code = shape ushr CODE_SHIFT
         if (code != TakFragment.CODE_CAUCHY) return drop("unknown fragment code $code")
@@ -215,13 +226,14 @@ public class TakReassembler(
         completed[key] = p.firstSeenAt + ceilingBudgetMillis
         while (completed.size > COMPLETED_CACHE_SIZE) completed.remove(completed.keys.first())
 
-        val crc = Crc32.compute(inner)
-        val duplicate = crc in recentCrcs
+        // A CRC match alone isn't proof of a redelivery, so compare size plus a 64-bit digest.
+        val digest = inner.size to fnv1a64(inner)
+        val duplicate = digest in recentDigests
         if (duplicate) {
             trace { "TakReassembler: msg $key is an exact redelivery, dropped" }
         } else {
-            recentCrcs.addLast(crc)
-            while (recentCrcs.size > RECENT_CRCS) recentCrcs.removeFirst()
+            recentDigests.addLast(digest)
+            while (recentDigests.size > RECENT_DIGESTS) recentDigests.removeFirst()
         }
         return if (duplicate) null else inner
     }
