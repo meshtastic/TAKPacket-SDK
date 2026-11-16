@@ -223,7 +223,9 @@ public class TakMeshReceiver(
     private val compressor: TakCompressor = TakCompressor(),
 ) {
     /**
-     * Handle one port-78 payload from mesh node [sender].
+     * Handle one port-78 payload. The mesh packet's sender is deliberately not
+     * used: fragments are matched on their own 32-bit message ID, and the
+     * decoded packet carries its own `uid` and callsign.
      *
      * @return the decoded packet; or null when [payload] is a fragment and its
      *         message is not complete yet (or the fragment was dropped), or a
@@ -233,14 +235,13 @@ public class TakMeshReceiver(
      */
     @Throws(ZstdException::class, IllegalArgumentException::class)
     public fun onPayload(
-        sender: Long,
         payload: ByteArray,
         nowMillis: Long,
     ): TakPacketV2Data? {
         val flags = if (payload.isEmpty()) -1 else payload[0].toInt() and BYTE_MASK
         return when (flags) {
             TakFragment.MARKER -> {
-                reassembler.accept(sender, payload, nowMillis)?.let {
+                reassembler.accept(payload, nowMillis)?.let {
                     compressor.decompress(it, TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE)
                 }
             }

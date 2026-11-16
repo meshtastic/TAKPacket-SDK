@@ -92,7 +92,7 @@ class MeshCommonTest {
     private fun deliverAll(
         rx: TakMeshReceiver,
         frames: List<ByteArray>,
-    ): List<TakPacketV2Data> = frames.mapNotNull { rx.onPayload(7L, it, 0L) }
+    ): List<TakPacketV2Data> = frames.mapNotNull { rx.onPayload(it, 0L) }
 
     // --- parser limits ------------------------------------------------------
 
@@ -289,7 +289,7 @@ class MeshCommonTest {
             assertEquals(MeshEncodeResult.Outcome.SINGLE_FRAME, r.outcome)
             assertContentEquals(inner, r.frames!!.single())
             assertFalse(r.truncated)
-            assertEquals(packet, receiver().onPayload(1L, r.frames.single(), 0L))
+            assertEquals(packet, receiver().onPayload(r.frames.single(), 0L))
         }
     }
 
@@ -343,23 +343,23 @@ class MeshCommonTest {
     fun theReceiverPassesSingleFramesThroughAndIgnoresRepairRequests() {
         val rx = receiver()
         val packet = parser.parse(pliXml)
-        assertEquals(packet, rx.onPayload(1L, compressor.compress(packet), 0L))
-        assertNull(rx.onPayload(1L, byteArrayOf(0xFD.toByte(), 1, 2, 3, 4, 5), 0L))
-        assertFailsWith<IllegalArgumentException> { rx.onPayload(1L, byteArrayOf(0x3E, 0, 0), 0L) }
-        assertFailsWith<IllegalArgumentException> { rx.onPayload(1L, ByteArray(0), 0L) }
+        assertEquals(packet, rx.onPayload(compressor.compress(packet), 0L))
+        assertNull(rx.onPayload(byteArrayOf(0xFD.toByte(), 1, 2, 3, 4, 5), 0L))
+        assertFailsWith<IllegalArgumentException> { rx.onPayload(byteArrayOf(0x3E, 0, 0), 0L) }
+        assertFailsWith<IllegalArgumentException> { rx.onPayload(ByteArray(0), 0L) }
     }
 
     @Test
     fun theReceiverWaitsForEnoughFragmentsThenExpires() {
         val frames = compressor.compressForMesh(chat(noisyText(1500)), TakFragmenter(), fragmentIfOversize = true).frames!!
-        val k = (frames[0][3].toInt() and 0x1F) + 1
+        val k = (frames[0][HDR_SHAPE].toInt() and 0x1F) + 1
         val rx = receiver()
         // Drop the first fragment: any K of the rest still decode.
-        val got = frames.drop(1).mapNotNull { rx.onPayload(3L, it, 0L) }
+        val got = frames.drop(1).mapNotNull { rx.onPayload(it, 0L) }
         assertEquals(1, got.size)
 
         val rx2 = receiver()
-        frames.take(k - 1).forEach { assertNull(rx2.onPayload(3L, it, 0L)) }
+        frames.take(k - 1).forEach { assertNull(rx2.onPayload(it, 0L)) }
         assertEquals(1, rx2.reassembler.pendingCount)
         rx2.evictExpired(Long.MAX_VALUE / 2)
         assertEquals(0, rx2.reassembler.pendingCount)

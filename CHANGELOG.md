@@ -13,15 +13,15 @@ One version covers all five bindings, so a release is a single tag and a single 
 - Kotlin: the wire core for fragmenting large `TAKPacketV2` messages across
   several frames, following `docs/design/large-payload-chunking.md`.
   `TakFragmenter` splits a wire payload that doesn't fit one frame into
-  fragments (flags byte `0xFE`, 5-byte header). `TakReassembler` rebuilds it
+  fragments (flags byte `0xFE`, 7-byte header). `TakReassembler` rebuilds it
   from any K of the fragments, in any order. `TakFragment` holds the wire
-  constants, and `MessageIdSource` supplies 16-bit message IDs.
+  constants, and `MessageIdSource` supplies random 32-bit message IDs.
 
   Losses are recovered with a systematic Cauchy erasure code over GF(256): the
   K source fragments are followed by repair fragments, and any K distinct
-  fragments decode. Each message carries a CRC-32. Reassembly is bounded per
-  partial message, per sender and in total, with timeouts derived from the
-  modem preset's airtime.
+  fragments decode. Each message carries a CRC-32. Reassembly keys messages on
+  their ID alone, never on the mesh packet's sender, and is bounded per partial
+  message and in total, with timeouts derived from the modem preset's airtime.
 
   Nothing changes for existing callers: a payload that fits one frame comes
   back unchanged, and nothing fragments unless the app uses these classes. The
@@ -42,7 +42,7 @@ One version covers all five bindings, so a release is a single tag and a single 
   duty-cycle budget, and can be built from the radio's `air_util_tx` and queue
   depth.
 
-  `TakMeshReceiver.onPayload(sender, payload, now)` routes port-78 payloads:
+  `TakMeshReceiver.onPayload(payload, now)` routes port-78 payloads:
   fragments go to a `TakReassembler` and are decoded once complete, everything
   else decodes as before.
 

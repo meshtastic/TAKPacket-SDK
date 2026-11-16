@@ -363,7 +363,7 @@ final class org.meshtastic.tak/TakMeshReceiver { // org.meshtastic.tak/TakMeshRe
         final fun <get-reassembler>(): org.meshtastic.tak/TakReassembler // org.meshtastic.tak/TakMeshReceiver.reassembler.<get-reassembler>|<get-reassembler>(){}[0]
 
     final fun evictExpired(kotlin/Long) // org.meshtastic.tak/TakMeshReceiver.evictExpired|evictExpired(kotlin.Long){}[0]
-    final fun onPayload(kotlin/Long, kotlin/ByteArray, kotlin/Long): org.meshtastic.tak/TakPacketV2Data? // org.meshtastic.tak/TakMeshReceiver.onPayload|onPayload(kotlin.Long;kotlin.ByteArray;kotlin.Long){}[0]
+    final fun onPayload(kotlin/ByteArray, kotlin/Long): org.meshtastic.tak/TakPacketV2Data? // org.meshtastic.tak/TakMeshReceiver.onPayload|onPayload(kotlin.ByteArray;kotlin.Long){}[0]
 }
 
 final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacketV2Data|null[0]
@@ -1068,16 +1068,14 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
 }
 
 final class org.meshtastic.tak/TakReassembler { // org.meshtastic.tak/TakReassembler|null[0]
-    constructor <init>(kotlin/Long, kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ..., kotlin/Int = ..., kotlin/Int = ...) // org.meshtastic.tak/TakReassembler.<init>|<init>(kotlin.Long;kotlin.Int;kotlin.Int;kotlin.Long;kotlin.Int;kotlin.Int){}[0]
+    constructor <init>(kotlin/Long, kotlin/Int = ..., kotlin/Int = ..., kotlin/Long = ..., kotlin/Int = ...) // org.meshtastic.tak/TakReassembler.<init>|<init>(kotlin.Long;kotlin.Int;kotlin.Int;kotlin.Long;kotlin.Int){}[0]
 
     final val frameAirtimeMillis // org.meshtastic.tak/TakReassembler.frameAirtimeMillis|{}frameAirtimeMillis[0]
         final fun <get-frameAirtimeMillis>(): kotlin/Long // org.meshtastic.tak/TakReassembler.frameAirtimeMillis.<get-frameAirtimeMillis>|<get-frameAirtimeMillis>(){}[0]
     final val hopFactor // org.meshtastic.tak/TakReassembler.hopFactor|{}hopFactor[0]
         final fun <get-hopFactor>(): kotlin/Int // org.meshtastic.tak/TakReassembler.hopFactor.<get-hopFactor>|<get-hopFactor>(){}[0]
-    final val maxPendingPerSender // org.meshtastic.tak/TakReassembler.maxPendingPerSender|{}maxPendingPerSender[0]
-        final fun <get-maxPendingPerSender>(): kotlin/Int // org.meshtastic.tak/TakReassembler.maxPendingPerSender.<get-maxPendingPerSender>|<get-maxPendingPerSender>(){}[0]
-    final val maxPendingTotal // org.meshtastic.tak/TakReassembler.maxPendingTotal|{}maxPendingTotal[0]
-        final fun <get-maxPendingTotal>(): kotlin/Int // org.meshtastic.tak/TakReassembler.maxPendingTotal.<get-maxPendingTotal>|<get-maxPendingTotal>(){}[0]
+    final val maxPending // org.meshtastic.tak/TakReassembler.maxPending|{}maxPending[0]
+        final fun <get-maxPending>(): kotlin/Int // org.meshtastic.tak/TakReassembler.maxPending.<get-maxPending>|<get-maxPending>(){}[0]
     final val pendingCount // org.meshtastic.tak/TakReassembler.pendingCount|{}pendingCount[0]
         final fun <get-pendingCount>(): kotlin/Int // org.meshtastic.tak/TakReassembler.pendingCount.<get-pendingCount>|<get-pendingCount>(){}[0]
     final val slackMillis // org.meshtastic.tak/TakReassembler.slackMillis|{}slackMillis[0]
@@ -1085,7 +1083,7 @@ final class org.meshtastic.tak/TakReassembler { // org.meshtastic.tak/TakReassem
     final val toleratedConsecutiveLosses // org.meshtastic.tak/TakReassembler.toleratedConsecutiveLosses|{}toleratedConsecutiveLosses[0]
         final fun <get-toleratedConsecutiveLosses>(): kotlin/Int // org.meshtastic.tak/TakReassembler.toleratedConsecutiveLosses.<get-toleratedConsecutiveLosses>|<get-toleratedConsecutiveLosses>(){}[0]
 
-    final fun accept(kotlin/Long, kotlin/ByteArray, kotlin/Long): kotlin/ByteArray? // org.meshtastic.tak/TakReassembler.accept|accept(kotlin.Long;kotlin.ByteArray;kotlin.Long){}[0]
+    final fun accept(kotlin/ByteArray, kotlin/Long): kotlin/ByteArray? // org.meshtastic.tak/TakReassembler.accept|accept(kotlin.ByteArray;kotlin.Long){}[0]
     final fun evictExpired(kotlin/Long) // org.meshtastic.tak/TakReassembler.evictExpired|evictExpired(kotlin.Long){}[0]
 }
 
