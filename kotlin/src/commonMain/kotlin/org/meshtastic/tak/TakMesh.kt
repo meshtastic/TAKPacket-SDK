@@ -256,7 +256,12 @@ public class TakMeshReceiver(
         }
     }
 
-    /** Drop partial messages whose deadlines have passed. Call periodically, e.g. once a minute. */
+    /**
+     * Drop partial messages whose deadlines have passed. [onPayload] already does this on every
+     * frame, so calling it is optional: it only frees memory sooner on a quiet channel. This class
+     * is not thread-safe, so call it on the same thread as [onPayload] (or under the same lock),
+     * never from an independent timer thread.
+     */
     public fun evictExpired(nowMillis: Long) {
         reassembler.evictExpired(nowMillis)
     }
