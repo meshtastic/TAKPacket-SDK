@@ -8,7 +8,7 @@
 1. **Keep `TAKPacketV2` unchanged.** Chunking is a thin transport layer *around* today's wire payload, not a schema change. A message that fits one frame goes out exactly as it does today, byte for byte, with zero added overhead.
 2. **Compress first, then chunk.** Serialize and compress the whole packet once with the one-shot zstd API (as today), then split the resulting wire payload into fragments. Measured, this needs about half the airtime of splitting the content into many small independent packets (§3).
 3. **Mark fragments with flags byte `0xFE` on the same port (78).** Older receivers read `0xFE & 0x3F = 0x3E`, an unknown dictionary, and drop the frame cleanly, so no new port number or firmware change is needed.
-4. **5-byte fragment header:** `[0xFE][msg_id:16][code:3 | K-1:5][esi]`. The wire format allows up to 32 *source* fragments, about 7 KB of compressed payload or about 70 s of airtime per hop on LongFast. The SDK's default policy cap is lower (8), and senders opt in per CoT.
+4. **7-byte fragment header:** `[0xFE][msg_id:32][code:3 | K-1:5][esi]`. The random 32-bit `msg_id` identifies a message on its own: receivers never use the mesh packet's From field. The wire format allows up to 32 *source* fragments, about 7 KB of compressed payload or about 70 s of airtime per hop on LongFast. The SDK's default policy cap is lower (8), and senders opt in per CoT.
 5. **Fountain-style erasure coding.** The sender transmits the K source fragments unchanged, then any number R of *repair* fragments. A receiver decodes from **any K distinct fragments**, whichever ones arrive. The code is a systematic MDS code over GF(256), built from a Cauchy matrix (§5.3). Its first repair fragment is exactly an XOR parity. At 90% per-frame delivery, a 5-fragment message goes from 59% delivered with no repair to 89% with one repair fragment and 97% with two. **The same codec also serves file transfer** (§5.5, §10a): a TAK message is just its one-block case.
 6. **A CRC-32 per message.** It catches mis-assembled messages, such as a reused `msg_id` or spliced fragments.
 7. **Reassembly is bounded and stateless across messages.** Losing fragments costs only that message. It never affects decoding of any other message, which is the resilience invariant restated for multi-frame messages (§7).
@@ -21,7 +21,7 @@ Measured with the Python binding and the shipped 512 KB dictionary, with the par
 
 **Which binding these numbers come from.** All sizes in this doc were measured with the **Python** binding (libzstd, level 19). Android uses the canonical **Kotlin** binding, whose pure-Kotlin encoder ignores the compression level. On the 47 shipped fixtures, Kotlin's output is about 1% larger in total: 4,447 B against 4,397 B, from `testdata/compression-report.md` versus Python on the same XML. That gap is small, but it can push a message near a boundary into one more fragment. These tables should be re-measured through Kotlin before the numbers are treated as final. An attempt in this environment was blocked by Maven Central rate-limiting.
 
-| Case | CoT XML | Protobuf | Wire (compressed) | Source fragments (220 B) |
+| Case | CoT XML | Protobuf | Wire (compressed) | Source fragments (218 B) |
 |---|---:|---:|---:|---:|
 | Freehand, 32 vertices | 1,547 | 267 | 250 | 2 |
 | Freehand, 128 vertices | 4,907 | 790 | 704 | 4 |
@@ -56,7 +56,7 @@ A `TAKPacketV2` has no useful partial form: half a route or half a `raw_detail` 
 | Option | Notes |
 |---|---|
 | New portnum | Clean separation, but needs a `portnums.proto` change, firmware and app plumbing, and a second listener in every app. |
-| Protobuf envelope (`message TAKFragment { … }`) | Self-describing, but about 9–11 B per frame of tags and varints versus 5 B. That goes against the frame-slimming work already done (the magic strip, which saves 4 B). |
+| Protobuf envelope (`message TAKFragment { … }`) | Self-describing, but about 11–13 B per frame of tags and varints versus 7 B. That goes against the frame-slimming work already done (the magic strip, which saves 4 B). |
 | **Flags byte `0xFE` on port 78** ✅ | Fits the existing `[flags][body]` format. Old receivers reject it as unknown dictionary `0x3E`, a path every binding already handles without crashing. Costs one value from the flags space. |
 
 ### Loss recovery
@@ -81,7 +81,7 @@ At K ≤ 32, a true fountain code and an MDS code converge. We get the fountain 
   - **228 B** is what is left for a port-78 payload. Android's `sendData` checks the whole encoded `Data` message (port number, payload and their protobuf framing) against 233.
   - **225 B** is what both clients actually cap a TAK payload at today. The SDK's own `compressWithRemarksFallback` example already uses 225.
 
-  So `maxFrameBytes` defaults to **225 B**, unless the clients' check changes first. Fragments carry 220 B of data each. The SDK's 237 B constant and `WIRE_FORMAT.md` describe a frame that cannot be sent. They move to the real figures in a separate change, ahead of this design (see §12).
+  So `maxFrameBytes` defaults to **225 B**, unless the clients' check changes first. Fragments carry 218 B of data each. The SDK's 237 B constant and `WIRE_FORMAT.md` describe a frame that cannot be sent. They move to the real figures in a separate change, ahead of this design (see §12).
 - **Broadcast only.** CoT traffic is always sent as a channel broadcast, never as a direct message, so every frame, fragment or repair request in this design is a broadcast, within the 225 B budget above. `maxFrameBytes` stays a parameter anyway, because the clients' cap may change, and PKI-encrypted DMs would need 12 B less (an 8-byte authentication tag plus a 4-byte nonce). Receivers learn the slice size from the fragments, so they never need to know the sender's budget.
 - **Resilience invariant:** no cross-packet compression state, one-shot zstd only, static dictionary. Still true here: the whole message is compressed once, and the reassembler only buffers bytes (§7).
 - **Firmware does not decode port 78.** `AtakPluginModule` is a passthrough for `ATAK_PLUGIN_V2`: firmware decrypts the packet and hands the bytes to the client unchanged, whatever the flags byte (`0xFF`, a dictionary ID, or `0xFE`). The nanopb pools in `atak.options` (`Route.links max_count:16`, 32 vertices, `GeoChat.message max_size:200`, `raw_detail max_size:220`) only bound the PLI that firmware builds itself in the TAK_TRACKER role. They place no limit on what phones send. See §8.
@@ -94,7 +94,7 @@ At K ≤ 32, a true fountain code and an MDS code converge. We get the fountain 
 
 ```
 +--------+------------+------------------+---------+---------------------+
-| Byte 0 | Bytes 1-2  | Byte 3           | Byte 4  | Bytes 5..N          |
+| Byte 0 | Bytes 1-4  | Byte 5           | Byte 6  | Bytes 7..N          |
 | 0xFE   | msg_id LE  | code:3 | K-1:5   | esi     | symbol data         |
 +--------+------------+------------------+---------+---------------------+
 ```
@@ -102,19 +102,19 @@ At K ≤ 32, a true fountain code and an MDS code converge. We get the fountain 
 | Field | Size | Meaning |
 |---|---|---|
 | marker | 1 B | `0xFE`. Receivers MUST test for `0xFF`, `0xFE` and `0xFD` (§10) **before** masking with `& 0x3F`. Dictionary IDs `0x3E` and `0x3D` are taken out of the dictionary range and never assigned, so a masked `0xFE` or `0xFD` can never be mistaken for a real dictionary. `WIRE_FORMAT.md` §3 currently lists `0x02`–`0x3E` as reserved for dictionaries; it changes to `0x02`–`0x3C` when this ships. |
-| `msg_id` | 2 B | Per-sender message ID, little-endian. Receivers key reassembly by `(sender node number, msg_id)`. See the reuse rule below. |
-| `code` | high 3 bits | Fragment variant: which repair scheme built the fragment, and whether the header carries extra fields. `0` = systematic Cauchy over GF(256), plain 5-byte header (§5.3). `1` is reserved for helper-relayed repair, whose header adds the originator's 4-byte node number (§10). `2`–`7` are reserved. Receivers drop a fragment with an unknown `code`, so a new variant never needs a new marker byte. |
+| `msg_id` | 4 B | Random message ID, little-endian. Receivers key reassembly by `msg_id` alone, never by the mesh packet's From field. See the uniqueness rule below. |
+| `code` | high 3 bits | Fragment variant: which repair scheme built the fragment, and whether the header carries extra fields. `0` = systematic Cauchy over GF(256), plain 7-byte header (§5.3). `1`–`7` are reserved. Receivers drop a fragment with an unknown `code`, so a new variant never needs a new marker byte. |
 | `K-1` | low 5 bits | Number of source fragments K, minus 1 (K = 1..32). |
 | `esi` | 1 B | Encoding symbol ID. `0..K-1` are source fragments (verbatim slices). `K..255` are repair fragments. |
-| data | ≤ maxFrame − 5 | A source slice, or a repair symbol of exactly S bytes. |
+| data | ≤ maxFrame − 7 | A source slice, or a repair symbol of exactly S bytes. |
 
-**`msg_id` reuse rule.** A sender MUST NOT reuse a `msg_id` within the reassembly window (§6.2). It keeps a rolling 16-bit counter that starts at a random value on every launch, and persists the last value where the platform allows.
+**`msg_id` uniqueness rule.** Receivers do not rely on the From field of the mesh packet header, so the ID alone must tell apart messages from every sender on the mesh. A sender draws a fresh random 32-bit `msg_id` for each fragmented message; no counter or persisted state is needed.
 
-- **Wrap-around.** Counter wrap is not a practical concern: 65,536 fragmented messages inside one window is far beyond what the airtime allows.
-- **Restarts.** A restart reuses an active ID only by chance: about 1 in 65,536 per message still being reassembled.
+- **Why 32 bits.** A receiver remembers up to 256 recently completed IDs (§6.2), and a new message whose ID matches one of them is dropped as a late fragment. With a 16-bit ID that happens to about 1 message in 256 (0.4%), which is too often. With 32 bits it is about 1 in 17 million, and a clash with one of the (at most 32) partials in flight is rarer still.
 - **If a collision happens anyway,** the CRC rejects the mixed result and that message is lost. Nothing wrong is ever delivered, and other messages are unaffected.
+- **Cost.** The two extra bytes leave 218 B of data per fragment instead of 220, about 1% more airtime.
 
-An 8-bit ID was considered and rejected. Its 1-in-256 restart collision rate, and a wrap after 256 messages, are too likely for a byte of savings.
+A 16-bit ID was used while reassembly was keyed by `(sender, msg_id)`. A 24-bit ID was considered; at about 1 in 65,000 per message it would still collide over months on a busy mesh.
 
 ### 5.2 Message blob and source fragments
 
@@ -123,10 +123,10 @@ blob  = inner || CRC32(inner) || 0x80        (CRC-32/IEEE, little-endian)
 inner = today's wire payload: [flags 0x00|0x01|0xFF][zstd body | raw protobuf]
 ```
 
-- **Slicing.** The blob is cut into K slices of `S = maxFrame − 5` bytes (220 at 225). Source fragment `esi = i` carries slice *i*. The last slice is sent **unpadded**, so no airtime is wasted on padding.
+- **Slicing.** The blob is cut into K slices of `S = maxFrame − 7` bytes (218 at 225). Source fragment `esi = i` carries slice *i*. The last slice is sent **unpadded**, so no airtime is wasted on padding.
 - **Receiving.** The receiver zero-pads every source slice to S. S is learned from any repair fragment or any non-last source fragment. When K=1 with no repair, the single fragment's own length is used.
 - **Finding the end.** The trailing `0x80` delimits the blob (ISO/IEC 7816-4 style). After decoding, strip trailing zero bytes, then the `0x80`. This costs 1 byte per message, and it lets a lost *last* slice be rebuilt from repair data without any length field.
-- **CRC.** The CRC is per *message* (4 B once), not per fragment; LoRa already has a PHY CRC per frame. This one catches what chunking introduces: a `msg_id` reused after a sender restart, or fragments from two messages spliced together. The zstd frame checksum stays off, so wire bytes do not depend on each binding's zstd options.
+- **CRC.** The CRC is per *message* (4 B once), not per fragment; LoRa already has a PHY CRC per frame. This one catches what chunking introduces: two messages that drew the same `msg_id`, or fragments from two messages spliced together. The zstd frame checksum stays off, so wire bytes do not depend on each binding's zstd options.
 - **When to fragment.** Use the fragment path when `inner.size > maxFrame`, **or** when the protobuf exceeds the single-frame decompression cap of 4,096 B (§6.1, §8). In the second case K may be 1.
 
 ### 5.3 Repair fragments: systematic Cauchy code over GF(256)
@@ -144,7 +144,7 @@ symbol(e)  = Σ_j coef(e, j) · s_j                     (byte-wise, over GF(256)
 
 - **This is MDS.** The repair rows are a Cauchy matrix `1/(x_e ⊕ y_j)` with `x_e = e ∈ [K, 255]` and `y_j = j ∈ [0, K-1]`, which never collide. Each column is scaled by a nonzero constant, which keeps every square submatrix nonsingular. So *any* K distinct fragments determine the K source slices.
 - **The scaling makes `coef(K, j) = 1`.** Repair fragment `esi = K` is the plain XOR of all source slices, so a binding that only ever sends one repair fragment needs no GF multiplication on encode.
-- **Decoding.** Once K distinct ESIs are held, build the K×K coefficient matrix and solve with Gauss–Jordan elimination over GF(256): at most 32×32, with 220-byte right-hand sides. If all source fragments arrived, there is nothing to solve.
+- **Decoding.** Once K distinct ESIs are held, build the K×K coefficient matrix and solve with Gauss–Jordan elimination over GF(256): at most 32×32, with 218-byte right-hand sides. If all source fragments arrived, there is nothing to solve.
 - **Determinism.** Coefficients are a pure function of `(e, j, K)`, so every binding produces byte-identical repair fragments from the same blob. Log/exp tables (2 × 256 B) are generated at startup or checked in.
 
 ### 5.4 Overhead
@@ -153,13 +153,13 @@ Computed with the prototype's framing for a 225 B frame budget:
 
 | Inner payload | Source frames K | On-air bytes (R=0) | Overhead | Frames with R=1 / R=2 |
 |---:|---:|---:|---:|---:|
-| 300 B | 2 | 315 | 15 B | 3 / 4 |
-| 700 B | 4 | 725 | 25 B | 5 / 6 |
-| 1,200 B | 6 | 1,235 | 35 B | 7 / 8 |
-| 2,260 B | 11 | 2,320 | 60 B | 12 / 13 |
-| 3,400 B | 16 | 3,485 | 85 B | 17 / 18 |
+| 300 B | 2 | 319 | 19 B | 3 / 4 |
+| 700 B | 4 | 733 | 33 B | 5 / 6 |
+| 1,200 B | 6 | 1,247 | 47 B | 7 / 8 |
+| 2,260 B | 11 | 2,342 | 82 B | 12 / 13 |
+| 3,400 B | 16 | 3,517 | 117 B | 17 / 18 |
 
-Header overhead is under 5% (prototype measured with a 4-byte header; numbers above are recomputed for the 5-byte header). The real cost is the R repair frames, and those are what buy loss tolerance.
+Overhead (the 7-byte header per frame plus 5 bytes of CRC and delimiter per message) is about 3–6%. The real cost is the R repair frames, and those are what buy loss tolerance.
 
 ### 5.5 One codec for small messages and file transfer
 
@@ -176,7 +176,7 @@ FecCodec  (code 0 = systematic Cauchy over GF(256), §5.3)
 | | TAK messages (this design) | File transfer (§10a, future) |
 |---|---|---|
 | Object | `inner ‖ CRC32 ‖ 0x80` | `file ‖ CRC32 ‖ 0x80` (or a hash in a manifest frame) |
-| Symbol size S | 220 (225 − 5-byte header) | maxFrame − that protocol's header |
+| Symbol size S | 218 (225 − 7-byte header) | maxFrame − that protocol's header |
 | Max block size | 32 symbols, so always one block | 128 symbols, so several blocks |
 | Repair per block | protocol caps a burst at K + R ≤ 48 | up to 256 − K_b (≥ 128) |
 | Framing | port 78, `0xFE` header (§5.1) | its own port; header carries object ID, source block number (SBN) and ESI |
@@ -267,23 +267,23 @@ Maintainers of open-source RaptorQ libraries say the same thing. The Rust crate'
 ### 6.2 Receiver
 
 ```
-on frame from node N on port 78:
+on frame on port 78 (the mesh packet's From field is not used):
   0xFF / other flags  -> today's decompress() path
-  0xFE                -> reassembler.accept(N, frame, now)
+  0xFE                -> reassembler.accept(frame, now)
                            -> on completion: inner -> decompress(inner, maxDecompressed = LARGE_CAP)
 ```
 
 Reassembler rules:
 
 - **Any order, duplicate ESIs ignored.** Rebroadcasts, MQTT and store-and-forward can reorder or replay frames.
-- **A conflicting `K` or `code` for an existing key** means `msg_id` was reused (e.g. the sender restarted). Discard the old partial and start a new one.
+- **A conflicting `K` or `code` for an existing key** means two messages drew the same `msg_id`. Discard the old partial and start a new one.
 - **An unknown `code`** means the frame is dropped (forward compatibility).
 - **Completion:** the reassembler holds K distinct ESIs. It solves (§5.3), strips the padding and `0x80`, and checks the CRC.
 - **A CRC mismatch does not drop the message.** One bad or stale fragment among the K used (for example after a `msg_id` collision) makes the solve produce garbage, but the message may still be recoverable. The partial stays open, and each new ESI triggers a retry: with K + j fragments held, try leaving out one fragment at a time. That is at most K + j solves of at most 32×32, microseconds each, and it recovers from any single bad fragment. More than one bad fragment just runs out the deadline, and the message is dropped then.
-- **After completion,** remember `(N, msg_id)` until that message's absolute ceiling, so late fragments and repair frames do not open a new partial. (Fragments carry no CRC, so the key is the ID alone.) The cache is bounded, e.g. 256 entries with least-recently-used eviction. An entry lost early means a late duplicate can be reassembled again; the CRC cache below stops it being delivered twice.
-- **Redelivery is suppressed by content.** The receiver also keeps, per sender, the CRC-32s of recently delivered messages, for example the last 64 or the last hour. A reassembled message whose CRC is already in that cache is dropped instead of delivered. This costs 4 B per entry. It is transport-level de-duplication of exact copies only. Deciding whether a *different* update is stale is the app's job (next point).
+- **After completion,** remember the `msg_id` until that message's absolute ceiling, so late fragments and repair frames do not open a new partial. (Fragments carry no CRC, so the key is the ID alone.) The cache is bounded, e.g. 256 entries with least-recently-used eviction. An entry lost early means a late duplicate can be reassembled again; the CRC cache below stops it being delivered twice.
+- **Redelivery is suppressed by content.** The receiver also keeps the CRC-32s of recently delivered messages, for example the last 256 or the last hour. A reassembled message whose CRC is already in that cache is dropped instead of delivered. This costs 4 B per entry. It is transport-level de-duplication of exact copies only. Deciding whether a *different* update is stale is the app's job (next point).
 - **Stale-update protection belongs in the app, not the SDK.** A late message can also be an *older* update with *different* content for the same `uid`, which the CRC cache cannot recognise. The SDK does not judge that. It delivers every reassembled event with its reconstructed `start` (from `start_epoch_lo14`). The app owns its CoT state, so it keeps the newest `start` per `uid` and ignores anything older. `uid` alone is the key, because each `uid` has a single sender. Events without `start_epoch_lo14` fall back to arrival order, as today.
-- **Bounds:** at most 4 partial messages per sender and 32 in total; evict the oldest when full. Each partial stores at most **K + 4** distinct fragments, which is at most 36 × 220 B ≈ 7.9 KB. That covers the CRC-retry rule below, which needs only one more fragment than K per bad fragment. Further fragments for a partial that is already full are ignored.
+- **Bounds:** at most 32 partial messages at once; evict the oldest when full. (Without the From field there is no per-sender cap.) Each partial stores at most **K + 4** distinct fragments, which is at most 36 × 218 B ≈ 7.8 KB. That covers the CRC-retry rule below, which needs only one more fragment than K per bad fragment. Further fragments for a partial that is already full are ignored.
 - **Timeouts come from the preset's airtime, and never depend on R.** The receiver cannot know how many repair fragments the sender chose, so its timers rely only on things it can see:
   - **Idle deadline:** `lastNewEsiAt + (L + 1) × frameAirtime(preset) × hopFactor + slack`. It is reset by every new ESI, so a long repair run of any length keeps the partial alive for as long as fragments keep arriving. L is the number of consecutive lost frames tolerated (default 4).
   - **Absolute ceiling**, for memory safety: `firstSeenAt + MAX_BURST × frameAirtime(preset) × hopFactor + slack`. The protocol bounds the initial burst: **a sender MUST send all fragments of a message as one burst (paced only by the radio queue), with K + R ≤ 48.** With K at most 32, that leaves room for 16 repair fragments. `MAX_BURST = 48` therefore covers every permitted sender policy.
@@ -305,8 +305,8 @@ With an MDS code, a message decodes when at least K of its K+R frames arrive: `P
 Recommendation:
 
 - **Default:** R = max(1, ⌈K/4⌉), so K=5 gets 2 repair fragments and K=10 gets 3.
-- **Adaptive senders** can append more repair fragments after the burst, with fresh ESIs and without re-sending anything. Unsolicited extras count against the same K + R ≤ 48 limit, and they help only if they arrive before receivers' idle deadline and absolute ceiling. A fragment arriving after its partial has expired opens a fresh partial. A single late fragment cannot complete it, so it just times out. That costs one partial slot until the idle deadline expires, within the per-sender and global caps.
-  - **K distinct late fragments can complete it,** for example after a store-and-forward or MQTT replay that outlasts the completed-message cache. The message can then be reassembled again, but the per-sender CRC cache (§6.2) recognises it and drops it, so it is not delivered twice. If that cache has also lost the entry, the copy is delivered with its original `start` time (`start_epoch_lo14`). An app applying the newest-`start`-per-`uid` rule (§6.2) then ignores it as old. Extras sent in answer to a repair request follow §10 instead.
+- **Adaptive senders** can append more repair fragments after the burst, with fresh ESIs and without re-sending anything. Unsolicited extras count against the same K + R ≤ 48 limit, and they help only if they arrive before receivers' idle deadline and absolute ceiling. A fragment arriving after its partial has expired opens a fresh partial. A single late fragment cannot complete it, so it just times out. That costs one partial slot until the idle deadline expires, within the cap on partials.
+  - **K distinct late fragments can complete it,** for example after a store-and-forward or MQTT replay that outlasts the completed-message cache. The message can then be reassembled again, but the CRC cache (§6.2) recognises it and drops it, so it is not delivered twice. If that cache has also lost the entry, the copy is delivered with its original `start` time (`start_epoch_lo14`). An app applying the newest-`start`-per-`uid` rule (§6.2) then ignores it as old. Extras sent in answer to a repair request follow §10 instead.
 
 **Consideration: losses are bursty, not independent.** The table assumes each frame is lost independently with the same probability. LoRa losses cluster instead: collisions, interference, hidden nodes, and a receiver briefly out of range. A fragment burst also competes with its own rebroadcasts on later hops, since fragment n+1 leaves the sender while neighbours are still relaying fragment n. So the effective p for a burst is probably lower than for an isolated packet, and the R=1–3 delivery figures above are best cases. Field tests should measure delivery for whole fragment sets rather than infer it from single-packet loss. Two levers to try:
 - **Spacing** fragments slightly apart in time. This reduces self-collision but stretches the burst.
@@ -321,7 +321,7 @@ The CLAUDE.md invariant says every *packet* must decode from its own bytes plus 
 Concretely:
 
 - Compression stays one-shot over the whole message. No zstd streaming API, no adaptive dictionary.
-- The reassembler holds raw bytes per `(sender, msg_id)` only. It never shares decoder or compression context between messages, and an evicted or timed-out partial cannot affect another message.
+- The reassembler holds raw bytes per `msg_id` only. It never shares decoder or compression context between messages, and an evicted or timed-out partial cannot affect another message.
 - `ResilienceTest` in every binding gains a case that interleaves fragments of messages A and B, drops some of A's, and asserts that B still decodes to its exact golden.
 
 ## 8. Schema and limits impact
@@ -338,8 +338,8 @@ Concretely:
 public class TakFragmenter(
     public val maxFrameBytes: Int = 225,             // clients' cap today (§4); a parameter, not a constant
     public val maxSourceFragments: Int = 8,           // cap when a CoT opts in; protocol max is 32
-    public val repairPolicy: (k: Int) -> Int = { k -> maxOf(1, (k + 3) / 4) },  // K + R clamped to 32
-    private val msgIds: MessageIdSource = MessageIdSource.random(),
+    public val repairPolicy: (k: Int) -> Int = { k -> maxOf(1, (k + 3) / 4) },  // K + R clamped to MAX_BURST (48)
+    private val msgIds: MessageIdSource = MessageIdSource.random(),   // fresh random 32-bit ID per message
 ) {
     /**
      * [inner] unchanged if it fits one frame AND [protobufSize] <= 4096; otherwise K source + R repair
@@ -352,17 +352,16 @@ public class TakFragmenter(
     public fun moreRepair(inner: ByteArray, msgId: Int, firstEsi: Int, count: Int): List<ByteArray>
 }
 
-/** Buffers fragments per sender. Clock and airtime are injected (commonMain has no wall clock; tests stay deterministic). */
+/** Buffers fragments by msg_id. Clock and airtime are injected (commonMain has no wall clock; tests stay deterministic). */
 public class TakReassembler(
     public val frameAirtimeMillis: Long,               // from the modem preset
     public val hopFactor: Int = 3,
     public val toleratedConsecutiveLosses: Int = 4,    // idle deadline (§6.2)
     public val slackMillis: Long = 30_000,
-    public val maxPendingPerSender: Int = 4,
-    public val maxPendingTotal: Int = 32,
+    public val maxPending: Int = 32,
 ) {
     /** Returns the completed inner wire payload, or null while waiting / on a dropped frame. */
-    public fun accept(sender: Long, frame: ByteArray, nowMillis: Long): ByteArray?
+    public fun accept(frame: ByteArray, nowMillis: Long): ByteArray?
     public fun evictExpired(nowMillis: Long)
 }
 
@@ -378,7 +377,7 @@ public fun compressForMesh(
     cotXml: String,
     fragmenter: TakFragmenter,
     fragmentIfOversize: Boolean = false,              // per-CoT opt-in (§6.1); false = today's behaviour
-    airtimeLeftMillis: Long? = null,                   // remaining duty-cycle budget, null = no limit (§6.1)
+    airtime: AirtimeBudget? = null,                    // remaining duty-cycle budget, null = no limit (§6.1)
 ): MeshEncodeResult
 public data class MeshEncodeResult(
     val outcome: Outcome,
@@ -395,8 +394,8 @@ public data class MeshEncodeResult(
 }
 
 /** One-call receive path: routes 0xFE to the reassembler, everything else to decompress(). */
-public class TakMeshReceiver(compressor: TakCompressor, reassembler: TakReassembler) {
-    public fun onPayload(sender: Long, payload: ByteArray, nowMillis: Long): TakPacketV2Data?
+public class TakMeshReceiver(reassembler: TakReassembler, compressor: TakCompressor = TakCompressor()) {
+    public fun onPayload(payload: ByteArray, nowMillis: Long): TakPacketV2Data?
 }
 ```
 
@@ -409,14 +408,14 @@ Pacing frames against `QueueStatus` and the airtime check (§6.1 steps 6 and 8) 
 Rateless coding makes repair requests simple. A receiver does not need to say *which* fragments it lacks, only *how many*:
 
 ```
-[0xFD][origin node number: 4 B LE][msg_id: 2 B][need: 1 B]      // broadcast, like everything else
+[0xFD][msg_id: 4 B LE][need: 1 B]      // broadcast, like everything else
 ```
 
-- **The request is a broadcast** and names the originator explicitly, because `msg_id` is only unique per sender.
+- **The request is a broadcast** and names only the `msg_id`, which identifies the message across the mesh (§5.1). The originator recognises its own IDs.
 - **The originator answers** with `need` fresh repair fragments, also broadcast, using ESIs it hasn't sent yet. Every receiver missing *any* fragments benefits from the same frames, so one answer can serve many receivers with different losses. A per-fragment re-send cannot do that.
-- **Receivers that hear** someone else's request for the same `(origin, msg_id)` hold off, to avoid request storms. Because requests are broadcast, every receiver can hear them.
-- **Amplification guard.** A request costs 8 bytes, and the answer can be many full frames, so the originator caps what it will send. It answers only `msg_id`s it still has cached. It coalesces requests that arrive within a short window into one answer of the largest `need`. It sends at most K repair fragments per message in total across all requests. This guards cheaply against misbehaving or malicious nodes. A hostile node on the channel can already jam it, so this is about not *amplifying* bad traffic, not about defending against an attacker.
-- **Helper nodes.** Any node that has *decoded* the message holds the full blob and can mint repair fragments itself, so a nearer node could answer instead of the originator. Helper-minted frames would need to carry the originator's node number, since the receiver keys by the frame's sender. That could be a 4-byte origin field signalled by a reserved `code` value. The same caps apply to helpers. Helpers should pick ESIs at random from the unused range, to make collisions between helpers unlikely.
+- **Receivers that hear** someone else's request for the same `msg_id` hold off, to avoid request storms. Because requests are broadcast, every receiver can hear them.
+- **Amplification guard.** A request costs 6 bytes, and the answer can be many full frames, so the originator caps what it will send. It answers only `msg_id`s it still has cached. It coalesces requests that arrive within a short window into one answer of the largest `need`. It sends at most K repair fragments per message in total across all requests. This guards cheaply against misbehaving or malicious nodes. A hostile node on the channel can already jam it, so this is about not *amplifying* bad traffic, not about defending against an attacker.
+- **Helper nodes.** Any node that has *decoded* the message holds the full blob and can mint repair fragments itself, so a nearer node could answer instead of the originator. Because receivers key by `msg_id` alone, helper-minted frames are ordinary fragments with the original `msg_id`: no origin field is needed. The same caps apply to helpers. Helpers should pick ESIs at random from the unused range, to make collisions between helpers unlikely.
 - **State.** The originator caches its recent blobs for the timeout window. That is transport state, not compression state, so §7 still holds.
 - **Reserve `0xFD` and this layout in v1** so it can be added without a format break. Old receivers mask `0xFD` to unknown dictionary `0x3D` and reject it.
 
@@ -432,14 +431,14 @@ This design deliberately does not cover those payloads:
 - **No compression gain.** JPEGs and zips are already compressed, so the TAK dictionary adds nothing.
 - **Different delivery model.** Bulk transfer needs resumable, sender-cached delivery, repair-on-demand per block, and explicit opt-in. It must work over channel broadcast, not only over DMs. PKI DMs are not post-quantum secure, so some deployments disable them outright, and file transfer cannot depend on them. That is a protocol of its own, even though the **erasure code is shared**. Split into 128-symbol source blocks, the same Cauchy GF(256) codec handles files (§5.5), so no second FEC implementation is needed.
 
-If mesh file transfer is wanted, it should be a separate bulk-transfer protocol, likely on its own portnum with wider K/ESI fields. It would reuse the **`FecCodec` from §5.5 unchanged**, plus this design's ideas (CRC per object, keying by sender and object ID, repair-on-demand by count, bounded reassembly), but not its frame layout or caps. The `b-f-t-r` notice itself is small CoT and already fits a single frame. A receiving app could show it as "file offered, not reachable over mesh" rather than offering a dead URL.
+If mesh file transfer is wanted, it should be a separate bulk-transfer protocol, likely on its own portnum with wider K/ESI fields. It would reuse the **`FecCodec` from §5.5 unchanged**, plus this design's ideas (CRC per object, keying by a random object ID, repair-on-demand by count, bounded reassembly), but not its frame layout or caps. The `b-f-t-r` notice itself is small CoT and already fits a single frame. A receiving app could show it as "file offered, not reachable over mesh" rather than offering a dead URL.
 
 ## 11. Testing plan
 
 - **Golden fragment sets** in `testdata/fragment/`, generated by Kotlin from a new `testdata/cot_xml_large/` fixture set. Fixtures: a large freehand, a 40-waypoint route, long remarks, an inner payload of exactly `maxFrame + 1`, and a highly compressible packet whose protobuf exceeds 4,096 B but fits one frame (the K=1 forced path). They live in a separate directory so the existing "100% of fixtures under MTU" assertion and the compression report stay as they are.
 - **Fragmenting is byte-identical across bindings.** Slicing and repair symbols are deterministic given the inner bytes, `msg_id` and R, so each binding encodes the golden `.bin` and must match the Kotlin frames exactly, including every repair fragment. That is a stronger check than the zstd layer allows. Compressed bytes still differ per binding, so end-to-end cross-language tests assert decodability plus the size tolerance, as today.
 - **Codec conformance suite** (shared with any future file transfer, §5.5): partition sizes, blocks of K_b up to 128 (any-K decode sampled), and GF(256) vectors: shared log/exp table checksums, `coef(e, j, K)` spot values, `coef(K, j, K) == 1`, and an MDS property test over all K×K subsets for small K (sampled for K ≥ 9).
-- **Reassembly matrix in every binding:** every K-subset of K+R (sampled for large K), shuffled order, duplicates, loss of the last slice, fewer than K (waits, then times out), CRC mismatch, `K`/`code` conflict, unknown `code`, a truncated header, the per-sender and global caps, idle-deadline extension by a long repair run, ceiling expiry, and a forced `msg_id` collision (CRC rejects, no other message affected).
+- **Reassembly matrix in every binding:** every K-subset of K+R (sampled for large K), shuffled order, duplicates, loss of the last slice, fewer than K (waits, then times out), CRC mismatch, `K`/`code` conflict, unknown `code`, a truncated header, the cap on partials, idle-deadline extension by a long repair run, ceiling expiry, and a forced `msg_id` collision (CRC rejects, no other message affected).
 - **Sender policy:** `fragmentIfOversize = false` never emits `0xFE`, and an oversized packet is then dropped with a failure result rather than sent. A set that doesn't fit the remaining duty-cycle budget is never started.
 - **Malformed-input fuzzing** of the reassembler, alongside the existing `testdata/malformed/` suite.
 - **ResilienceTest:** the interleaving case from §7.
@@ -451,7 +450,7 @@ If mesh file transfer is wanted, it should be a separate bulk-transfer protocol,
 - **Receivers ship first.** Neither client has a reassembler yet, and today Android logs a warning with a stack trace for every port-78 frame it can't decode, which would be about 10 per message at the default cap. So the reassembler ships in both clients first. Senders start setting `fragmentIfOversize` only after that.
 - **Opt-in by design.** Because the flag is per CoT and defaults to `false`, fragmentation stays opt-in even after rollout; it is never a global switch.
 
-Old decoders reject `0xFE` and `0xFD` frames by throwing their existing "unknown dictionary" exception; I checked that Python raises `ValueError: Unknown dictionary ID: 62`, TypeScript throws `Error`, and Kotlin throws `IllegalArgumentException`. That is safe, but apps must catch it quietly, or a single 20-fragment message turns into 20 user-visible errors or log lines. The new `TakMeshReceiver` routes these frames before decoding, so the issue only affects code that calls `decompress()` directly. Meshtastic-Android and Meshtastic-Apple need to route port-78 frames through `TakMeshReceiver` (or the reassembler), pass the sender's node number, and pace fragment sends against `QueueStatus`.
+Old decoders reject `0xFE` and `0xFD` frames by throwing their existing "unknown dictionary" exception; I checked that Python raises `ValueError: Unknown dictionary ID: 62`, TypeScript throws `Error`, and Kotlin throws `IllegalArgumentException`. That is safe, but apps must catch it quietly, or a single 20-fragment message turns into 20 user-visible errors or log lines. The new `TakMeshReceiver` routes these frames before decoding, so the issue only affects code that calls `decompress()` directly. Meshtastic-Android and Meshtastic-Apple need to route port-78 frames through `TakMeshReceiver` (or the reassembler) and pace fragment sends against `QueueStatus`. Neither needs the mesh packet's From field.
 
 **Open questions**
 
