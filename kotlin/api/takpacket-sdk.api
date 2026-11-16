@@ -305,6 +305,7 @@ public final class org/meshtastic/tak/TakCompressor {
 	public final fun compressWithRemarksFallbackDetailed (Lorg/meshtastic/tak/TakPacketV2Data;I)Lorg/meshtastic/tak/TakCompressor$RemarksFallbackResult;
 	public final fun compressWithStats (Lorg/meshtastic/tak/TakPacketV2Data;)Lorg/meshtastic/tak/TakCompressor$CompressionResult;
 	public final fun decompress ([B)Lorg/meshtastic/tak/TakPacketV2Data;
+	public final fun decompress ([BI)Lorg/meshtastic/tak/TakPacketV2Data;
 }
 
 public final class org/meshtastic/tak/TakCompressor$Companion {
@@ -349,6 +350,7 @@ public final class org/meshtastic/tak/TakFragment {
 	public static final field INSTANCE Lorg/meshtastic/tak/TakFragment;
 	public static final field MARKER I
 	public static final field MAX_BURST I
+	public static final field MAX_FRAME_BYTES I
 	public static final field MAX_REASSEMBLED_DECOMPRESSED_SIZE I
 	public static final field MAX_SOURCE_FRAGMENTS I
 	public static final field REPAIR_REQUEST_MARKER I

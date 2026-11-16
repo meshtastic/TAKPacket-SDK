@@ -52,6 +52,13 @@ public object TakFragment {
     /** What both Meshtastic clients cap a port-78 payload at (see WIRE_FORMAT.md). */
     public const val DEFAULT_MAX_FRAME_BYTES: Int = 225
 
+    /**
+     * The firmware's `Data.payload` ceiling. No frame can be larger on LoRa, so
+     * receivers drop anything bigger (from MQTT, say) before buffering it, and
+     * senders cannot be configured above it.
+     */
+    public const val MAX_FRAME_BYTES: Int = 233
+
     /** Decompression cap for a reassembled message (single frames keep `TakCompressor.MAX_DECOMPRESSED_SIZE`). */
     public const val MAX_REASSEMBLED_DECOMPRESSED_SIZE: Int = 32768
 
@@ -99,7 +106,9 @@ public class TakFragmenter(
     private val messageIds: MessageIdSource = MessageIdSource.random(),
 ) {
     init {
-        require(maxFrameBytes > TakFragment.HEADER_SIZE) { "maxFrameBytes must exceed the ${TakFragment.HEADER_SIZE}-byte header" }
+        require(maxFrameBytes in TakFragment.HEADER_SIZE + 1..TakFragment.MAX_FRAME_BYTES) {
+            "maxFrameBytes must be in ${TakFragment.HEADER_SIZE + 1}..${TakFragment.MAX_FRAME_BYTES}"
+        }
         require(maxSourceFragments in 1..TakFragment.MAX_SOURCE_FRAGMENTS) {
             "maxSourceFragments must be in 1..${TakFragment.MAX_SOURCE_FRAGMENTS}"
         }
@@ -128,7 +137,9 @@ public class TakFragmenter(
      * - Otherwise returns K source fragments followed by R repair fragments. K
      *   may be 1 when only the protobuf-size rule forces fragmenting (design doc
      *   §5.2).
-     * - Returns null if K would exceed [maxSourceFragments].
+     * - Returns null if K would exceed [maxSourceFragments], or if [protobufSize]
+     *   exceeds [TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE], since every
+     *   receiver would reject the reassembled message.
      */
     public fun split(
         inner: ByteArray,
@@ -136,7 +147,7 @@ public class TakFragmenter(
         msgId: Int,
     ): List<ByteArray>? {
         require(inner.isNotEmpty()) { "inner payload is empty" }
-        return if (fitsOneFrame(inner, protobufSize)) listOf(inner) else fragment(inner, msgId)
+        return if (fitsOneFrame(inner, protobufSize)) listOf(inner) else fragment(inner, protobufSize, msgId)
     }
 
     private fun fitsOneFrame(
@@ -146,12 +157,13 @@ public class TakFragmenter(
 
     private fun fragment(
         inner: ByteArray,
+        protobufSize: Int,
         msgId: Int,
     ): List<ByteArray>? {
         val s = sliceSize
         val blob = buildBlob(inner)
         val k = (blob.size + s - 1) / s
-        if (k > maxSourceFragments) return null
+        if (k > maxSourceFragments || protobufSize > TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE) return null
         val r = repairPolicy(k).coerceIn(0, TakFragment.MAX_BURST - k)
 
         val shape = (TakFragment.CODE_CAUCHY shl CODE_SHIFT) or (k - 1)

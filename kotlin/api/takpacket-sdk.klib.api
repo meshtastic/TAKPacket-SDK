@@ -208,6 +208,7 @@ final class org.meshtastic.tak/TakCompressor { // org.meshtastic.tak/TakCompress
     final fun compressWithRemarksFallbackDetailed(org.meshtastic.tak/TakPacketV2Data, kotlin/Int): org.meshtastic.tak/TakCompressor.RemarksFallbackResult // org.meshtastic.tak/TakCompressor.compressWithRemarksFallbackDetailed|compressWithRemarksFallbackDetailed(org.meshtastic.tak.TakPacketV2Data;kotlin.Int){}[0]
     final fun compressWithStats(org.meshtastic.tak/TakPacketV2Data): org.meshtastic.tak/TakCompressor.CompressionResult // org.meshtastic.tak/TakCompressor.compressWithStats|compressWithStats(org.meshtastic.tak.TakPacketV2Data){}[0]
     final fun decompress(kotlin/ByteArray): org.meshtastic.tak/TakPacketV2Data // org.meshtastic.tak/TakCompressor.decompress|decompress(kotlin.ByteArray){}[0]
+    final fun decompress(kotlin/ByteArray, kotlin/Int): org.meshtastic.tak/TakPacketV2Data // org.meshtastic.tak/TakCompressor.decompress|decompress(kotlin.ByteArray;kotlin.Int){}[0]
 
     final class CompressionResult { // org.meshtastic.tak/TakCompressor.CompressionResult|null[0]
         constructor <init>(kotlin/Int, kotlin/Int, kotlin/Int, kotlin/ByteArray) // org.meshtastic.tak/TakCompressor.CompressionResult.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.ByteArray){}[0]
@@ -1326,6 +1327,8 @@ final object org.meshtastic.tak/TakFragment { // org.meshtastic.tak/TakFragment|
         final fun <get-MARKER>(): kotlin/Int // org.meshtastic.tak/TakFragment.MARKER.<get-MARKER>|<get-MARKER>(){}[0]
     final const val MAX_BURST // org.meshtastic.tak/TakFragment.MAX_BURST|{}MAX_BURST[0]
         final fun <get-MAX_BURST>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_BURST.<get-MAX_BURST>|<get-MAX_BURST>(){}[0]
+    final const val MAX_FRAME_BYTES // org.meshtastic.tak/TakFragment.MAX_FRAME_BYTES|{}MAX_FRAME_BYTES[0]
+        final fun <get-MAX_FRAME_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_FRAME_BYTES.<get-MAX_FRAME_BYTES>|<get-MAX_FRAME_BYTES>(){}[0]
     final const val MAX_REASSEMBLED_DECOMPRESSED_SIZE // org.meshtastic.tak/TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE|{}MAX_REASSEMBLED_DECOMPRESSED_SIZE[0]
         final fun <get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE.<get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>|<get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>(){}[0]
     final const val MAX_SOURCE_FRAGMENTS // org.meshtastic.tak/TakFragment.MAX_SOURCE_FRAGMENTS|{}MAX_SOURCE_FRAGMENTS[0]

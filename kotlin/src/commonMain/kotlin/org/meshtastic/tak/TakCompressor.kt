@@ -112,7 +112,22 @@ public class TakCompressor(
      *         (the original cause is preserved via `cause`).
      */
     @Throws(ZstdException::class, IllegalArgumentException::class)
-    public fun decompress(wirePayload: ByteArray): TakPacketV2Data {
+    public fun decompress(wirePayload: ByteArray): TakPacketV2Data = decompress(wirePayload, MAX_DECOMPRESSED_SIZE)
+
+    /**
+     * [decompress] with a caller-chosen cap on the protobuf size. Single frames
+     * use [MAX_DECOMPRESSED_SIZE]; a payload rebuilt from fragments uses
+     * [TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE] (design doc §8).
+     *
+     * @throws IllegalArgumentException if [maxDecompressedSize] is not positive,
+     *         and otherwise as for the single-argument [decompress].
+     */
+    @Throws(ZstdException::class, IllegalArgumentException::class)
+    public fun decompress(
+        wirePayload: ByteArray,
+        maxDecompressedSize: Int,
+    ): TakPacketV2Data {
+        require(maxDecompressedSize > 0) { "maxDecompressedSize must be positive" }
         require(wirePayload.size >= 2) { "Wire payload too short: ${wirePayload.size} bytes" }
 
         val flagsByte = wirePayload[0].toInt() and 0xFF
@@ -122,10 +137,8 @@ public class TakCompressor(
             if (flagsByte == DictionaryProvider.DICT_ID_UNCOMPRESSED) {
                 // Uncompressed raw protobuf (e.g. from TAK_TRACKER firmware). Enforce
                 // the decompressed-size cap here because there's no zstd pass to do it.
-                if (compressedBytes.size > MAX_DECOMPRESSED_SIZE) {
-                    throw IllegalArgumentException(
-                        "Uncompressed payload size ${compressedBytes.size} exceeds limit $MAX_DECOMPRESSED_SIZE",
-                    )
+                require(compressedBytes.size <= maxDecompressedSize) {
+                    "Uncompressed payload size ${compressedBytes.size} exceeds limit $maxDecompressedSize"
                 }
                 compressedBytes
             } else {
@@ -143,9 +156,9 @@ public class TakCompressor(
                     val restored = ByteArray(ZSTD_MAGIC.size + compressedBytes.size)
                     ZSTD_MAGIC.copyInto(restored, destinationOffset = 0)
                     compressedBytes.copyInto(restored, destinationOffset = ZSTD_MAGIC.size)
-                    // The codec's size-limited decompress guards the 4096B cap — a bomb
-                    // that expands past the limit throws inside the zstd library.
-                    ZstdCodec.decompressWithDict(restored, dictId, MAX_DECOMPRESSED_SIZE)
+                    // The codec's size-limited decompress guards the cap — a bomb that
+                    // expands past the limit throws inside the zstd library.
+                    ZstdCodec.decompressWithDict(restored, dictId, maxDecompressedSize)
                 } catch (e: ZstdException) {
                     // Preserve the typed codec exception so callers can catch it
                     // (re-wrapping in RuntimeException would defeat the contract).
