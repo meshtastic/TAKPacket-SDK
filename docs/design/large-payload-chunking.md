@@ -57,6 +57,7 @@ A `TAKPacketV2` has no useful partial form: half a route or half a `raw_detail` 
 |---|---|
 | New portnum | Clean separation, but needs a `portnums.proto` change, firmware and app plumbing, and a second listener in every app. |
 | Protobuf envelope (`message TAKFragment { … }`) | Self-describing, but about 11–13 B per frame of tags and varints versus 7 B. That goes against the frame-slimming work already done (the magic strip, which saves 4 B). |
+| Reuse `ChunkedPayload` from `mesh.proto` | Meshtastic already has a generic chunking message (`payload_id`, `chunk_count`, `chunk_index`, `payload_chunk`, with `ChunkedPayloadResponse` to request missing chunks). It does not fit here: it has no repair coding, so recovering a lost chunk needs a request and a resend, which costs a round trip on a lossy mesh and is what the erasure code avoids; its protobuf framing is about 15 B per chunk against 7 B; and it carries no portnum, so a receiver could not tell a TAK chunk from any other without a new port or a wrapper. |
 | **Flags byte `0xFE` on port 78** ✅ | Fits the existing `[flags][body]` format. Old receivers reject it as unknown dictionary `0x3E`, a path every binding already handles without crashing. Costs one value from the flags space. |
 
 ### Loss recovery
