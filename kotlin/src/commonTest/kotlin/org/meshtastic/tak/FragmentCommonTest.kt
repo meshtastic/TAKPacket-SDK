@@ -176,7 +176,7 @@ class FragmentCommonTest {
             TakPacketV2Data(
                 cotTypeId = CotTypeMapper.typeToEnum("b-t-f"),
                 callsign = "ALPHA-1",
-                payload = TakPacketV2Data.Payload.Chat(message = String(CharArray(6_000) { "abcdefghijklmnopqrstuvwxyz0123456789 "[Random(it).nextInt(37)] })),
+                payload = TakPacketV2Data.Payload.Chat(message = CharArray(6_000) { "abcdefghijklmnopqrstuvwxyz0123456789 "[Random(it).nextInt(37)] }.concatToString()),
             )
         val protobufSize = TakPacketV2Serializer.serialize(packet).size
         assertTrue(protobufSize > TakCompressor.MAX_DECOMPRESSED_SIZE, "precondition: over the single-frame cap")
