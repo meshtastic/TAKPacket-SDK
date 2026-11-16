@@ -1,5 +1,8 @@
 package org.meshtastic.tak
 
+import kotlin.jvm.JvmOverloads
+import kotlin.jvm.JvmStatic
+
 /** One hour, the window over which firmware tracks transmit airtime (`air_util_tx`). */
 private const val DUTY_CYCLE_WINDOW_MILLIS: Long = 3_600_000L
 private const val PERCENT: Double = 100.0
@@ -34,6 +37,7 @@ public data class AirtimeBudget(
          * @param airUtilTxPercent `DeviceMetrics.air_util_tx`: percent of the last hour spent transmitting.
          * @param queuedFrames frames waiting in the radio's outgoing queue.
          */
+        @JvmStatic
         public fun fromDeviceMetrics(
             dutyCyclePercent: Double,
             airUtilTxPercent: Double,
@@ -218,46 +222,48 @@ internal class MeshEncoder(
  * @param reassembler holds partial fragment sets; build it with the current preset's frame airtime.
  * @param compressor decodes single frames and reassembled payloads.
  */
-public class TakMeshReceiver(
-    public val reassembler: TakReassembler,
-    private val compressor: TakCompressor = TakCompressor(),
-) {
-    /**
-     * Handle one port-78 payload. The mesh packet's sender is deliberately not
-     * used: fragments are matched on their own 32-bit message ID, and the
-     * decoded packet carries its own `uid` and callsign.
-     *
-     * @return the decoded packet; or null when [payload] is a fragment and its
-     *         message is not complete yet (or the fragment was dropped), or a
-     *         repair request, which this version ignores.
-     * @throws IllegalArgumentException, ZstdException or RuntimeException for a
-     *         payload that cannot be decoded, as `TakCompressor.decompress` does.
-     */
-    @Throws(ZstdException::class, IllegalArgumentException::class)
-    public fun onPayload(
-        payload: ByteArray,
-        nowMillis: Long,
-    ): TakPacketV2Data? {
-        val flags = if (payload.isEmpty()) -1 else payload[0].toInt() and BYTE_MASK
-        return when (flags) {
-            TakFragment.MARKER -> {
-                reassembler.accept(payload, nowMillis)?.let {
-                    compressor.decompress(it, TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE)
+public class TakMeshReceiver
+    @JvmOverloads
+    constructor(
+        public val reassembler: TakReassembler,
+        private val compressor: TakCompressor = TakCompressor(),
+    ) {
+        /**
+         * Handle one port-78 payload. The mesh packet's sender is deliberately not
+         * used: fragments are matched on their own 32-bit message ID, and the
+         * decoded packet carries its own `uid` and callsign.
+         *
+         * @return the decoded packet; or null when [payload] is a fragment and its
+         *         message is not complete yet (or the fragment was dropped), or a
+         *         repair request, which this version ignores.
+         * @throws IllegalArgumentException, ZstdException or RuntimeException for a
+         *         payload that cannot be decoded, as `TakCompressor.decompress` does.
+         */
+        @Throws(ZstdException::class, IllegalArgumentException::class)
+        public fun onPayload(
+            payload: ByteArray,
+            nowMillis: Long,
+        ): TakPacketV2Data? {
+            val flags = if (payload.isEmpty()) -1 else payload[0].toInt() and BYTE_MASK
+            return when (flags) {
+                TakFragment.MARKER -> {
+                    reassembler.accept(payload, nowMillis)?.let {
+                        compressor.decompress(it, TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE)
+                    }
+                }
+
+                TakFragment.REPAIR_REQUEST_MARKER -> {
+                    null
+                }
+
+                else -> {
+                    compressor.decompress(payload)
                 }
             }
+        }
 
-            TakFragment.REPAIR_REQUEST_MARKER -> {
-                null
-            }
-
-            else -> {
-                compressor.decompress(payload)
-            }
+        /** Drop partial messages whose deadlines have passed. Call periodically, e.g. once a minute. */
+        public fun evictExpired(nowMillis: Long) {
+            reassembler.evictExpired(nowMillis)
         }
     }
-
-    /** Drop partial messages whose deadlines have passed. Call periodically, e.g. once a minute. */
-    public fun evictExpired(nowMillis: Long) {
-        reassembler.evictExpired(nowMillis)
-    }
-}

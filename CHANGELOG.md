@@ -56,6 +56,18 @@ One version covers all five bindings, so a release is a single tag and a single 
   and `Limits.LARGE` (512 and 64), and `TakFragmenter.sourceFragmentsFor(size)`,
   which reports K for a payload size.
 
+- Kotlin: a Java-friendly API on the JVM artifact. Fluent builders replace the
+  long Kotlin constructors from Java: `TakPacketV2Data.Builder` (with
+  `cotType(String)`, `how(String)`, `latitudeDegrees`/`longitudeDegrees`,
+  `startEpochSeconds` and `addMarti` helpers) and builders for the `Chat`,
+  `TakTalk`, `TakTalkRoom`, `Marker`, `DrawnShape`, `Route`, `RangeAndBearing`
+  and `EmergencyAlert` payloads, each with `toBuilder()`. The fragmentation and
+  mesh calls gain `@JvmOverloads`/`@JvmStatic` (`TakFragmenter`,
+  `TakReassembler`, `TakMeshReceiver`, `compressForMesh`,
+  `AirtimeBudget.fromDeviceMetrics`, `MessageIdSource.random`,
+  `TakFragment.isFragment`), so Java can omit default arguments. A Java test
+  in `kotlin/src/jvmTest/java` keeps this surface compiling from Java.
+
 ## [0.10.0] - 2026-10-31
 
 ### Added

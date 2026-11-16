@@ -1,5 +1,7 @@
 package org.meshtastic.tak
 
+import kotlin.jvm.JvmOverloads
+
 /**
  * Compresses TAKPacketV2 protobuf bytes using zstd with pre-trained dictionaries,
  * and decompresses received wire payloads back to protobuf bytes.
@@ -294,6 +296,7 @@ public class TakCompressor(
      * @throws ZstdException if the zstd codec fails to compress.
      */
     @Throws(ZstdException::class, IllegalArgumentException::class)
+    @JvmOverloads
     public fun compressForMesh(
         cotXml: String,
         fragmenter: TakFragmenter,
@@ -329,6 +332,7 @@ public class TakCompressor(
      * @throws ZstdException if the zstd codec fails to compress.
      */
     @Throws(ZstdException::class)
+    @JvmOverloads
     public fun compressForMesh(
         packet: TakPacketV2Data,
         fragmenter: TakFragmenter,
