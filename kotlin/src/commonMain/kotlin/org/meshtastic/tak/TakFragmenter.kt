@@ -51,8 +51,67 @@ public object TakFragment {
     /** Protocol cap on source plus repair fragments in one burst. */
     public const val MAX_BURST: Int = 48
 
-    /** What both Meshtastic clients cap a port-78 payload at (see WIRE_FORMAT.md). */
+    /**
+     * What both Meshtastic clients cap a port-78 payload at (see WIRE_FORMAT.md).
+     *
+     * **This is a client convention, not a channel limit, and it is too large for some channels.**
+     * An AEAD channel admits only 220 bytes and a signed one far less, so a sender that takes this
+     * default on such a channel has its frames refused as `TOO_LARGE` by the firmware. Prefer
+     * [maxFrameBytes], which derives the real ceiling from how the channel is configured.
+     */
     public const val DEFAULT_MAX_FRAME_BYTES: Int = 225
+
+    /** Radio payload ceiling, per Semtech's SX12xx datasheets (`MAX_LORA_PAYLOAD_LEN`). */
+    public const val LORA_PAYLOAD_BYTES: Int = 255
+
+    /** Mesh packet header ahead of the payload (`MESHTASTIC_HEADER_LENGTH`). */
+    public const val MESH_HEADER_BYTES: Int = 16
+
+    /** AES-CCM authentication tag on an AEAD channel (`MESHTASTIC_AEAD_OVERHEAD`). */
+    public const val AEAD_OVERHEAD_BYTES: Int = 12
+
+    /** A 64-byte XEdDSA signature plus its field tag and length (`Data.xeddsa_signature`). */
+    public const val SIGNATURE_OVERHEAD_BYTES: Int = 66
+
+    /** `Data` framing around the payload: the portnum field, and the payload's own tag and length. */
+    public const val DATA_OVERHEAD_BYTES: Int = 5
+
+    /** `Data.bitfield`, which the firmware sets on every packet it composes for sending. */
+    public const val BITFIELD_OVERHEAD_BYTES: Int = 2
+
+    /**
+     * The largest payload a channel will actually carry, in bytes.
+     *
+     * Every term is charged only when it applies, because the worst case is far below the common
+     * one and a single conservative constant would spend bytes nobody owes. Signing alone costs 66.
+     *
+     * Derived from the firmware's own refusal, `Router.cpp`:
+     * ```
+     * if (useAead && numbytes + MESHTASTIC_HEADER_LENGTH + MESHTASTIC_AEAD_OVERHEAD > MAX_LORA_PAYLOAD_LEN)
+     *     return meshtastic_Routing_Error_TOO_LARGE;
+     * ```
+     * where `numbytes` is the whole encoded `Data` message, not the payload inside it.
+     *
+     * @param aead the channel uses AES-CCM authenticated encryption.
+     * @param signed packets carry an XEdDSA signature. Over the limit the firmware sends them
+     *        unsigned instead, and a receiver in Strict signature mode drops them, so a sender
+     *        that signs must budget for it rather than discover it.
+     * @param firmwareSetsBitfield the firmware composes the `Data` message, as it does whenever it
+     *        encrypts. Pass false when the caller builds and encrypts `Data` itself and sends the
+     *        ciphertext verbatim: no `bitfield` is added, and those two bytes stay available.
+     */
+    public fun maxFrameBytes(
+        aead: Boolean = false,
+        signed: Boolean = false,
+        firmwareSetsBitfield: Boolean = true,
+    ): Int {
+        val budget = LORA_PAYLOAD_BYTES - MESH_HEADER_BYTES -
+            (if (aead) AEAD_OVERHEAD_BYTES else 0) -
+            DATA_OVERHEAD_BYTES -
+            (if (firmwareSetsBitfield) BITFIELD_OVERHEAD_BYTES else 0) -
+            (if (signed) SIGNATURE_OVERHEAD_BYTES else 0)
+        return minOf(budget, MAX_FRAME_BYTES)
+    }
 
     /**
      * The firmware's `Data.payload` ceiling. No frame can be larger on LoRa, so
