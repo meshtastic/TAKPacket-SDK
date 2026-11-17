@@ -22,9 +22,19 @@ The v2 protocol moves all compression logic from device firmware to client appli
 | Offset | Size | Field | Description |
 |--------|------|-------|-------------|
 | 0 | 1 byte | Flags | Dictionary ID and version bits |
-| 1 | 1..236 bytes | Payload | zstd-compressed TAKPacketV2 protobuf body, **with the 4-byte zstd magic number stripped** (or raw protobuf if flags=0xFF) |
+| 1 | 1..224 bytes | Payload | zstd-compressed TAKPacketV2 protobuf body, **with the 4-byte zstd magic number stripped** (or raw protobuf if flags=0xFF) |
 
-Total wire size MUST NOT exceed **237 bytes** (the LoRa maximum payload size).
+Total wire size MUST NOT exceed **225 bytes**.
+
+Three limits are involved, and the tightest one wins:
+
+| Limit | Bytes | Where it comes from |
+|-------|-------|---------------------|
+| Firmware ceiling for `Data.payload` | 233 | `mesh.options` (`DATA_PAYLOAD_LEN`) |
+| Port-78 payload Android will send | 228 | `sendData` checks the whole encoded `Data` message (port number, payload and their protobuf framing) against 233 |
+| What both clients cap a TAK payload at | **225** | Meshtastic-Android and Meshtastic-Apple |
+
+Earlier versions of this document gave 237 bytes. No frame that size can be sent.
 
 ## 3. Flags Byte
 
@@ -209,7 +219,7 @@ The legacy v1 protocol uses port 72 (`ATAK_PLUGIN`) with a different encoding (T
 | Invalid protobuf after decompression | SHOULD handle gracefully | Drop message, log error |
 | Decompressed size > 4096 bytes | MUST reject | Drop message, log warning |
 | Reserved bits set in flags byte | SHOULD ignore | Mask with `& 0x3F`, process normally |
-| Wire payload > 237 bytes | MUST NOT send | Sender error |
+| Wire payload > 225 bytes | MUST NOT send | Sender error |
 
 Implementations MUST NOT crash on any malformed input.
 
@@ -231,8 +241,8 @@ Measured against the 47 bundled test fixtures (real CoT XML captured from ATAK-C
 | Median XML input size | ~700 bytes |
 | Median compressed wire size | **87 bytes** |
 | Median compression ratio | **7.2×** |
-| Maximum compressed size (test fixtures) | 184 bytes (`route_itak_3wp`, 771B XML) |
-| LoRa MTU headroom (worst case) | 53 bytes |
+| Maximum compressed size (test fixtures) | 193 bytes (`drawing_telestration`, 2130B XML) |
+| LoRa MTU headroom (worst case) | 32 bytes |
 | 100% of test fixtures under MTU | Yes |
 
 See [`testdata/compression-report.md`](testdata/compression-report.md) for per-fixture measurements, regenerated on every Kotlin test run.

@@ -353,7 +353,7 @@ public class TakTests
     {
         var pkt = _parser.Parse(LoadXml(fixture));
         var result = _compressor.CompressWithStats(pkt);
-        Assert.True(result.CompressedSize <= 237, $"{fixture}: {result.CompressedSize}B exceeds 237B MTU");
+        Assert.True(result.CompressedSize <= 225, $"{fixture}: {result.CompressedSize}B exceeds 225B MTU");
     }
 
     [Fact]

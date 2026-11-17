@@ -2,7 +2,7 @@
 
 Cross-platform conversion of ATAK **Cursor-on-Target (CoT)** XML into Meshtastic's
 `TAKPacketV2` protobuf, compressed with zstd dictionary compression for transport over LoRa
-mesh networks (237-byte MTU, Meshtastic port 78 / `ATAK_PLUGIN_V2`).
+mesh networks (225-byte MTU, Meshtastic port 78 / `ATAK_PLUGIN_V2`).
 
 This is the Kotlin Multiplatform binding — the **canonical** implementation of the SDK. It
 targets the JVM (Android), the Apple/Linux/Windows native platforms, JS, and Wasm, and
@@ -15,7 +15,7 @@ Sending an event:
 
 ```
 CoT XML ──CotMeshSanitizer──▶ clean XML ──CotXmlParser──▶ TakPacketV2Data
-        ──TakCompressor──▶ [1-byte flags][zstd-compressed protobuf]   (≤ 237 B on the wire)
+        ──TakCompressor──▶ [1-byte flags][zstd-compressed protobuf]   (≤ 225 B on the wire)
 ```
 
 Receiving reverses it: `TakCompressor.decompress` → `TakPacketV2Data` → `CotXmlBuilder.build`

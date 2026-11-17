@@ -31,7 +31,7 @@ flowchart TD
         A -->|"CotMeshSanitizer<br/>→ CotXmlParser"| B
         B -->|TakCompressor| C
     end
-    C -->|"LoRa / Meshtastic<br/>(≤237 B MTU)"| D
+    C -->|"LoRa / Meshtastic<br/>(≤225 B MTU)"| D
     subgraph recv ["Receiving App"]
         D["Wire Payload"]
         E["TAKPacketV2<br/>Protobuf"]
@@ -125,7 +125,7 @@ for the full specification including error handling requirements and annotated e
 
 ## Mesh Hygiene (`CotMeshSanitizer`)
 
-ATAK and its plugins emit CoT XML that carries display-only `<detail>` children (map-rendering hints, geofences, archive flags, creator metadata, stroke styling, …) and is often pretty-printed with an `<?xml?>` prologue. None of that is needed by a receiver, and every byte competes for the 237-byte LoRa MTU. `CotMeshSanitizer` is the SDK's shared, golden-tested pre-processing pass that consumers run on raw CoT XML **before** handing it to `CotXmlParser`:
+ATAK and its plugins emit CoT XML that carries display-only `<detail>` children (map-rendering hints, geofences, archive flags, creator metadata, stroke styling, …) and is often pretty-printed with an `<?xml?>` prologue. None of that is needed by a receiver, and every byte competes for the 225-byte LoRa MTU. `CotMeshSanitizer` is the SDK's shared, golden-tested pre-processing pass that consumers run on raw CoT XML **before** handing it to `CotXmlParser`:
 
 | Method | What it does |
 |--------|--------------|
@@ -315,7 +315,7 @@ if (packet.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route)
 | `equipment_flags` | 0=none, 1=hoist, 2=extraction, 3=ventilator, 4=blood |
 | `terrain_flags` | 0=slope, 1=rough, 2=loose, 3=trees, 4=wires, 5=other |
 
-A bare CASEVAC compresses to ~134B and a full 9-line MEDEVAC to ~160B — well under the 237B LoRa MTU even with all 9 lines populated.
+A bare CASEVAC compresses to ~134B and a full 9-line MEDEVAC to ~160B — well under the 225 B LoRa MTU even with all 9 lines populated.
 
 **Kotlin — build a CASEVAC request:**
 ```kotlin
@@ -442,7 +442,7 @@ val wire = compressor.compressWithRemarksFallback(packet, maxWireBytes = 225)
 
 ## Real-World Compression Examples
 
-End-to-end walkthroughs showing actual CoT XML from ATAK/iTAK being compressed for LoRa mesh transmission. Each example shows the raw XML, what gets stripped before compression, the resulting proto structure, and the final compressed wire payload. The LoRa MTU is **237 bytes**.
+End-to-end walkthroughs showing actual CoT XML from ATAK/iTAK being compressed for LoRa mesh transmission. Each example shows the raw XML, what gets stripped before compression, the resulting proto structure, and the final compressed wire payload. The LoRa MTU is **225 bytes**.
 
 > **Note:** The per-example compressed byte sizes in this section are **illustrative** — they predate the v0.4.0 wire changes (512KB proto-trained dictionary, magic-number strip, skip-compress) and are kept here only to show the *shape* of the reduction. For exact, regenerated per-fixture sizes see [`testdata/compression-report.md`](testdata/compression-report.md).
 
@@ -720,7 +720,7 @@ route {
 | Stripped | ~380 B | -57% |
 | Compressed | **~80 B** | **91% total** |
 
-> **Note:** Routes are the tightest fit under the 237B LoRa MTU. The stripper removes waypoint `uid` attributes (~40 bytes each in proto wire format), `routetype`, `order`, `color`, and empty `callsign` attributes. Without UID stripping, a 5-waypoint route compresses to ~271 bytes (over the 237B limit); with it, even routes with 5-6 waypoints fit comfortably. The builder generates deterministic UIDs (`{eventUid}-{index}`) on reconstruction so ATAK can create internal waypoint markers.
+> **Note:** Routes are the tightest fit under the 225 B LoRa MTU. The stripper removes waypoint `uid` attributes (~40 bytes each in proto wire format), `routetype`, `order`, `color`, and empty `callsign` attributes. Without UID stripping, a 5-waypoint route compresses to ~271 bytes (over the 225 B limit); with it, even routes with 5-6 waypoints fit comfortably. The builder generates deterministic UIDs (`{eventUid}-{index}`) on reconstruction so ATAK can create internal waypoint markers.
 
 **Route reconstruction details:** The `CotXmlBuilder` emits route elements in the order ATAK expects:
 1. `<link>` waypoints first — each with `uid`, `type`, `callsign`, 3-component `point="lat,lon,hae"`, and `relation="c"`

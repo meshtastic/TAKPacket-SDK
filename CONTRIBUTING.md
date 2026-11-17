@@ -8,7 +8,7 @@ companion and does not duplicate it wholesale.
 ## What this repo is
 
 TAKPacket-SDK converts ATAK Cursor-on-Target (CoT) XML into Meshtastic's `TAKPacketV2` protobuf
-and compresses it with zstd dictionary compression for LoRa mesh transport (237-byte MTU,
+and compresses it with zstd dictionary compression for LoRa mesh transport (225-byte MTU,
 port 78). **Five parallel implementations** — Kotlin (canonical), Swift, Python, TypeScript, C# —
 produce cross-decodable wire payloads, validated by 47 shared test fixtures under
 [`testdata/`](testdata/).
