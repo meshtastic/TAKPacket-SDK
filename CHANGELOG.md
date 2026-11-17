@@ -38,11 +38,17 @@ One version covers all five bindings, so a release is a single tag and a single 
   fragmentIfOversize, airtime)` returns the frames to send for one CoT, as a
   `MeshEncodeResult` (`SINGLE_FRAME`, `FRAGMENTED`, `TOO_LARGE` or
   `INSUFFICIENT_AIRTIME`). Fragmenting is opt-in per CoT. With
-  `fragmentIfOversize = false` (the default) the result matches
-  `compressWithRemarksFallbackDetailed`, except that a packet whose protobuf is
-  over 4,096 B is now reported as too large rather than sent to receivers that
-  would reject it. With `true`, an oversized CoT is fragmented, and the
-  remarks-then-truncate fallbacks run only when the fragment cap is exceeded.
+  `fragmentIfOversize = false` (the default) it sends one frame or nothing, and
+  a packet that doesn't fit goes through the same fallbacks as
+  `compressWithRemarksFallbackDetailed`, plus two more: a protobuf over 4,096 B
+  counts as not fitting even when it compresses small enough, since receivers
+  would reject it, and a packet built with more shape vertices or route links
+  than `CotXmlParser.Limits.SINGLE_FRAME` allows is cut down to them (the XML
+  overload parses with those limits, so this only affects packets built
+  directly). Only what still doesn't fit after dropping the remarks and
+  truncating is `TOO_LARGE`. With `true`, an oversized CoT is fragmented, and
+  the remarks-then-truncate fallbacks run only when the fragment cap is
+  exceeded.
   `AirtimeBudget` blocks a fragment burst that wouldn't fit the hour's
   duty-cycle budget, and can be built from the radio's `air_util_tx` and queue
   depth.

@@ -247,16 +247,19 @@ public class TakMeshReceiver
             val flags = if (payload.isEmpty()) -1 else payload[0].toInt() and BYTE_MASK
             return when (flags) {
                 TakFragment.MARKER -> {
+                    // accept() evicts expired partials itself.
                     reassembler.accept(payload, nowMillis)?.let {
                         compressor.decompress(it, TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE)
                     }
                 }
 
                 TakFragment.REPAIR_REQUEST_MARKER -> {
+                    reassembler.evictExpired(nowMillis)
                     null
                 }
 
                 else -> {
+                    reassembler.evictExpired(nowMillis)
                     compressor.decompress(payload)
                 }
             }
@@ -264,7 +267,8 @@ public class TakMeshReceiver
 
         /**
          * Drop partial messages whose deadlines have passed. [onPayload] already does this on every
-         * frame, so calling it is optional: it only frees memory sooner on a quiet channel. This class
+         * payload, fragment or not, and before decoding, so a payload that fails to decode still
+         * counts. Calling it is optional: it only frees memory sooner on a quiet channel. This class
          * is not thread-safe, so call it on the same thread as [onPayload] (or under the same lock),
          * never from an independent timer thread.
          */
