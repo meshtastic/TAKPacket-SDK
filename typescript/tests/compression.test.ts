@@ -3,7 +3,7 @@ import { TakCompressor } from "../src/TakCompressor.js";
 import { parseCotXml } from "../src/CotXmlParser.js";
 import { FIXTURES, loadFixtureXml } from "./helpers.js";
 
-const LORA_MTU = 237;
+const LORA_MTU = 225;
 const compressor = new TakCompressor();
 
 // Minimal synthetic-packet seed for the fallback tests. Using a real fixture

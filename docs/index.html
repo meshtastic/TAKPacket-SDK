@@ -51,10 +51,10 @@
     <h1>TAKPacket-SDK</h1>
     <p class="tagline">Convert ATAK Cursor-on-Target (CoT) XML to Meshtastic's
       <code>TAKPacketV2</code> protobuf and compress it with zstd dictionary compression for LoRa
-      mesh transport (237-byte MTU, port 78). Five byte-interoperable language bindings.</p>
+      mesh transport (225-byte MTU, port 78). Five byte-interoperable language bindings.</p>
     <div class="pipeline">CoT XML &nbsp;→&nbsp; <b>CotMeshSanitizer</b> &nbsp;→&nbsp;
       <b>CotXmlParser</b> &nbsp;→&nbsp; TAKPacketV2 &nbsp;→&nbsp; <b>TakCompressor</b>
-      &nbsp;→&nbsp; [flags byte][zstd body] &nbsp;≤ 237 B</div>
+      &nbsp;→&nbsp; [flags byte][zstd body] &nbsp;≤ 225 B</div>
   </header>
 
   <h2>Consume the SDK</h2>

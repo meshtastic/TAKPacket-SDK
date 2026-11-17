@@ -11,7 +11,7 @@ import Testing
 @Suite("Compression")
 struct CompressionSuite {
 
-    static let LORA_MTU = 237
+    static let LORA_MTU = 225
 
     let parser = CotXmlParser()
     let compressor = TakCompressor()

@@ -73,7 +73,7 @@ export interface RemarksFallbackResult {
  * number has been stripped (re-prepended on decode). When compression would not
  * shrink the packet, {@link compress} instead emits the flags byte `0xFF`
  * followed by the raw protobuf (skip-compress), so tiny payloads never expand.
- * The total wire payload must stay within the 237-byte LoRa MTU; use
+ * The total wire payload must stay within the 225-byte LoRa MTU; use
  * {@link compressWithRemarksFallback} to enforce that with graceful remarks
  * stripping.
  *
@@ -102,7 +102,7 @@ export interface RemarksFallbackResult {
  *
  * // Encode CoT XML for the mesh:
  * const packet = parseCotXml(cotXmlString);
- * const wire = await codec.compress(packet); // Buffer, ≤ 237 bytes
+ * const wire = await codec.compress(packet); // Buffer, ≤ 225 bytes
  *
  * // Decode a received frame back to CoT XML:
  * const decoded = await codec.decompress(wire);
@@ -173,7 +173,7 @@ export class TakCompressor {
    * payload never expands.
    *
    * @remarks
-   * The caller is responsible for keeping the result within the 237-byte LoRa
+   * The caller is responsible for keeping the result within the 225-byte LoRa
    * MTU; this method does not enforce it. Use
    * {@link compressWithRemarksFallback} when you need MTU enforcement.
    * Asynchronous because the protobuf schema is loaded lazily.

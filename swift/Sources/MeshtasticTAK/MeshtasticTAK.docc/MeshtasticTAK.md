@@ -6,7 +6,7 @@ it with zstd dictionary compression for LoRa mesh transport.
 ## Overview
 
 `MeshtasticTAK` is the Swift binding of the TAKPacket-SDK. It turns a CoT XML event into a
-compact wire payload that fits the 237-byte LoRa MTU (Meshtastic port 78), and reverses the
+compact wire payload that fits the 225-byte LoRa MTU (Meshtastic port 78), and reverses the
 process on receive. Its payloads are byte-interoperable with the Kotlin, Python, TypeScript,
 and C# bindings.
 
