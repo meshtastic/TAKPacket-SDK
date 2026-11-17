@@ -82,8 +82,12 @@ At K ≤ 32, a true fountain code and an MDS code converge. We get the fountain 
   - **228 B** is what is left for a port-78 payload. Android's `sendData` checks the whole encoded `Data` message (port number, payload and their protobuf framing) against 233.
   - **225 B** is what both clients actually cap a TAK payload at today. The SDK's own `compressWithRemarksFallback` example already uses 225.
 
-  So `maxFrameBytes` defaults to **225 B**, unless the clients' check changes first. Fragments carry 218 B of data each. The SDK's 237 B constant and `WIRE_FORMAT.md` describe a frame that cannot be sent. They move to the real figures in a separate change, ahead of this design (see §12).
-- **Broadcast only.** CoT traffic is always sent as a channel broadcast, never as a direct message, so every frame, fragment or repair request in this design is a broadcast, within the 225 B budget above. `maxFrameBytes` stays a parameter anyway, because the clients' cap may change, and PKI-encrypted DMs would need 12 B less (an 8-byte authentication tag plus a 4-byte nonce). Receivers learn the slice size from the fragments, so they never need to know the sender's budget.
+  So `maxFrameBytes` defaults to **225 B**, unless the clients' check changes first. The SDK's 237 B constant and `WIRE_FORMAT.md` describe a frame that cannot be sent. They move to the real figures in a separate change, ahead of this design (see §12).
+
+  225 is a client convention, not a channel limit, and a channel can carry less. The firmware checks the whole encoded `Data` message against what the radio can hold, so an authenticated channel spends 12 more bytes on its tag and admits **220**, and signing costs another 66 on top of whatever else applies. Signing is the one that cannot be found by trial: past the limit the firmware sends the packet **unsigned**, and a receiver in Strict signature mode drops it. So the budget is derived from the channel rather than assumed, through `TakFragment.maxFrameBytes(aead, signed, firmwareSetsBitfield)`.
+
+  A fragment does not carry a fixed 218 B either. The blob is spread evenly over its frames, so a fragment carries `ceil(blob / K)` bytes, at most `maxFrame - 7`.
+- **Broadcast only.** CoT traffic is always sent as a channel broadcast, never as a direct message, so every frame, fragment or repair request in this design is a broadcast, That does not by itself mean the full 225 B is available: an authenticated (AES-CCM) broadcast channel spends 12 B on its tag exactly as a PKI-encrypted direct message would, and such channels are in use today. `maxFrameBytes` is therefore a parameter per channel, not a constant. Receivers learn the slice size from the fragments, so they never need to know the sender's budget.
 - **Resilience invariant:** no cross-packet compression state, one-shot zstd only, static dictionary. Still true here: the whole message is compressed once, and the reassembler only buffers bytes (§7).
 - **Firmware does not decode port 78.** `AtakPluginModule` is a passthrough for `ATAK_PLUGIN_V2`: firmware decrypts the packet and hands the bytes to the client unchanged, whatever the flags byte (`0xFF`, a dictionary ID, or `0xFE`). The nanopb pools in `atak.options` (`Route.links max_count:16`, 32 vertices, `GeoChat.message max_size:200`, `raw_detail max_size:220`) only bound the PLI that firmware builds itself in the TAK_TRACKER role. They place no limit on what phones send. See §8.
 - **Airtime.** One full frame is about 2.2 s on LongFast, 0.64 s on MediumFast and 9.3 s on LongSlow, per hop, before rebroadcasts. Firmware also throttles on channel utilization. Multi-frame messages must be rare, user-initiated events, never periodic traffic.
@@ -113,7 +117,7 @@ At K ≤ 32, a true fountain code and an MDS code converge. We get the fountain 
 
 - **Why 32 bits.** A receiver remembers up to 256 recently completed IDs (§6.2), and a new message whose ID matches one of them is dropped as a late fragment. With a 16-bit ID that happens to about 1 message in 256 (0.4%), which is too often. With 32 bits it is about 1 in 17 million, and a clash with one of the (at most 32) partials in flight is rarer still.
 - **If a collision happens anyway,** the CRC rejects the mixed result and that message is lost. Nothing wrong is ever delivered, and other messages are unaffected.
-- **Cost.** The two extra bytes leave 218 B of data per fragment instead of 220, about 1% more airtime.
+- **Cost.** The two extra bytes leave at most 218 B of data per fragment instead of 220, about 1% more airtime.
 
 A 16-bit ID was used while reassembly was keyed by `(sender, msg_id)`. A 24-bit ID was considered; at about 1 in 65,000 per message it would still collide over months on a busy mesh.
 
@@ -364,6 +368,8 @@ public class TakReassembler(
 ) {
     /** Returns the completed inner wire payload, or null while waiting / on a dropped frame. */
     public fun accept(frame: ByteArray, nowMillis: Long): ByteArray?
+    // Optional: accept() already evicts on every frame. Not thread-safe, so a
+    // caller that uses it must run it on the same thread as accept().
     public fun evictExpired(nowMillis: Long)
 }
 

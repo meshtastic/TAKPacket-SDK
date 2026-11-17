@@ -271,6 +271,15 @@ public final class org/meshtastic/tak/LoggerKt {
 	public static final fun trace (Lkotlin/jvm/functions/Function0;)V
 }
 
+public abstract interface class org/meshtastic/tak/MessageIdSource {
+	public static final field Companion Lorg/meshtastic/tak/MessageIdSource$Companion;
+	public abstract fun next ()I
+}
+
+public final class org/meshtastic/tak/MessageIdSource$Companion {
+	public final fun random ()Lorg/meshtastic/tak/MessageIdSource;
+}
+
 public final class org/meshtastic/tak/NoOpLogger : org/meshtastic/tak/Logger {
 	public static final field INSTANCE Lorg/meshtastic/tak/NoOpLogger;
 	public fun log (Ljava/lang/String;)V
@@ -296,6 +305,7 @@ public final class org/meshtastic/tak/TakCompressor {
 	public final fun compressWithRemarksFallbackDetailed (Lorg/meshtastic/tak/TakPacketV2Data;I)Lorg/meshtastic/tak/TakCompressor$RemarksFallbackResult;
 	public final fun compressWithStats (Lorg/meshtastic/tak/TakPacketV2Data;)Lorg/meshtastic/tak/TakCompressor$CompressionResult;
 	public final fun decompress ([B)Lorg/meshtastic/tak/TakPacketV2Data;
+	public final fun decompress ([BI)Lorg/meshtastic/tak/TakPacketV2Data;
 }
 
 public final class org/meshtastic/tak/TakCompressor$Companion {
@@ -331,6 +341,44 @@ public final class org/meshtastic/tak/TakCompressor$RemarksFallbackResult {
 	public final fun getWirePayload ()[B
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakFragment {
+	public static final field AEAD_OVERHEAD_BYTES I
+	public static final field BITFIELD_OVERHEAD_BYTES I
+	public static final field CODE_CAUCHY I
+	public static final field DATA_OVERHEAD_BYTES I
+	public static final field DEFAULT_MAX_FRAME_BYTES I
+	public static final field HEADER_SIZE I
+	public static final field INSTANCE Lorg/meshtastic/tak/TakFragment;
+	public static final field LORA_PAYLOAD_BYTES I
+	public static final field MARKER I
+	public static final field MAX_BURST I
+	public static final field MAX_FRAME_BYTES I
+	public static final field MAX_REASSEMBLED_DECOMPRESSED_SIZE I
+	public static final field MAX_SOURCE_FRAGMENTS I
+	public static final field MESH_HEADER_BYTES I
+	public static final field REPAIR_REQUEST_MARKER I
+	public static final field SIGNATURE_OVERHEAD_BYTES I
+	public final fun isFragment ([B)Z
+	public final fun maxFrameBytes (ZZZ)I
+	public static synthetic fun maxFrameBytes$default (Lorg/meshtastic/tak/TakFragment;ZZZILjava/lang/Object;)I
+}
+
+public final class org/meshtastic/tak/TakFragmenter {
+	public static final field Companion Lorg/meshtastic/tak/TakFragmenter$Companion;
+	public fun <init> ()V
+	public fun <init> (IILkotlin/jvm/functions/Function1;Lorg/meshtastic/tak/MessageIdSource;)V
+	public synthetic fun <init> (IILkotlin/jvm/functions/Function1;Lorg/meshtastic/tak/MessageIdSource;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getMaxFrameBytes ()I
+	public final fun getMaxSourceFragments ()I
+	public final fun getSliceSize ()I
+	public final fun split ([BI)Ljava/util/List;
+	public final fun split ([BII)Ljava/util/List;
+}
+
+public final class org/meshtastic/tak/TakFragmenter$Companion {
+	public final fun defaultRepairCount (I)I
 }
 
 public final class org/meshtastic/tak/TakPacketSdk {
@@ -899,6 +947,19 @@ public final class org/meshtastic/tak/TakPacketV2Serializer {
 	public static final field INSTANCE Lorg/meshtastic/tak/TakPacketV2Serializer;
 	public final fun deserialize ([B)Lorg/meshtastic/tak/TakPacketV2Data;
 	public final fun serialize (Lorg/meshtastic/tak/TakPacketV2Data;)[B
+}
+
+public final class org/meshtastic/tak/TakReassembler {
+	public fun <init> (JIIJI)V
+	public synthetic fun <init> (JIIJIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun accept ([BJ)[B
+	public final fun evictExpired (J)V
+	public final fun getFrameAirtimeMillis ()J
+	public final fun getHopFactor ()I
+	public final fun getMaxPending ()I
+	public final fun getPendingCount ()I
+	public final fun getSlackMillis ()J
+	public final fun getToleratedConsecutiveLosses ()I
 }
 
 public final class org/meshtastic/tak/ZstdException : java/lang/RuntimeException {

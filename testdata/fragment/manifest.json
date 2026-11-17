@@ -1,0 +1,11 @@
+{
+  "maxFrameBytes": 225,
+  "cases": [
+    {"name": "freehand_200v", "msgId": 16909060, "protobufSize": 1177, "innerSize": 1161, "k": 6, "repair": 2, "frames": 8},
+    {"name": "marker_remarks_500w", "msgId": 33752069, "protobufSize": 3577, "innerSize": 907, "k": 5, "repair": 2, "frames": 7},
+    {"name": "frame_plus_one", "msgId": 50595078, "protobufSize": 400, "innerSize": 226, "k": 2, "repair": 1, "frames": 3},
+    {"name": "forced_k1", "msgId": 67438087, "protobufSize": 4097, "innerSize": 150, "k": 1, "repair": 1, "frames": 2},
+    {"name": "no_repair_k3", "msgId": 84281096, "protobufSize": 1200, "innerSize": 600, "k": 3, "repair": 0, "frames": 3},
+    {"name": "max_source_32", "msgId": 4294967295, "protobufSize": 9000, "innerSize": 6971, "k": 32, "repair": 8, "frames": 40}
+  ]
+}
