@@ -2,7 +2,7 @@
 
 This package converts ATAK Cursor-on-Target (CoT) XML into Meshtastic's
 ``TAKPacketV2`` protobuf and compresses it with zstd dictionary compression for
-transport over a LoRa mesh (237-byte MTU, port 78, ``ATAK_PLUGIN_V2``). It is
+transport over a LoRa mesh (225-byte MTU, port 78, ``ATAK_PLUGIN_V2``). It is
 the Python binding of TAKPacket-SDK; five parallel language bindings (Kotlin,
 Swift, Python, TypeScript, C#) produce cross-decodable wire payloads.
 
@@ -20,7 +20,7 @@ display-only detail and fit the MTU without losing routable content.
 
 Wire format
 -----------
-- MTU 237 bytes; LoRa port 78.
+- MTU 225 bytes; LoRa port 78.
 - Wire payload is ``[1 byte flags][N bytes zstd body]``.
 - Flags byte: bits 0-5 = dictionary ID, bits 6-7 reserved (zeroed on send,
   ignored on receive). Dict ID 0 = non-aircraft dictionary, 1 = aircraft,

@@ -25,7 +25,7 @@ import java.io.File
  */
 class CompressionTest {
     companion object {
-        const val LORA_MTU = 237
+        const val LORA_MTU = 225
     }
 
     private val parser = CotXmlParser()

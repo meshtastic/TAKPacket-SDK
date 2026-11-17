@@ -2,7 +2,7 @@
 
 The TypeScript binding of [TAKPacket-SDK](https://github.com/meshtastic/TAKPacket-SDK): convert
 ATAK Cursor-on-Target (CoT) XML to Meshtastic's `TAKPacketV2` protobuf and compress it with zstd
-dictionary compression for LoRa mesh transport (237-byte MTU, port 78). Wire payloads are
+dictionary compression for LoRa mesh transport (225-byte MTU, port 78). Wire payloads are
 byte-interoperable with the Kotlin, Swift, Python, and C# bindings.
 
 Ships ESM with bundled type declarations. Compression uses the native
@@ -34,7 +34,7 @@ let clean = normalizeCotXml(cotXmlString);
 clean = stripNonEssentialForMesh(clean);
 
 const packet = parseCotXml(clean);
-const wirePayload = await compressor.compress(packet);   // Uint8Array: [flags][zstd body], ≤ 237 B
+const wirePayload = await compressor.compress(packet);   // Uint8Array: [flags][zstd body], ≤ 225 B
 
 // Receive side
 const received = await compressor.decompress(wirePayload);

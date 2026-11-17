@@ -2,7 +2,7 @@
 
 The Python binding of [TAKPacket-SDK](https://github.com/meshtastic/TAKPacket-SDK): convert ATAK
 Cursor-on-Target (CoT) XML to Meshtastic's `TAKPacketV2` protobuf and compress it with zstd
-dictionary compression for LoRa mesh transport (237-byte MTU, port 78). Wire payloads are
+dictionary compression for LoRa mesh transport (225-byte MTU, port 78). Wire payloads are
 byte-interoperable with the Kotlin, Swift, TypeScript, and C# bindings.
 
 Requires **Python 3.9+**. Depends on `protobuf` and `zstandard`.
@@ -30,7 +30,7 @@ clean = CotMeshSanitizer.normalize_cot_xml(cot_xml_string)
 clean = CotMeshSanitizer.strip_non_essential_for_mesh(clean)
 
 packet = parser.parse(clean)
-wire_payload = compressor.compress(packet)   # bytes: [flags][zstd body], <= 237 B
+wire_payload = compressor.compress(packet)   # bytes: [flags][zstd body], <= 225 B
 
 # Receive side
 received = compressor.decompress(wire_payload)
