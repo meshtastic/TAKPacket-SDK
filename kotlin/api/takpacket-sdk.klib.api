@@ -1317,12 +1317,20 @@ final object org.meshtastic.tak/NoOpLogger : org.meshtastic.tak/Logger { // org.
 }
 
 final object org.meshtastic.tak/TakFragment { // org.meshtastic.tak/TakFragment|null[0]
+    final const val AEAD_OVERHEAD_BYTES // org.meshtastic.tak/TakFragment.AEAD_OVERHEAD_BYTES|{}AEAD_OVERHEAD_BYTES[0]
+        final fun <get-AEAD_OVERHEAD_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.AEAD_OVERHEAD_BYTES.<get-AEAD_OVERHEAD_BYTES>|<get-AEAD_OVERHEAD_BYTES>(){}[0]
+    final const val BITFIELD_OVERHEAD_BYTES // org.meshtastic.tak/TakFragment.BITFIELD_OVERHEAD_BYTES|{}BITFIELD_OVERHEAD_BYTES[0]
+        final fun <get-BITFIELD_OVERHEAD_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.BITFIELD_OVERHEAD_BYTES.<get-BITFIELD_OVERHEAD_BYTES>|<get-BITFIELD_OVERHEAD_BYTES>(){}[0]
     final const val CODE_CAUCHY // org.meshtastic.tak/TakFragment.CODE_CAUCHY|{}CODE_CAUCHY[0]
         final fun <get-CODE_CAUCHY>(): kotlin/Int // org.meshtastic.tak/TakFragment.CODE_CAUCHY.<get-CODE_CAUCHY>|<get-CODE_CAUCHY>(){}[0]
+    final const val DATA_OVERHEAD_BYTES // org.meshtastic.tak/TakFragment.DATA_OVERHEAD_BYTES|{}DATA_OVERHEAD_BYTES[0]
+        final fun <get-DATA_OVERHEAD_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.DATA_OVERHEAD_BYTES.<get-DATA_OVERHEAD_BYTES>|<get-DATA_OVERHEAD_BYTES>(){}[0]
     final const val DEFAULT_MAX_FRAME_BYTES // org.meshtastic.tak/TakFragment.DEFAULT_MAX_FRAME_BYTES|{}DEFAULT_MAX_FRAME_BYTES[0]
         final fun <get-DEFAULT_MAX_FRAME_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.DEFAULT_MAX_FRAME_BYTES.<get-DEFAULT_MAX_FRAME_BYTES>|<get-DEFAULT_MAX_FRAME_BYTES>(){}[0]
     final const val HEADER_SIZE // org.meshtastic.tak/TakFragment.HEADER_SIZE|{}HEADER_SIZE[0]
         final fun <get-HEADER_SIZE>(): kotlin/Int // org.meshtastic.tak/TakFragment.HEADER_SIZE.<get-HEADER_SIZE>|<get-HEADER_SIZE>(){}[0]
+    final const val LORA_PAYLOAD_BYTES // org.meshtastic.tak/TakFragment.LORA_PAYLOAD_BYTES|{}LORA_PAYLOAD_BYTES[0]
+        final fun <get-LORA_PAYLOAD_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.LORA_PAYLOAD_BYTES.<get-LORA_PAYLOAD_BYTES>|<get-LORA_PAYLOAD_BYTES>(){}[0]
     final const val MARKER // org.meshtastic.tak/TakFragment.MARKER|{}MARKER[0]
         final fun <get-MARKER>(): kotlin/Int // org.meshtastic.tak/TakFragment.MARKER.<get-MARKER>|<get-MARKER>(){}[0]
     final const val MAX_BURST // org.meshtastic.tak/TakFragment.MAX_BURST|{}MAX_BURST[0]
@@ -1333,10 +1341,15 @@ final object org.meshtastic.tak/TakFragment { // org.meshtastic.tak/TakFragment|
         final fun <get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE.<get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>|<get-MAX_REASSEMBLED_DECOMPRESSED_SIZE>(){}[0]
     final const val MAX_SOURCE_FRAGMENTS // org.meshtastic.tak/TakFragment.MAX_SOURCE_FRAGMENTS|{}MAX_SOURCE_FRAGMENTS[0]
         final fun <get-MAX_SOURCE_FRAGMENTS>(): kotlin/Int // org.meshtastic.tak/TakFragment.MAX_SOURCE_FRAGMENTS.<get-MAX_SOURCE_FRAGMENTS>|<get-MAX_SOURCE_FRAGMENTS>(){}[0]
+    final const val MESH_HEADER_BYTES // org.meshtastic.tak/TakFragment.MESH_HEADER_BYTES|{}MESH_HEADER_BYTES[0]
+        final fun <get-MESH_HEADER_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.MESH_HEADER_BYTES.<get-MESH_HEADER_BYTES>|<get-MESH_HEADER_BYTES>(){}[0]
     final const val REPAIR_REQUEST_MARKER // org.meshtastic.tak/TakFragment.REPAIR_REQUEST_MARKER|{}REPAIR_REQUEST_MARKER[0]
         final fun <get-REPAIR_REQUEST_MARKER>(): kotlin/Int // org.meshtastic.tak/TakFragment.REPAIR_REQUEST_MARKER.<get-REPAIR_REQUEST_MARKER>|<get-REPAIR_REQUEST_MARKER>(){}[0]
+    final const val SIGNATURE_OVERHEAD_BYTES // org.meshtastic.tak/TakFragment.SIGNATURE_OVERHEAD_BYTES|{}SIGNATURE_OVERHEAD_BYTES[0]
+        final fun <get-SIGNATURE_OVERHEAD_BYTES>(): kotlin/Int // org.meshtastic.tak/TakFragment.SIGNATURE_OVERHEAD_BYTES.<get-SIGNATURE_OVERHEAD_BYTES>|<get-SIGNATURE_OVERHEAD_BYTES>(){}[0]
 
     final fun isFragment(kotlin/ByteArray): kotlin/Boolean // org.meshtastic.tak/TakFragment.isFragment|isFragment(kotlin.ByteArray){}[0]
+    final fun maxFrameBytes(kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Boolean = ...): kotlin/Int // org.meshtastic.tak/TakFragment.maxFrameBytes|maxFrameBytes(kotlin.Boolean;kotlin.Boolean;kotlin.Boolean){}[0]
 }
 
 final object org.meshtastic.tak/TakPacketSdk { // org.meshtastic.tak/TakPacketSdk|null[0]
