@@ -221,8 +221,8 @@ public class TakFragmenter(
         protobufSize: Int,
         msgId: Int,
     ): List<ByteArray>? {
-        val s = sliceSize
         val blob = buildBlob(inner)
+        val s = balancedSliceSize(blob.size, sliceSize)
         val k = (blob.size + s - 1) / s
         if (k > maxSourceFragments || protobufSize > TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE) return null
         val r = repairPolicy(k).coerceIn(0, TakFragment.MAX_BURST - k)
@@ -256,6 +256,28 @@ public class TakFragmenter(
 
         /** Default repair policy: max(1, ceil(k / 4)). */
         public fun defaultRepairCount(k: Int): Int = maxOf(1, (k + REPAIR_DIVISOR - 1) / REPAIR_DIVISOR)
+
+        /**
+         * Slice length that spreads [blobSize] evenly over the fewest frames of at most [maxSlice]
+         * bytes, rather than filling frames and leaving a short tail.
+         *
+         * The frame count is identical either way, so this costs nothing and gains twice: a shorter
+         * frame is less airtime, and it is less likely to be lost, because the chance of a collision
+         * or a fade landing on a frame grows with its time on air. Most of the saving is in the
+         * repair symbols, which are always a full slice long however little the last source slice
+         * carries, so packing left them at full length even when the real data per slice was half
+         * that.
+         *
+         * Dividing by the frame count can only shrink the slice, never grow it past [maxSlice], so
+         * a balanced burst still fits a channel that the packed one fit.
+         */
+        internal fun balancedSliceSize(
+            blobSize: Int,
+            maxSlice: Int,
+        ): Int {
+            val frames = (blobSize + maxSlice - 1) / maxSlice
+            return (blobSize + frames - 1) / frames
+        }
 
         /** `inner || CRC32(inner) LE || 0x80` (design doc §5.2). */
         internal fun buildBlob(inner: ByteArray): ByteArray {
