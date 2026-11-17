@@ -88,9 +88,24 @@ starts with a 7-byte header:
 | `K-1` | low 5 bits | Number of source fragments K, minus 1 (K = 1..32) |
 | `esi` | 1 B | Encoding symbol ID: `0..K-1` are source fragments, `K..255` repair fragments |
 
-The fragments carry `wire payload || CRC32 || 0x80`, cut into equal slices, plus repair symbols so
-that any K distinct fragments rebuild the message. A rebuilt payload is decoded as in §9 with a
-decompression cap of 32,768 bytes instead of 4,096. `0xFD` is reserved for repair requests and is
+The fragments carry `wire payload || CRC32 || 0x80`, cut into slices, plus repair symbols so that
+any K distinct fragments rebuild the message. A rebuilt payload is decoded as in §9 with a
+decompression cap of 32,768 bytes instead of 4,096.
+
+The slice length is not carried in the header and is not implied by the frame size. A sender
+chooses it, and spreads the message evenly over its frames rather than filling them, so a slice is
+usually well short of what the frame could hold. A receiver MUST therefore learn the length from
+the frames instead of assuming one:
+
+- source fragments `esi = 0..K-2` and every repair fragment are exactly one slice long, so the
+  first of those to arrive reveals the length;
+- the last source fragment, `esi = K-1`, is `1..slice` bytes and reveals nothing;
+- repair symbols are computed over source slices zero-padded to the slice length, so a decoder
+  must pad the last slice before using it to rebuild a missing fragment, and trim the rebuilt
+  message at the `0x80` delimiter afterwards.
+
+A receiver that hardcodes a slice length, or derives one from its own frame budget, will reject
+valid bursts from a sender configured differently. `0xFD` is reserved for repair requests and is
 not sent by this version; receivers ignore it. The full specification is
 `docs/design/large-payload-chunking.md` §5-§6.
 
