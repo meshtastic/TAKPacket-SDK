@@ -364,4 +364,27 @@ class MeshCommonTest {
         rx2.evictExpired(Long.MAX_VALUE / 2)
         assertEquals(0, rx2.reassembler.pendingCount)
     }
+
+    @Test
+    fun everyPayloadEvictsExpiredPartials() {
+        val frames = compressor.compressForMesh(chat(noisyText(1500)), TakFragmenter(), fragmentIfOversize = true).frames!!
+        val packet = parser.parse(pliXml)
+        val later = Long.MAX_VALUE / 2
+        val rx = receiver()
+
+        // A single frame before the deadline leaves the partial; one after it evicts it.
+        assertNull(rx.onPayload(frames[0], 0L))
+        assertEquals(packet, rx.onPayload(compressor.compress(packet), 0L))
+        assertEquals(1, rx.reassembler.pendingCount)
+        assertEquals(packet, rx.onPayload(compressor.compress(packet), later))
+        assertEquals(0, rx.reassembler.pendingCount)
+
+        // So does a repair request, and a payload that fails to decode.
+        assertNull(rx.onPayload(frames[0], 0L))
+        assertNull(rx.onPayload(byteArrayOf(0xFD.toByte(), 1, 2, 3, 4, 5), later))
+        assertEquals(0, rx.reassembler.pendingCount)
+        assertNull(rx.onPayload(frames[0], 0L))
+        assertFailsWith<IllegalArgumentException> { rx.onPayload(byteArrayOf(0x3E, 0, 0), later) }
+        assertEquals(0, rx.reassembler.pendingCount)
+    }
 }
