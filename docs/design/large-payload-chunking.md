@@ -124,7 +124,7 @@ blob  = inner || CRC32(inner) || 0x80        (CRC-32/IEEE, little-endian)
 inner = today's wire payload: [flags 0x00|0x01|0xFF][zstd body | raw protobuf]
 ```
 
-- **Slicing.** The blob is cut into K slices of `S = maxFrame − 7` bytes (218 at 225). Source fragment `esi = i` carries slice *i*. The last slice is sent **unpadded**, so no airtime is wasted on padding.
+- **Slicing.** K is the fewest frames of at most `maxFrame − 7` bytes that hold the blob (218 at 225), and the blob is then spread evenly over them: `S = ceil(blob / K)`. Dividing rather than filling cannot push S past the budget, so every frame goes out short of what the channel allows, which is both less airtime and less exposure to a collision or a fade. Source fragment `esi = i` carries slice *i*. The last slice is sent **unpadded**, so no airtime is wasted on padding; the gain from spreading is in the repair fragments, which are always a full S however little the last source slice carries.
 - **Receiving.** The receiver zero-pads every source slice to S. S is learned from any repair fragment or any non-last source fragment. When K=1 with no repair, the single fragment's own length is used.
 - **Finding the end.** The trailing `0x80` delimits the blob (ISO/IEC 7816-4 style). After decoding, strip trailing zero bytes, then the `0x80`. This costs 1 byte per message, and it lets a lost *last* slice be rebuilt from repair data without any length field.
 - **CRC.** The CRC is per *message* (4 B once), not per fragment; LoRa already has a PHY CRC per frame. This one catches what chunking introduces: two messages that drew the same `msg_id`, or fragments from two messages spliced together. The zstd frame checksum stays off, so wire bytes do not depend on each binding's zstd options.
