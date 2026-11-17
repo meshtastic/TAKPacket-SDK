@@ -12,7 +12,6 @@ import kotlin.test.assertTrue
  * firmware, which is invisible from the receiving end and easy to mistake for a radio problem.
  */
 class FrameBudgetTest {
-
     @Test
     fun plain_channel_allows_232() {
         // 255 radio - 16 header - 5 Data framing - 2 bitfield

@@ -107,11 +107,12 @@ public object TakFragment {
         signed: Boolean = false,
         firmwareSetsBitfield: Boolean = true,
     ): Int {
-        val budget = LORA_PAYLOAD_BYTES - MESH_HEADER_BYTES -
-            (if (aead) AEAD_OVERHEAD_BYTES else 0) -
-            DATA_OVERHEAD_BYTES -
-            (if (firmwareSetsBitfield) BITFIELD_OVERHEAD_BYTES else 0) -
-            (if (signed) SIGNATURE_OVERHEAD_BYTES else 0)
+        val budget =
+            LORA_PAYLOAD_BYTES - MESH_HEADER_BYTES -
+                (if (aead) AEAD_OVERHEAD_BYTES else 0) -
+                DATA_OVERHEAD_BYTES -
+                (if (firmwareSetsBitfield) BITFIELD_OVERHEAD_BYTES else 0) -
+                (if (signed) SIGNATURE_OVERHEAD_BYTES else 0)
         return minOf(budget, MAX_FRAME_BYTES)
     }
 
