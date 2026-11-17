@@ -4,7 +4,7 @@ Instructions for Claude Code sessions working on this repository.
 
 ## What this repo is
 
-TAKPacket-SDK is a cross-platform library that converts ATAK Cursor-on-Target (CoT) XML into Meshtastic's `TAKPacketV2` protobuf format and compresses it with zstd dictionary compression for LoRa mesh transport (237-byte MTU, port 78). Five parallel implementations — Kotlin, Swift, Python, TypeScript, C# — produce cross-decodable wire payloads validated by 47 shared test fixtures.
+TAKPacket-SDK is a cross-platform library that converts ATAK Cursor-on-Target (CoT) XML into Meshtastic's `TAKPacketV2` protobuf format and compresses it with zstd dictionary compression for LoRa mesh transport (225-byte MTU, port 78). Five parallel implementations — Kotlin, Swift, Python, TypeScript, C# — produce cross-decodable wire payloads validated by 47 shared test fixtures.
 
 > **Interop nuance (important):** every binding can decode any other binding's frames, and the intermediate protobuf goldens (`.pb`) are byte-identical across bindings (protobuf serialization is deterministic). The *compressed* bytes (`.bin`) may differ slightly per binding (zstd encoders differ), so cross-language tests assert **decodability + a size tolerance**, NOT compressed-byte-identity. Do not write a test that requires byte-identical compressed output across languages.
 
@@ -79,7 +79,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 
 ## Wire format (critical constants)
 
-- **MTU:** 237 bytes (LoRa maximum)
+- **MTU:** 225 bytes. That is what both clients cap a TAK payload at. The firmware ceiling for `Data.payload` is 233, and Android's `sendData` check leaves 228 for a port-78 payload. Earlier docs said 237, which no frame can actually reach.
 - **Port:** 78 (`ATAK_PLUGIN_V2`)
 - **Wire payload:** `[1 byte flags][N bytes zstd body]`
 - **Flags byte:** bits 0-5 = dictionary ID, bits 6-7 = reserved (ignore on receive, zero on send)

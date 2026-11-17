@@ -34,6 +34,21 @@ One version covers all five bindings, so a release is a single tag and a single 
   `TakMeshReceiver`), and the other four bindings, follow separately. Golden
   fragment sets for those bindings are in `testdata/fragment/`.
 
+### Fixed
+
+- The documented LoRa MTU is now 225 bytes, not 237, in `WIRE_FORMAT.md`, every
+  binding's README and API docs, and each binding's compression tests.
+
+  237 bytes was never sendable. The firmware caps `Data.payload` at 233 bytes,
+  and Android's `sendData` checks the whole encoded `Data` message against that,
+  which leaves 228 bytes for a port-78 payload. Both Meshtastic clients cap a
+  TAK payload at 225 bytes, and the SDK's own `compressWithRemarksFallback`
+  examples already used that figure.
+
+  No wire format or API changes. All 47 fixtures fit, the largest being 193
+  bytes. Callers that sized `maxWireBytes` from the old documentation should
+  use 225.
+
 ## [0.10.0] - 2026-10-31
 
 ### Added

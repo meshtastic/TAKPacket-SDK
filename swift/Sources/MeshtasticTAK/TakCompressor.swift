@@ -5,7 +5,7 @@ import CZstd
 /// using zstd with the pre-trained dictionaries from ``DictionaryProvider``.
 ///
 /// ## Wire format
-/// `[1 byte flags][zstd-compressed protobuf body]`, total ≤ 237 bytes (the LoRa
+/// `[1 byte flags][zstd-compressed protobuf body]`, total ≤ 225 bytes (the LoRa
 /// MTU). In the flags byte, bits 0–5 are the dictionary ID and bits 6–7 are
 /// reserved (zeroed on send, masked off on receive). The sentinel value `0xFF`
 /// means the body is raw, uncompressed protobuf.
@@ -70,7 +70,7 @@ public class TakCompressor {
     /// ``DictionaryProvider/selectDictId(cotTypeId:cotTypeStr:)``), compresses
     /// with the redundant frame fields disabled and the zstd magic stripped, and
     /// applies the skip-compress guard. The returned payload is not checked
-    /// against the 237-byte MTU — use ``compressWithRemarksFallback(_:maxWireBytes:)``
+    /// against the 225-byte MTU — use ``compressWithRemarksFallback(_:maxWireBytes:)``
     /// when you need to enforce the limit.
     ///
     /// - Parameter packet: The packet to encode.

@@ -4,7 +4,7 @@ from datetime import date
 from meshtastic_tak import CotXmlParser, TakCompressor
 from conftest import FIXTURE_NAMES, TESTDATA_DIR, load_fixture_xml
 
-LORA_MTU = 237
+LORA_MTU = 225
 
 parser = CotXmlParser()
 compressor = TakCompressor()
