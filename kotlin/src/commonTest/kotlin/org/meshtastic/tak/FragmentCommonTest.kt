@@ -110,7 +110,7 @@ class FragmentCommonTest {
     fun oneByteOverAFrameFragmentsWithTwoSourceSlices() {
         val inner = payload(TakFragment.DEFAULT_MAX_FRAME_BYTES + 1)
         val frames = assertNotNull(fragmenter().split(inner, protobufSize = 400, msgId = 0x12345678))
-        // K = ceil((226 + 5) / 220) = 2, R = 1.
+        // K = ceil((226 + 5) / 218) = 2, R = 1.
         assertEquals(3, frames.size)
         val f0 = frames[0]
         assertEquals(0xFE, f0[0].toInt() and 0xFF)
@@ -119,8 +119,46 @@ class FragmentCommonTest {
         assertEquals(0, (f0[5].toInt() and 0xFF) ushr 5, "code")
         assertEquals(listOf(0, 1, 2), frames.map { it[6].toInt() and 0xFF })
         assertTrue(frames.all { it.size <= TakFragment.DEFAULT_MAX_FRAME_BYTES })
-        assertEquals(TakFragment.DEFAULT_MAX_FRAME_BYTES, frames[0].size)
-        assertEquals(TakFragment.DEFAULT_MAX_FRAME_BYTES, frames[2].size, "repair symbols are a full slice")
+        // Balanced rather than packed: 231 blob bytes go out as 116 + 115, not 218 + 13. This is
+        // the case balancing matters most in -- packed, two of the three frames sat at the 225-byte
+        // ceiling to carry 13 bytes of tail and its repair symbol.
+        assertEquals(123, frames[0].size)
+        assertEquals(122, frames[1].size)
+        assertEquals(123, frames[2].size, "the repair symbol is one balanced slice, not a full frame")
+    }
+
+    @Test
+    fun balancedSlicingRoundTripsAcrossEveryTailLength() {
+        // Balancing changes where the blob is cut, so sweep sizes that land on and either side of
+        // a frame boundary. A slice length that left the last slice empty, or a repair symbol
+        // padded to the wrong length, would surface here and nowhere else.
+        for (size in (TakFragment.DEFAULT_MAX_FRAME_BYTES + 1)..1_400) {
+            val inner = payload(size)
+            val frames = assertNotNull(fragmenter().split(inner, protobufSize = size + 16, msgId = size))
+            assertTrue(TakFragment.isFragment(frames[0]), "$size B should have fragmented")
+            val sizes = frames.map { it.size }
+            assertTrue(sizes.all { it <= TakFragment.DEFAULT_MAX_FRAME_BYTES }, "over budget at $size: $sizes")
+            assertTrue(sizes.all { it > TakFragment.HEADER_SIZE }, "empty slice at $size: $sizes")
+
+            // Any K of the K+R frames must still rebuild it; drop the first repair's worth.
+            val k = kOf(frames[0])
+            val delivered = deliver(reassembler(), frames.drop(frames.size - k))
+            assertEquals(1, delivered.size, "no message rebuilt at $size")
+            assertEquals(inner.toList(), delivered[0].toList(), "payload differs at $size")
+        }
+    }
+
+    @Test
+    fun noFrameSitsAtTheCeilingWhenThereIsSlack() {
+        // The point of balancing: a payload one byte over a frame used to go out as two frames at
+        // the 225-byte ceiling plus a 20-byte tail, so almost all of that airtime carried one byte
+        // of data and its repair symbol.
+        val frames = assertNotNull(fragmenter().split(payload(TakFragment.DEFAULT_MAX_FRAME_BYTES + 1), 400, 7))
+        val largest = frames.maxOf { it.size }
+        assertTrue(
+            largest < TakFragment.DEFAULT_MAX_FRAME_BYTES * 2 / 3,
+            "largest frame $largest is still near the ${TakFragment.DEFAULT_MAX_FRAME_BYTES} ceiling",
+        )
     }
 
     @Test
