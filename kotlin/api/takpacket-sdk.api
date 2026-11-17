@@ -408,17 +408,25 @@ public final class org/meshtastic/tak/TakCompressor$RemarksFallbackResult {
 }
 
 public final class org/meshtastic/tak/TakFragment {
+	public static final field AEAD_OVERHEAD_BYTES I
+	public static final field BITFIELD_OVERHEAD_BYTES I
 	public static final field CODE_CAUCHY I
+	public static final field DATA_OVERHEAD_BYTES I
 	public static final field DEFAULT_MAX_FRAME_BYTES I
 	public static final field HEADER_SIZE I
 	public static final field INSTANCE Lorg/meshtastic/tak/TakFragment;
+	public static final field LORA_PAYLOAD_BYTES I
 	public static final field MARKER I
 	public static final field MAX_BURST I
 	public static final field MAX_FRAME_BYTES I
 	public static final field MAX_REASSEMBLED_DECOMPRESSED_SIZE I
 	public static final field MAX_SOURCE_FRAGMENTS I
+	public static final field MESH_HEADER_BYTES I
 	public static final field REPAIR_REQUEST_MARKER I
+	public static final field SIGNATURE_OVERHEAD_BYTES I
 	public final fun isFragment ([B)Z
+	public final fun maxFrameBytes (ZZZ)I
+	public static synthetic fun maxFrameBytes$default (Lorg/meshtastic/tak/TakFragment;ZZZILjava/lang/Object;)I
 }
 
 public final class org/meshtastic/tak/TakFragmenter {
