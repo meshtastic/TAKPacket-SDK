@@ -100,6 +100,8 @@ public object TakFragment {
      *        encrypts. Pass false when the caller builds and encrypts `Data` itself and sends the
      *        ciphertext verbatim: no `bitfield` is added, and those two bytes stay available.
      */
+    @JvmStatic
+    @JvmOverloads
     public fun maxFrameBytes(
         aead: Boolean = false,
         signed: Boolean = false,

@@ -156,6 +156,32 @@ class JavaApiTest {
     }
 
     @Test
+    void frameBudgetIsReachableFromJavaAtEveryArity() {
+        // @JvmStatic and @JvmOverloads, so Java gets a static call and does not have to pass
+        // arguments it does not care about.
+        assertEquals(232, TakFragment.maxFrameBytes());
+        assertEquals(220, TakFragment.maxFrameBytes(true));
+        assertEquals(154, TakFragment.maxFrameBytes(true, true));
+        assertEquals(222, TakFragment.maxFrameBytes(true, false, false));
+    }
+
+    @Test
+    void aFragmenterBuiltForAnAeadChannelStaysUnderItsCeiling() {
+        int budget = TakFragment.maxFrameBytes(true);
+        TakPacketV2Data packet = envelope("m-t-t")
+                .payload(new TakTalk.Builder().text(noisyText(1_500)).build())
+                .build();
+        TakFragmenter fragmenter = new TakFragmenter(budget, 16);
+
+        MeshEncodeResult result = compressor.compressForMesh(packet, fragmenter, true);
+        assertEquals(MeshEncodeResult.Outcome.FRAGMENTED, result.getOutcome());
+        for (byte[] frame : result.getFrames()) {
+            assertTrue(frame.length <= budget, "frame of " + frame.length + " exceeds the AEAD budget");
+        }
+        assertEquals(packet, receive(result.getFrames()));
+    }
+
+    @Test
     void fragmenterTakesJavaLambdas() {
         TakFragmenter noRepair = new TakFragmenter(TakFragment.DEFAULT_MAX_FRAME_BYTES, 8, k -> 0, () -> 0x12345678);
         byte[] inner = new byte[600];
