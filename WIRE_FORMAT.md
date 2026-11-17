@@ -36,6 +36,27 @@ Three limits are involved, and the tightest one wins:
 
 Earlier versions of this document gave 237 bytes. No frame that size can be sent.
 
+Those three apply to every channel. A channel's own configuration can tighten the ceiling below
+225, because the firmware checks the whole encoded `Data` message against what the radio can carry
+(`255 - 16 B mesh header`) and refuses an oversized one with `TOO_LARGE` before it reaches the air:
+
+| Channel configuration | Payload bytes | What it spends |
+|-----------------------|---------------|----------------|
+| Plain | 225 (the client cap still binds) | 5 B `Data` framing, 2 B `bitfield` |
+| AES-CCM authenticated | **220** | the above plus the 12 B authentication tag |
+| XEdDSA signed | **166** | the above plus a 64 B signature and its framing |
+| Authenticated and signed | **154** | both |
+
+Signing is the one that cannot be discovered by trial: over the limit the firmware sends the packet
+**unsigned** instead, and a receiver in Strict signature mode then drops it. A sender that takes the
+225-byte convention on an authenticated channel simply loses every full frame, which looks from the
+far end like a radio fault. Senders should derive the budget from the channel rather than assume
+one; the Kotlin SDK exposes `TakFragment.maxFrameBytes()` for exactly this.
+
+The 2 B `bitfield` is only spent when the firmware composes the `Data` message, which it does
+whenever it encrypts. A sender that builds and encrypts `Data` itself and hands over the ciphertext
+keeps those two bytes.
+
 ## 3. Flags Byte
 
 ```
