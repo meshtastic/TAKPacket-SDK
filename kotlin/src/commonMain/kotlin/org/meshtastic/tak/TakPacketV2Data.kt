@@ -431,6 +431,12 @@ public data class TakPacketV2Data(
             val lang: String = "",
             /** True when the source CoT had a `<voice/>` marker (speech-to-text origin). */
             val fromVoice: Boolean = false,
+            /**
+             * The [VoiceProfile] the receiver should speak this message with, matching
+             * [VoiceProfile.voiceProfileId]. Empty = the receiver's default voice. Packet-level
+             * only: no CoT XML carries it, so the parser leaves it empty.
+             */
+            val voiceProfileId: String = "",
         ) : Payload() {
             /** Starts a [Builder] from this value. */
             public fun toBuilder(): Builder = Builder(this)
@@ -449,6 +455,8 @@ public data class TakPacketV2Data(
                 public fun lang(lang: String): Builder = apply { current = current.copy(lang = lang) }
 
                 public fun fromVoice(fromVoice: Boolean): Builder = apply { current = current.copy(fromVoice = fromVoice) }
+
+                public fun voiceProfileId(voiceProfileId: String): Builder = apply { current = current.copy(voiceProfileId = voiceProfileId) }
 
                 public fun build(): TakTalk = current
             }

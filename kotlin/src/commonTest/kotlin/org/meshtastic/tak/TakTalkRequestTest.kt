@@ -1,6 +1,8 @@
 package org.meshtastic.tak
 
+import org.meshtastic.proto.CotType
 import org.meshtastic.proto.TAKPacketV2
+import org.meshtastic.proto.TakTalkMessage
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,8 +13,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The TAKTALK voice profile (tag 44) and the request payloads,
- * `VoiceProfileRequest` (tag 45) and `TakTalkRoomRequest` (tag 46). They are
+ * The TAKTALK voice profile (tag 44), the request payloads,
+ * `VoiceProfileRequest` (tag 45) and `TakTalkRoomRequest` (tag 46), and the
+ * `voice_profile_id` a TAKTALK message names its profile with. They are
  * packet-level only: built directly, never parsed from CoT XML.
  */
 class TakTalkRequestTest {
@@ -124,5 +127,37 @@ class TakTalkRequestTest {
         assertNotEquals(a, a.copy(profileData = Random(1).nextBytes(64)))
         assertEquals(a.copy(voiceProfileName = "Bravo"), a.toBuilder().voiceProfileName("Bravo").build())
         assertTrue(a.toString().contains("64 bytes"), a.toString())
+    }
+
+    @Test
+    fun aTakTalkMessageKeepsItsVoiceProfileId() {
+        // Start from the wire, as a peer would send it.
+        val wire =
+            TAKPacketV2
+                .Builder()
+                .also {
+                    it.cot_type_id = CotType.CotType_m_t_t
+                    it.callsign = "ALPHA-1"
+                    it.taktalk =
+                        TakTalkMessage
+                            .Builder()
+                            .also { m ->
+                                m.text = "Moving to the north gate"
+                                m.from_voice = true
+                                m.voice_profile_id = "6f1c2a54-0d3b-4f6e-9a77-2c8e5b1d4f90"
+                            }.build()
+                }.build()
+                .encode()
+
+        val packet = TakPacketV2Serializer.deserialize(wire)
+        val talk = packet.payload as TakPacketV2Data.Payload.TakTalk
+        assertEquals("6f1c2a54-0d3b-4f6e-9a77-2c8e5b1d4f90", talk.voiceProfileId)
+
+        val back = TAKPacketV2.ADAPTER.decode(TakPacketV2Serializer.serialize(packet))
+        assertEquals("6f1c2a54-0d3b-4f6e-9a77-2c8e5b1d4f90", back.taktalk?.voice_profile_id)
+        assertEquals(packet, compressor.decompress(compressor.compress(packet)))
+
+        // Empty, the default, means the receiver's default voice.
+        assertEquals("", TakPacketV2Data.Payload.TakTalk(text = "hi").voiceProfileId)
     }
 }

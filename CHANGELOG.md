@@ -8,6 +8,13 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ## [Unreleased]
 
+### Breaking
+
+- Kotlin: `TakPacketV2Data.Payload` has three new subclasses
+  (`VoiceProfile`, `VoiceProfileRequest`, `TakTalkRoomRequest`), so an
+  exhaustive `when` over a payload no longer compiles. Add branches for them,
+  or an `else`.
+
 ### Added
 
 - Kotlin: the wire core for fragmenting large `TAKPacketV2` messages across
@@ -79,12 +86,16 @@ One version covers all five bindings, so a release is a single tag and a single 
   `Payload.VoiceProfileRequest` (`voice_profile_request`, tag 45) and
   `Payload.TakTalkRoomRequest` (`taktalk_room_request`, tag 46). The requests
   are `y-` events addressed with Marti; the replies are a `VoiceProfile` and a
-  `TakTalkRoom`. A voice profile's opaque model data is usually larger than
+  `TakTalkRoom`. `Payload.TakTalk` gains `voiceProfileId` (`TakTalkMessage`
+  tag 5), naming the profile a message is spoken with; empty means the
+  receiver's default voice. Its constructor and `copy` gain the parameter, so
+  code compiled against an earlier SDK needs recompiling. A voice profile's opaque model data is usually larger than
   one frame, so send it with `fragmentIfOversize = true` and a fragmenter whose
   `maxSourceFragments` covers it (the default 8 carries about 1.7 KB). All three are packet-level only for
   now: `CotXmlParser` never produces them and `CotXmlBuilder` renders just the
-  envelope. A receiver on an earlier SDK decodes any of them as a PLI, since
-  it does not know the arm.
+  envelope. A receiver on an earlier SDK, or on the Swift, Python, TypeScript
+  or C# bindings, decodes an unfragmented one as a PLI, since it does not know
+  the arm; one without fragment support rejects a fragmented voice profile.
 
 ### Changed
 

@@ -1116,7 +1116,7 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
         }
 
         final class TakTalk : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk|null[0]
-            constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Boolean = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.Boolean){}[0]
+            constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Boolean = ..., kotlin/String = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.Boolean;kotlin.String){}[0]
 
             final val chatroomId // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.chatroomId|{}chatroomId[0]
                 final fun <get-chatroomId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.chatroomId.<get-chatroomId>|<get-chatroomId>(){}[0]
@@ -1126,12 +1126,15 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
                 final fun <get-lang>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.lang.<get-lang>|<get-lang>(){}[0]
             final val text // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.text|{}text[0]
                 final fun <get-text>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.text.<get-text>|<get-text>(){}[0]
+            final val voiceProfileId // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.voiceProfileId|{}voiceProfileId[0]
+                final fun <get-voiceProfileId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.voiceProfileId.<get-voiceProfileId>|<get-voiceProfileId>(){}[0]
 
             final fun component1(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component1|component1(){}[0]
             final fun component2(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component2|component2(){}[0]
             final fun component3(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component3|component3(){}[0]
             final fun component4(): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component4|component4(){}[0]
-            final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Boolean = ...): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.Boolean){}[0]
+            final fun component5(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component5|component5(){}[0]
+            final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Boolean = ..., kotlin/String = ...): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.Boolean;kotlin.String){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.hashCode|hashCode(){}[0]
             final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.toBuilder|toBuilder(){}[0]
@@ -1145,6 +1148,7 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
                 final fun fromVoice(kotlin/Boolean): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.fromVoice|fromVoice(kotlin.Boolean){}[0]
                 final fun lang(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.lang|lang(kotlin.String){}[0]
                 final fun text(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.text|text(kotlin.String){}[0]
+                final fun voiceProfileId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.voiceProfileId|voiceProfileId(kotlin.String){}[0]
             }
         }
 

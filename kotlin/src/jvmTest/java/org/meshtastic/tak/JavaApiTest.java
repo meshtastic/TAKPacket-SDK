@@ -71,6 +71,7 @@ class JavaApiTest {
                         .chatroomId("6f1c2a54-0d3b-4f6e-9a77-2c8e5b1d4f90")
                         .lang("English")
                         .fromVoice(true)
+                        .voiceProfileId("6f1c2a54-0d3b-4f6e-9a77-2c8e5b1d4f90")
                         .build())
                 .build();
 

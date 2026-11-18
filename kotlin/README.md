@@ -101,7 +101,8 @@ Builders exist for the envelope (`TakPacketV2Data.Builder`) and for the `Chat`, 
 `TakTalkRoom`, `VoiceProfile`, `VoiceProfileRequest`, `TakTalkRoomRequest`, `Marker`,
 `DrawnShape`, `Route`, `RangeAndBearing` and `EmergencyAlert` payloads. The three TAKTALK voice
 profile and request payloads are packet-level only: build them directly, since the XML parser
-never produces them. A voice profile usually needs fragmenting.
+never produces them. A voice profile usually needs fragmenting. The Swift, Python, TypeScript and
+C# bindings don't handle these payloads yet: they decode them as a PLI.
 A PLI has no payload: set the envelope fields and an `a-f-*` type.
 
 ## Core classes

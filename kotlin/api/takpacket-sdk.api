@@ -1058,19 +1058,21 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$Route$Link {
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalk : org/meshtastic/tak/TakPacketV2Data$Payload {
 	public fun <init> ()V
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Z
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk;
-	public static synthetic fun copy$default (Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk;
+	public static synthetic fun copy$default (Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLjava/lang/String;ILjava/lang/Object;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getChatroomId ()Ljava/lang/String;
 	public final fun getFromVoice ()Z
 	public final fun getLang ()Ljava/lang/String;
 	public final fun getText ()Ljava/lang/String;
+	public final fun getVoiceProfileId ()Ljava/lang/String;
 	public fun hashCode ()I
 	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
 	public fun toString ()Ljava/lang/String;
@@ -1085,6 +1087,7 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder {
 	public final fun fromVoice (Z)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
 	public final fun lang (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
 	public final fun text (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
+	public final fun voiceProfileId (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom : org/meshtastic/tak/TakPacketV2Data$Payload {

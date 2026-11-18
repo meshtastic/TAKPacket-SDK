@@ -133,6 +133,7 @@ public object TakPacketV2Serializer {
                             wb.chatroom_id = payload.chatroomId
                             wb.lang = payload.lang
                             wb.from_voice = payload.fromVoice
+                            wb.voice_profile_id = payload.voiceProfileId
                         }.build()
             }
 
@@ -491,6 +492,7 @@ public object TakPacketV2Serializer {
                         chatroomId = t.chatroom_id,
                         lang = t.lang,
                         fromVoice = t.from_voice,
+                        voiceProfileId = t.voice_profile_id,
                     )
                 }
 
