@@ -83,11 +83,12 @@ One version covers all five bindings, so a release is a single tag and a single 
 
   Both `compressForMesh` overloads take the policy in place of the flag, and
   the XML overload parses with `CotXmlParser.Limits.LARGE` for either
-  fragmenting policy. The `fragmentIfOversize` overloads are unchanged and
-  remain as shorthand, so no existing caller has to change. The policy
-  overloads carry `@JvmOverloads` like the flag ones, so Java can name a policy
-  and leave off `airtime`. `README.md` has a flowchart and a table of what each
-  policy does.
+  fragmenting policy. Under those two, a shape over 32 vertices that fits one
+  frame therefore goes out whole, where `NEVER` cuts it to 32 at parse. The
+  `fragmentIfOversize` overloads are unchanged and remain as shorthand, so no
+  existing caller has to change. The policy overloads carry `@JvmOverloads`
+  like the flag ones, so Java can name a policy and leave off `airtime`.
+  `README.md` has a flowchart and a table of what each policy does.
 
 - Kotlin: a Java-friendly API on the JVM artifact. Fluent builders replace the
   long Kotlin constructors from Java: `TakPacketV2Data.Builder` (with

@@ -57,10 +57,16 @@ public data class AirtimeBudget(
  * CoT does not fit one frame. The caller picks it per CoT; it is never carried
  * on the wire.
  *
- * A CoT that fits one frame goes out as that frame, untouched, under every
- * policy. They differ only once it does not fit. A fragment set in the table
- * is conditional twice over: the fragmenter's caps have to allow it
- * (`maxSourceFragments`, and a protobuf within
+ * A packet that fits one frame goes out as that frame, untouched, under every
+ * policy; the encoder treats them differently only once it does not fit. The
+ * XML overload of `compressForMesh` also differs one step earlier, at parse:
+ * [NEVER] parses with [CotXmlParser.Limits.SINGLE_FRAME] and the other two
+ * with [CotXmlParser.Limits.LARGE], so a shape or route over the single-frame
+ * limits is cut under [NEVER] even when the whole of it would have fitted one
+ * frame.
+ *
+ * A fragment set in the table is conditional twice over: the fragmenter's
+ * caps have to allow it (`maxSourceFragments`, and a protobuf within
  * [TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE]), and so does the
  * [AirtimeBudget] when one is passed. What happens when either refuses comes
  * after the table.
@@ -101,9 +107,9 @@ public enum class FragmentPolicy {
     STRIP_FIRST,
 
     /**
-     * Fragment before giving anything up, so the CoT arrives whole whenever the
-     * fragmenter's caps allow. Costs a burst even when dropping the remarks
-     * alone would have fitted one frame.
+     * Fragment before giving anything up, so the CoT goes out whole whenever the
+     * fragmenter's caps and the airtime budget allow. Costs a burst even when
+     * dropping the remarks alone would have fitted one frame.
      */
     FRAGMENT_FIRST,
 }

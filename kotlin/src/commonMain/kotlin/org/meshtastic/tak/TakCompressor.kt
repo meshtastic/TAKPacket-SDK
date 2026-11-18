@@ -328,12 +328,14 @@ public class TakCompressor(
      * [compressWithRemarksFallbackDetailed] at `fragmenter.maxFrameBytes`, with
      * one difference. A packet whose protobuf exceeds [MAX_DECOMPRESSED_SIZE]
      * counts as not fitting even when it compresses into one frame, since
-     * receivers would reject it: its remarks are dropped, and if that is not
-     * enough it is [MeshEncodeResult.Outcome.TOO_LARGE].
+     * receivers would reject it. If it has remarks they are dropped and it is
+     * tried again; if it has none, or that is not enough, it is
+     * [MeshEncodeResult.Outcome.TOO_LARGE].
      *
      * With [FragmentPolicy.STRIP_FIRST] or [FragmentPolicy.FRAGMENT_FIRST] the CoT
-     * is parsed with [CotXmlParser.Limits.LARGE], so geometry that needs more than
-     * one frame reaches the fragmenter instead of being cut at parse, and an
+     * is parsed with [CotXmlParser.Limits.LARGE], so geometry beyond the
+     * single-frame limits is kept: it goes out whole in one frame if it fits, and
+     * otherwise reaches the fragmenter instead of being cut at parse. An
      * oversized packet may be fragmented, up to `fragmenter.maxSourceFragments`.
      * See the [TakPacketV2Data] overload for the steps, the fallbacks and the
      * airtime check.

@@ -448,13 +448,13 @@ A CoT that does not fit one 225 B frame has to give something up: its remarks, s
 
 | Policy | What gives way first | Meant for |
 |--------|----------------------|-----------|
-| `NEVER` | Remarks, then geometry. One frame or nothing. | PLI and anything else sent periodically |
+| `NEVER` | Remarks, and geometry beyond 32 vertices or 16 route links. One frame or nothing. | PLI and anything else sent periodically |
 | `STRIP_FIRST` | Remarks. A burst is spent only on what dropping them cannot fix. | CoTs whose geometry or text matters more than their remarks |
 | `FRAGMENT_FIRST` | Airtime. The CoT is fragmented before anything is dropped. | CoTs that should arrive whole |
 
-`NEVER` takes the same path as `compressWithRemarksFallback()`, with two more checks. A protobuf over 4,096 B counts as not fitting even when it compresses into one frame, because receivers would reject it: the remarks are dropped, and the CoT is refused if that is not enough. And a packet built with more than 32 vertices or 16 route links is cut down to them before the CoT is given up on; the XML overload already parses with those limits.
+`NEVER` takes the same path as `compressWithRemarksFallback()`, with two more checks. A protobuf over 4,096 B counts as not fitting even when it compresses into one frame, because receivers would reject it: any remarks are dropped, and the CoT is refused if that is not enough or it had none. And a packet built with more than 32 vertices or 16 route links is cut down to them before the CoT is given up on; the XML overload already parses with those limits.
 
-A CoT that fits one frame goes out as that frame, untouched, under every policy. The flowchart is the whole decision; each fallback runs at most once.
+A packet that fits one frame goes out as that frame, untouched, under every policy. From XML the policies part ways one step earlier, at parse: `NEVER` keeps at most 32 vertices and 16 route links, and the other two keep 512 and 64. So a 40-vertex shape that fits one frame whole is sent whole under `STRIP_FIRST` and `FRAGMENT_FIRST`, and as its first 32 vertices under `NEVER`. The flowchart is the whole decision; each fallback runs at most once.
 
 ```mermaid
 flowchart TD
@@ -492,7 +492,7 @@ The same decisions, read by situation. A "fragment set" here is one that the fra
 
 | The CoT… | `NEVER` | `STRIP_FIRST` | `FRAGMENT_FIRST` |
 |----------|---------|---------------|------------------|
-| fits one frame | One frame, untouched | One frame, untouched | One frame, untouched |
+| fits one frame | One frame. From XML, geometry over 32 / 16 is cut at parse | One frame, untouched | One frame, untouched |
 | misses one frame only because of its remarks | One frame, remarks dropped | One frame, remarks dropped | Fragment set, remarks kept |
 | is too big even without its remarks | One frame if cutting the geometry to 32 / 16 is enough, otherwise `TOO_LARGE` | Fragment set, without the remarks | Fragment set, remarks kept |
 | is too big for the fragment cap | — | Geometry cut to 32 / 16, then one frame or a fragment set, or `TOO_LARGE` if it still fits neither | Remarks dropped, then geometry cut to 32 / 16 if still needed, then one frame or a fragment set, or `TOO_LARGE` if it still fits neither |
@@ -501,7 +501,11 @@ The same decisions, read by situation. A "fragment set" here is one that the fra
 Whatever still does not fit after both fallbacks is `TOO_LARGE`. A long chat message over the fragment cap ends there under every policy, because it has no remarks to drop and no geometry to cut. `TOO_LARGE` and `INSUFFICIENT_AIRTIME` both come back with no frames.
 
 ```kotlin
-val fragmenter = TakFragmenter()   // 225 B frames, at most 8 source fragments
+// 225 B is the clients' cap on a plain channel. An authenticated or signed channel carries less,
+// so take the smaller of that and what the channel's own configuration allows.
+val fragmenter = TakFragmenter(
+    maxFrameBytes = minOf(TakFragment.maxFrameBytes(aead, signed), TakFragment.DEFAULT_MAX_FRAME_BYTES),
+)   // at most 8 source fragments
 
 // What is left of this hour's duty cycle. Pass null where the region has no limit.
 val airtime = AirtimeBudget.fromDeviceMetrics(
@@ -523,6 +527,8 @@ when (result.outcome) {
         drop()
 }
 ```
+
+`aead` and `signed` are the channel's own settings. The frame size comes out at 225 B on a plain channel, 220 B on an AES-CCM authenticated one, 166 B on a signed one and 154 B with both ([`WIRE_FORMAT.md`](WIRE_FORMAT.md) §2). The firmware refuses a frame that is too large for an authenticated channel, and sends one that is too large for a signed channel unsigned, which a receiver in Strict signature mode then drops. Wherever this section says 225 B, read the fragmenter's `maxFrameBytes`.
 
 `send` and `sendBurst` stand for the app's own radio link. The SDK does not pace a fragment set, and handing one to the radio all at once can overflow its outgoing queue and lose several fragments before any of them is on the air. Send the frames in order as one burst: wait for free space in the queue (`QueueStatus.free`) before each frame, retry a frame the radio rejects, and give the message up if the wait would outlast the receivers' timers. The rules are step 8 of §6.1 in [the design doc](docs/design/large-payload-chunking.md).
 
