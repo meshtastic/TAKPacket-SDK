@@ -20,8 +20,10 @@ import org.meshtastic.proto.TAKEnvironment
 import org.meshtastic.proto.TAKPacketV2
 import org.meshtastic.proto.TakTalkMessage
 import org.meshtastic.proto.TakTalkRoomData
+import org.meshtastic.proto.TakTalkRoomRequest
 import org.meshtastic.proto.TaskRequest
 import org.meshtastic.proto.Team
+import org.meshtastic.proto.VoiceProfileRequest
 import org.meshtastic.proto.ZMistEntry
 import kotlin.math.roundToInt
 
@@ -89,6 +91,8 @@ public object TakPacketV2Serializer {
         var taskField: TaskRequest? = null
         var takTalkField: TakTalkMessage? = null
         var takTalkRoomField: TakTalkRoomData? = null
+        var voiceProfileRequestField: VoiceProfileRequest? = null
+        var takTalkRoomRequestField: TakTalkRoomRequest? = null
 
         when (val payload = data.payload) {
             // PLI is the implicit payload — no oneof variant is set (saves ~3
@@ -148,6 +152,14 @@ public object TakPacketV2Serializer {
                             wb.room_name = payload.roomName
                             wb.participants = payload.participants
                         }.build()
+            }
+
+            is TakPacketV2Data.Payload.VoiceProfileRequest -> {
+                voiceProfileRequestField = payload.toWire()
+            }
+
+            is TakPacketV2Data.Payload.TakTalkRoomRequest -> {
+                takTalkRoomRequestField = payload.toWire()
             }
 
             is TakPacketV2Data.Payload.Aircraft -> {
@@ -437,6 +449,8 @@ public object TakPacketV2Serializer {
                     wb.task = taskField
                     wb.taktalk = takTalkField
                     wb.taktalk_room = takTalkRoomField
+                    wb.voice_profile_request = voiceProfileRequestField
+                    wb.taktalk_room_request = takTalkRoomRequestField
                 }.build()
 
         return TAKPacketV2.ADAPTER.encode(packet)
@@ -473,6 +487,14 @@ public object TakPacketV2Serializer {
                         roomName = r.room_name,
                         participants = r.participants.toList(),
                     )
+                }
+
+                proto.voice_profile_request != null -> {
+                    proto.voice_profile_request!!.toPayload()
+                }
+
+                proto.taktalk_room_request != null -> {
+                    proto.taktalk_room_request!!.toPayload()
                 }
 
                 proto.taktalk != null -> {
@@ -804,3 +826,13 @@ public object TakPacketV2Serializer {
             model = model.ifEmpty { null },
         )
 }
+
+// The TAKTALK request arms (tags 45 and 46), kept out of the serializer object to hold it under
+// detekt's LargeClass limit.
+private fun TakPacketV2Data.Payload.VoiceProfileRequest.toWire(): VoiceProfileRequest = VoiceProfileRequest.Builder().also { it.voice_profile_id = voiceProfileId }.build()
+
+private fun TakPacketV2Data.Payload.TakTalkRoomRequest.toWire(): TakTalkRoomRequest = TakTalkRoomRequest.Builder().also { it.room_id = roomId }.build()
+
+private fun VoiceProfileRequest.toPayload() = TakPacketV2Data.Payload.VoiceProfileRequest(voiceProfileId = voice_profile_id)
+
+private fun TakTalkRoomRequest.toPayload() = TakPacketV2Data.Payload.TakTalkRoomRequest(roomId = room_id)

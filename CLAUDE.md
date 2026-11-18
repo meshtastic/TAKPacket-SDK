@@ -94,7 +94,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 
 ## Key data model patterns
 
-- **`TakPacketV2Data`** has 26 envelope fields + `Payload` sealed class with 13 oneof variants (Chat, Aircraft, RawDetail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest, TakTalk, TakTalkRoom). **PLI is implicit**: there is no PLI oneof arm — a packet with NO payload variant + an `a-f-*` cot type IS a PLI. Proto tag 30 is reserved.
+- **`TakPacketV2Data`** has 26 envelope fields + `Payload` sealed class with its oneof variants (Chat, Aircraft, RawDetail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest, TakTalk, TakTalkRoom, and in Kotlin only the packet-level VoiceProfileRequest and TakTalkRoomRequest). **PLI is implicit**: there is no PLI oneof arm — a packet with NO payload variant + an `a-f-*` cot type IS a PLI. Proto tag 30 is reserved.
 - **`EnvironmentData`** and **`SensorFovData`** are optional top-level annotations (not payload variants) — they attach to any event type
 - **Delta encoding:** Route waypoints (`Route.Link.point`) and R&B anchor use `CotGeoPoint` lat/lon deltas. **DrawnShape vertices** are two PACKED `repeated sint32` columns — `vertex_lat_deltas` (tag 18) + `vertex_lon_deltas` (tag 19), zigzag deltas from the envelope `latitude_i`/`longitude_i`. Old `repeated CotGeoPoint vertices = 12` is reserved. (CotGeoPoint still exists for Route/R&B.)
 - **Dual color encoding:** Every color field carries both a `Team` palette enum (compact) and an exact `_argb` int32 (lossless fallback)

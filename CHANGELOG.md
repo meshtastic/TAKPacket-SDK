@@ -74,6 +74,20 @@ One version covers all five bindings, so a release is a single tag and a single 
   `TakFragment.isFragment`), so Java can omit default arguments. A Java test
   in `kotlin/src/jvmTest/java` keeps this surface compiling from Java.
 
+- Kotlin: the TAKTALK request payloads from `atak.proto`,
+  `Payload.VoiceProfileRequest` (`voice_profile_request`, tag 45) and
+  `Payload.TakTalkRoomRequest` (`taktalk_room_request`, tag 46), each with a
+  Java builder. Both are `y-` events addressed with Marti; the replies are a
+  voice profile and a `TakTalkRoom`. They are packet-level only for now:
+  `CotXmlParser` never produces them and `CotXmlBuilder` renders just the
+  envelope. A receiver on an earlier SDK decodes either one as a PLI, since
+  it does not know the arm.
+
+### Changed
+
+- Kotlin: `org.meshtastic:protobufs` 2.8.3, for the TAKTALK request messages.
+  Consumers that pin their own `protobufs` need 2.8.3 or later.
+
 ### Fixed
 
 - The documented LoRa MTU is now 225 bytes, not 237, in `WIRE_FORMAT.md`, every

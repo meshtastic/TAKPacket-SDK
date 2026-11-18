@@ -1178,6 +1178,27 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             }
         }
 
+        final class TakTalkRoomRequest : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest|null[0]
+            constructor <init>(kotlin/String = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.<init>|<init>(kotlin.String){}[0]
+
+            final val roomId // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.roomId|{}roomId[0]
+                final fun <get-roomId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.roomId.<get-roomId>|<get-roomId>(){}[0]
+
+            final fun component1(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.component1|component1(){}[0]
+            final fun copy(kotlin/String = ...): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.copy|copy(kotlin.String){}[0]
+            final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.equals|equals(kotlin.Any?){}[0]
+            final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.toBuilder|toBuilder(){}[0]
+            final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.TakTalkRoomRequest){}[0]
+
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder.build|build(){}[0]
+                final fun roomId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder.roomId|roomId(kotlin.String){}[0]
+            }
+        }
+
         final class TaskRequest : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.TaskRequest|null[0]
             constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TaskRequest.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.Int;kotlin.Int;kotlin.String){}[0]
 
@@ -1220,6 +1241,27 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.Vertex.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.Vertex.hashCode|hashCode(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.Vertex.toString|toString(){}[0]
+        }
+
+        final class VoiceProfileRequest : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest|null[0]
+            constructor <init>(kotlin/String = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.<init>|<init>(kotlin.String){}[0]
+
+            final val voiceProfileId // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.voiceProfileId|{}voiceProfileId[0]
+                final fun <get-voiceProfileId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.voiceProfileId.<get-voiceProfileId>|<get-voiceProfileId>(){}[0]
+
+            final fun component1(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.component1|component1(){}[0]
+            final fun copy(kotlin/String = ...): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.copy|copy(kotlin.String){}[0]
+            final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.equals|equals(kotlin.Any?){}[0]
+            final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.toBuilder|toBuilder(){}[0]
+            final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.VoiceProfileRequest){}[0]
+
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder.build|build(){}[0]
+                final fun voiceProfileId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder.voiceProfileId|voiceProfileId(kotlin.String){}[0]
+            }
         }
 
         final object None : org.meshtastic.tak/TakPacketV2Data.Payload // org.meshtastic.tak/TakPacketV2Data.Payload.None|null[0]

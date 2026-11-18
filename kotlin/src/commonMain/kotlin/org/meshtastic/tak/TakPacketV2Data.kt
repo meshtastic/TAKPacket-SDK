@@ -499,6 +499,62 @@ public data class TakPacketV2Data(
         }
 
         /**
+         * TAKTALK request for a peer's voice profile (CoT type y-). Maps to the
+         * `VoiceProfileRequest` protobuf message (payload_variant tag 45). Address it
+         * to the peer with [TakPacketV2Data.marti]; the reply is that peer's voice profile.
+         *
+         * Packet-level only: [CotXmlParser] never produces this variant and
+         * [CotXmlBuilder] renders just the envelope for it.
+         */
+        public data class VoiceProfileRequest(
+            /** Profile wanted, matching a chat's voice profile ID. Empty asks for whichever profile the peer is using. */
+            val voiceProfileId: String = "",
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [VoiceProfileRequest], for Java callers. Fields left unset keep
+             * [VoiceProfileRequest]'s own defaults.
+             */
+            public class Builder(
+                private var current: VoiceProfileRequest = VoiceProfileRequest(),
+            ) {
+                public fun voiceProfileId(voiceProfileId: String): Builder = apply { current = current.copy(voiceProfileId = voiceProfileId) }
+
+                public fun build(): VoiceProfileRequest = current
+            }
+        }
+
+        /**
+         * TAKTALK request for a room's name and roster (CoT type y-). Maps to the
+         * `TakTalkRoomRequest` protobuf message (payload_variant tag 46). Address it
+         * with [TakPacketV2Data.marti]; the reply is a [TakTalkRoom].
+         *
+         * Packet-level only: [CotXmlParser] never produces this variant and
+         * [CotXmlBuilder] renders just the envelope for it.
+         */
+        public data class TakTalkRoomRequest(
+            /** Room UUID wanted, matching [TakTalkRoom.roomId]. */
+            val roomId: String = "",
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [TakTalkRoomRequest], for Java callers. Fields left unset keep
+             * [TakTalkRoomRequest]'s own defaults.
+             */
+            public class Builder(
+                private var current: TakTalkRoomRequest = TakTalkRoomRequest(),
+            ) {
+                public fun roomId(roomId: String): Builder = apply { current = current.copy(roomId = roomId) }
+
+                public fun build(): TakTalkRoomRequest = current
+            }
+        }
+
+        /**
          * ADS-B / military air track. Maps to the `AircraftTrack` protobuf
          * message (payload_variant tag 32). The structured fields are
          * synthesized into a `<remarks>` line on rebuild when no `<_aircot_>`
