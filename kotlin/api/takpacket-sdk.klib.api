@@ -476,7 +476,49 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
     final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.hashCode|hashCode(){}[0]
     final fun howString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.howString|howString(){}[0]
+    final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.toBuilder|toBuilder(){}[0]
     final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.toString|toString(){}[0]
+
+    final class Builder { // org.meshtastic.tak/TakPacketV2Data.Builder|null[0]
+        constructor <init>(org.meshtastic.tak/TakPacketV2Data = ...) // org.meshtastic.tak/TakPacketV2Data.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data){}[0]
+
+        final fun addMarti(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.addMarti|addMarti(kotlin.String){}[0]
+        final fun altSrc(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.altSrc|altSrc(kotlin.Int){}[0]
+        final fun altitude(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.altitude|altitude(kotlin.Int){}[0]
+        final fun battery(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.battery|battery(kotlin.Int){}[0]
+        final fun build(): org.meshtastic.tak/TakPacketV2Data // org.meshtastic.tak/TakPacketV2Data.Builder.build|build(){}[0]
+        final fun callsign(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.callsign|callsign(kotlin.String){}[0]
+        final fun cotType(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.cotType|cotType(kotlin.String){}[0]
+        final fun cotTypeId(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.cotTypeId|cotTypeId(kotlin.Int){}[0]
+        final fun cotTypeStr(kotlin/String?): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.cotTypeStr|cotTypeStr(kotlin.String?){}[0]
+        final fun course(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.course|course(kotlin.Int){}[0]
+        final fun deviceCallsign(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.deviceCallsign|deviceCallsign(kotlin.String){}[0]
+        final fun endpoint(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.endpoint|endpoint(kotlin.String){}[0]
+        final fun environment(org.meshtastic.tak/TakPacketV2Data.EnvironmentData?): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.environment|environment(org.meshtastic.tak.TakPacketV2Data.EnvironmentData?){}[0]
+        final fun geoSrc(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.geoSrc|geoSrc(kotlin.Int){}[0]
+        final fun how(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.how|how(kotlin.Int){}[0]
+        final fun how(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.how|how(kotlin.String){}[0]
+        final fun latitudeDegrees(kotlin/Double): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.latitudeDegrees|latitudeDegrees(kotlin.Double){}[0]
+        final fun latitudeI(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.latitudeI|latitudeI(kotlin.Int){}[0]
+        final fun longitudeDegrees(kotlin/Double): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.longitudeDegrees|longitudeDegrees(kotlin.Double){}[0]
+        final fun longitudeI(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.longitudeI|longitudeI(kotlin.Int){}[0]
+        final fun marti(kotlin.collections/List<kotlin/String>): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.marti|marti(kotlin.collections.List<kotlin.String>){}[0]
+        final fun payload(org.meshtastic.tak/TakPacketV2Data.Payload): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.payload|payload(org.meshtastic.tak.TakPacketV2Data.Payload){}[0]
+        final fun phone(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.phone|phone(kotlin.String){}[0]
+        final fun remarks(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.remarks|remarks(kotlin.String){}[0]
+        final fun role(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.role|role(kotlin.Int){}[0]
+        final fun sensorFov(org.meshtastic.tak/TakPacketV2Data.SensorFovData?): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.sensorFov|sensorFov(org.meshtastic.tak.TakPacketV2Data.SensorFovData?){}[0]
+        final fun speed(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.speed|speed(kotlin.Int){}[0]
+        final fun staleSeconds(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.staleSeconds|staleSeconds(kotlin.Int){}[0]
+        final fun startEpochLo14(kotlin/Int?): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.startEpochLo14|startEpochLo14(kotlin.Int?){}[0]
+        final fun startEpochSeconds(kotlin/Long): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.startEpochSeconds|startEpochSeconds(kotlin.Long){}[0]
+        final fun takDevice(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.takDevice|takDevice(kotlin.String){}[0]
+        final fun takOs(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.takOs|takOs(kotlin.String){}[0]
+        final fun takPlatform(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.takPlatform|takPlatform(kotlin.String){}[0]
+        final fun takVersion(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.takVersion|takVersion(kotlin.String){}[0]
+        final fun team(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.team|team(kotlin.Int){}[0]
+        final fun uid(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.uid|uid(kotlin.String){}[0]
+    }
 
     final class EnvironmentData { // org.meshtastic.tak/TakPacketV2Data.EnvironmentData|null[0]
         constructor <init>(kotlin/Double? = ..., kotlin/Int? = ..., kotlin/Double? = ...) // org.meshtastic.tak/TakPacketV2Data.EnvironmentData.<init>|<init>(kotlin.Double?;kotlin.Int?;kotlin.Double?){}[0]
@@ -762,7 +804,23 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun copy(kotlin/String = ..., kotlin/String? = ..., kotlin/String? = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Boolean = ...): org.meshtastic.tak/TakPacketV2Data.Payload.Chat // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.copy|copy(kotlin.String;kotlin.String?;kotlin.String?;kotlin.String;kotlin.Int;kotlin.String;kotlin.String;kotlin.String;kotlin.Boolean){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.toBuilder|toBuilder(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.Chat = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.Chat){}[0]
+
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.Chat // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.build|build(){}[0]
+                final fun hasVoiceProfile(kotlin/Boolean): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.hasVoiceProfile|hasVoiceProfile(kotlin.Boolean){}[0]
+                final fun lang(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.lang|lang(kotlin.String){}[0]
+                final fun message(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.message|message(kotlin.String){}[0]
+                final fun receiptForUid(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.receiptForUid|receiptForUid(kotlin.String){}[0]
+                final fun receiptType(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.receiptType|receiptType(kotlin.Int){}[0]
+                final fun roomId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.roomId|roomId(kotlin.String){}[0]
+                final fun to(kotlin/String?): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.to|to(kotlin.String?){}[0]
+                final fun toCallsign(kotlin/String?): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.toCallsign|toCallsign(kotlin.String?){}[0]
+                final fun voiceProfileId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Chat.Builder.voiceProfileId|voiceProfileId(kotlin.String){}[0]
+            }
         }
 
         final class DrawnShape : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape|null[0]
@@ -823,7 +881,32 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin.collections/List<org.meshtastic.tak/TakPacketV2Data.Payload.Vertex> = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ...): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Boolean;kotlin.collections.List<org.meshtastic.tak.TakPacketV2Data.Payload.Vertex>;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.String){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.toBuilder|toBuilder(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.DrawnShape){}[0]
+
+                final fun addVertex(kotlin/Int, kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.addVertex|addVertex(kotlin.Int;kotlin.Int){}[0]
+                final fun angleDeg(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.angleDeg|angleDeg(kotlin.Int){}[0]
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.build|build(){}[0]
+                final fun bullseyeBearingRef(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.bullseyeBearingRef|bullseyeBearingRef(kotlin.Int){}[0]
+                final fun bullseyeDistanceDm(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.bullseyeDistanceDm|bullseyeDistanceDm(kotlin.Int){}[0]
+                final fun bullseyeFlags(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.bullseyeFlags|bullseyeFlags(kotlin.Int){}[0]
+                final fun bullseyeUidRef(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.bullseyeUidRef|bullseyeUidRef(kotlin.String){}[0]
+                final fun fillArgb(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.fillArgb|fillArgb(kotlin.Int){}[0]
+                final fun fillColor(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.fillColor|fillColor(kotlin.Int){}[0]
+                final fun kind(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.kind|kind(kotlin.Int){}[0]
+                final fun labelsOn(kotlin/Boolean): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.labelsOn|labelsOn(kotlin.Boolean){}[0]
+                final fun majorCm(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.majorCm|majorCm(kotlin.Int){}[0]
+                final fun minorCm(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.minorCm|minorCm(kotlin.Int){}[0]
+                final fun strokeArgb(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.strokeArgb|strokeArgb(kotlin.Int){}[0]
+                final fun strokeColor(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.strokeColor|strokeColor(kotlin.Int){}[0]
+                final fun strokeWeightX10(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.strokeWeightX10|strokeWeightX10(kotlin.Int){}[0]
+                final fun style(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.style|style(kotlin.Int){}[0]
+                final fun truncated(kotlin/Boolean): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.truncated|truncated(kotlin.Boolean){}[0]
+                final fun vertices(kotlin.collections/List<org.meshtastic.tak/TakPacketV2Data.Payload.Vertex>): org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.DrawnShape.Builder.vertices|vertices(kotlin.collections.List<org.meshtastic.tak.TakPacketV2Data.Payload.Vertex>){}[0]
+            }
         }
 
         final class EmergencyAlert : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert|null[0]
@@ -842,7 +925,17 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun copy(kotlin/Int = ..., kotlin/String = ..., kotlin/String = ...): org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.copy|copy(kotlin.Int;kotlin.String;kotlin.String){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.toBuilder|toBuilder(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.EmergencyAlert){}[0]
+
+                final fun authoringUid(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder.authoringUid|authoringUid(kotlin.String){}[0]
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder.build|build(){}[0]
+                final fun cancelReferenceUid(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder.cancelReferenceUid|cancelReferenceUid(kotlin.String){}[0]
+                final fun type(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.EmergencyAlert.Builder.type|type(kotlin.Int){}[0]
+            }
         }
 
         final class Marker : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.Marker|null[0]
@@ -876,7 +969,22 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ...): org.meshtastic.tak/TakPacketV2Data.Payload.Marker // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Boolean;kotlin.String;kotlin.String;kotlin.String;kotlin.String){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.toBuilder|toBuilder(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.Marker = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.Marker){}[0]
+
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.Marker // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.build|build(){}[0]
+                final fun color(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.color|color(kotlin.Int){}[0]
+                final fun colorArgb(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.colorArgb|colorArgb(kotlin.Int){}[0]
+                final fun iconset(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.iconset|iconset(kotlin.String){}[0]
+                final fun kind(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.kind|kind(kotlin.Int){}[0]
+                final fun parentCallsign(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.parentCallsign|parentCallsign(kotlin.String){}[0]
+                final fun parentType(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.parentType|parentType(kotlin.String){}[0]
+                final fun parentUid(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.parentUid|parentUid(kotlin.String){}[0]
+                final fun readiness(kotlin/Boolean): org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Marker.Builder.readiness|readiness(kotlin.Boolean){}[0]
+            }
         }
 
         final class Pli : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.Pli|null[0]
@@ -923,7 +1031,22 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.copy|copy(kotlin.Int;kotlin.Int;kotlin.String;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.toBuilder|toBuilder(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.RangeAndBearing){}[0]
+
+                final fun anchorLatI(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.anchorLatI|anchorLatI(kotlin.Int){}[0]
+                final fun anchorLonI(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.anchorLonI|anchorLonI(kotlin.Int){}[0]
+                final fun anchorUid(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.anchorUid|anchorUid(kotlin.String){}[0]
+                final fun bearingCdeg(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.bearingCdeg|bearingCdeg(kotlin.Int){}[0]
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.build|build(){}[0]
+                final fun rangeCm(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.rangeCm|rangeCm(kotlin.Int){}[0]
+                final fun strokeArgb(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.strokeArgb|strokeArgb(kotlin.Int){}[0]
+                final fun strokeColor(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.strokeColor|strokeColor(kotlin.Int){}[0]
+                final fun strokeWeightX10(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.RangeAndBearing.Builder.strokeWeightX10|strokeWeightX10(kotlin.Int){}[0]
+            }
         }
 
         final class RawDetail : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.RawDetail|null[0]
@@ -964,7 +1087,21 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/Int = ..., kotlin.collections/List<org.meshtastic.tak/TakPacketV2Data.Payload.Route.Link> = ..., kotlin/Boolean = ...): org.meshtastic.tak/TakPacketV2Data.Payload.Route // org.meshtastic.tak/TakPacketV2Data.Payload.Route.copy|copy(kotlin.Int;kotlin.Int;kotlin.String;kotlin.Int;kotlin.collections.List<org.meshtastic.tak.TakPacketV2Data.Payload.Route.Link>;kotlin.Boolean){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.Route.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.Route.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Route.toBuilder|toBuilder(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.Route.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.Route = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.Route){}[0]
+
+                final fun addLink(org.meshtastic.tak/TakPacketV2Data.Payload.Route.Link): org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder.addLink|addLink(org.meshtastic.tak.TakPacketV2Data.Payload.Route.Link){}[0]
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.Route // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder.build|build(){}[0]
+                final fun direction(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder.direction|direction(kotlin.Int){}[0]
+                final fun links(kotlin.collections/List<org.meshtastic.tak/TakPacketV2Data.Payload.Route.Link>): org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder.links|links(kotlin.collections.List<org.meshtastic.tak.TakPacketV2Data.Payload.Route.Link>){}[0]
+                final fun method(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder.method|method(kotlin.Int){}[0]
+                final fun prefix(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder.prefix|prefix(kotlin.String){}[0]
+                final fun strokeWeightX10(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder.strokeWeightX10|strokeWeightX10(kotlin.Int){}[0]
+                final fun truncated(kotlin/Boolean): org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Builder.truncated|truncated(kotlin.Boolean){}[0]
+            }
 
             final class Link { // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Link|null[0]
                 constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Int = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.Route.Link.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.String;kotlin.String;kotlin.Int){}[0]
@@ -993,7 +1130,7 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
         }
 
         final class TakTalk : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk|null[0]
-            constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Boolean = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.Boolean){}[0]
+            constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Boolean = ..., kotlin/String = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.<init>|<init>(kotlin.String;kotlin.String;kotlin.String;kotlin.Boolean;kotlin.String){}[0]
 
             final val chatroomId // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.chatroomId|{}chatroomId[0]
                 final fun <get-chatroomId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.chatroomId.<get-chatroomId>|<get-chatroomId>(){}[0]
@@ -1003,15 +1140,30 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
                 final fun <get-lang>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.lang.<get-lang>|<get-lang>(){}[0]
             final val text // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.text|{}text[0]
                 final fun <get-text>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.text.<get-text>|<get-text>(){}[0]
+            final val voiceProfileId // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.voiceProfileId|{}voiceProfileId[0]
+                final fun <get-voiceProfileId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.voiceProfileId.<get-voiceProfileId>|<get-voiceProfileId>(){}[0]
 
             final fun component1(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component1|component1(){}[0]
             final fun component2(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component2|component2(){}[0]
             final fun component3(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component3|component3(){}[0]
             final fun component4(): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component4|component4(){}[0]
-            final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Boolean = ...): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.Boolean){}[0]
+            final fun component5(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.component5|component5(){}[0]
+            final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Boolean = ..., kotlin/String = ...): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.copy|copy(kotlin.String;kotlin.String;kotlin.String;kotlin.Boolean;kotlin.String){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.toBuilder|toBuilder(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.TakTalk){}[0]
+
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.build|build(){}[0]
+                final fun chatroomId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.chatroomId|chatroomId(kotlin.String){}[0]
+                final fun fromVoice(kotlin/Boolean): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.fromVoice|fromVoice(kotlin.Boolean){}[0]
+                final fun lang(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.lang|lang(kotlin.String){}[0]
+                final fun text(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.text|text(kotlin.String){}[0]
+                final fun voiceProfileId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalk.Builder.voiceProfileId|voiceProfileId(kotlin.String){}[0]
+            }
         }
 
         final class TakTalkRoom : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom|null[0]
@@ -1030,7 +1182,39 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin.collections/List<kotlin/String> = ...): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.copy|copy(kotlin.String;kotlin.String;kotlin.collections.List<kotlin.String>){}[0]
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.toBuilder|toBuilder(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.TakTalkRoom){}[0]
+
+                final fun addParticipant(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder.addParticipant|addParticipant(kotlin.String){}[0]
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder.build|build(){}[0]
+                final fun participants(kotlin.collections/List<kotlin/String>): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder.participants|participants(kotlin.collections.List<kotlin.String>){}[0]
+                final fun roomId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder.roomId|roomId(kotlin.String){}[0]
+                final fun roomName(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoom.Builder.roomName|roomName(kotlin.String){}[0]
+            }
+        }
+
+        final class TakTalkRoomRequest : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest|null[0]
+            constructor <init>(kotlin/String = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.<init>|<init>(kotlin.String){}[0]
+
+            final val roomId // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.roomId|{}roomId[0]
+                final fun <get-roomId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.roomId.<get-roomId>|<get-roomId>(){}[0]
+
+            final fun component1(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.component1|component1(){}[0]
+            final fun copy(kotlin/String = ...): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.copy|copy(kotlin.String){}[0]
+            final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.equals|equals(kotlin.Any?){}[0]
+            final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.toBuilder|toBuilder(){}[0]
+            final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.TakTalkRoomRequest){}[0]
+
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder.build|build(){}[0]
+                final fun roomId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.TakTalkRoomRequest.Builder.roomId|roomId(kotlin.String){}[0]
+            }
         }
 
         final class TaskRequest : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.TaskRequest|null[0]
@@ -1075,6 +1259,53 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.Vertex.equals|equals(kotlin.Any?){}[0]
             final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.Vertex.hashCode|hashCode(){}[0]
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.Vertex.toString|toString(){}[0]
+        }
+
+        final class VoiceProfile : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile|null[0]
+            constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/ByteArray = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.<init>|<init>(kotlin.String;kotlin.String;kotlin.ByteArray){}[0]
+
+            final val profileData // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.profileData|{}profileData[0]
+                final fun <get-profileData>(): kotlin/ByteArray // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.profileData.<get-profileData>|<get-profileData>(){}[0]
+            final val voiceProfileId // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.voiceProfileId|{}voiceProfileId[0]
+                final fun <get-voiceProfileId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.voiceProfileId.<get-voiceProfileId>|<get-voiceProfileId>(){}[0]
+            final val voiceProfileName // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.voiceProfileName|{}voiceProfileName[0]
+                final fun <get-voiceProfileName>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.voiceProfileName.<get-voiceProfileName>|<get-voiceProfileName>(){}[0]
+
+            final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/ByteArray = ...): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.copy|copy(kotlin.String;kotlin.String;kotlin.ByteArray){}[0]
+            final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.equals|equals(kotlin.Any?){}[0]
+            final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.toBuilder|toBuilder(){}[0]
+            final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.VoiceProfile){}[0]
+
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.build|build(){}[0]
+                final fun profileData(kotlin/ByteArray): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.profileData|profileData(kotlin.ByteArray){}[0]
+                final fun voiceProfileId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.voiceProfileId|voiceProfileId(kotlin.String){}[0]
+                final fun voiceProfileName(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.voiceProfileName|voiceProfileName(kotlin.String){}[0]
+            }
+        }
+
+        final class VoiceProfileRequest : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest|null[0]
+            constructor <init>(kotlin/String = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.<init>|<init>(kotlin.String){}[0]
+
+            final val voiceProfileId // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.voiceProfileId|{}voiceProfileId[0]
+                final fun <get-voiceProfileId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.voiceProfileId.<get-voiceProfileId>|<get-voiceProfileId>(){}[0]
+
+            final fun component1(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.component1|component1(){}[0]
+            final fun copy(kotlin/String = ...): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.copy|copy(kotlin.String){}[0]
+            final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.equals|equals(kotlin.Any?){}[0]
+            final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.toBuilder|toBuilder(){}[0]
+            final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.VoiceProfileRequest){}[0]
+
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder.build|build(){}[0]
+                final fun voiceProfileId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.Builder.voiceProfileId|voiceProfileId(kotlin.String){}[0]
+            }
         }
 
         final object None : org.meshtastic.tak/TakPacketV2Data.Payload // org.meshtastic.tak/TakPacketV2Data.Payload.None|null[0]

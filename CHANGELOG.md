@@ -8,6 +8,13 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ## [Unreleased]
 
+### Breaking
+
+- Kotlin: `TakPacketV2Data.Payload` has three new subclasses
+  (`VoiceProfile`, `VoiceProfileRequest`, `TakTalkRoomRequest`), so an
+  exhaustive `when` over a payload no longer compiles. Add branches for them,
+  or an `else`.
+
 ### Added
 
 - Kotlin: the wire core for fragmenting large `TAKPacketV2` messages across
@@ -77,8 +84,44 @@ One version covers all five bindings, so a release is a single tag and a single 
   Both `compressForMesh` overloads take the policy in place of the flag, and
   the XML overload parses with `CotXmlParser.Limits.LARGE` for either
   fragmenting policy. The `fragmentIfOversize` overloads are unchanged and
-  remain as shorthand, so no existing caller has to change. `README.md` has a
-  flowchart and a table of what each policy does.
+  remain as shorthand, so no existing caller has to change. The policy
+  overloads carry `@JvmOverloads` like the flag ones, so Java can name a policy
+  and leave off `airtime`. `README.md` has a flowchart and a table of what each
+  policy does.
+
+- Kotlin: a Java-friendly API on the JVM artifact. Fluent builders replace the
+  long Kotlin constructors from Java: `TakPacketV2Data.Builder` (with
+  `cotType(String)`, `how(String)`, `latitudeDegrees`/`longitudeDegrees`,
+  `startEpochSeconds` and `addMarti` helpers) and builders for the `Chat`,
+  `TakTalk`, `TakTalkRoom`, `Marker`, `DrawnShape`, `Route`, `RangeAndBearing`
+  and `EmergencyAlert` payloads, each with `toBuilder()`. The fragmentation and
+  mesh calls gain `@JvmOverloads`/`@JvmStatic` (`TakFragmenter`,
+  `TakReassembler`, `TakMeshReceiver`, `compressForMesh`,
+  `AirtimeBudget.fromDeviceMetrics`, `MessageIdSource.random`,
+  `TakFragment.isFragment`), so Java can omit default arguments. A Java test
+  in `kotlin/src/jvmTest/java` keeps this surface compiling from Java.
+
+- Kotlin: the TAKTALK voice profile and request payloads from `atak.proto`,
+  each with a Java builder: `Payload.VoiceProfile` (`voice_profile`, tag 44),
+  `Payload.VoiceProfileRequest` (`voice_profile_request`, tag 45) and
+  `Payload.TakTalkRoomRequest` (`taktalk_room_request`, tag 46). The requests
+  are `y-` events addressed with Marti; the replies are a `VoiceProfile` and a
+  `TakTalkRoom`. `Payload.TakTalk` gains `voiceProfileId` (`TakTalkMessage`
+  tag 5), naming the profile a message is spoken with; empty means the
+  receiver's default voice. Its constructor and `copy` gain the parameter, so
+  code compiled against an earlier SDK needs recompiling. A voice profile's opaque model data is usually larger than
+  one frame, so send it with `fragmentIfOversize = true` and a fragmenter whose
+  `maxSourceFragments` covers it (the default 8 carries about 1.7 KB). All three are packet-level only for
+  now: `CotXmlParser` never produces them and `CotXmlBuilder` renders just the
+  envelope. A receiver on an earlier SDK, or on the Swift, Python, TypeScript
+  or C# bindings, decodes an unfragmented one as a PLI, since it does not know
+  the arm; one without fragment support rejects a fragmented voice profile.
+
+### Changed
+
+- Kotlin: `org.meshtastic:protobufs` 2.8.3, for the TAKTALK voice profile and
+  request messages.
+  Consumers that pin their own `protobufs` need 2.8.3 or later.
 
 ### Fixed
 

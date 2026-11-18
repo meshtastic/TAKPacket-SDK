@@ -20,8 +20,11 @@ import org.meshtastic.proto.TAKEnvironment
 import org.meshtastic.proto.TAKPacketV2
 import org.meshtastic.proto.TakTalkMessage
 import org.meshtastic.proto.TakTalkRoomData
+import org.meshtastic.proto.TakTalkRoomRequest
 import org.meshtastic.proto.TaskRequest
 import org.meshtastic.proto.Team
+import org.meshtastic.proto.VoiceProfile
+import org.meshtastic.proto.VoiceProfileRequest
 import org.meshtastic.proto.ZMistEntry
 import kotlin.math.roundToInt
 
@@ -130,6 +133,7 @@ public object TakPacketV2Serializer {
                             wb.chatroom_id = payload.chatroomId
                             wb.lang = payload.lang
                             wb.from_voice = payload.fromVoice
+                            wb.voice_profile_id = payload.voiceProfileId
                         }.build()
             }
 
@@ -149,6 +153,11 @@ public object TakPacketV2Serializer {
                             wb.participants = payload.participants
                         }.build()
             }
+
+            // TAKTALK voice profile and requests: set on the builder below.
+            is TakPacketV2Data.Payload.VoiceProfile, is TakPacketV2Data.Payload.VoiceProfileRequest,
+            is TakPacketV2Data.Payload.TakTalkRoomRequest,
+            -> {}
 
             is TakPacketV2Data.Payload.Aircraft -> {
                 aircraftField =
@@ -437,6 +446,7 @@ public object TakPacketV2Serializer {
                     wb.task = taskField
                     wb.taktalk = takTalkField
                     wb.taktalk_room = takTalkRoomField
+                    wb.setTakTalkVoiceArms(data.payload)
                 }.build()
 
         return TAKPacketV2.ADAPTER.encode(packet)
@@ -482,6 +492,7 @@ public object TakPacketV2Serializer {
                         chatroomId = t.chatroom_id,
                         lang = t.lang,
                         fromVoice = t.from_voice,
+                        voiceProfileId = t.voice_profile_id,
                     )
                 }
 
@@ -680,13 +691,14 @@ public object TakPacketV2Serializer {
                     )
                 }
 
-                // No payload_variant set → implicit PLI (position report). The
+                // The TAKTALK voice profile and request arms are decoded by takTalkVoicePayload
+                // below the object. No payload_variant set → implicit PLI (position report). The
                 // former `bool pli` field was dropped; a position beacon now carries
                 // zero payload bytes. None is never produced on decode (the parser
                 // never emits it, and the builder renders None/Pli identically), so
                 // collapsing no-variant to Pli is lossless for real traffic.
                 else -> {
-                    TakPacketV2Data.Payload.Pli(true)
+                    proto.takTalkVoicePayload() ?: TakPacketV2Data.Payload.Pli(true)
                 }
             }
 
@@ -804,3 +816,36 @@ public object TakPacketV2Serializer {
             model = model.ifEmpty { null },
         )
 }
+
+// The TAKTALK voice profile and request arms (tags 44 to 46), kept out of the serializer object to
+// hold it under detekt's LargeClass limit.
+private fun TAKPacketV2.Builder.setTakTalkVoiceArms(payload: TakPacketV2Data.Payload) {
+    when (payload) {
+        is TakPacketV2Data.Payload.VoiceProfile -> {
+            voice_profile =
+                VoiceProfile
+                    .Builder()
+                    .also {
+                        it.voice_profile_id = payload.voiceProfileId
+                        it.voice_profile_name = payload.voiceProfileName
+                        it.profile_data = payload.profileData.toByteString()
+                    }.build()
+        }
+
+        is TakPacketV2Data.Payload.VoiceProfileRequest -> {
+            voice_profile_request = VoiceProfileRequest.Builder().also { it.voice_profile_id = payload.voiceProfileId }.build()
+        }
+
+        is TakPacketV2Data.Payload.TakTalkRoomRequest -> {
+            taktalk_room_request = TakTalkRoomRequest.Builder().also { it.room_id = payload.roomId }.build()
+        }
+
+        else -> {}
+    }
+}
+
+/** The TAKTALK voice profile or request this packet carries, or null when it carries none. */
+private fun TAKPacketV2.takTalkVoicePayload(): TakPacketV2Data.Payload? =
+    voice_profile?.let { TakPacketV2Data.Payload.VoiceProfile(it.voice_profile_id, it.voice_profile_name, it.profile_data.toByteArray()) }
+        ?: voice_profile_request?.let { TakPacketV2Data.Payload.VoiceProfileRequest(it.voice_profile_id) }
+        ?: taktalk_room_request?.let { TakPacketV2Data.Payload.TakTalkRoomRequest(it.room_id) }

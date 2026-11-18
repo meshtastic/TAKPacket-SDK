@@ -59,6 +59,52 @@ For payloads that may exceed the MTU, `compressor.compressWithRemarksFallback(pa
 without remarks and returns `null` if it still won't fit; `compressWithStats(packet)` returns the
 payload plus size/ratio diagnostics.
 
+## Using from Java
+
+The JVM artifact works from plain Java. With Maven, or any build without Gradle module metadata,
+depend on `org.meshtastic:takpacket-sdk-jvm`; the Kotlin standard library comes in transitively.
+
+Build packets with the nested builders rather than the Kotlin constructors. Unset fields keep the
+data class defaults, and `toBuilder()` starts from an existing packet:
+
+```java
+import org.meshtastic.tak.*;
+import org.meshtastic.tak.TakPacketV2Data.Payload.TakTalk;
+
+TakPacketV2Data packet = new TakPacketV2Data.Builder()
+        .cotType("m-t-t")
+        .how("h-g-i-g-o")
+        .uid("ANDROID-0000000000000001")
+        .callsign("ALPHA-1")
+        .latitudeDegrees(38.8895)
+        .longitudeDegrees(-77.0353)
+        .addMarti("BRAVO-2")               // TAK Talk voice plays only for listed callsigns
+        .payload(new TakTalk.Builder()
+                .text("Moving to the north gate")
+                .chatroomId(roomUuid)
+                .fromVoice(true)
+                .build())
+        .build();
+
+TakCompressor compressor = new TakCompressor();
+TakFragmenter fragmenter = new TakFragmenter();    // keep one per sender
+MeshEncodeResult result = compressor.compressForMesh(packet, fragmenter, true);  // true = may fragment
+// result.getOutcome(): SINGLE_FRAME, FRAGMENTED, TOO_LARGE or INSUFFICIENT_AIRTIME
+// Send each of result.getFrames() as its own port-78 packet, in order, as one burst.
+
+// Receive side: one receiver for all senders.
+TakMeshReceiver receiver = new TakMeshReceiver(new TakReassembler(frameAirtimeMillis));
+TakPacketV2Data received = receiver.onPayload(payloadBytes, System.currentTimeMillis());
+```
+
+Builders exist for the envelope (`TakPacketV2Data.Builder`) and for the `Chat`, `TakTalk`,
+`TakTalkRoom`, `VoiceProfile`, `VoiceProfileRequest`, `TakTalkRoomRequest`, `Marker`,
+`DrawnShape`, `Route`, `RangeAndBearing` and `EmergencyAlert` payloads. The three TAKTALK voice
+profile and request payloads are packet-level only: build them directly, since the XML parser
+never produces them. A voice profile usually needs fragmenting. The Swift, Python, TypeScript and
+C# bindings don't handle these payloads yet: they decode them as a PLI.
+A PLI has no payload: set the envelope fields and an `a-f-*` type.
+
 ## Core classes
 
 | Class | Responsibility |
