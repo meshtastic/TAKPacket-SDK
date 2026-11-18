@@ -1,5 +1,17 @@
 package org.meshtastic.tak
 
+import kotlin.math.roundToInt
+
+private const val MAX_LATITUDE: Double = 90.0
+private const val MAX_LONGITUDE: Double = 180.0
+private const val DEGREES_SCALE: Double = 1e7
+
+/** Degrees to degrees × 1e7, clamped, rounded the way [CotXmlParser] does it. */
+private fun scaleDegrees(
+    degrees: Double,
+    limit: Double,
+): Int = (degrees.coerceIn(-limit, limit) * DEGREES_SCALE).roundToInt()
+
 /**
  * Platform-agnostic data model for a `TAKPacketV2` — the SDK's internal
  * representation, decoupled from any specific protobuf library.
@@ -115,6 +127,100 @@ public data class TakPacketV2Data(
     // tag 43, the highest.
     val startEpochLo14: Int? = null,
 ) {
+    /** Starts a [Builder] from this value. */
+    public fun toBuilder(): Builder = Builder(this)
+
+    /**
+     * Fluent builder for [TakPacketV2Data], for Java callers that would otherwise have to pass
+     * every constructor argument. Fields left unset keep [TakPacketV2Data]'s own defaults.
+     */
+    @Suppress("TooManyFunctions") // one setter per field
+    public class Builder(
+        private var current: TakPacketV2Data = TakPacketV2Data(),
+    ) {
+        public fun cotTypeId(cotTypeId: Int): Builder = apply { current = current.copy(cotTypeId = cotTypeId) }
+
+        public fun cotTypeStr(cotTypeStr: String?): Builder = apply { current = current.copy(cotTypeStr = cotTypeStr) }
+
+        public fun how(how: Int): Builder = apply { current = current.copy(how = how) }
+
+        public fun callsign(callsign: String): Builder = apply { current = current.copy(callsign = callsign) }
+
+        public fun team(team: Int): Builder = apply { current = current.copy(team = team) }
+
+        public fun role(role: Int): Builder = apply { current = current.copy(role = role) }
+
+        public fun latitudeI(latitudeI: Int): Builder = apply { current = current.copy(latitudeI = latitudeI) }
+
+        public fun longitudeI(longitudeI: Int): Builder = apply { current = current.copy(longitudeI = longitudeI) }
+
+        public fun altitude(altitude: Int): Builder = apply { current = current.copy(altitude = altitude) }
+
+        public fun speed(speed: Int): Builder = apply { current = current.copy(speed = speed) }
+
+        public fun course(course: Int): Builder = apply { current = current.copy(course = course) }
+
+        public fun battery(battery: Int): Builder = apply { current = current.copy(battery = battery) }
+
+        public fun geoSrc(geoSrc: Int): Builder = apply { current = current.copy(geoSrc = geoSrc) }
+
+        public fun altSrc(altSrc: Int): Builder = apply { current = current.copy(altSrc = altSrc) }
+
+        public fun uid(uid: String): Builder = apply { current = current.copy(uid = uid) }
+
+        public fun deviceCallsign(deviceCallsign: String): Builder = apply { current = current.copy(deviceCallsign = deviceCallsign) }
+
+        public fun staleSeconds(staleSeconds: Int): Builder = apply { current = current.copy(staleSeconds = staleSeconds) }
+
+        public fun takVersion(takVersion: String): Builder = apply { current = current.copy(takVersion = takVersion) }
+
+        public fun takDevice(takDevice: String): Builder = apply { current = current.copy(takDevice = takDevice) }
+
+        public fun takPlatform(takPlatform: String): Builder = apply { current = current.copy(takPlatform = takPlatform) }
+
+        public fun takOs(takOs: String): Builder = apply { current = current.copy(takOs = takOs) }
+
+        public fun endpoint(endpoint: String): Builder = apply { current = current.copy(endpoint = endpoint) }
+
+        public fun phone(phone: String): Builder = apply { current = current.copy(phone = phone) }
+
+        public fun remarks(remarks: String): Builder = apply { current = current.copy(remarks = remarks) }
+
+        public fun environment(environment: EnvironmentData?): Builder = apply { current = current.copy(environment = environment) }
+
+        public fun sensorFov(sensorFov: SensorFovData?): Builder = apply { current = current.copy(sensorFov = sensorFov) }
+
+        public fun marti(marti: List<String>): Builder = apply { current = current.copy(marti = marti) }
+
+        public fun payload(payload: Payload): Builder = apply { current = current.copy(payload = payload) }
+
+        public fun startEpochLo14(startEpochLo14: Int?): Builder = apply { current = current.copy(startEpochLo14 = startEpochLo14) }
+
+        /** Sets [TakPacketV2Data.cotTypeId] from a CoT type string, keeping the string itself only when it has no enum value (as the parser does). */
+        public fun cotType(type: String): Builder =
+            apply {
+                val id = CotTypeMapper.typeToEnum(type)
+                current = current.copy(cotTypeId = id, cotTypeStr = if (id == CotTypeMapper.COTTYPE_OTHER) type else null)
+            }
+
+        /** Sets [TakPacketV2Data.how] from a CoT `how` string such as `"m-g"` or `"h-e"`. */
+        public fun how(how: String): Builder = apply { current = current.copy(how = CotTypeMapper.howToEnum(how)) }
+
+        /** Latitude in degrees, stored as degrees × 1e7 like the parser does. */
+        public fun latitudeDegrees(degrees: Double): Builder = apply { current = current.copy(latitudeI = scaleDegrees(degrees, MAX_LATITUDE)) }
+
+        /** Longitude in degrees, stored as degrees × 1e7 like the parser does. */
+        public fun longitudeDegrees(degrees: Double): Builder = apply { current = current.copy(longitudeI = scaleDegrees(degrees, MAX_LONGITUDE)) }
+
+        /** The event's `start` time in epoch seconds; only its low 14 bits go on the wire. */
+        public fun startEpochSeconds(epochSeconds: Long): Builder = apply { current = current.copy(startEpochLo14 = StartEpoch.truncate(epochSeconds)) }
+
+        /** Adds one directed-routing recipient callsign. TAK Talk voice playback requires the receiver's callsign here. */
+        public fun addMarti(callsign: String): Builder = apply { current = current.copy(marti = current.marti + callsign) }
+
+        public fun build(): TakPacketV2Data = current
+    }
+
     /**
      * Weather annotation from a CoT `<environment>` detail element.
      *
@@ -277,7 +383,39 @@ public data class TakPacketV2Data(
              * non-TAKTALK chats.
              */
             val hasVoiceProfile: Boolean = false,
-        ) : Payload()
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [Chat], for Java callers that would otherwise have to pass
+             * every constructor argument. Fields left unset keep [Chat]'s own defaults.
+             */
+            public class Builder(
+                private var current: Chat = Chat(),
+            ) {
+                public fun message(message: String): Builder = apply { current = current.copy(message = message) }
+
+                public fun to(to: String?): Builder = apply { current = current.copy(to = to) }
+
+                public fun toCallsign(toCallsign: String?): Builder = apply { current = current.copy(toCallsign = toCallsign) }
+
+                public fun receiptForUid(receiptForUid: String): Builder = apply { current = current.copy(receiptForUid = receiptForUid) }
+
+                public fun receiptType(receiptType: Int): Builder = apply { current = current.copy(receiptType = receiptType) }
+
+                public fun lang(lang: String): Builder = apply { current = current.copy(lang = lang) }
+
+                public fun roomId(roomId: String): Builder = apply { current = current.copy(roomId = roomId) }
+
+                /** Sets the voice profile ID and marks it present: the serializer drops the ID unless [hasVoiceProfile] is true. */
+                public fun voiceProfileId(voiceProfileId: String): Builder = apply { current = current.copy(voiceProfileId = voiceProfileId, hasVoiceProfile = true) }
+
+                public fun hasVoiceProfile(hasVoiceProfile: Boolean): Builder = apply { current = current.copy(hasVoiceProfile = hasVoiceProfile) }
+
+                public fun build(): Chat = current
+            }
+        }
 
         /**
          * TAKTALK voice/text chat message (CoT type m-t-t). The voice audio
@@ -293,7 +431,28 @@ public data class TakPacketV2Data(
             val lang: String = "",
             /** True when the source CoT had a `<voice/>` marker (speech-to-text origin). */
             val fromVoice: Boolean = false,
-        ) : Payload()
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [TakTalk], for Java callers that would otherwise have to pass
+             * every constructor argument. Fields left unset keep [TakTalk]'s own defaults.
+             */
+            public class Builder(
+                private var current: TakTalk = TakTalk(),
+            ) {
+                public fun text(text: String): Builder = apply { current = current.copy(text = text) }
+
+                public fun chatroomId(chatroomId: String): Builder = apply { current = current.copy(chatroomId = chatroomId) }
+
+                public fun lang(lang: String): Builder = apply { current = current.copy(lang = lang) }
+
+                public fun fromVoice(fromVoice: Boolean): Builder = apply { current = current.copy(fromVoice = fromVoice) }
+
+                public fun build(): TakTalk = current
+            }
+        }
 
         /**
          * TAKTALK room/membership broadcast (CoT type y-). Not a chat message;
@@ -315,7 +474,29 @@ public data class TakPacketV2Data(
             val roomName: String = "",
             /** Current member callsigns in the room. */
             val participants: List<String> = emptyList(),
-        ) : Payload()
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [TakTalkRoom], for Java callers that would otherwise have to pass
+             * every constructor argument. Fields left unset keep [TakTalkRoom]'s own defaults.
+             */
+            public class Builder(
+                private var current: TakTalkRoom = TakTalkRoom(),
+            ) {
+                public fun roomId(roomId: String): Builder = apply { current = current.copy(roomId = roomId) }
+
+                public fun roomName(roomName: String): Builder = apply { current = current.copy(roomName = roomName) }
+
+                public fun participants(participants: List<String>): Builder = apply { current = current.copy(participants = participants) }
+
+                /** Adds one member callsign. */
+                public fun addParticipant(callsign: String): Builder = apply { current = current.copy(participants = current.participants + callsign) }
+
+                public fun build(): TakTalkRoom = current
+            }
+        }
 
         /**
          * ADS-B / military air track. Maps to the `AircraftTrack` protobuf
@@ -429,7 +610,61 @@ public data class TakPacketV2Data(
             val bullseyeFlags: Int = 0,
             /** UID this bullseye references for relative bearing, if any. */
             val bullseyeUidRef: String = "",
-        ) : Payload()
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [DrawnShape], for Java callers that would otherwise have to pass
+             * every constructor argument. Fields left unset keep [DrawnShape]'s own defaults.
+             */
+            @Suppress("TooManyFunctions") // one setter per field
+            public class Builder(
+                private var current: DrawnShape = DrawnShape(),
+            ) {
+                public fun kind(kind: Int): Builder = apply { current = current.copy(kind = kind) }
+
+                public fun style(style: Int): Builder = apply { current = current.copy(style = style) }
+
+                public fun majorCm(majorCm: Int): Builder = apply { current = current.copy(majorCm = majorCm) }
+
+                public fun minorCm(minorCm: Int): Builder = apply { current = current.copy(minorCm = minorCm) }
+
+                public fun angleDeg(angleDeg: Int): Builder = apply { current = current.copy(angleDeg = angleDeg) }
+
+                public fun strokeColor(strokeColor: Int): Builder = apply { current = current.copy(strokeColor = strokeColor) }
+
+                public fun strokeArgb(strokeArgb: Int): Builder = apply { current = current.copy(strokeArgb = strokeArgb) }
+
+                public fun strokeWeightX10(strokeWeightX10: Int): Builder = apply { current = current.copy(strokeWeightX10 = strokeWeightX10) }
+
+                public fun fillColor(fillColor: Int): Builder = apply { current = current.copy(fillColor = fillColor) }
+
+                public fun fillArgb(fillArgb: Int): Builder = apply { current = current.copy(fillArgb = fillArgb) }
+
+                public fun labelsOn(labelsOn: Boolean): Builder = apply { current = current.copy(labelsOn = labelsOn) }
+
+                public fun vertices(vertices: List<Vertex>): Builder = apply { current = current.copy(vertices = vertices) }
+
+                public fun truncated(truncated: Boolean): Builder = apply { current = current.copy(truncated = truncated) }
+
+                public fun bullseyeDistanceDm(bullseyeDistanceDm: Int): Builder = apply { current = current.copy(bullseyeDistanceDm = bullseyeDistanceDm) }
+
+                public fun bullseyeBearingRef(bullseyeBearingRef: Int): Builder = apply { current = current.copy(bullseyeBearingRef = bullseyeBearingRef) }
+
+                public fun bullseyeFlags(bullseyeFlags: Int): Builder = apply { current = current.copy(bullseyeFlags = bullseyeFlags) }
+
+                public fun bullseyeUidRef(bullseyeUidRef: String): Builder = apply { current = current.copy(bullseyeUidRef = bullseyeUidRef) }
+
+                /** Adds one vertex, in degrees × 1e7. */
+                public fun addVertex(
+                    latI: Int,
+                    lonI: Int,
+                ): Builder = apply { current = current.copy(vertices = current.vertices + Vertex(latI, lonI)) }
+
+                public fun build(): DrawnShape = current
+            }
+        }
 
         /**
          * Fixed marker: spot, waypoint, checkpoint, 2525 symbol, or custom icon.
@@ -452,7 +687,36 @@ public data class TakPacketV2Data(
             val parentCallsign: String = "",
             /** Icon set path (e.g. `COT_MAPPING_2525B/…`); empty for built-in markers. */
             val iconset: String = "",
-        ) : Payload()
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [Marker], for Java callers that would otherwise have to pass
+             * every constructor argument. Fields left unset keep [Marker]'s own defaults.
+             */
+            public class Builder(
+                private var current: Marker = Marker(),
+            ) {
+                public fun kind(kind: Int): Builder = apply { current = current.copy(kind = kind) }
+
+                public fun color(color: Int): Builder = apply { current = current.copy(color = color) }
+
+                public fun colorArgb(colorArgb: Int): Builder = apply { current = current.copy(colorArgb = colorArgb) }
+
+                public fun readiness(readiness: Boolean): Builder = apply { current = current.copy(readiness = readiness) }
+
+                public fun parentUid(parentUid: String): Builder = apply { current = current.copy(parentUid = parentUid) }
+
+                public fun parentType(parentType: String): Builder = apply { current = current.copy(parentType = parentType) }
+
+                public fun parentCallsign(parentCallsign: String): Builder = apply { current = current.copy(parentCallsign = parentCallsign) }
+
+                public fun iconset(iconset: String): Builder = apply { current = current.copy(iconset = iconset) }
+
+                public fun build(): Marker = current
+            }
+        }
 
         /**
          * Range and bearing measurement line. Maps to `RangeAndBearing` proto
@@ -476,7 +740,36 @@ public data class TakPacketV2Data(
             val strokeArgb: Int = 0,
             /** Stroke weight × 10 (e.g. 3.0 px → 30). */
             val strokeWeightX10: Int = 0,
-        ) : Payload()
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [RangeAndBearing], for Java callers that would otherwise have to pass
+             * every constructor argument. Fields left unset keep [RangeAndBearing]'s own defaults.
+             */
+            public class Builder(
+                private var current: RangeAndBearing = RangeAndBearing(),
+            ) {
+                public fun anchorLatI(anchorLatI: Int): Builder = apply { current = current.copy(anchorLatI = anchorLatI) }
+
+                public fun anchorLonI(anchorLonI: Int): Builder = apply { current = current.copy(anchorLonI = anchorLonI) }
+
+                public fun anchorUid(anchorUid: String): Builder = apply { current = current.copy(anchorUid = anchorUid) }
+
+                public fun rangeCm(rangeCm: Int): Builder = apply { current = current.copy(rangeCm = rangeCm) }
+
+                public fun bearingCdeg(bearingCdeg: Int): Builder = apply { current = current.copy(bearingCdeg = bearingCdeg) }
+
+                public fun strokeColor(strokeColor: Int): Builder = apply { current = current.copy(strokeColor = strokeColor) }
+
+                public fun strokeArgb(strokeArgb: Int): Builder = apply { current = current.copy(strokeArgb = strokeArgb) }
+
+                public fun strokeWeightX10(strokeWeightX10: Int): Builder = apply { current = current.copy(strokeWeightX10 = strokeWeightX10) }
+
+                public fun build(): RangeAndBearing = current
+            }
+        }
 
         /**
          * Named route consisting of ordered waypoints and control points.
@@ -500,6 +793,34 @@ public data class TakPacketV2Data(
             /** True if links were dropped because the route exceeded the parser's limit. */
             val truncated: Boolean = false,
         ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [Route], for Java callers that would otherwise have to pass
+             * every constructor argument. Fields left unset keep [Route]'s own defaults.
+             */
+            public class Builder(
+                private var current: Route = Route(),
+            ) {
+                public fun method(method: Int): Builder = apply { current = current.copy(method = method) }
+
+                public fun direction(direction: Int): Builder = apply { current = current.copy(direction = direction) }
+
+                public fun prefix(prefix: String): Builder = apply { current = current.copy(prefix = prefix) }
+
+                public fun strokeWeightX10(strokeWeightX10: Int): Builder = apply { current = current.copy(strokeWeightX10 = strokeWeightX10) }
+
+                public fun links(links: List<Link>): Builder = apply { current = current.copy(links = links) }
+
+                public fun truncated(truncated: Boolean): Builder = apply { current = current.copy(truncated = truncated) }
+
+                /** Adds one waypoint or checkpoint. */
+                public fun addLink(link: Link): Builder = apply { current = current.copy(links = current.links + link) }
+
+                public fun build(): Route = current
+            }
+
             /**
              * One route waypoint or control point.
              *
@@ -639,7 +960,26 @@ public data class TakPacketV2Data(
             val authoringUid: String = "",
             /** For Type_Cancel: UID of the alert being cancelled. Empty otherwise. */
             val cancelReferenceUid: String = "",
-        ) : Payload()
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [EmergencyAlert], for Java callers that would otherwise have to pass
+             * every constructor argument. Fields left unset keep [EmergencyAlert]'s own defaults.
+             */
+            public class Builder(
+                private var current: EmergencyAlert = EmergencyAlert(),
+            ) {
+                public fun type(type: Int): Builder = apply { current = current.copy(type = type) }
+
+                public fun authoringUid(authoringUid: String): Builder = apply { current = current.copy(authoringUid = authoringUid) }
+
+                public fun cancelReferenceUid(cancelReferenceUid: String): Builder = apply { current = current.copy(cancelReferenceUid = cancelReferenceUid) }
+
+                public fun build(): EmergencyAlert = current
+            }
+        }
 
         /**
          * Task / engage request (CoT type `t-s`).

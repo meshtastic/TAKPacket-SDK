@@ -7,6 +7,7 @@ public final class org/meshtastic/tak/AirtimeBudget {
 	public final fun copy (JJ)Lorg/meshtastic/tak/AirtimeBudget;
 	public static synthetic fun copy$default (Lorg/meshtastic/tak/AirtimeBudget;JJILjava/lang/Object;)Lorg/meshtastic/tak/AirtimeBudget;
 	public fun equals (Ljava/lang/Object;)Z
+	public static final fun fromDeviceMetrics (DDIJ)Lorg/meshtastic/tak/AirtimeBudget;
 	public final fun getFrameAirtimeMillis ()J
 	public final fun getRemainingMillis ()J
 	public fun hashCode ()I
@@ -334,6 +335,7 @@ public final class org/meshtastic/tak/MeshEncodeResult$Outcome : java/lang/Enum 
 public abstract interface class org/meshtastic/tak/MessageIdSource {
 	public static final field Companion Lorg/meshtastic/tak/MessageIdSource$Companion;
 	public abstract fun next ()I
+	public static fun random ()Lorg/meshtastic/tak/MessageIdSource;
 }
 
 public final class org/meshtastic/tak/MessageIdSource$Companion {
@@ -361,7 +363,11 @@ public final class org/meshtastic/tak/TakCompressor {
 	public fun <init> (I)V
 	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun compress (Lorg/meshtastic/tak/TakPacketV2Data;)[B
+	public final fun compressForMesh (Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public final fun compressForMesh (Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;Z)Lorg/meshtastic/tak/MeshEncodeResult;
 	public final fun compressForMesh (Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public final fun compressForMesh (Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public final fun compressForMesh (Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;Z)Lorg/meshtastic/tak/MeshEncodeResult;
 	public final fun compressForMesh (Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;)Lorg/meshtastic/tak/MeshEncodeResult;
 	public static synthetic fun compressForMesh$default (Lorg/meshtastic/tak/TakCompressor;Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;ILjava/lang/Object;)Lorg/meshtastic/tak/MeshEncodeResult;
 	public static synthetic fun compressForMesh$default (Lorg/meshtastic/tak/TakCompressor;Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;ILjava/lang/Object;)Lorg/meshtastic/tak/MeshEncodeResult;
@@ -424,16 +430,23 @@ public final class org/meshtastic/tak/TakFragment {
 	public static final field MESH_HEADER_BYTES I
 	public static final field REPAIR_REQUEST_MARKER I
 	public static final field SIGNATURE_OVERHEAD_BYTES I
-	public final fun isFragment ([B)Z
-	public final fun maxFrameBytes (ZZZ)I
-	public static synthetic fun maxFrameBytes$default (Lorg/meshtastic/tak/TakFragment;ZZZILjava/lang/Object;)I
+	public static final fun isFragment ([B)Z
+	public static final fun maxFrameBytes ()I
+	public static final fun maxFrameBytes (Z)I
+	public static final fun maxFrameBytes (ZZ)I
+	public static final fun maxFrameBytes (ZZZ)I
+	public static synthetic fun maxFrameBytes$default (ZZZILjava/lang/Object;)I
 }
 
 public final class org/meshtastic/tak/TakFragmenter {
 	public static final field Companion Lorg/meshtastic/tak/TakFragmenter$Companion;
 	public fun <init> ()V
+	public fun <init> (I)V
+	public fun <init> (II)V
+	public fun <init> (IILkotlin/jvm/functions/Function1;)V
 	public fun <init> (IILkotlin/jvm/functions/Function1;Lorg/meshtastic/tak/MessageIdSource;)V
 	public synthetic fun <init> (IILkotlin/jvm/functions/Function1;Lorg/meshtastic/tak/MessageIdSource;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public static final fun defaultRepairCount (I)I
 	public final fun getMaxFrameBytes ()I
 	public final fun getMaxSourceFragments ()I
 	public final fun getSliceSize ()I
@@ -447,6 +460,7 @@ public final class org/meshtastic/tak/TakFragmenter$Companion {
 }
 
 public final class org/meshtastic/tak/TakMeshReceiver {
+	public fun <init> (Lorg/meshtastic/tak/TakReassembler;)V
 	public fun <init> (Lorg/meshtastic/tak/TakReassembler;Lorg/meshtastic/tak/TakCompressor;)V
 	public synthetic fun <init> (Lorg/meshtastic/tak/TakReassembler;Lorg/meshtastic/tak/TakCompressor;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun evictExpired (J)V
@@ -529,7 +543,50 @@ public final class org/meshtastic/tak/TakPacketV2Data {
 	public final fun getUid ()Ljava/lang/String;
 	public fun hashCode ()I
 	public final fun howString ()Ljava/lang/String;
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addMarti (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun altSrc (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun altitude (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun battery (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data;
+	public final fun callsign (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun cotType (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun cotTypeId (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun cotTypeStr (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun course (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun deviceCallsign (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun endpoint (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun environment (Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun geoSrc (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun how (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun how (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun latitudeDegrees (D)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun latitudeI (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun longitudeDegrees (D)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun longitudeI (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun marti (Ljava/util/List;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun payload (Lorg/meshtastic/tak/TakPacketV2Data$Payload;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun phone (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun remarks (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun role (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun sensorFov (Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun speed (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun staleSeconds (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun startEpochLo14 (Ljava/lang/Integer;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun startEpochSeconds (J)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun takDevice (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun takOs (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun takPlatform (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun takVersion (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun team (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun uid (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$EnvironmentData {
@@ -707,7 +764,24 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$Chat : org/meshtas
 	public final fun getToCallsign ()Ljava/lang/String;
 	public final fun getVoiceProfileId ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat;
+	public final fun hasVoiceProfile (Z)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
+	public final fun lang (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
+	public final fun message (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
+	public final fun receiptForUid (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
+	public final fun receiptType (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
+	public final fun roomId (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
+	public final fun to (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
+	public final fun toCallsign (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
+	public final fun voiceProfileId (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Chat$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape : org/meshtastic/tak/TakPacketV2Data$Payload {
@@ -752,7 +826,33 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape : org/m
 	public final fun getTruncated ()Z
 	public final fun getVertices ()Ljava/util/List;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addVertex (II)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun angleDeg (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape;
+	public final fun bullseyeBearingRef (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun bullseyeDistanceDm (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun bullseyeFlags (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun bullseyeUidRef (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun fillArgb (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun fillColor (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun kind (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun labelsOn (Z)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun majorCm (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun minorCm (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun strokeArgb (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun strokeColor (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun strokeWeightX10 (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun style (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun truncated (Z)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
+	public final fun vertices (Ljava/util/List;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$DrawnShape$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert : org/meshtastic/tak/TakPacketV2Data$Payload {
@@ -769,7 +869,18 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert : o
 	public final fun getCancelReferenceUid ()Ljava/lang/String;
 	public final fun getType ()I
 	public fun hashCode ()I
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun authoringUid (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert$Builder;
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert;
+	public final fun cancelReferenceUid (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert$Builder;
+	public final fun type (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$EmergencyAlert$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$Marker : org/meshtastic/tak/TakPacketV2Data$Payload {
@@ -796,7 +907,23 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$Marker : org/mesht
 	public final fun getParentUid ()Ljava/lang/String;
 	public final fun getReadiness ()Z
 	public fun hashCode ()I
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker;
+	public final fun color (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder;
+	public final fun colorArgb (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder;
+	public final fun iconset (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder;
+	public final fun kind (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder;
+	public final fun parentCallsign (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder;
+	public final fun parentType (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder;
+	public final fun parentUid (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder;
+	public final fun readiness (Z)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Marker$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$None : org/meshtastic/tak/TakPacketV2Data$Payload {
@@ -840,7 +967,23 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing : 
 	public final fun getStrokeColor ()I
 	public final fun getStrokeWeightX10 ()I
 	public fun hashCode ()I
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun anchorLatI (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder;
+	public final fun anchorLonI (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder;
+	public final fun anchorUid (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder;
+	public final fun bearingCdeg (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder;
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing;
+	public final fun rangeCm (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder;
+	public final fun strokeArgb (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder;
+	public final fun strokeColor (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder;
+	public final fun strokeWeightX10 (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$RangeAndBearing$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$RawDetail : org/meshtastic/tak/TakPacketV2Data$Payload {
@@ -874,7 +1017,22 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$Route : org/meshta
 	public final fun getStrokeWeightX10 ()I
 	public final fun getTruncated ()Z
 	public fun hashCode ()I
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$Payload$Route$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addLink (Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route$Link;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route$Builder;
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route;
+	public final fun direction (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route$Builder;
+	public final fun links (Ljava/util/List;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route$Builder;
+	public final fun method (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route$Builder;
+	public final fun prefix (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route$Builder;
+	public final fun strokeWeightX10 (I)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route$Builder;
+	public final fun truncated (Z)Lorg/meshtastic/tak/TakPacketV2Data$Payload$Route$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$Route$Link {
@@ -914,7 +1072,19 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalk : org/mesh
 	public final fun getLang ()Ljava/lang/String;
 	public final fun getText ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk;
+	public final fun chatroomId (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
+	public final fun fromVoice (Z)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
+	public final fun lang (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
+	public final fun text (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalk$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom : org/meshtastic/tak/TakPacketV2Data$Payload {
@@ -931,7 +1101,19 @@ public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom : org/
 	public final fun getRoomId ()Ljava/lang/String;
 	public final fun getRoomName ()Ljava/lang/String;
 	public fun hashCode ()I
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom$Builder;
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addParticipant (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom$Builder;
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom;
+	public final fun participants (Ljava/util/List;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom$Builder;
+	public final fun roomId (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom$Builder;
+	public final fun roomName (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Payload$TakTalkRoom$Builder;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$Payload$TaskRequest : org/meshtastic/tak/TakPacketV2Data$Payload {
@@ -1023,6 +1205,10 @@ public final class org/meshtastic/tak/TakPacketV2Serializer {
 }
 
 public final class org/meshtastic/tak/TakReassembler {
+	public fun <init> (J)V
+	public fun <init> (JI)V
+	public fun <init> (JII)V
+	public fun <init> (JIIJ)V
 	public fun <init> (JIIJI)V
 	public synthetic fun <init> (JIIJIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun accept ([BJ)[B

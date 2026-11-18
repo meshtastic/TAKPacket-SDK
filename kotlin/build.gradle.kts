@@ -219,6 +219,13 @@ tasks.withType<AbstractArchiveTask>().configureEach {
     isPreserveFileTimestamps = false
 }
 
+// Java sources (the Java API test in src/jvmTest/java) must target the same release as the
+// Kotlin jvm target above, or Kotlin's JVM-target validation fails the build. --release also
+// compiles them against the Java 17 class library, matching -Xjdk-release=17.
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(17)
+}
+
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
