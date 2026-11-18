@@ -431,6 +431,12 @@ public data class TakPacketV2Data(
             val lang: String = "",
             /** True when the source CoT had a `<voice/>` marker (speech-to-text origin). */
             val fromVoice: Boolean = false,
+            /**
+             * The [VoiceProfile] the receiver should speak this message with, matching
+             * [VoiceProfile.voiceProfileId]. Empty = the receiver's default voice. Packet-level
+             * only: no CoT XML carries it, so the parser leaves it empty.
+             */
+            val voiceProfileId: String = "",
         ) : Payload() {
             /** Starts a [Builder] from this value. */
             public fun toBuilder(): Builder = Builder(this)
@@ -449,6 +455,8 @@ public data class TakPacketV2Data(
                 public fun lang(lang: String): Builder = apply { current = current.copy(lang = lang) }
 
                 public fun fromVoice(fromVoice: Boolean): Builder = apply { current = current.copy(fromVoice = fromVoice) }
+
+                public fun voiceProfileId(voiceProfileId: String): Builder = apply { current = current.copy(voiceProfileId = voiceProfileId) }
 
                 public fun build(): TakTalk = current
             }
@@ -495,6 +503,121 @@ public data class TakPacketV2Data(
                 public fun addParticipant(callsign: String): Builder = apply { current = current.copy(participants = current.participants + callsign) }
 
                 public fun build(): TakTalkRoom = current
+            }
+        }
+
+        /**
+         * A sender's TAKTALK synthetic speech profile, so receivers can render that sender's
+         * messages in their own voice. Maps to the `VoiceProfile` protobuf message
+         * (payload_variant tag 44); it is the reply to a [VoiceProfileRequest].
+         *
+         * [profileData] is opaque model data, not audio, and usually bigger than one frame:
+         * send it with `compressForMesh(..., fragmentIfOversize = true)` and a [TakFragmenter]
+         * whose `maxSourceFragments` covers it (the default 8 carries about 1.7 KB at the 225 B
+         * MTU; the ceiling is 32). It gains nothing from the TAK dictionary; the compressor's
+         * skip-compress rule keeps it from growing past the raw protobuf plus one byte.
+         *
+         * Packet-level only: [CotXmlParser] never produces this variant and
+         * [CotXmlBuilder] renders just the envelope for it.
+         */
+        public class VoiceProfile(
+            /** Stable identifier, matching [Chat.voiceProfileId] and [VoiceProfileRequest.voiceProfileId]. */
+            public val voiceProfileId: String = "",
+            /** Friendly display name for the voice. */
+            public val voiceProfileName: String = "",
+            /** The profile itself, opaque to this SDK. */
+            public val profileData: ByteArray = ByteArray(0),
+        ) : Payload() {
+            /** A copy with the given fields replaced, like a data class `copy`. */
+            public fun copy(
+                voiceProfileId: String = this.voiceProfileId,
+                voiceProfileName: String = this.voiceProfileName,
+                profileData: ByteArray = this.profileData,
+            ): VoiceProfile = VoiceProfile(voiceProfileId, voiceProfileName, profileData)
+
+            override fun equals(other: Any?): Boolean =
+                other is VoiceProfile &&
+                    voiceProfileId == other.voiceProfileId &&
+                    voiceProfileName == other.voiceProfileName &&
+                    profileData.contentEquals(other.profileData)
+
+            override fun hashCode(): Int = (voiceProfileId.hashCode() * 31 + voiceProfileName.hashCode()) * 31 + profileData.contentHashCode()
+
+            override fun toString(): String = "VoiceProfile(voiceProfileId=$voiceProfileId, voiceProfileName=$voiceProfileName, profileData=${profileData.size} bytes)"
+
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [VoiceProfile], for Java callers. Fields left unset keep
+             * [VoiceProfile]'s own defaults.
+             */
+            public class Builder(
+                private var current: VoiceProfile = VoiceProfile(),
+            ) {
+                public fun voiceProfileId(voiceProfileId: String): Builder = apply { current = current.copy(voiceProfileId = voiceProfileId) }
+
+                public fun voiceProfileName(voiceProfileName: String): Builder = apply { current = current.copy(voiceProfileName = voiceProfileName) }
+
+                public fun profileData(profileData: ByteArray): Builder = apply { current = current.copy(profileData = profileData) }
+
+                public fun build(): VoiceProfile = current
+            }
+        }
+
+        /**
+         * TAKTALK request for a peer's voice profile (CoT type y-). Maps to the
+         * `VoiceProfileRequest` protobuf message (payload_variant tag 45). Address it
+         * to the peer with [TakPacketV2Data.marti]; the reply is that peer's voice profile.
+         *
+         * Packet-level only: [CotXmlParser] never produces this variant and
+         * [CotXmlBuilder] renders just the envelope for it.
+         */
+        public data class VoiceProfileRequest(
+            /** Profile wanted, matching a chat's voice profile ID. Empty asks for whichever profile the peer is using. */
+            val voiceProfileId: String = "",
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [VoiceProfileRequest], for Java callers. Fields left unset keep
+             * [VoiceProfileRequest]'s own defaults.
+             */
+            public class Builder(
+                private var current: VoiceProfileRequest = VoiceProfileRequest(),
+            ) {
+                public fun voiceProfileId(voiceProfileId: String): Builder = apply { current = current.copy(voiceProfileId = voiceProfileId) }
+
+                public fun build(): VoiceProfileRequest = current
+            }
+        }
+
+        /**
+         * TAKTALK request for a room's name and roster (CoT type y-). Maps to the
+         * `TakTalkRoomRequest` protobuf message (payload_variant tag 46). Address it
+         * with [TakPacketV2Data.marti]; the reply is a [TakTalkRoom].
+         *
+         * Packet-level only: [CotXmlParser] never produces this variant and
+         * [CotXmlBuilder] renders just the envelope for it.
+         */
+        public data class TakTalkRoomRequest(
+            /** Room UUID wanted, matching [TakTalkRoom.roomId]. */
+            val roomId: String = "",
+        ) : Payload() {
+            /** Starts a [Builder] from this value. */
+            public fun toBuilder(): Builder = Builder(this)
+
+            /**
+             * Fluent builder for [TakTalkRoomRequest], for Java callers. Fields left unset keep
+             * [TakTalkRoomRequest]'s own defaults.
+             */
+            public class Builder(
+                private var current: TakTalkRoomRequest = TakTalkRoomRequest(),
+            ) {
+                public fun roomId(roomId: String): Builder = apply { current = current.copy(roomId = roomId) }
+
+                public fun build(): TakTalkRoomRequest = current
             }
         }
 
