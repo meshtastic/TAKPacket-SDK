@@ -68,9 +68,11 @@ One version covers all five bindings, so a release is a single tag and a single 
   `true` already select. `STRIP_FIRST` is new: it drops the remarks before it
   considers a fragment set. A CoT that misses one frame only because of its
   remarks then still goes out as one frame, where `FRAGMENT_FIRST` spends a
-  burst of at least three frames to keep them. A burst is spent only on what
-  dropping the remarks cannot fix, such as geometry or a long chat message, and
-  a CoT with no remarks behaves the same under both policies.
+  burst to keep them whenever the fragmenter's caps and the airtime budget
+  allow one (three frames for two source fragments under the default repair
+  policy). Under `STRIP_FIRST` a burst is spent only on what dropping the
+  remarks cannot fix, such as geometry or a long chat message, and a CoT with
+  no remarks behaves the same under both policies.
 
   Both `compressForMesh` overloads take the policy in place of the flag, and
   the XML overload parses with `CotXmlParser.Limits.LARGE` for either

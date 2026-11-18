@@ -54,7 +54,12 @@ public data class AirtimeBudget(
  * on the wire.
  *
  * A CoT that fits one frame goes out as that frame, untouched, under every
- * policy. They differ only once it does not fit:
+ * policy. They differ only once it does not fit. A fragment set in the table
+ * is conditional twice over: the fragmenter's caps have to allow it
+ * (`maxSourceFragments`, and a protobuf within
+ * [TakFragment.MAX_REASSEMBLED_DECOMPRESSED_SIZE]), and so does the
+ * [AirtimeBudget] when one is passed. What happens when either refuses comes
+ * after the table.
  *
  * | Policy           | Misses one frame only because of its remarks | Too big even without its remarks                   |
  * |------------------|----------------------------------------------|----------------------------------------------------|
@@ -63,10 +68,18 @@ public data class AirtimeBudget(
  * | [FRAGMENT_FIRST] | a fragment set, remarks kept                 | a fragment set, remarks kept while the caps allow  |
  *
  * The same two fallbacks apply under every policy, each at most once and in
- * this order, whenever a packet neither fits one frame nor may be fragmented:
- * drop the remarks, then cut the geometry to
+ * this order, whenever a packet neither fits one frame nor may be fragmented,
+ * whether the policy is holding fragmenting back or the fragmenter's caps
+ * refuse the set: drop the remarks, then cut the geometry to
  * [CotXmlParser.Limits.SINGLE_FRAME]. A packet that still fits nowhere is
- * [MeshEncodeResult.Outcome.TOO_LARGE].
+ * [MeshEncodeResult.Outcome.TOO_LARGE]. A long chat message over the caps
+ * ends there under every policy, since it has no remarks to drop and no
+ * geometry to cut.
+ *
+ * A fragment set that the caps allow but the airtime budget does not cover is
+ * [MeshEncodeResult.Outcome.INSUFFICIENT_AIRTIME]. That ends the call with no
+ * frames; it does not fall back to a smaller packet. The budget is only
+ * consulted for a fragment set, never for a single frame.
  */
 public enum class FragmentPolicy {
     /**
@@ -105,8 +118,13 @@ internal fun fragmentPolicyFor(fragmentIfOversize: Boolean): FragmentPolicy = if
  *           frame for [Outcome.SINGLE_FRAME], K source then R repair fragments
  *           for [Outcome.FRAGMENTED], null otherwise.
  * @property remarksStripped true if this call dropped the remarks to make the packet fit.
- * @property truncated true if this call cut shape vertices or route links down to
- *           [CotXmlParser.Limits.SINGLE_FRAME] to make the packet fit.
+ * @property truncated true if the geometry fallback ran: the encoder cut shape
+ *           vertices or route links down to [CotXmlParser.Limits.SINGLE_FRAME]
+ *           to make the packet fit. It does not report a cut made at parse.
+ *           Under [FragmentPolicy.NEVER] the XML overload parses with those
+ *           limits, so longer geometry is already cut before the encoder sees
+ *           it and this stays false. The payload's own `truncated` flag is set
+ *           in both cases.
  */
 public class MeshEncodeResult(
     public val outcome: Outcome,

@@ -448,9 +448,11 @@ A CoT that does not fit one 225 B frame has to give something up: its remarks, s
 
 | Policy | What gives way first | Meant for |
 |--------|----------------------|-----------|
-| `NEVER` | Remarks, then geometry. One frame or nothing, which is what `compressWithRemarksFallback()` does. | PLI and anything else sent periodically |
+| `NEVER` | Remarks, then geometry. One frame or nothing. | PLI and anything else sent periodically |
 | `STRIP_FIRST` | Remarks. A burst is spent only on what dropping them cannot fix. | CoTs whose geometry or text matters more than their remarks |
 | `FRAGMENT_FIRST` | Airtime. The CoT is fragmented before anything is dropped. | CoTs that should arrive whole |
+
+`NEVER` takes the same path as `compressWithRemarksFallback()`, with two more checks. A protobuf over 4,096 B counts as not fitting even when it compresses into one frame, because receivers would reject it: the remarks are dropped, and the CoT is refused if that is not enough. And a packet built with more than 32 vertices or 16 route links is cut down to them before the CoT is given up on; the XML overload already parses with those limits.
 
 A CoT that fits one frame goes out as that frame, untouched, under every policy. The flowchart is the whole decision; each fallback runs at most once.
 
@@ -486,32 +488,49 @@ flowchart TD
     geometry -->|no| toolarge
 ```
 
-The same decisions, read by situation:
+The same decisions, read by situation. A "fragment set" here is one that the fragmenter's caps and the airtime budget both allow; the last two rows are what happens when one of them refuses.
 
 | The CoT… | `NEVER` | `STRIP_FIRST` | `FRAGMENT_FIRST` |
 |----------|---------|---------------|------------------|
 | fits one frame | One frame, untouched | One frame, untouched | One frame, untouched |
 | misses one frame only because of its remarks | One frame, remarks dropped | One frame, remarks dropped | Fragment set, remarks kept |
 | is too big even without its remarks | One frame if cutting the geometry to 32 / 16 is enough, otherwise `TOO_LARGE` | Fragment set, without the remarks | Fragment set, remarks kept |
-| is too big for the fragment cap | — | Geometry cut to 32 / 16, then one frame or a fragment set | Remarks dropped, then geometry cut to 32 / 16, then one frame or a fragment set |
-| needs a burst the airtime budget cannot cover | — | `INSUFFICIENT_AIRTIME`, nothing is sent | `INSUFFICIENT_AIRTIME`, nothing is sent |
+| is too big for the fragment cap | — | Geometry cut to 32 / 16, then one frame or a fragment set, or `TOO_LARGE` if it still fits neither | Remarks dropped, then geometry cut to 32 / 16 if still needed, then one frame or a fragment set, or `TOO_LARGE` if it still fits neither |
+| needs a burst the airtime budget cannot cover | — | `INSUFFICIENT_AIRTIME`, no frames are returned | `INSUFFICIENT_AIRTIME`, no frames are returned |
 
-Whatever still does not fit after both fallbacks is `TOO_LARGE`.
+Whatever still does not fit after both fallbacks is `TOO_LARGE`. A long chat message over the fragment cap ends there under every policy, because it has no remarks to drop and no geometry to cut. `TOO_LARGE` and `INSUFFICIENT_AIRTIME` both come back with no frames.
 
 ```kotlin
 val fragmenter = TakFragmenter()   // 225 B frames, at most 8 source fragments
-val result = compressor.compressForMesh(cotXml, fragmenter, FragmentPolicy.STRIP_FIRST)
+
+// What is left of this hour's duty cycle. Pass null where the region has no limit.
+val airtime = AirtimeBudget.fromDeviceMetrics(
+    dutyCyclePercent = 10.0,                  // the region's limit, here EU_868
+    airUtilTxPercent = airUtilTx,             // DeviceMetrics.air_util_tx
+    queuedFrames = queueMaxlen - queueFree,   // QueueStatus.maxlen - free
+    frameAirtimeMillis = 2_200,               // one full frame on the current preset, here LongFast
+)
+
+val result = compressor.compressForMesh(cotXml, fragmenter, FragmentPolicy.STRIP_FIRST, airtime)
 when (result.outcome) {
-    MeshEncodeResult.Outcome.SINGLE_FRAME, MeshEncodeResult.Outcome.FRAGMENTED ->
-        result.frames!!.forEach { send(it) }   // one port-78 packet each, in order, as one burst
+    MeshEncodeResult.Outcome.SINGLE_FRAME ->
+        send(result.frames!!.single())        // one port-78 packet, as today
+    MeshEncodeResult.Outcome.FRAGMENTED ->
+        sendBurst(result.frames!!)            // one port-78 packet each, in order, paced by the radio queue
     MeshEncodeResult.Outcome.INSUFFICIENT_AIRTIME ->
-        retryLater()                           // or send a reduced frame now with FragmentPolicy.NEVER
+        retryLater()                          // no frames came back: encode again later with a fresh budget
     MeshEncodeResult.Outcome.TOO_LARGE ->
         drop()
 }
 ```
 
-`result.remarksStripped` and `result.truncated` say what the call gave up. The `fragmentIfOversize` flag on `compressForMesh` is shorthand for two of the policies: `false` is `NEVER` and `true` is `FRAGMENT_FIRST`. On the receive side, `TakMeshReceiver.onPayload` reassembles fragments and decodes single frames as before.
+`send` and `sendBurst` stand for the app's own radio link. The SDK does not pace a fragment set, and handing one to the radio all at once can overflow its outgoing queue and lose several fragments before any of them is on the air. Send the frames in order as one burst: wait for free space in the queue (`QueueStatus.free`) before each frame, retry a frame the radio rejects, and give the message up if the wait would outlast the receivers' timers. The rules are step 8 of §6.1 in [the design doc](docs/design/large-payload-chunking.md).
+
+The airtime budget is only checked for a fragment set. A single frame is returned whatever the budget says, under every policy. So if you answer `INSUFFICIENT_AIRTIME` by encoding again with `FragmentPolicy.NEVER` to get a reduced single frame, check `airtime.allows(1)` before you send it, and hold it back otherwise.
+
+`result.remarksStripped` and `result.truncated` say which fallbacks the encoder ran. `result.truncated` does not cover a cut made at parse: under `NEVER` the XML overload parses with single-frame limits, so a 100-vertex shape goes out as 32 vertices with `result.truncated == false`. The shape or route that a receiver decodes carries its own `truncated` flag, which is set either way.
+
+The `fragmentIfOversize` flag on `compressForMesh` is shorthand for two of the policies: `false` is `NEVER` and `true` is `FRAGMENT_FIRST`. On the receive side, `TakMeshReceiver.onPayload` reassembles fragments and decodes single frames as before.
 
 ## Real-World Compression Examples
 

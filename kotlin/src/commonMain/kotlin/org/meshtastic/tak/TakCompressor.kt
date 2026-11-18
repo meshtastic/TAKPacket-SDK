@@ -321,10 +321,11 @@ public class TakCompressor(
      *
      * With [FragmentPolicy.NEVER] this never emits a fragment: the CoT is parsed
      * with today's single-frame limits and behaves as
-     * [compressWithRemarksFallbackDetailed] at `fragmenter.maxFrameBytes`, except
-     * that a packet whose protobuf exceeds [MAX_DECOMPRESSED_SIZE] is reported as
-     * [MeshEncodeResult.Outcome.TOO_LARGE] instead of being sent to receivers that
-     * would reject it.
+     * [compressWithRemarksFallbackDetailed] at `fragmenter.maxFrameBytes`, with
+     * one difference. A packet whose protobuf exceeds [MAX_DECOMPRESSED_SIZE]
+     * counts as not fitting even when it compresses into one frame, since
+     * receivers would reject it: its remarks are dropped, and if that is not
+     * enough it is [MeshEncodeResult.Outcome.TOO_LARGE].
      *
      * With [FragmentPolicy.STRIP_FIRST] or [FragmentPolicy.FRAGMENT_FIRST] the CoT
      * is parsed with [CotXmlParser.Limits.LARGE], so geometry that needs more than
@@ -373,7 +374,8 @@ public class TakCompressor(
      *        Keep one per sender so message IDs keep rolling.
      * @param policy what may give way first when the packet does not fit one frame.
      * @param airtime what is left of the hour's duty-cycle budget, or null when
-     *        the region has no limit.
+     *        the region has no limit. Only a fragment set is checked against it;
+     *        a single frame is returned whatever it says.
      * @throws ZstdException if the zstd codec fails to compress.
      */
     @Throws(ZstdException::class)
