@@ -30,9 +30,37 @@ One version covers all five bindings, so a release is a single tag and a single 
 
   Nothing changes for existing callers: a payload that fits one frame comes
   back unchanged, and nothing fragments unless the app uses these classes. The
-  send and receive paths that pick fragmenting per CoT (`compressForMesh`,
-  `TakMeshReceiver`), and the other four bindings, follow separately. Golden
-  fragment sets for those bindings are in `testdata/fragment/`.
+  other four bindings follow separately; golden fragment sets for them are in
+  `testdata/fragment/`.
+
+- Kotlin: the send and receive paths for fragmented messages.
+  `TakCompressor.compressForMesh(cotXml or packet, fragmenter,
+  fragmentIfOversize, airtime)` returns the frames to send for one CoT, as a
+  `MeshEncodeResult` (`SINGLE_FRAME`, `FRAGMENTED`, `TOO_LARGE` or
+  `INSUFFICIENT_AIRTIME`). Fragmenting is opt-in per CoT. With
+  `fragmentIfOversize = false` (the default) it sends one frame or nothing, and
+  a packet that doesn't fit goes through the same fallbacks as
+  `compressWithRemarksFallbackDetailed`, plus two more: a protobuf over 4,096 B
+  counts as not fitting even when it compresses small enough, since receivers
+  would reject it, and a packet built with more shape vertices or route links
+  than `CotXmlParser.Limits.SINGLE_FRAME` allows is cut down to them (the XML
+  overload parses with those limits, so this only affects packets built
+  directly). Only what still doesn't fit after dropping the remarks and
+  truncating is `TOO_LARGE`. With `true`, an oversized CoT is fragmented, and
+  the remarks-then-truncate fallbacks run only when the fragment cap is
+  exceeded.
+  `AirtimeBudget` blocks a fragment burst that wouldn't fit the hour's
+  duty-cycle budget, and can be built from the radio's `air_util_tx` and queue
+  depth.
+
+  `TakMeshReceiver.onPayload(payload, now)` routes port-78 payloads:
+  fragments go to a `TakReassembler` and are decoded once complete, everything
+  else decodes as before.
+
+  Supporting additions: `CotXmlParser.parse(cotXml, limits)` with
+  `CotXmlParser.Limits.SINGLE_FRAME` (32 vertices, 16 route links; the default)
+  and `Limits.LARGE` (512 and 64), and `TakFragmenter.sourceFragmentsFor(size)`,
+  which reports K for a payload size.
 
 ### Fixed
 

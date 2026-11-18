@@ -275,6 +275,68 @@ public class TakCompressor(
     }
 
     /**
+     * One-call send path for the mesh (design doc §6.1): parse [cotXml], compress
+     * it, and return the frames to send.
+     *
+     * With [fragmentIfOversize] false (the default) this never emits a fragment:
+     * the CoT is parsed with today's single-frame limits and behaves as
+     * [compressWithRemarksFallbackDetailed] at `fragmenter.maxFrameBytes`, except
+     * that a packet whose protobuf exceeds [MAX_DECOMPRESSED_SIZE] is reported as
+     * [MeshEncodeResult.Outcome.TOO_LARGE] instead of being sent to receivers that
+     * would reject it.
+     *
+     * With [fragmentIfOversize] true the CoT is parsed with
+     * [CotXmlParser.Limits.LARGE] and an oversized packet is fragmented, up to
+     * `fragmenter.maxSourceFragments`. See the [TakPacketV2Data] overload for
+     * the fallbacks and the airtime check.
+     *
+     * @throws IllegalArgumentException if [cotXml] cannot be parsed.
+     * @throws ZstdException if the zstd codec fails to compress.
+     */
+    @Throws(ZstdException::class, IllegalArgumentException::class)
+    public fun compressForMesh(
+        cotXml: String,
+        fragmenter: TakFragmenter,
+        fragmentIfOversize: Boolean = false,
+        airtime: AirtimeBudget? = null,
+    ): MeshEncodeResult {
+        val limits = if (fragmentIfOversize) CotXmlParser.Limits.LARGE else CotXmlParser.Limits.SINGLE_FRAME
+        return compressForMesh(CotXmlParser().parse(cotXml, limits), fragmenter, fragmentIfOversize, airtime)
+    }
+
+    /**
+     * One-call send path for an already parsed [packet]. Pass a packet parsed
+     * with [CotXmlParser.Limits.LARGE] to allow more geometry when fragmenting.
+     *
+     * 1. If the wire payload fits one frame and its protobuf is within
+     *    [MAX_DECOMPRESSED_SIZE]: [MeshEncodeResult.Outcome.SINGLE_FRAME].
+     * 2. Otherwise, if [fragmentIfOversize] is true and the fragmenter's caps
+     *    allow it: [MeshEncodeResult.Outcome.FRAGMENTED], unless [airtime] is
+     *    given and the whole set does not fit it, which gives
+     *    [MeshEncodeResult.Outcome.INSUFFICIENT_AIRTIME].
+     * 3. Otherwise fall back and retry from step 1: first drop the remarks, then
+     *    cut vertices and route links to [CotXmlParser.Limits.SINGLE_FRAME].
+     *    Each fallback runs at most once, and they accumulate.
+     * 4. If nothing fits: [MeshEncodeResult.Outcome.TOO_LARGE].
+     *
+     * Fragment frames must be sent as one burst, paced against the radio's
+     * `QueueStatus`; pacing stays with the caller, which owns the radio link.
+     *
+     * @param fragmenter frame size, fragment caps, repair policy and message IDs.
+     *        Keep one per sender so message IDs keep rolling.
+     * @param airtime what is left of the hour's duty-cycle budget, or null when
+     *        the region has no limit.
+     * @throws ZstdException if the zstd codec fails to compress.
+     */
+    @Throws(ZstdException::class)
+    public fun compressForMesh(
+        packet: TakPacketV2Data,
+        fragmenter: TakFragmenter,
+        fragmentIfOversize: Boolean = false,
+        airtime: AirtimeBudget? = null,
+    ): MeshEncodeResult = MeshEncoder(this, fragmenter, fragmentIfOversize, airtime).encode(packet)
+
+    /**
      * Compress and return both the wire payload and intermediate sizes for reporting.
      *
      * @throws ZstdException if the underlying zstd codec fails to compress.

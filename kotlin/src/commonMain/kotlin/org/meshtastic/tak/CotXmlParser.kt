@@ -27,7 +27,23 @@ public class CotXmlParser {
      *         otherwise unparseable.
      */
     @Throws(IllegalArgumentException::class)
-    public fun parse(cotXml: String): TakPacketV2Data {
+    public fun parse(cotXml: String): TakPacketV2Data = parse(cotXml, Limits.SINGLE_FRAME)
+
+    /**
+     * Parse a CoT XML event string, keeping at most [Limits.maxVertices] shape
+     * vertices and [Limits.maxRouteLinks] route links. Extra vertices or links
+     * are dropped and the payload's `truncated` flag is set.
+     *
+     * Use [Limits.LARGE] only for a CoT that may be fragmented
+     * (`TakCompressor.compressForMesh` with `fragmentIfOversize = true`).
+     *
+     * @throws IllegalArgumentException as for the single-argument [parse].
+     */
+    @Throws(IllegalArgumentException::class)
+    public fun parse(
+        cotXml: String,
+        limits: Limits,
+    ): TakPacketV2Data {
         // Reject XML with DOCTYPE or ENTITY declarations to prevent XXE and entity expansion attacks
         if (cotXml.contains("<!DOCTYPE", ignoreCase = true) || cotXml.contains("<!ENTITY", ignoreCase = true)) {
             throw IllegalArgumentException("XML contains prohibited DOCTYPE or ENTITY declaration")
@@ -686,7 +702,7 @@ public class CotXmlParser {
 
                                             (linkType == "b-m-p-w" || linkType == "b-m-p-c") &&
                                                 cotTypeStr == "b-m-r" -> {
-                                                if (routeLinks.size < MAX_ROUTE_LINKS) {
+                                                if (routeLinks.size < limits.maxRouteLinks) {
                                                     routeLinks.add(
                                                         TakPacketV2Data.Payload.Route.Link(
                                                             latI = plati,
@@ -703,7 +719,7 @@ public class CotXmlParser {
                                             }
 
                                             else -> {
-                                                if (vertices.size < MAX_VERTICES) {
+                                                if (vertices.size < limits.maxVertices) {
                                                     vertices.add(TakPacketV2Data.Payload.Vertex(plati, ploni))
                                                     hasShapeData = true
                                                 } else {
@@ -1239,6 +1255,35 @@ public class CotXmlParser {
         return inner.encodeToByteArray()
     }
 
+    /**
+     * Caps on repeated geometry kept by [parse]. Set by the caller, not carried
+     * on the wire (see `docs/design/large-payload-chunking.md` §8).
+     *
+     * @property maxVertices drawn-shape vertices kept per packet.
+     * @property maxRouteLinks route waypoints and control points kept per packet.
+     */
+    public data class Limits(
+        val maxVertices: Int,
+        val maxRouteLinks: Int,
+    ) {
+        init {
+            require(maxVertices >= 1 && maxRouteLinks >= 1) { "limits must be at least 1" }
+        }
+
+        public companion object {
+            /**
+             * Today's caps, sized so most shapes and routes fit one 225-byte
+             * frame. The default for [parse]. (Firmware forwards port-78
+             * payloads without decoding them; its nanopb limits only bound the
+             * PLI it builds itself in the TAK_TRACKER role.)
+             */
+            public val SINGLE_FRAME: Limits = Limits(MAX_VERTICES, MAX_ROUTE_LINKS)
+
+            /** Caps for a CoT that may be fragmented across several frames. */
+            public val LARGE: Limits = Limits(MAX_VERTICES_LARGE, MAX_ROUTE_LINKS_LARGE)
+        }
+    }
+
     public companion object {
         /**
          * `GeoPointSource` enum values (position / altitude provenance), mirroring
@@ -1267,6 +1312,12 @@ public class CotXmlParser {
          * links are dropped and the route's `truncated` flag is set.
          */
         public const val MAX_ROUTE_LINKS: Int = 16
+
+        /** Vertex cap of [Limits.LARGE], for shapes that may be fragmented. */
+        public const val MAX_VERTICES_LARGE: Int = 512
+
+        /** Route-link cap of [Limits.LARGE], for routes that may be fragmented. */
+        public const val MAX_ROUTE_LINKS_LARGE: Int = 64
 
         /**
          * `DrawnShape.Kind` enum values (mirror atak.proto), set on

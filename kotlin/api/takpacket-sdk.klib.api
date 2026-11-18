@@ -30,6 +30,27 @@ abstract fun interface org.meshtastic.tak/MessageIdSource { // org.meshtastic.ta
     }
 }
 
+final class org.meshtastic.tak/AirtimeBudget { // org.meshtastic.tak/AirtimeBudget|null[0]
+    constructor <init>(kotlin/Long, kotlin/Long) // org.meshtastic.tak/AirtimeBudget.<init>|<init>(kotlin.Long;kotlin.Long){}[0]
+
+    final val frameAirtimeMillis // org.meshtastic.tak/AirtimeBudget.frameAirtimeMillis|{}frameAirtimeMillis[0]
+        final fun <get-frameAirtimeMillis>(): kotlin/Long // org.meshtastic.tak/AirtimeBudget.frameAirtimeMillis.<get-frameAirtimeMillis>|<get-frameAirtimeMillis>(){}[0]
+    final val remainingMillis // org.meshtastic.tak/AirtimeBudget.remainingMillis|{}remainingMillis[0]
+        final fun <get-remainingMillis>(): kotlin/Long // org.meshtastic.tak/AirtimeBudget.remainingMillis.<get-remainingMillis>|<get-remainingMillis>(){}[0]
+
+    final fun allows(kotlin/Int): kotlin/Boolean // org.meshtastic.tak/AirtimeBudget.allows|allows(kotlin.Int){}[0]
+    final fun component1(): kotlin/Long // org.meshtastic.tak/AirtimeBudget.component1|component1(){}[0]
+    final fun component2(): kotlin/Long // org.meshtastic.tak/AirtimeBudget.component2|component2(){}[0]
+    final fun copy(kotlin/Long = ..., kotlin/Long = ...): org.meshtastic.tak/AirtimeBudget // org.meshtastic.tak/AirtimeBudget.copy|copy(kotlin.Long;kotlin.Long){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/AirtimeBudget.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // org.meshtastic.tak/AirtimeBudget.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // org.meshtastic.tak/AirtimeBudget.toString|toString(){}[0]
+
+    final object Companion { // org.meshtastic.tak/AirtimeBudget.Companion|null[0]
+        final fun fromDeviceMetrics(kotlin/Double, kotlin/Double, kotlin/Int, kotlin/Long): org.meshtastic.tak/AirtimeBudget // org.meshtastic.tak/AirtimeBudget.Companion.fromDeviceMetrics|fromDeviceMetrics(kotlin.Double;kotlin.Double;kotlin.Int;kotlin.Long){}[0]
+    }
+}
+
 final class org.meshtastic.tak/BuiltCot { // org.meshtastic.tak/BuiltCot|null[0]
     final val originStart // org.meshtastic.tak/BuiltCot.originStart|{}originStart[0]
         final fun <get-originStart>(): kotlin.time/Instant? // org.meshtastic.tak/BuiltCot.originStart.<get-originStart>|<get-originStart>(){}[0]
@@ -51,6 +72,30 @@ final class org.meshtastic.tak/CotXmlParser { // org.meshtastic.tak/CotXmlParser
 
     final fun extractRawDetailBytes(kotlin/String): kotlin/ByteArray // org.meshtastic.tak/CotXmlParser.extractRawDetailBytes|extractRawDetailBytes(kotlin.String){}[0]
     final fun parse(kotlin/String): org.meshtastic.tak/TakPacketV2Data // org.meshtastic.tak/CotXmlParser.parse|parse(kotlin.String){}[0]
+    final fun parse(kotlin/String, org.meshtastic.tak/CotXmlParser.Limits): org.meshtastic.tak/TakPacketV2Data // org.meshtastic.tak/CotXmlParser.parse|parse(kotlin.String;org.meshtastic.tak.CotXmlParser.Limits){}[0]
+
+    final class Limits { // org.meshtastic.tak/CotXmlParser.Limits|null[0]
+        constructor <init>(kotlin/Int, kotlin/Int) // org.meshtastic.tak/CotXmlParser.Limits.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+        final val maxRouteLinks // org.meshtastic.tak/CotXmlParser.Limits.maxRouteLinks|{}maxRouteLinks[0]
+            final fun <get-maxRouteLinks>(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Limits.maxRouteLinks.<get-maxRouteLinks>|<get-maxRouteLinks>(){}[0]
+        final val maxVertices // org.meshtastic.tak/CotXmlParser.Limits.maxVertices|{}maxVertices[0]
+            final fun <get-maxVertices>(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Limits.maxVertices.<get-maxVertices>|<get-maxVertices>(){}[0]
+
+        final fun component1(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Limits.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Limits.component2|component2(){}[0]
+        final fun copy(kotlin/Int = ..., kotlin/Int = ...): org.meshtastic.tak/CotXmlParser.Limits // org.meshtastic.tak/CotXmlParser.Limits.copy|copy(kotlin.Int;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/CotXmlParser.Limits.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Limits.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // org.meshtastic.tak/CotXmlParser.Limits.toString|toString(){}[0]
+
+        final object Companion { // org.meshtastic.tak/CotXmlParser.Limits.Companion|null[0]
+            final val LARGE // org.meshtastic.tak/CotXmlParser.Limits.Companion.LARGE|{}LARGE[0]
+                final fun <get-LARGE>(): org.meshtastic.tak/CotXmlParser.Limits // org.meshtastic.tak/CotXmlParser.Limits.Companion.LARGE.<get-LARGE>|<get-LARGE>(){}[0]
+            final val SINGLE_FRAME // org.meshtastic.tak/CotXmlParser.Limits.Companion.SINGLE_FRAME|{}SINGLE_FRAME[0]
+                final fun <get-SINGLE_FRAME>(): org.meshtastic.tak/CotXmlParser.Limits // org.meshtastic.tak/CotXmlParser.Limits.Companion.SINGLE_FRAME.<get-SINGLE_FRAME>|<get-SINGLE_FRAME>(){}[0]
+        }
+    }
 
     final object Companion { // org.meshtastic.tak/CotXmlParser.Companion|null[0]
         final const val EMERGENCY_TYPE_ALERT_911 // org.meshtastic.tak/CotXmlParser.Companion.EMERGENCY_TYPE_ALERT_911|{}EMERGENCY_TYPE_ALERT_911[0]
@@ -115,8 +160,12 @@ final class org.meshtastic.tak/CotXmlParser { // org.meshtastic.tak/CotXmlParser
             final fun <get-MARKER_KIND_WAYPOINT>(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Companion.MARKER_KIND_WAYPOINT.<get-MARKER_KIND_WAYPOINT>|<get-MARKER_KIND_WAYPOINT>(){}[0]
         final const val MAX_ROUTE_LINKS // org.meshtastic.tak/CotXmlParser.Companion.MAX_ROUTE_LINKS|{}MAX_ROUTE_LINKS[0]
             final fun <get-MAX_ROUTE_LINKS>(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Companion.MAX_ROUTE_LINKS.<get-MAX_ROUTE_LINKS>|<get-MAX_ROUTE_LINKS>(){}[0]
+        final const val MAX_ROUTE_LINKS_LARGE // org.meshtastic.tak/CotXmlParser.Companion.MAX_ROUTE_LINKS_LARGE|{}MAX_ROUTE_LINKS_LARGE[0]
+            final fun <get-MAX_ROUTE_LINKS_LARGE>(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Companion.MAX_ROUTE_LINKS_LARGE.<get-MAX_ROUTE_LINKS_LARGE>|<get-MAX_ROUTE_LINKS_LARGE>(){}[0]
         final const val MAX_VERTICES // org.meshtastic.tak/CotXmlParser.Companion.MAX_VERTICES|{}MAX_VERTICES[0]
             final fun <get-MAX_VERTICES>(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Companion.MAX_VERTICES.<get-MAX_VERTICES>|<get-MAX_VERTICES>(){}[0]
+        final const val MAX_VERTICES_LARGE // org.meshtastic.tak/CotXmlParser.Companion.MAX_VERTICES_LARGE|{}MAX_VERTICES_LARGE[0]
+            final fun <get-MAX_VERTICES_LARGE>(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Companion.MAX_VERTICES_LARGE.<get-MAX_VERTICES_LARGE>|<get-MAX_VERTICES_LARGE>(){}[0]
         final const val PRECEDENCE_CONVENIENCE // org.meshtastic.tak/CotXmlParser.Companion.PRECEDENCE_CONVENIENCE|{}PRECEDENCE_CONVENIENCE[0]
             final fun <get-PRECEDENCE_CONVENIENCE>(): kotlin/Int // org.meshtastic.tak/CotXmlParser.Companion.PRECEDENCE_CONVENIENCE.<get-PRECEDENCE_CONVENIENCE>|<get-PRECEDENCE_CONVENIENCE>(){}[0]
         final const val PRECEDENCE_PRIORITY // org.meshtastic.tak/CotXmlParser.Companion.PRECEDENCE_PRIORITY|{}PRECEDENCE_PRIORITY[0]
@@ -200,10 +249,40 @@ final class org.meshtastic.tak/CotXmlParser { // org.meshtastic.tak/CotXmlParser
     }
 }
 
+final class org.meshtastic.tak/MeshEncodeResult { // org.meshtastic.tak/MeshEncodeResult|null[0]
+    constructor <init>(org.meshtastic.tak/MeshEncodeResult.Outcome, kotlin.collections/List<kotlin/ByteArray>?, kotlin/Boolean, kotlin/Boolean) // org.meshtastic.tak/MeshEncodeResult.<init>|<init>(org.meshtastic.tak.MeshEncodeResult.Outcome;kotlin.collections.List<kotlin.ByteArray>?;kotlin.Boolean;kotlin.Boolean){}[0]
+
+    final val frames // org.meshtastic.tak/MeshEncodeResult.frames|{}frames[0]
+        final fun <get-frames>(): kotlin.collections/List<kotlin/ByteArray>? // org.meshtastic.tak/MeshEncodeResult.frames.<get-frames>|<get-frames>(){}[0]
+    final val outcome // org.meshtastic.tak/MeshEncodeResult.outcome|{}outcome[0]
+        final fun <get-outcome>(): org.meshtastic.tak/MeshEncodeResult.Outcome // org.meshtastic.tak/MeshEncodeResult.outcome.<get-outcome>|<get-outcome>(){}[0]
+    final val remarksStripped // org.meshtastic.tak/MeshEncodeResult.remarksStripped|{}remarksStripped[0]
+        final fun <get-remarksStripped>(): kotlin/Boolean // org.meshtastic.tak/MeshEncodeResult.remarksStripped.<get-remarksStripped>|<get-remarksStripped>(){}[0]
+    final val truncated // org.meshtastic.tak/MeshEncodeResult.truncated|{}truncated[0]
+        final fun <get-truncated>(): kotlin/Boolean // org.meshtastic.tak/MeshEncodeResult.truncated.<get-truncated>|<get-truncated>(){}[0]
+
+    final fun toString(): kotlin/String // org.meshtastic.tak/MeshEncodeResult.toString|toString(){}[0]
+
+    final enum class Outcome : kotlin/Enum<org.meshtastic.tak/MeshEncodeResult.Outcome> { // org.meshtastic.tak/MeshEncodeResult.Outcome|null[0]
+        enum entry FRAGMENTED // org.meshtastic.tak/MeshEncodeResult.Outcome.FRAGMENTED|null[0]
+        enum entry INSUFFICIENT_AIRTIME // org.meshtastic.tak/MeshEncodeResult.Outcome.INSUFFICIENT_AIRTIME|null[0]
+        enum entry SINGLE_FRAME // org.meshtastic.tak/MeshEncodeResult.Outcome.SINGLE_FRAME|null[0]
+        enum entry TOO_LARGE // org.meshtastic.tak/MeshEncodeResult.Outcome.TOO_LARGE|null[0]
+
+        final val entries // org.meshtastic.tak/MeshEncodeResult.Outcome.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<org.meshtastic.tak/MeshEncodeResult.Outcome> // org.meshtastic.tak/MeshEncodeResult.Outcome.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valueOf(kotlin/String): org.meshtastic.tak/MeshEncodeResult.Outcome // org.meshtastic.tak/MeshEncodeResult.Outcome.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<org.meshtastic.tak/MeshEncodeResult.Outcome> // org.meshtastic.tak/MeshEncodeResult.Outcome.values|values#static(){}[0]
+    }
+}
+
 final class org.meshtastic.tak/TakCompressor { // org.meshtastic.tak/TakCompressor|null[0]
     constructor <init>(kotlin/Int = ...) // org.meshtastic.tak/TakCompressor.<init>|<init>(kotlin.Int){}[0]
 
     final fun compress(org.meshtastic.tak/TakPacketV2Data): kotlin/ByteArray // org.meshtastic.tak/TakCompressor.compress|compress(org.meshtastic.tak.TakPacketV2Data){}[0]
+    final fun compressForMesh(kotlin/String, org.meshtastic.tak/TakFragmenter, kotlin/Boolean = ..., org.meshtastic.tak/AirtimeBudget? = ...): org.meshtastic.tak/MeshEncodeResult // org.meshtastic.tak/TakCompressor.compressForMesh|compressForMesh(kotlin.String;org.meshtastic.tak.TakFragmenter;kotlin.Boolean;org.meshtastic.tak.AirtimeBudget?){}[0]
+    final fun compressForMesh(org.meshtastic.tak/TakPacketV2Data, org.meshtastic.tak/TakFragmenter, kotlin/Boolean = ..., org.meshtastic.tak/AirtimeBudget? = ...): org.meshtastic.tak/MeshEncodeResult // org.meshtastic.tak/TakCompressor.compressForMesh|compressForMesh(org.meshtastic.tak.TakPacketV2Data;org.meshtastic.tak.TakFragmenter;kotlin.Boolean;org.meshtastic.tak.AirtimeBudget?){}[0]
     final fun compressWithRemarksFallback(org.meshtastic.tak/TakPacketV2Data, kotlin/Int): kotlin/ByteArray? // org.meshtastic.tak/TakCompressor.compressWithRemarksFallback|compressWithRemarksFallback(org.meshtastic.tak.TakPacketV2Data;kotlin.Int){}[0]
     final fun compressWithRemarksFallbackDetailed(org.meshtastic.tak/TakPacketV2Data, kotlin/Int): org.meshtastic.tak/TakCompressor.RemarksFallbackResult // org.meshtastic.tak/TakCompressor.compressWithRemarksFallbackDetailed|compressWithRemarksFallbackDetailed(org.meshtastic.tak.TakPacketV2Data;kotlin.Int){}[0]
     final fun compressWithStats(org.meshtastic.tak/TakPacketV2Data): org.meshtastic.tak/TakCompressor.CompressionResult // org.meshtastic.tak/TakCompressor.compressWithStats|compressWithStats(org.meshtastic.tak.TakPacketV2Data){}[0]
@@ -268,12 +347,23 @@ final class org.meshtastic.tak/TakFragmenter { // org.meshtastic.tak/TakFragment
     final val sliceSize // org.meshtastic.tak/TakFragmenter.sliceSize|{}sliceSize[0]
         final fun <get-sliceSize>(): kotlin/Int // org.meshtastic.tak/TakFragmenter.sliceSize.<get-sliceSize>|<get-sliceSize>(){}[0]
 
+    final fun sourceFragmentsFor(kotlin/Int): kotlin/Int // org.meshtastic.tak/TakFragmenter.sourceFragmentsFor|sourceFragmentsFor(kotlin.Int){}[0]
     final fun split(kotlin/ByteArray, kotlin/Int): kotlin.collections/List<kotlin/ByteArray>? // org.meshtastic.tak/TakFragmenter.split|split(kotlin.ByteArray;kotlin.Int){}[0]
     final fun split(kotlin/ByteArray, kotlin/Int, kotlin/Int): kotlin.collections/List<kotlin/ByteArray>? // org.meshtastic.tak/TakFragmenter.split|split(kotlin.ByteArray;kotlin.Int;kotlin.Int){}[0]
 
     final object Companion { // org.meshtastic.tak/TakFragmenter.Companion|null[0]
         final fun defaultRepairCount(kotlin/Int): kotlin/Int // org.meshtastic.tak/TakFragmenter.Companion.defaultRepairCount|defaultRepairCount(kotlin.Int){}[0]
     }
+}
+
+final class org.meshtastic.tak/TakMeshReceiver { // org.meshtastic.tak/TakMeshReceiver|null[0]
+    constructor <init>(org.meshtastic.tak/TakReassembler, org.meshtastic.tak/TakCompressor = ...) // org.meshtastic.tak/TakMeshReceiver.<init>|<init>(org.meshtastic.tak.TakReassembler;org.meshtastic.tak.TakCompressor){}[0]
+
+    final val reassembler // org.meshtastic.tak/TakMeshReceiver.reassembler|{}reassembler[0]
+        final fun <get-reassembler>(): org.meshtastic.tak/TakReassembler // org.meshtastic.tak/TakMeshReceiver.reassembler.<get-reassembler>|<get-reassembler>(){}[0]
+
+    final fun evictExpired(kotlin/Long) // org.meshtastic.tak/TakMeshReceiver.evictExpired|evictExpired(kotlin.Long){}[0]
+    final fun onPayload(kotlin/ByteArray, kotlin/Long): org.meshtastic.tak/TakPacketV2Data? // org.meshtastic.tak/TakMeshReceiver.onPayload|onPayload(kotlin.ByteArray;kotlin.Long){}[0]
 }
 
 final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacketV2Data|null[0]

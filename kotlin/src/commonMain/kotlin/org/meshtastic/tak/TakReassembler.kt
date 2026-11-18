@@ -112,7 +112,11 @@ public class TakReassembler(
         return if (partial != null && store(partial, header, nowMillis)) tryComplete(key, partial) else null
     }
 
-    /** Remove partial messages and completed-message entries whose time has passed. */
+    /**
+     * Remove partial messages and completed-message entries whose time has passed. [accept] already
+     * does this on every frame. Not thread-safe: call it on the same thread as [accept], or under
+     * the same lock.
+     */
     public fun evictExpired(nowMillis: Long) {
         val idle = idleBudgetMillis
         val ceiling = ceilingBudgetMillis

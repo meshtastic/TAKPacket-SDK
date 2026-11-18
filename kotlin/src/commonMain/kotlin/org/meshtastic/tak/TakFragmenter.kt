@@ -178,6 +178,9 @@ public class TakFragmenter(
     /** Bytes of message data carried by each fragment. */
     public val sliceSize: Int get() = maxFrameBytes - TakFragment.HEADER_SIZE
 
+    /** Source fragments (K) needed for a wire payload of [innerSize] bytes, before any cap is applied. */
+    public fun sourceFragmentsFor(innerSize: Int): Int = (innerSize + BLOB_TRAILER_BYTES + sliceSize - 1) / sliceSize
+
     /** [split] with the next ID from this fragmenter's [MessageIdSource]. Only draws an ID when it fragments. */
     public fun split(
         inner: ByteArray,

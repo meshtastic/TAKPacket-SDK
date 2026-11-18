@@ -368,8 +368,10 @@ public class TakReassembler(
 ) {
     /** Returns the completed inner wire payload, or null while waiting / on a dropped frame. */
     public fun accept(frame: ByteArray, nowMillis: Long): ByteArray?
-    // Optional: accept() already evicts on every frame. Not thread-safe, so a
-    // caller that uses it must run it on the same thread as accept().
+    // accept() evicts on every frame it sees, so this is needed only for traffic
+    // that never reaches accept(): on a channel carrying mostly single frames,
+    // nothing else would drop an expired partial. Not thread-safe, so call it on
+    // the same thread as accept(), never from an independent timer.
     public fun evictExpired(nowMillis: Long)
 }
 
