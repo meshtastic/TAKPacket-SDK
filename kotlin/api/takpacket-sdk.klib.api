@@ -6,6 +6,18 @@
 // - Show declarations: true
 
 // Library unique name: <org.meshtastic:takpacket-sdk>
+final enum class org.meshtastic.tak/FragmentPolicy : kotlin/Enum<org.meshtastic.tak/FragmentPolicy> { // org.meshtastic.tak/FragmentPolicy|null[0]
+    enum entry FRAGMENT_FIRST // org.meshtastic.tak/FragmentPolicy.FRAGMENT_FIRST|null[0]
+    enum entry NEVER // org.meshtastic.tak/FragmentPolicy.NEVER|null[0]
+    enum entry STRIP_FIRST // org.meshtastic.tak/FragmentPolicy.STRIP_FIRST|null[0]
+
+    final val entries // org.meshtastic.tak/FragmentPolicy.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<org.meshtastic.tak/FragmentPolicy> // org.meshtastic.tak/FragmentPolicy.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): org.meshtastic.tak/FragmentPolicy // org.meshtastic.tak/FragmentPolicy.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<org.meshtastic.tak/FragmentPolicy> // org.meshtastic.tak/FragmentPolicy.values|values#static(){}[0]
+}
+
 final enum class org.meshtastic.tak/StartRecovery : kotlin/Enum<org.meshtastic.tak/StartRecovery> { // org.meshtastic.tak/StartRecovery|null[0]
     enum entry ABSENT // org.meshtastic.tak/StartRecovery.ABSENT|null[0]
     enum entry RECOVERED // org.meshtastic.tak/StartRecovery.RECOVERED|null[0]
@@ -282,7 +294,9 @@ final class org.meshtastic.tak/TakCompressor { // org.meshtastic.tak/TakCompress
 
     final fun compress(org.meshtastic.tak/TakPacketV2Data): kotlin/ByteArray // org.meshtastic.tak/TakCompressor.compress|compress(org.meshtastic.tak.TakPacketV2Data){}[0]
     final fun compressForMesh(kotlin/String, org.meshtastic.tak/TakFragmenter, kotlin/Boolean = ..., org.meshtastic.tak/AirtimeBudget? = ...): org.meshtastic.tak/MeshEncodeResult // org.meshtastic.tak/TakCompressor.compressForMesh|compressForMesh(kotlin.String;org.meshtastic.tak.TakFragmenter;kotlin.Boolean;org.meshtastic.tak.AirtimeBudget?){}[0]
+    final fun compressForMesh(kotlin/String, org.meshtastic.tak/TakFragmenter, org.meshtastic.tak/FragmentPolicy, org.meshtastic.tak/AirtimeBudget? = ...): org.meshtastic.tak/MeshEncodeResult // org.meshtastic.tak/TakCompressor.compressForMesh|compressForMesh(kotlin.String;org.meshtastic.tak.TakFragmenter;org.meshtastic.tak.FragmentPolicy;org.meshtastic.tak.AirtimeBudget?){}[0]
     final fun compressForMesh(org.meshtastic.tak/TakPacketV2Data, org.meshtastic.tak/TakFragmenter, kotlin/Boolean = ..., org.meshtastic.tak/AirtimeBudget? = ...): org.meshtastic.tak/MeshEncodeResult // org.meshtastic.tak/TakCompressor.compressForMesh|compressForMesh(org.meshtastic.tak.TakPacketV2Data;org.meshtastic.tak.TakFragmenter;kotlin.Boolean;org.meshtastic.tak.AirtimeBudget?){}[0]
+    final fun compressForMesh(org.meshtastic.tak/TakPacketV2Data, org.meshtastic.tak/TakFragmenter, org.meshtastic.tak/FragmentPolicy, org.meshtastic.tak/AirtimeBudget? = ...): org.meshtastic.tak/MeshEncodeResult // org.meshtastic.tak/TakCompressor.compressForMesh|compressForMesh(org.meshtastic.tak.TakPacketV2Data;org.meshtastic.tak.TakFragmenter;org.meshtastic.tak.FragmentPolicy;org.meshtastic.tak.AirtimeBudget?){}[0]
     final fun compressWithRemarksFallback(org.meshtastic.tak/TakPacketV2Data, kotlin/Int): kotlin/ByteArray? // org.meshtastic.tak/TakCompressor.compressWithRemarksFallback|compressWithRemarksFallback(org.meshtastic.tak.TakPacketV2Data;kotlin.Int){}[0]
     final fun compressWithRemarksFallbackDetailed(org.meshtastic.tak/TakPacketV2Data, kotlin/Int): org.meshtastic.tak/TakCompressor.RemarksFallbackResult // org.meshtastic.tak/TakCompressor.compressWithRemarksFallbackDetailed|compressWithRemarksFallbackDetailed(org.meshtastic.tak.TakPacketV2Data;kotlin.Int){}[0]
     final fun compressWithStats(org.meshtastic.tak/TakPacketV2Data): org.meshtastic.tak/TakCompressor.CompressionResult // org.meshtastic.tak/TakCompressor.compressWithStats|compressWithStats(org.meshtastic.tak.TakPacketV2Data){}[0]

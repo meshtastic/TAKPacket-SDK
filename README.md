@@ -440,6 +440,79 @@ val wire = compressor.compressWithRemarksFallback(packet, maxWireBytes = 225)
     ?: return // packet too large even without remarks
 ```
 
+## Oversized CoTs: Strip or Fragment (`FragmentPolicy`)
+
+> **Kotlin only for now.** `compressForMesh` and fragmenting exist in the Kotlin binding. The other four bindings still send one frame or nothing, and cannot read a fragment yet, so receivers have to ship before any sender fragments. The design is in [`docs/design/large-payload-chunking.md`](docs/design/large-payload-chunking.md) and the frame format in [`WIRE_FORMAT.md`](WIRE_FORMAT.md) §3.
+
+A CoT that does not fit one 225 B frame has to give something up: its remarks, some of its geometry, or the airtime of a multi-frame burst. `TakCompressor.compressForMesh` makes that choice from a `FragmentPolicy` the caller sets per CoT. The policy is a send-side choice and is never carried on the wire.
+
+| Policy | What gives way first | Meant for |
+|--------|----------------------|-----------|
+| `NEVER` | Remarks, then geometry. One frame or nothing, which is what `compressWithRemarksFallback()` does. | PLI and anything else sent periodically |
+| `STRIP_FIRST` | Remarks. A burst is spent only on what dropping them cannot fix. | CoTs whose geometry or text matters more than their remarks |
+| `FRAGMENT_FIRST` | Airtime. The CoT is fragmented before anything is dropped. | CoTs that should arrive whole |
+
+A CoT that fits one frame goes out as that frame, untouched, under every policy. The flowchart is the whole decision; each fallback runs at most once.
+
+```mermaid
+flowchart TD
+    parse["Parse the CoT<br/>NEVER keeps 32 vertices / 16 route links<br/>the other two keep 512 / 64"]
+    compress["Compress once"]
+    fits{"Fits one frame?<br/>wire ≤ 225 B and protobuf ≤ 4,096 B"}
+    may{"May it fragment yet?<br/>FRAGMENT_FIRST: yes<br/>STRIP_FIRST: once no remarks are left<br/>NEVER: no"}
+    caps{"Within the fragmenter's caps?<br/>K ≤ maxSourceFragments<br/>and protobuf ≤ 32 KB"}
+    air{"Does the burst fit the airtime budget?<br/>(yes when no budget is passed)"}
+    remarks{"Remarks left to drop?"}
+    geometry{"More than 32 vertices<br/>or 16 route links?"}
+    drop["Drop the remarks"]
+    cut["Cut to 32 / 16"]
+    single(["SINGLE_FRAME"])
+    fragmented(["FRAGMENTED"])
+    noair(["INSUFFICIENT_AIRTIME"])
+    toolarge(["TOO_LARGE"])
+
+    parse --> compress --> fits
+    fits -->|yes| single
+    fits -->|no| may
+    may -->|yes| caps
+    may -->|no| remarks
+    caps -->|yes| air
+    caps -->|no| remarks
+    air -->|yes| fragmented
+    air -->|no| noair
+    remarks -->|yes| drop --> compress
+    remarks -->|no| geometry
+    geometry -->|yes| cut --> compress
+    geometry -->|no| toolarge
+```
+
+The same decisions, read by situation:
+
+| The CoT… | `NEVER` | `STRIP_FIRST` | `FRAGMENT_FIRST` |
+|----------|---------|---------------|------------------|
+| fits one frame | One frame, untouched | One frame, untouched | One frame, untouched |
+| misses one frame only because of its remarks | One frame, remarks dropped | One frame, remarks dropped | Fragment set, remarks kept |
+| is too big even without its remarks | One frame if cutting the geometry to 32 / 16 is enough, otherwise `TOO_LARGE` | Fragment set, without the remarks | Fragment set, remarks kept |
+| is too big for the fragment cap | — | Geometry cut to 32 / 16, then one frame or a fragment set | Remarks dropped, then geometry cut to 32 / 16, then one frame or a fragment set |
+| needs a burst the airtime budget cannot cover | — | `INSUFFICIENT_AIRTIME`, nothing is sent | `INSUFFICIENT_AIRTIME`, nothing is sent |
+
+Whatever still does not fit after both fallbacks is `TOO_LARGE`.
+
+```kotlin
+val fragmenter = TakFragmenter()   // 225 B frames, at most 8 source fragments
+val result = compressor.compressForMesh(cotXml, fragmenter, FragmentPolicy.STRIP_FIRST)
+when (result.outcome) {
+    MeshEncodeResult.Outcome.SINGLE_FRAME, MeshEncodeResult.Outcome.FRAGMENTED ->
+        result.frames!!.forEach { send(it) }   // one port-78 packet each, in order, as one burst
+    MeshEncodeResult.Outcome.INSUFFICIENT_AIRTIME ->
+        retryLater()                           // or send a reduced frame now with FragmentPolicy.NEVER
+    MeshEncodeResult.Outcome.TOO_LARGE ->
+        drop()
+}
+```
+
+`result.remarksStripped` and `result.truncated` say what the call gave up. The `fragmentIfOversize` flag on `compressForMesh` is shorthand for two of the policies: `false` is `NEVER` and `true` is `FRAGMENT_FIRST`. On the receive side, `TakMeshReceiver.onPayload` reassembles fragments and decodes single frames as before.
+
 ## Real-World Compression Examples
 
 End-to-end walkthroughs showing actual CoT XML from ATAK/iTAK being compressed for LoRa mesh transmission. Each example shows the raw XML, what gets stripped before compression, the resulting proto structure, and the final compressed wire payload. The LoRa MTU is **225 bytes**.

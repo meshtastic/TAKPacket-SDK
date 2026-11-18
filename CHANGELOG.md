@@ -62,6 +62,22 @@ One version covers all five bindings, so a release is a single tag and a single 
   and `Limits.LARGE` (512 and 64), and `TakFragmenter.sourceFragmentsFor(size)`,
   which reports K for a payload size.
 
+- Kotlin: `FragmentPolicy`, a three-way choice for `compressForMesh` of what
+  gives way first when a CoT does not fit one frame. `NEVER` and
+  `FRAGMENT_FIRST` are the two behaviours that `fragmentIfOversize = false` and
+  `true` already select. `STRIP_FIRST` is new: it drops the remarks before it
+  considers a fragment set. A CoT that misses one frame only because of its
+  remarks then still goes out as one frame, where `FRAGMENT_FIRST` spends a
+  burst of at least three frames to keep them. A burst is spent only on what
+  dropping the remarks cannot fix, such as geometry or a long chat message, and
+  a CoT with no remarks behaves the same under both policies.
+
+  Both `compressForMesh` overloads take the policy in place of the flag, and
+  the XML overload parses with `CotXmlParser.Limits.LARGE` for either
+  fragmenting policy. The `fragmentIfOversize` overloads are unchanged and
+  remain as shorthand, so no existing caller has to change. `README.md` has a
+  flowchart and a table of what each policy does.
+
 ### Fixed
 
 - The documented LoRa MTU is now 225 bytes, not 237, in `WIRE_FORMAT.md`, every

@@ -49,6 +49,55 @@ public data class AirtimeBudget(
 }
 
 /**
+ * What `TakCompressor.compressForMesh` may give up, and in which order, when a
+ * CoT does not fit one frame. The caller picks it per CoT; it is never carried
+ * on the wire.
+ *
+ * A CoT that fits one frame goes out as that frame, untouched, under every
+ * policy. They differ only once it does not fit:
+ *
+ * | Policy           | Misses one frame only because of its remarks | Too big even without its remarks                   |
+ * |------------------|----------------------------------------------|----------------------------------------------------|
+ * | [NEVER]          | one frame, remarks dropped                   | one frame if cutting the geometry is enough        |
+ * | [STRIP_FIRST]    | one frame, remarks dropped                   | a fragment set, without the remarks                |
+ * | [FRAGMENT_FIRST] | a fragment set, remarks kept                 | a fragment set, remarks kept while the caps allow  |
+ *
+ * The same two fallbacks apply under every policy, each at most once and in
+ * this order, whenever a packet neither fits one frame nor may be fragmented:
+ * drop the remarks, then cut the geometry to
+ * [CotXmlParser.Limits.SINGLE_FRAME]. A packet that still fits nowhere is
+ * [MeshEncodeResult.Outcome.TOO_LARGE].
+ */
+public enum class FragmentPolicy {
+    /**
+     * One frame or nothing; never a fragment. Today's behaviour, and the right
+     * choice for PLI and anything else sent periodically.
+     */
+    NEVER,
+
+    /**
+     * Drop the remarks before considering a fragment set. A CoT that misses one
+     * frame only because of its remarks still goes out as one frame, and a
+     * burst is spent only on what dropping them cannot fix: geometry, or text
+     * that is the message itself.
+     */
+    STRIP_FIRST,
+
+    /**
+     * Fragment before giving anything up, so the CoT arrives whole whenever the
+     * fragmenter's caps allow. Costs a burst even when dropping the remarks
+     * alone would have fitted one frame.
+     */
+    FRAGMENT_FIRST,
+}
+
+/**
+ * The policy a `fragmentIfOversize` flag stands for: `false` is
+ * [FragmentPolicy.NEVER], `true` is [FragmentPolicy.FRAGMENT_FIRST].
+ */
+internal fun fragmentPolicyFor(fragmentIfOversize: Boolean): FragmentPolicy = if (fragmentIfOversize) FragmentPolicy.FRAGMENT_FIRST else FragmentPolicy.NEVER
+
+/**
  * Result of `TakCompressor.compressForMesh`.
  *
  * @property outcome what the call produced.
@@ -86,14 +135,14 @@ public class MeshEncodeResult(
 
 /**
  * The send path behind `TakCompressor.compressForMesh` (design doc §6.1):
- * compress, try one frame, otherwise fragment if allowed, with two fallbacks
- * that each run at most once and accumulate: drop the remarks, then cut the
- * geometry to single-frame limits.
+ * compress, try one frame, otherwise fragment if the [policy] allows it yet,
+ * with two fallbacks that each run at most once and accumulate: drop the
+ * remarks, then cut the geometry to single-frame limits.
  */
 internal class MeshEncoder(
     private val compressor: TakCompressor,
     private val fragmenter: TakFragmenter,
-    private val fragmentIfOversize: Boolean,
+    private val policy: FragmentPolicy,
     private val airtime: AirtimeBudget?,
 ) {
     private var remarksStripped = false
@@ -131,7 +180,7 @@ internal class MeshEncoder(
                 result(MeshEncodeResult.Outcome.SINGLE_FRAME, listOf(inner))
             }
 
-            fragmentIfOversize -> {
+            mayFragment(packet) -> {
                 fragmented(inner, protobufSize)
             }
 
@@ -140,6 +189,19 @@ internal class MeshEncoder(
             }
         }
     }
+
+    /**
+     * Whether [packet] may go out as a fragment set at this point.
+     * [FragmentPolicy.STRIP_FIRST] holds fragmenting back while there are
+     * remarks left to drop, so the remarks fallback in [encode] runs first and
+     * a burst is only spent on what dropping them could not fix.
+     */
+    private fun mayFragment(packet: TakPacketV2Data): Boolean =
+        when (policy) {
+            FragmentPolicy.NEVER -> false
+            FragmentPolicy.STRIP_FIRST -> packet.remarks.isEmpty()
+            FragmentPolicy.FRAGMENT_FIRST -> true
+        }
 
     /** The fragment set for [inner], or null if the fragmenter's caps refuse it. */
     private fun fragmented(

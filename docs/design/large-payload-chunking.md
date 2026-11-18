@@ -233,14 +233,15 @@ Maintainers of open-source RaptorQ libraries say the same thing. The Rust crate'
 ### 6.1 Sender
 
 ```
-1. packet = parse(cotXml, limits = fragmentIfOversize ? LARGE : SINGLE_FRAME)   // see §8
+1. packet = parse(cotXml, limits = policy is NEVER ? SINGLE_FRAME : LARGE)       // see §8
    fallbacks = {remarks: available, singleFrameLimits: available}
 2. proto  = serialize(packet); inner = compress(packet)         // unchanged one-shot path
 3. if inner.size <= maxFrame and proto.size <= 4096:
        send [inner]; done                                       // today's behaviour, byte-identical
 4. K = ceil((inner.size + 5) / S)
-5. if fragmentIfOversize is false for this CoT
-      or K > maxSourceFragments (policy, ≤ 32) or proto.size > LARGE_CAP:
+5. if policy is NEVER for this CoT
+      or (policy is STRIP_FIRST and the packet still has remarks)
+      or K > maxSourceFragments (sender cap, ≤ 32) or proto.size > LARGE_CAP:
        if remarks available and packet has remarks:
            drop remarks, mark used, go to 2
        if singleFrameLimits available:
@@ -258,16 +259,19 @@ Maintainers of open-source RaptorQ libraries say the same thing. The Rust crate'
        stop sending this message and report failure (receivers time out on their own)
 ```
 
-- **Each fallback runs at most once**, so the loop always terminates. The fallbacks accumulate: when the single-frame re-parse runs after remarks were dropped, the re-parsed packet has its remarks dropped too. The `fragmentIfOversize = false` path uses the same chain, but its packet was parsed with single-frame limits in step 1, so the single-frame fallback has nothing to cut. That leaves exactly today's `compressWithRemarksFallback` behaviour: a CoT with too much geometry is truncated to 32 vertices and keeps its remarks if it then fits, rather than keeping more vertices at the cost of its remarks.
+- **Each fallback runs at most once**, so the loop always terminates. The fallbacks accumulate: when the single-frame re-parse runs after remarks were dropped, the re-parsed packet has its remarks dropped too. The `NEVER` path uses the same chain, but its packet was parsed with single-frame limits in step 1, so the single-frame fallback has nothing to cut. That leaves exactly today's `compressWithRemarksFallback` behaviour: a CoT with too much geometry is truncated to 32 vertices and keeps its remarks if it then fits, rather than keeping more vertices at the cost of its remarks.
 - **Pacing is bounded by the receivers' timers, as far as the sender can see.** The sender can only observe its own wait for the radio queue. It cannot observe when the radio actually transmits a queued frame, or how long relays take to forward it. So the rule above limits only queue wait: the gap between handing two fragments to the radio stays under the idle budget, and the whole hand-off under the ceiling. Delay after the radio accepts a frame (time on air, channel-busy backoff, firmware throttling, relay contention) is absorbed by the receivers' `hopFactor` and `slack` margins (§6.2). The guarantee is therefore conditional: a message is delivered within the receivers' timers only while that later delay stays inside those margins. Past them, the message is lost cleanly, which is the same outcome as a dropped fragment. Field tests should tune `hopFactor` and `slack` per preset.
 - **Never start a burst the duty cycle will cut off.** In regions with a duty-cycle limit, such as EU_868, firmware aborts a phone-originated send once the node's hourly airtime budget is spent. A burst that crosses that line is cut off partway, which wastes all the airtime already used. So before step 7 the sender compares the airtime the whole set needs, (K + R) × frame airtime, against what is left in the hour.
   - **What is left in the hour** is the region's limit, minus the radio's reported `air_util_tx` (the percentage of airtime used transmitting in the last hour, from its device metrics), minus the airtime of frames already handed to the radio but not yet sent. `air_util_tx` only counts frames that have been transmitted, so the sender also subtracts what is still queued, including fragments of other sets in flight. It can estimate that from `QueueStatus` (`maxlen − free` queued frames, each costing up to one frame airtime). Skip the check when the region has no limit or `override_duty_cycle` is set.
   - **If the set doesn't fit,** the call fails with a distinct "insufficient airtime" result, so the app can retry later instead of dropping the message.
 - **The radio queue is bounded.** Firmware reports `QueueStatus` (`free` / `maxlen` / `res`) after each packet it accepts from the phone. Pushing a whole fragment set without waiting can overflow the queue and lose several fragments before any of them reaches the air. Repair fragments are not meant to cover that loss.
-- **Fragmentation is opt-in, per CoT.** Each send carries a `fragmentIfOversize` flag, default `false`. With `false`, the SDK behaves exactly as today for that CoT and never emits a fragment. With `true`, an oversized CoT may be fragmented, up to a `maxSourceFragments` cap. The flag lives on the send call, not on the wire. The app or plugin sets it per CoT: for example `true` for a user-drawn shape, route or long chat message, and never for PLI or other periodic traffic.
-  - **With `fragmentIfOversize = false`, the sender never emits a fragment.** The CoT is parsed with single-frame limits, and a packet that cannot take step 3 drops its remarks. If it still doesn't fit, it is dropped and the call reports failure. The SDK never sends a single frame that receivers would reject for exceeding the 4,096-byte cap.
+- **Fragmentation is opt-in, per CoT, and the opt-in says what gives way first.** Each send carries a `FragmentPolicy`, and a call that names none gets `NEVER`. All three policies send a CoT that fits one frame as that frame; they differ only in step 5. The policy lives on the send call, not on the wire. The app or plugin sets it per CoT: for example `STRIP_FIRST` or `FRAGMENT_FIRST` for a user-drawn shape, route or long chat message, and `NEVER` for PLI or other periodic traffic.
+  - **With `NEVER`, the sender never emits a fragment.** The CoT is parsed with single-frame limits, and a packet that cannot take step 3 drops its remarks. If it still doesn't fit, it is dropped and the call reports failure. The SDK never sends a single frame that receivers would reject for exceeding the 4,096-byte cap.
   - **That is today's behaviour, made explicit.** Today such a packet would be sent and then rejected by every receiver. Real PLI protobufs are about 100 B, so in practice this path never triggers for them.
-  - **`maxSourceFragments = 1` is not the same as `fragmentIfOversize = false`.** It still allows a one-source-fragment set (plus repair) for a packet that compresses into one frame but whose protobuf is over 4,096 B.
+  - **With `FRAGMENT_FIRST`, an oversized CoT is fragmented before anything is given up,** up to the `maxSourceFragments` cap. A CoT that misses one frame only because of its remarks therefore costs a burst, three frames at K=2, where dropping the remarks would have cost one frame.
+  - **With `STRIP_FIRST`, the remarks are dropped before a fragment set is considered.** Step 5 holds fragmenting back while the packet still has remarks, so the remarks fallback runs first. A CoT that only needed its remarks dropped goes out as one frame, exactly as under `NEVER`. A burst is spent only on what dropping them cannot fix, such as geometry or a long chat message, and that burst does not carry the remarks. A CoT with no remarks behaves exactly as under `FRAGMENT_FIRST`.
+  - **`maxSourceFragments = 1` is not the same as `NEVER`.** It still allows a one-source-fragment set (plus repair) for a packet that compresses into one frame but whose protobuf is over 4,096 B.
+  - **`fragmentIfOversize` remains as shorthand.** The boolean that preceded the policy is still accepted on the send call: `false` is `NEVER` and `true` is `FRAGMENT_FIRST`.
 
 ### 6.2 Receiver
 
@@ -378,15 +382,19 @@ public class TakReassembler(
 // TakCompressor additions
 public fun decompress(wirePayload: ByteArray, maxDecompressedSize: Int = MAX_DECOMPRESSED_SIZE): TakPacketV2Data
 
+/** What may give way first when a CoT does not fit one frame (§6.1 step 5). Set per CoT, never on the wire. */
+public enum class FragmentPolicy { NEVER, STRIP_FIRST, FRAGMENT_FIRST }
+
 /** One-call send path: compress, bounded fallbacks, then fragment. Generalizes compressWithRemarksFallbackDetailed. */
-/** Takes the CoT XML: step 1 parses with LARGE limits when fragmentIfOversize is true, otherwise with
- *  single-frame limits. The single-frame fallback (§6.1 step 5) cuts vertices and route links to the
+/** Takes the CoT XML: step 1 parses with single-frame limits when the policy is NEVER, otherwise with
+ *  LARGE limits. The single-frame fallback (§6.1 step 5) cuts vertices and route links to the
  *  single-frame limits, which gives the same packet as re-parsing the XML with them. An overload
- *  takes an already-parsed packet. */
+ *  takes an already-parsed packet, and both also accept the earlier `fragmentIfOversize: Boolean = false`
+ *  in place of the policy (false = NEVER, true = FRAGMENT_FIRST). */
 public fun compressForMesh(
     cotXml: String,
     fragmenter: TakFragmenter,
-    fragmentIfOversize: Boolean = false,              // per-CoT opt-in (§6.1); false = today's behaviour
+    policy: FragmentPolicy,                            // per CoT (§6.1); NEVER = today's behaviour
     airtime: AirtimeBudget? = null,                    // remaining duty-cycle budget, null = no limit (§6.1)
 ): MeshEncodeResult
 public data class MeshEncodeResult(
@@ -449,7 +457,7 @@ If mesh file transfer is wanted, it should be a separate bulk-transfer protocol,
 - **Fragmenting is byte-identical across bindings.** Slicing and repair symbols are deterministic given the inner bytes, `msg_id` and R, so each binding encodes the golden `.bin` and must match the Kotlin frames exactly, including every repair fragment. That is a stronger check than the zstd layer allows. Compressed bytes still differ per binding, so end-to-end cross-language tests assert decodability plus the size tolerance, as today.
 - **Codec conformance suite** (shared with any future file transfer, §5.5): partition sizes, blocks of K_b up to 128 (any-K decode sampled), and GF(256) vectors: shared log/exp table checksums, `coef(e, j, K)` spot values, `coef(K, j, K) == 1`, and an MDS property test over all K×K subsets for small K (sampled for K ≥ 9).
 - **Reassembly matrix in every binding:** every K-subset of K+R (sampled for large K), shuffled order, duplicates, loss of the last slice, fewer than K (waits, then times out), CRC mismatch, `K`/`code` conflict (frame dropped, partial kept), unknown `code`, a truncated header, the cap on partials, idle-deadline extension by a long repair run, ceiling expiry, and a forced `msg_id` collision (CRC rejects, no other message affected).
-- **Sender policy:** `fragmentIfOversize = false` never emits `0xFE`, and an oversized packet is then dropped with a failure result rather than sent. A set that doesn't fit the remaining duty-cycle budget is never started.
+- **Sender policy:** `NEVER` never emits `0xFE`, and an oversized packet is then dropped with a failure result rather than sent. `STRIP_FIRST` sends one frame whenever dropping the remarks is enough, and fragments only what that cannot fix. A set that doesn't fit the remaining duty-cycle budget is never started.
 - **Malformed-input fuzzing** of the reassembler, alongside the existing `testdata/malformed/` suite.
 - **ResilienceTest:** the interleaving case from §7.
 - **Backward compatibility:** a pre-change decoder fed `0xFE` frames rejects them as an unknown dictionary and does not throw past its existing contract.
@@ -458,7 +466,7 @@ If mesh file transfer is wanted, it should be a separate bulk-transfer protocol,
 
 **Compatibility.** Additive on the wire. New senders only fragment what old senders would have truncated or dropped, and only for CoTs that opt in.
 - **Receivers ship first.** Neither client has a reassembler yet, and today Android logs a warning with a stack trace for every port-78 frame it can't decode, which would be about 10 per message at the default cap. So the reassembler ships in both clients first. Senders start setting `fragmentIfOversize` only after that.
-- **Opt-in by design.** Because the flag is per CoT and defaults to `false`, fragmentation stays opt-in even after rollout; it is never a global switch.
+- **Opt-in by design.** Because the policy is per CoT and defaults to `NEVER`, fragmentation stays opt-in even after rollout; it is never a global switch.
 
 Old decoders reject `0xFE` and `0xFD` frames by throwing their existing "unknown dictionary" exception; I checked that Python raises `ValueError: Unknown dictionary ID: 62`, TypeScript throws `Error`, and Kotlin throws `IllegalArgumentException`. That is safe, but apps must catch it quietly, or a single 20-fragment message turns into 20 user-visible errors or log lines. The new `TakMeshReceiver` routes these frames before decoding, so the issue only affects code that calls `decompress()` directly. Meshtastic-Android and Meshtastic-Apple need to route port-78 frames through `TakMeshReceiver` (or the reassembler) and pace fragment sends against `QueueStatus`. Neither needs the mesh packet's From field.
 
@@ -466,8 +474,8 @@ Old decoders reject `0xFE` and `0xFD` frames by throwing their existing "unknown
 
 1. ~~**233 vs 237.**~~ **Resolved: 225 B.** 233 B is the firmware ceiling for `Data.payload`, 228 B is what Android's `sendData` check leaves for a port-78 payload, and both clients cap at 225 B. 237 describes a frame that cannot be sent. The SDK's MTU constant and `WIRE_FORMAT.md` move to these figures in their own change, ahead of this one.
 2. ~~**Source fragment cap.**~~ **Resolved: 3-bit `code`, 5-bit count.** The wire format allows up to 32 source fragments (about 7 KB, about 70 s per hop on LongFast), and 8 `code` values. The SDK's default policy cap stays at 8; going higher is a per-deployment choice that no longer needs a wire change.
-3. **Default `maxSourceFragments` and repair policy per event type and modem preset.** Should the SDK ship a policy table, or leave it entirely to apps?
-4. ~~**Should truncation stay the default?**~~ **Resolved: yes, per CoT.** Fragmentation is opt-in through `fragmentIfOversize` (default `false`), and receivers ship before any sender opts in (see Compatibility above).
+3. **Default `maxSourceFragments` and repair policy per event type and modem preset.** Should the SDK ship a policy table, or leave it entirely to apps? The same question applies to `FragmentPolicy`: the SDK offers the three policies, but which one each event type gets is still chosen by the app.
+4. ~~**Should truncation stay the default?**~~ **Resolved: yes, per CoT.** Fragmentation is opt-in through `FragmentPolicy` (default `NEVER`), and receivers ship before any sender opts in (see Compatibility above).
 5. **Large-mode parser limits:** 512 vertices and 64 links are placeholders. What do ATAK users actually draw?
 6. **Repair on demand (§10):** worth building in v1.x, or wait for field data on loss rates?
 7. **One codec at every size:** Cauchy GF(256) with source blocks (recommended, §5.5), or RaptorQ for both? RaptorQ removes the 6–8% blocking cost for feedback-free file broadcast. Against that, it is not MDS at small K, it has no Swift/C#/TypeScript implementation, and phones would need a licence on Qualcomm's terms (§5.6). **Without a licence on Qualcomm's terms for every phone, RaptorQ is off the table**, and the `code 1` slot should not be reserved for it.
