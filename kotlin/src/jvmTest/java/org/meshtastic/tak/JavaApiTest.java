@@ -17,6 +17,7 @@ import org.meshtastic.tak.TakPacketV2Data.Payload.DrawnShape;
 import org.meshtastic.tak.TakPacketV2Data.Payload.TakTalk;
 import org.meshtastic.tak.TakPacketV2Data.Payload.TakTalkRoom;
 import org.meshtastic.tak.TakPacketV2Data.Payload.TakTalkRoomRequest;
+import org.meshtastic.tak.TakPacketV2Data.Payload.VoiceProfile;
 import org.meshtastic.tak.TakPacketV2Data.Payload.VoiceProfileRequest;
 
 /**
@@ -142,6 +143,26 @@ class JavaApiTest {
     }
 
     @Test
+    void voiceProfileReplyIsFragmentedAndReassembled() {
+        byte[] model = new byte[2_500];
+        new Random(44).nextBytes(model);
+        TakPacketV2Data packet = envelope("y-")
+                .addMarti("BRAVO-2")
+                .payload(new VoiceProfile.Builder()
+                        .voiceProfileId("6f1c2a54-0d3b-4f6e-9a77-2c8e5b1d4f90")
+                        .voiceProfileName("Alpha Lead")
+                        .profileData(model)
+                        .build())
+                .build();
+
+        MeshEncodeResult result = compressor.compressForMesh(packet, new TakFragmenter(TakFragment.DEFAULT_MAX_FRAME_BYTES, 16), true);
+        assertEquals(MeshEncodeResult.Outcome.FRAGMENTED, result.getOutcome());
+        TakPacketV2Data received = receive(result.getFrames());
+        assertEquals(packet, received);
+        assertTrue(java.util.Arrays.equals(model, ((VoiceProfile) received.getPayload()).getProfileData()));
+    }
+
+    @Test
     void longTakTalkMessageIsFragmentedWhenOptedIn() {
         TakPacketV2Data packet = envelope("m-t-t")
                 .payload(new TakTalk.Builder().text(noisyText(1_500)).build())
@@ -240,6 +261,7 @@ class JavaApiTest {
             {TakPacketV2Data.Payload.Chat.class, TakPacketV2Data.Payload.Chat.Builder.class},
             {TakTalk.class, TakTalk.Builder.class},
             {TakTalkRoom.class, TakTalkRoom.Builder.class},
+            {VoiceProfile.class, VoiceProfile.Builder.class},
             {VoiceProfileRequest.class, VoiceProfileRequest.Builder.class},
             {TakTalkRoomRequest.class, TakTalkRoomRequest.Builder.class},
             {TakPacketV2Data.Payload.Marker.class, TakPacketV2Data.Payload.Marker.Builder.class},

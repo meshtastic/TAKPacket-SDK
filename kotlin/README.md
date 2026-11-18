@@ -98,9 +98,10 @@ TakPacketV2Data received = receiver.onPayload(payloadBytes, System.currentTimeMi
 ```
 
 Builders exist for the envelope (`TakPacketV2Data.Builder`) and for the `Chat`, `TakTalk`,
-`TakTalkRoom`, `VoiceProfileRequest`, `TakTalkRoomRequest`, `Marker`, `DrawnShape`, `Route`,
-`RangeAndBearing` and `EmergencyAlert` payloads. The two TAKTALK requests are packet-level only:
-build them directly, since the XML parser never produces them.
+`TakTalkRoom`, `VoiceProfile`, `VoiceProfileRequest`, `TakTalkRoomRequest`, `Marker`,
+`DrawnShape`, `Route`, `RangeAndBearing` and `EmergencyAlert` payloads. The three TAKTALK voice
+profile and request payloads are packet-level only: build them directly, since the XML parser
+never produces them. A voice profile usually needs fragmenting.
 A PLI has no payload: set the envelope fields and an `a-f-*` type.
 
 ## Core classes

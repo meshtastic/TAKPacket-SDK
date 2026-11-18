@@ -1243,6 +1243,32 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
             final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.Vertex.toString|toString(){}[0]
         }
 
+        final class VoiceProfile : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile|null[0]
+            constructor <init>(kotlin/String = ..., kotlin/String = ..., kotlin/ByteArray = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.<init>|<init>(kotlin.String;kotlin.String;kotlin.ByteArray){}[0]
+
+            final val profileData // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.profileData|{}profileData[0]
+                final fun <get-profileData>(): kotlin/ByteArray // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.profileData.<get-profileData>|<get-profileData>(){}[0]
+            final val voiceProfileId // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.voiceProfileId|{}voiceProfileId[0]
+                final fun <get-voiceProfileId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.voiceProfileId.<get-voiceProfileId>|<get-voiceProfileId>(){}[0]
+            final val voiceProfileName // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.voiceProfileName|{}voiceProfileName[0]
+                final fun <get-voiceProfileName>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.voiceProfileName.<get-voiceProfileName>|<get-voiceProfileName>(){}[0]
+
+            final fun copy(kotlin/String = ..., kotlin/String = ..., kotlin/ByteArray = ...): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.copy|copy(kotlin.String;kotlin.String;kotlin.ByteArray){}[0]
+            final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.equals|equals(kotlin.Any?){}[0]
+            final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.hashCode|hashCode(){}[0]
+            final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.toBuilder|toBuilder(){}[0]
+            final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.toString|toString(){}[0]
+
+            final class Builder { // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder|null[0]
+                constructor <init>(org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.Payload.VoiceProfile){}[0]
+
+                final fun build(): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.build|build(){}[0]
+                final fun profileData(kotlin/ByteArray): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.profileData|profileData(kotlin.ByteArray){}[0]
+                final fun voiceProfileId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.voiceProfileId|voiceProfileId(kotlin.String){}[0]
+                final fun voiceProfileName(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfile.Builder.voiceProfileName|voiceProfileName(kotlin.String){}[0]
+            }
+        }
+
         final class VoiceProfileRequest : org.meshtastic.tak/TakPacketV2Data.Payload { // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest|null[0]
             constructor <init>(kotlin/String = ...) // org.meshtastic.tak/TakPacketV2Data.Payload.VoiceProfileRequest.<init>|<init>(kotlin.String){}[0]
 
