@@ -337,6 +337,159 @@ class MeshCommonTest {
         assertEquals(0L, AirtimeBudget.fromDeviceMetrics(10.0, 12.0, 0, airtime).remainingMillis)
     }
 
+    // --- fragment policy ----------------------------------------------------
+
+    /** Fixed message IDs, so two encodings of one packet can be compared frame for frame. */
+    private fun fixedIds() = TakFragmenter(messageIds = MessageIdSource { 0x0BADC0DE })
+
+    /** A PLI that misses one frame only because of its remarks: dropping them is enough to fit. */
+    private fun pliWithLongRemarks(): TakPacketV2Data = parser.parse(pliXml).copy(remarks = noisyText(300))
+
+    private fun assertSameEncoding(
+        expected: MeshEncodeResult,
+        actual: MeshEncodeResult,
+    ) {
+        assertEquals(expected.outcome, actual.outcome)
+        assertEquals(expected.remarksStripped, actual.remarksStripped)
+        assertEquals(expected.truncated, actual.truncated)
+        assertEquals(expected.frames?.size, actual.frames?.size)
+        expected.frames
+            .orEmpty()
+            .zip(actual.frames.orEmpty())
+            .forEach { (want, got) -> assertContentEquals(want, got) }
+    }
+
+    @Test
+    fun everyPolicySendsACotThatFitsAsTheSameSingleFrame() {
+        val expected = compressor.compress(parser.parse(pliXml))
+        for (policy in FragmentPolicy.entries) {
+            val r = compressor.compressForMesh(pliXml, TakFragmenter(), policy)
+            assertEquals(MeshEncodeResult.Outcome.SINGLE_FRAME, r.outcome, "$policy")
+            assertContentEquals(expected, r.frames!!.single(), "$policy")
+            assertFalse(r.remarksStripped || r.truncated, "$policy")
+        }
+    }
+
+    @Test
+    fun theFlagOverloadsAreShorthandForNeverAndFragmentFirst() {
+        for (xml in listOf(shapeXml(100), shapeXml(100, remarks = noisyText(300)), routeXml(40), pliXml)) {
+            assertSameEncoding(
+                compressor.compressForMesh(xml, fixedIds(), fragmentIfOversize = false),
+                compressor.compressForMesh(xml, fixedIds(), FragmentPolicy.NEVER),
+            )
+            assertSameEncoding(
+                compressor.compressForMesh(xml, fixedIds(), fragmentIfOversize = true),
+                compressor.compressForMesh(xml, fixedIds(), FragmentPolicy.FRAGMENT_FIRST),
+            )
+        }
+        val packet = pliWithLongRemarks()
+        assertSameEncoding(
+            compressor.compressForMesh(packet, fixedIds()),
+            compressor.compressForMesh(packet, fixedIds(), FragmentPolicy.NEVER),
+        )
+        assertSameEncoding(
+            compressor.compressForMesh(packet, fixedIds(), fragmentIfOversize = true),
+            compressor.compressForMesh(packet, fixedIds(), FragmentPolicy.FRAGMENT_FIRST),
+        )
+    }
+
+    @Test
+    fun stripFirstDropsTheRemarksInsteadOfFragmenting() {
+        val packet = pliWithLongRemarks()
+        assertTrue(compressor.compress(packet).size > TakFragment.DEFAULT_MAX_FRAME_BYTES, "precondition: over one frame")
+        val withoutRemarks = compressor.compress(packet.copy(remarks = ""))
+
+        val strip = compressor.compressForMesh(packet, TakFragmenter(), FragmentPolicy.STRIP_FIRST)
+        assertEquals(MeshEncodeResult.Outcome.SINGLE_FRAME, strip.outcome)
+        assertTrue(strip.remarksStripped)
+        assertContentEquals(withoutRemarks, strip.frames!!.single())
+
+        // FRAGMENT_FIRST spends a burst on the same packet to keep the remarks.
+        val fragment = compressor.compressForMesh(packet, TakFragmenter(), FragmentPolicy.FRAGMENT_FIRST)
+        assertEquals(MeshEncodeResult.Outcome.FRAGMENTED, fragment.outcome)
+        assertFalse(fragment.remarksStripped)
+        assertEquals(packet, deliverAll(receiver(), fragment.frames!!).single())
+    }
+
+    @Test
+    fun stripFirstFragmentsWhatDroppingTheRemarksCannotFix() {
+        val xml = shapeXml(100, remarks = noisyText(300))
+        val strip = compressor.compressForMesh(xml, TakFragmenter(), FragmentPolicy.STRIP_FIRST)
+        assertEquals(MeshEncodeResult.Outcome.FRAGMENTED, strip.outcome)
+        assertTrue(strip.remarksStripped)
+        assertFalse(strip.truncated)
+        val got = deliverAll(receiver(), strip.frames!!).single()
+        assertEquals("", got.remarks)
+        assertEquals(100, shape(got).vertices.size)
+        assertFalse(shape(got).truncated)
+
+        // The burst carries the geometry alone, so it is shorter than FRAGMENT_FIRST's.
+        val fragment = compressor.compressForMesh(xml, TakFragmenter(), FragmentPolicy.FRAGMENT_FIRST)
+        assertEquals(MeshEncodeResult.Outcome.FRAGMENTED, fragment.outcome)
+        assertFalse(fragment.remarksStripped)
+        assertTrue(strip.frames.size <= fragment.frames!!.size)
+        assertTrue(strip.frames.sumOf { it.size } < fragment.frames.sumOf { it.size })
+    }
+
+    @Test
+    fun stripFirstWithNoRemarksToDropIsFragmentFirst() {
+        val packets =
+            listOf(
+                parser.parse(shapeXml(200), CotXmlParser.Limits.LARGE),
+                parser.parse(routeXml(64), CotXmlParser.Limits.LARGE),
+                chat(noisyText(1500)),
+            )
+        for (packet in packets) {
+            val fragment = compressor.compressForMesh(packet, fixedIds(), FragmentPolicy.FRAGMENT_FIRST)
+            assertEquals(MeshEncodeResult.Outcome.FRAGMENTED, fragment.outcome)
+            assertSameEncoding(fragment, compressor.compressForMesh(packet, fixedIds(), FragmentPolicy.STRIP_FIRST))
+        }
+    }
+
+    @Test
+    fun stripFirstFallsBackToCuttingGeometryOverTheFragmentCap() {
+        // Too big for one source fragment even without remarks, so the geometry is cut as well.
+        val xml = shapeXml(200, remarks = noisyText(400))
+        val r = compressor.compressForMesh(xml, TakFragmenter(maxSourceFragments = 1), FragmentPolicy.STRIP_FIRST)
+        assertTrue(r.remarksStripped)
+        assertTrue(r.truncated)
+        val got = deliverAll(receiver(), r.frames!!).single()
+        assertEquals("", got.remarks)
+        assertEquals(CotXmlParser.MAX_VERTICES, shape(got).vertices.size)
+        assertTrue(shape(got).truncated)
+    }
+
+    @Test
+    fun stripFirstOnlyAsksTheAirtimeBudgetForABurst() {
+        val none = AirtimeBudget(frameAirtimeMillis = airtime, remainingMillis = 0)
+
+        // Dropping the remarks gets it into one frame, and single frames are never held back.
+        val single = compressor.compressForMesh(pliWithLongRemarks(), TakFragmenter(), FragmentPolicy.STRIP_FIRST, none)
+        assertEquals(MeshEncodeResult.Outcome.SINGLE_FRAME, single.outcome)
+        assertTrue(single.remarksStripped)
+
+        // The geometry still needs a burst once the remarks are gone, and the budget refuses it.
+        val xml = shapeXml(100, remarks = noisyText(300))
+        val refused = compressor.compressForMesh(xml, TakFragmenter(), FragmentPolicy.STRIP_FIRST, none)
+        assertEquals(MeshEncodeResult.Outcome.INSUFFICIENT_AIRTIME, refused.outcome)
+        assertNull(refused.frames)
+        assertTrue(refused.remarksStripped)
+    }
+
+    @Test
+    fun onlyNeverParsesWithSingleFrameLimits() {
+        val xml = shapeXml(100)
+        val never = compressor.compressForMesh(xml, TakFragmenter(), FragmentPolicy.NEVER)
+        assertEquals(MeshEncodeResult.Outcome.SINGLE_FRAME, never.outcome)
+        assertEquals(CotXmlParser.MAX_VERTICES, shape(deliverAll(receiver(), never.frames!!).single()).vertices.size)
+
+        for (policy in listOf(FragmentPolicy.STRIP_FIRST, FragmentPolicy.FRAGMENT_FIRST)) {
+            val r = compressor.compressForMesh(xml, TakFragmenter(), policy)
+            assertEquals(MeshEncodeResult.Outcome.FRAGMENTED, r.outcome, "$policy")
+            assertEquals(100, shape(deliverAll(receiver(), r.frames!!).single()).vertices.size, "$policy")
+        }
+    }
+
     // --- receiver -----------------------------------------------------------
 
     @Test

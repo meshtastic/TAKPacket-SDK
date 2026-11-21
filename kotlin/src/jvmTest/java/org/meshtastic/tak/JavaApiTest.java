@@ -207,6 +207,40 @@ class JavaApiTest {
     }
 
     @Test
+    void fragmentPolicyIsReachableFromJavaAtEveryArity() {
+        // @JvmOverloads on the policy overloads too, so Java can name a policy and leave off the airtime budget.
+        TakPacketV2Data packet = envelope("m-t-t")
+                .payload(new TakTalk.Builder().text(noisyText(1_500)).build())
+                .build();
+        TakFragmenter fragmenter = new TakFragmenter();
+
+        assertEquals(
+                MeshEncodeResult.Outcome.TOO_LARGE,
+                compressor.compressForMesh(packet, fragmenter, FragmentPolicy.NEVER).getOutcome());
+
+        MeshEncodeResult result = compressor.compressForMesh(packet, fragmenter, FragmentPolicy.STRIP_FIRST);
+        assertEquals(MeshEncodeResult.Outcome.FRAGMENTED, result.getOutcome());
+        assertEquals(packet, receive(result.getFrames()));
+
+        AirtimeBudget spent = AirtimeBudget.fromDeviceMetrics(10.0, 10.0, 0, AIRTIME_MS);
+        MeshEncodeResult held = compressor.compressForMesh(packet, fragmenter, FragmentPolicy.FRAGMENT_FIRST, spent);
+        assertEquals(MeshEncodeResult.Outcome.INSUFFICIENT_AIRTIME, held.getOutcome());
+        assertNull(held.getFrames());
+
+        // The XML overload, at both arities.
+        String pli = "<event version=\"2.0\" uid=\"ANDROID-0000000000000001\" type=\"a-f-G-U-C\" "
+                + "time=\"2026-03-15T14:22:10Z\" start=\"2026-03-15T14:22:10Z\" stale=\"2026-03-15T14:28:10Z\" how=\"m-g\">"
+                + "<point lat=\"38.8895\" lon=\"-77.0353\" hae=\"10.0\" ce=\"9.9\" le=\"9999999.0\"/>"
+                + "<detail><contact callsign=\"ALPHA-1\"/></detail></event>";
+        assertEquals(
+                MeshEncodeResult.Outcome.SINGLE_FRAME,
+                compressor.compressForMesh(pli, fragmenter, FragmentPolicy.STRIP_FIRST).getOutcome());
+        assertEquals(
+                MeshEncodeResult.Outcome.SINGLE_FRAME,
+                compressor.compressForMesh(pli, fragmenter, FragmentPolicy.STRIP_FIRST, spent).getOutcome());
+    }
+
+    @Test
     void frameBudgetIsReachableFromJavaAtEveryArity() {
         // @JvmStatic and @JvmOverloads, so Java gets a static call and does not have to pass
         // arguments it does not care about.
