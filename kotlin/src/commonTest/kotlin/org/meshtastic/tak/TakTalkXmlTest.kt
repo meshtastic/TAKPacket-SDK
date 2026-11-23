@@ -253,7 +253,7 @@ class TakTalkXmlTest {
         for (payload in payloads) {
             val noCallsign = packet("y-", "ROOM-DATA-$roomId", payload).toBuilder().callsign("").build()
             val xml = builder.build(noCallsign)
-            assertTrue(xml.contains("<sender-callsign/>"), "${payload::class.simpleName}: $xml")
+            assertTrue(xml.contains("<sender-callsign></sender-callsign>"), "${payload::class.simpleName}: $xml")
             val back = parser.parse(xml)
             assertEquals("", back.callsign)
             assertEquals(payload, back.payload)

@@ -69,7 +69,7 @@ internal object TakTalkXml {
 
     /**
      * `<sender-callsign>`, which every TAKTALK `y-` event carries instead of `<contact>`.
-     * Written even when [callsign] is empty (`<sender-callsign/>`): the plugin's receiver
+     * Written even when [callsign] is empty (`<sender-callsign></sender-callsign>`): the plugin's receiver
      * reads the element without checking that it exists, so leaving it out crashes the
      * receiver rather than leaving the sender blank.
      */
@@ -78,11 +78,7 @@ internal object TakTalkXml {
         callsign: String,
         esc: (String) -> String,
     ) {
-        if (callsign.isEmpty()) {
-            sb.append("    <sender-callsign/>\n")
-        } else {
-            sb.append("    <sender-callsign>").append(esc(callsign)).append("</sender-callsign>\n")
-        }
+        sb.append("    <sender-callsign>").append(esc(callsign)).append("</sender-callsign>\n")
     }
 
     /**
