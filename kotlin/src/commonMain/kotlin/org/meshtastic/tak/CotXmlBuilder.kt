@@ -1,6 +1,7 @@
 package org.meshtastic.tak
 
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
@@ -155,6 +156,9 @@ public class CotXmlBuilder {
          */
         private const val DEFAULT_ENDPOINT = "*:-1:stcp"
 
+        /** How far in the past the TAKTALK plugin stamps `stale` on its control events (24 minutes). */
+        private val TAKTALK_CONTROL_STALE_AGE = 24.minutes
+
         // --- DrawnShape StyleMode values (mirror atak.proto) -------------
         private const val STYLE_UNSPECIFIED = 0
         private const val STYLE_STROKE_ONLY = 1
@@ -290,10 +294,15 @@ public class CotXmlBuilder {
         // but not PLI or chat, which are exactly the ones whose transit can exceed their
         // window. Only `time`/`start` become honest here; lifetime after arrival does not
         // change.
-        val stale = now + staleWindow
+        // The TAKTALK plugin's voice profile and request events are control messages it
+        // sends already stale, so ATAK doesn't retain them; match that.
+        val stale = if (TakTalkXml.uidPrefixFor(packet.payload) != null) now - TAKTALK_CONTROL_STALE_AGE else now + staleWindow
         val staleStr = stale.toString()
 
-        val cotType = packet.cotTypeString()
+        // The TAKTALK voice profile and request events are always y-: the plugin routes them
+        // by UID prefix, and receivers expect the type it sends.
+        val cotType = if (TakTalkXml.uidPrefixFor(packet.payload) != null) "y-" else packet.cotTypeString()
+        val uid = TakTalkXml.routedUid(packet.uid, packet.payload)
         // For most CoT types, missing/Unspecified how falls back to "m-g"
         // (the most common machine-generated value).  TAKTALK m-t-t and y-
         // events are special-cased to use ATAK's "null" how convention —
@@ -320,7 +329,7 @@ public class CotXmlBuilder {
 
         sb.append("""<?xml version="1.0" encoding="UTF-8"?>""")
         sb.append("\n")
-        sb.append("""<event version="2.0" uid="${esc(packet.uid)}" type="${esc(cotType)}" how="${esc(how)}" """)
+        sb.append("""<event version="2.0" uid="${esc(uid)}" type="${esc(cotType)}" how="${esc(how)}" """)
         sb.append("""time="$timeStr" start="$timeStr" stale="$staleStr">""")
         sb.append("\n")
         sb.append("""  <point lat="$lat" lon="$lon" hae="$hae" ce="9999999" le="9999999"/>""")
@@ -337,7 +346,8 @@ public class CotXmlBuilder {
         val isRoute = packet.payload is TakPacketV2Data.Payload.Route
         val isTakTalkShape =
             packet.payload is TakPacketV2Data.Payload.TakTalk ||
-                packet.payload is TakPacketV2Data.Payload.TakTalkRoom
+                packet.payload is TakPacketV2Data.Payload.TakTalkRoom ||
+                TakTalkXml.uidPrefixFor(packet.payload) != null
         if (packet.callsign.isNotEmpty() && !isRoute && !isTakTalkShape) {
             // Always DEFAULT_ENDPOINT, never packet.endpoint: a mesh contact is
             // replied to over the server stream, so a peer's concrete endpoint is
@@ -512,9 +522,23 @@ public class CotXmlBuilder {
                 if (payload.chatroomId.isNotEmpty()) {
                     sb.append("    <chatroom-id>").append(esc(payload.chatroomId)).append("</chatroom-id>\n")
                 }
+                // Always present: the body is the voice profile ID, empty for the receiver's default
+                // voice, and the plugin reads the profile from it. fromVoice has no XML counterpart.
                 if (payload.fromVoice) {
-                    sb.append("    <voice/>\n")
+                    trace { "CotXmlBuilder: TakTalk.fromVoice has no CoT XML counterpart, not rendered" }
                 }
+                if (payload.voiceProfileId.isEmpty()) {
+                    sb.append("    <voice/>\n")
+                } else {
+                    sb.append("    <voice>").append(esc(payload.voiceProfileId)).append("</voice>\n")
+                }
+            }
+
+            // TAKTALK voice profile and requests (y-, routed by UID prefix).
+            is TakPacketV2Data.Payload.VoiceProfile, is TakPacketV2Data.Payload.VoiceProfileRequest,
+            is TakPacketV2Data.Payload.TakTalkRoomRequest,
+            -> {
+                TakTalkXml.appendControlDetail(sb, packet, ::esc)
             }
 
             // TAKTALK room/membership broadcast (CoT type y-).
@@ -950,13 +974,7 @@ public class CotXmlBuilder {
         // m-t-t and y- don't use <remarks> at all, so excluding them prevents accidental
         // double-emission when callers populate the legacy remarks field. All other types
         // (shapes, markers, RAB, casevac, emergency, task) emit here.
-        if (packet.remarks.isNotEmpty() &&
-            packet.payload !is TakPacketV2Data.Payload.Chat &&
-            packet.payload !is TakPacketV2Data.Payload.Aircraft &&
-            packet.payload !is TakPacketV2Data.Payload.Route &&
-            packet.payload !is TakPacketV2Data.Payload.TakTalk &&
-            packet.payload !is TakPacketV2Data.Payload.TakTalkRoom
-        ) {
+        if (packet.remarks.isNotEmpty() && carriesRemarks(packet.payload)) {
             sb.append("    <remarks>${esc(packet.remarks)}</remarks>\n")
         }
 
@@ -1007,3 +1025,18 @@ public class CotXmlBuilder {
             .replace("\"", "&quot;")
             .replace("'", "&apos;")
 }
+
+/**
+ * Whether [payload]'s CoT XML takes `<remarks>`. Chat, aircraft and routes carry their text
+ * elsewhere, and the TAKTALK events don't use it.
+ */
+private fun carriesRemarks(payload: TakPacketV2Data.Payload): Boolean =
+    when (payload) {
+        is TakPacketV2Data.Payload.Chat, is TakPacketV2Data.Payload.Aircraft, is TakPacketV2Data.Payload.Route,
+        is TakPacketV2Data.Payload.TakTalk, is TakPacketV2Data.Payload.TakTalkRoom,
+        is TakPacketV2Data.Payload.VoiceProfile, is TakPacketV2Data.Payload.VoiceProfileRequest,
+        is TakPacketV2Data.Payload.TakTalkRoomRequest,
+        -> false
+
+        else -> true
+    }

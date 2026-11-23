@@ -429,12 +429,16 @@ public data class TakPacketV2Data(
             val chatroomId: String = "",
             /** Language tag of the message (e.g. "English"). Empty = unspecified. */
             val lang: String = "",
-            /** True when the source CoT had a `<voice/>` marker (speech-to-text origin). */
+            /**
+             * True when the message originated as speech-to-text. Packet-level only: it has no
+             * CoT XML counterpart, so [CotXmlBuilder] doesn't render it and [CotXmlParser]
+             * leaves it false. (`<voice>` carries [voiceProfileId], not this flag.)
+             */
             val fromVoice: Boolean = false,
             /**
              * The [VoiceProfile] the receiver should speak this message with, matching
-             * [VoiceProfile.voiceProfileId]. Empty = the receiver's default voice. Packet-level
-             * only: no CoT XML carries it, so the parser leaves it empty.
+             * [VoiceProfile.voiceProfileId]. Empty = the receiver's default voice. In CoT XML it
+             * is the body of `<voice>`, which [CotXmlBuilder] always writes for this payload.
              */
             val voiceProfileId: String = "",
         ) : Payload() {
@@ -517,8 +521,8 @@ public data class TakPacketV2Data(
          * MTU; the ceiling is 32). It gains nothing from the TAK dictionary; the compressor's
          * skip-compress rule keeps it from growing past the raw protobuf plus one byte.
          *
-         * Packet-level only: [CotXmlParser] never produces this variant and
-         * [CotXmlBuilder] renders just the envelope for it.
+         * In CoT XML it is a `y-` event with UID prefix `TAKTALK-RESPONSE-`, carrying
+         * `<sender-callsign>`, `<voice-data>` (Base64), `<voice-id>` and `<voice-name>`.
          */
         public class VoiceProfile(
             /** Stable identifier, matching [Chat.voiceProfileId] and [VoiceProfileRequest.voiceProfileId]. */
@@ -570,8 +574,9 @@ public data class TakPacketV2Data(
          * `VoiceProfileRequest` protobuf message (payload_variant tag 45). Address it
          * to the peer with [TakPacketV2Data.marti]; the reply is that peer's voice profile.
          *
-         * Packet-level only: [CotXmlParser] never produces this variant and
-         * [CotXmlBuilder] renders just the envelope for it.
+         * In CoT XML it is a `y-` event with UID prefix `TAKTALK-REQUEST-`, carrying only
+         * `<sender-callsign>`: [voiceProfileId] has no XML counterpart and is dropped (and
+         * logged) by [CotXmlBuilder], so it parses back empty.
          */
         public data class VoiceProfileRequest(
             /** Profile wanted, matching a chat's voice profile ID. Empty asks for whichever profile the peer is using. */
@@ -598,8 +603,8 @@ public data class TakPacketV2Data(
          * `TakTalkRoomRequest` protobuf message (payload_variant tag 46). Address it
          * with [TakPacketV2Data.marti]; the reply is a [TakTalkRoom].
          *
-         * Packet-level only: [CotXmlParser] never produces this variant and
-         * [CotXmlBuilder] renders just the envelope for it.
+         * In CoT XML it is a `y-` event with UID prefix `ROOM-REQUEST` (no trailing hyphen),
+         * carrying `<sender-callsign>` and `<chatroom-id>`.
          */
         public data class TakTalkRoomRequest(
             /** Room UUID wanted, matching [TakTalkRoom.roomId]. */

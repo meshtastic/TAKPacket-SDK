@@ -24,7 +24,9 @@ public class CotXmlParser {
      *
      * @throws IllegalArgumentException if the XML contains a prohibited DOCTYPE
      *         or ENTITY declaration (XXE / entity-expansion guard) or is
-     *         otherwise unparseable.
+     *         otherwise unparseable, or if a TAKTALK voice profile's
+     *         `<voice-data>` is not valid Base64 (decoded strictly, so a corrupt
+     *         profile fails here rather than arriving as wrong bytes).
      */
     @Throws(IllegalArgumentException::class)
     public fun parse(cotXml: String): TakPacketV2Data = parse(cotXml, Limits.SINGLE_FRAME)
@@ -99,7 +101,16 @@ public class CotXmlParser {
         var talkText = ""
         var talkChatroomId = ""
         var talkLang = ""
-        var fromVoice = false
+        var talkVoiceProfileId = ""
+        var inTaktalkVoice = false
+
+        // --- TAKTALK voice profile (y-, TAKTALK-RESPONSE-) accumulators --
+        var voiceDataText = ""
+        var voiceId = ""
+        var voiceName = ""
+        var inVoiceData = false
+        var inVoiceId = false
+        var inVoiceName = false
         var inTaktalkText = false
         var inTaktalkChatroomId = false
         var inTaktalkLang = false
@@ -368,11 +379,26 @@ public class CotXmlParser {
                                 }
                             }
 
+                            // The body is the sender's voice profile ID, empty when none is
+                            // selected. fromVoice has no XML counterpart and is not inferred
+                            // from this element being present.
                             "voice" -> {
                                 if (cotTypeStr == "m-t-t") {
                                     hasTakTalkData = true
-                                    fromVoice = true
+                                    inTaktalkVoice = true
                                 }
+                            }
+
+                            "voice-data" -> {
+                                inVoiceData = cotTypeStr == "y-"
+                            }
+
+                            "voice-id" -> {
+                                inVoiceId = cotTypeStr == "y-"
+                            }
+
+                            "voice-name" -> {
+                                inVoiceName = cotTypeStr == "y-"
                             }
 
                             "callsign" -> {
@@ -813,6 +839,22 @@ public class CotXmlParser {
                                         callsign = text
                                     }
 
+                                    inTaktalkVoice -> {
+                                        talkVoiceProfileId = text
+                                    }
+
+                                    inVoiceData -> {
+                                        voiceDataText = text
+                                    }
+
+                                    inVoiceId -> {
+                                        voiceId = text
+                                    }
+
+                                    inVoiceName -> {
+                                        voiceName = text
+                                    }
+
                                     inChatEa -> {
                                         chatLang = text
                                     }
@@ -874,6 +916,22 @@ public class CotXmlParser {
 
                             "callsign" -> {
                                 inMttCallsign = false
+                            }
+
+                            "voice" -> {
+                                inTaktalkVoice = false
+                            }
+
+                            "voice-data" -> {
+                                inVoiceData = false
+                            }
+
+                            "voice-id" -> {
+                                inVoiceId = false
+                            }
+
+                            "voice-name" -> {
+                                inVoiceName = false
                             }
 
                             "Ea" -> {
@@ -977,6 +1035,24 @@ public class CotXmlParser {
                     TakPacketV2Data.Payload.Pli(true)
                 }
 
+                // The TAKTALK plugin routes its y- control events by UID prefix, and a room
+                // request carries <chatroom-id> like a room broadcast, so these come first.
+                cotTypeStr == "y-" && uid.startsWith(TakTalkXml.VOICE_PROFILE_UID_PREFIX) -> {
+                    TakPacketV2Data.Payload.VoiceProfile(
+                        voiceProfileId = voiceId,
+                        voiceProfileName = voiceName,
+                        profileData = TakTalkXml.decodeVoiceData(voiceDataText),
+                    )
+                }
+
+                cotTypeStr == "y-" && uid.startsWith(TakTalkXml.VOICE_PROFILE_REQUEST_UID_PREFIX) -> {
+                    TakPacketV2Data.Payload.VoiceProfileRequest()
+                }
+
+                cotTypeStr == "y-" && uid.startsWith(TakTalkXml.ROOM_REQUEST_UID_PREFIX) -> {
+                    TakPacketV2Data.Payload.TakTalkRoomRequest(roomId = roomDataId)
+                }
+
                 hasRoomData && cotTypeStr == "y-" -> {
                     TakPacketV2Data.Payload.TakTalkRoom(
                         roomId = roomDataId,
@@ -990,7 +1066,7 @@ public class CotXmlParser {
                         text = talkText,
                         chatroomId = talkChatroomId,
                         lang = talkLang,
-                        fromVoice = fromVoice,
+                        voiceProfileId = talkVoiceProfileId,
                     )
                 }
 

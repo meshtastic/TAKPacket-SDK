@@ -15,8 +15,8 @@ import kotlin.test.assertTrue
 /**
  * The TAKTALK voice profile (tag 44), the request payloads,
  * `VoiceProfileRequest` (tag 45) and `TakTalkRoomRequest` (tag 46), and the
- * `voice_profile_id` a TAKTALK message names its profile with. They are
- * packet-level only: built directly, never parsed from CoT XML.
+ * `voice_profile_id` a TAKTALK message names its profile with, at the
+ * protobuf layer. [TakTalkXmlTest] covers them as CoT XML.
  */
 class TakTalkRequestTest {
     private val compressor = TakCompressor()
@@ -72,11 +72,12 @@ class TakTalkRequestTest {
     }
 
     @Test
-    fun xmlRendersTheEnvelopeOnly() {
+    fun roomRequestXmlKeepsMartiAndTheRoom() {
+        // Full XML coverage is in TakTalkXmlTest.
         val xml = CotXmlBuilder().build(roomRequest)
         assertTrue(xml.contains("""type="y-""""), xml)
         assertTrue(xml.contains("BRAVO-2"), "marti must survive so the request reaches its addressee: $xml")
-        assertFalse(xml.contains("30b2755c-c547-44ef-a0cc-cdbd8a15616f"), xml)
+        assertTrue(xml.contains("<chatroom-id>30b2755c-c547-44ef-a0cc-cdbd8a15616f</chatroom-id>"), xml)
         assertNotNull(CotXmlParser().parse(xml))
     }
 
