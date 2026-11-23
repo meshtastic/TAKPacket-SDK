@@ -127,6 +127,12 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ### Fixed
 
+- Kotlin: `CotXmlParser` dropped entity references from element bodies, so
+  `A &amp; B` parsed as `A  B` and `&#65;` disappeared, in every text field.
+  The reader now expands them. Declared entities are still refused; an
+  undeclared reference is malformed XML and now throws
+  `IllegalArgumentException`.
+
 - The documented LoRa MTU is now 225 bytes, not 237, in `WIRE_FORMAT.md`, every
   binding's README and API docs, and each binding's compression tests.
 

@@ -162,6 +162,28 @@ class TakTalkXmlTest {
     }
 
     @Test
+    fun characterReferencesInVoiceDataAreResolvedNotDropped() {
+        // &#65; is "A", a Base64 character: dropping it would shift every later byte.
+        val data = modelBytes()
+        val encoded = Base64.Default.encode(data)
+        val firstA = encoded.indexOf('A')
+        assertTrue(firstA >= 0, encoded)
+        val withRef = encoded.substring(0, firstA) + "&#65;" + encoded.substring(firstA + 1)
+        assertContentEquals(data, (parser.parse(voiceProfileXml(withRef)).payload as TakPacketV2Data.Payload.VoiceProfile).profileData)
+    }
+
+    @Test
+    fun escapedTextSurvivesTheRoundTrip() {
+        val profile = TakPacketV2Data.Payload.VoiceProfile(profileId, "Alpha & Bravo <Lead>", ByteArray(8) { it.toByte() })
+        val talk = TakPacketV2Data.Payload.TakTalk(text = "Tom & Jerry", voiceProfileId = "a&b")
+        val sentProfile = packet("y-", "TAKTALK-RESPONSE-1", profile).toBuilder().callsign("A & B").build()
+        val back = parser.parse(builder.build(sentProfile))
+        assertEquals(profile, back.payload)
+        assertEquals("A & B", back.callsign)
+        assertEquals(talk, parser.parse(builder.build(packet("m-t-t", "u-1", talk))).payload)
+    }
+
+    @Test
     fun anUnresolvedEntityIsAnErrorNotCorruptBytes() {
         // A double-escaped &#10; reaches the decoder as the literal text "&#10;".
         val wrapped =

@@ -51,7 +51,11 @@ public class CotXmlParser {
             throw IllegalArgumentException("XML contains prohibited DOCTYPE or ENTITY declaration")
         }
 
-        val reader = xmlStreaming.newReader(cotXml)
+        // expandEntities: otherwise the reader hands &amp;, &lt;, &#10; and the like over as
+        // ENTITY_REF events, which the text handler below never sees, and they vanish from
+        // element bodies ("A &amp; B" parsed as "A  B"). Declared entities are still refused
+        // by the guard above; an undeclared reference is malformed XML and now throws.
+        val reader = xmlStreaming.newReader(cotXml, expandEntities = true)
 
         var uid = ""
         var cotTypeStr = ""
