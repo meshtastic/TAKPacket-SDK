@@ -96,7 +96,9 @@ One version covers all five bindings, so a release is a single tag and a single 
   All three round-trip as CoT XML the way the ATAK TAKTALK plugin writes
   them: type `y-`, routed by UID prefix (`TAKTALK-RESPONSE-`,
   `TAKTALK-REQUEST-`, and `ROOM-REQUEST` with no trailing hyphen), each with
-  `<sender-callsign>`. The room request adds `<chatroom-id>`; the voice profile
+  `<sender-callsign>`, written even when the callsign is empty since the
+  plugin's receiver reads it unguarded; the room broadcast now does the same.
+  The room request adds `<chatroom-id>`; the voice profile
   adds `<voice-data>` (Base64 in 76-character lines), `<voice-id>` and
   `<voice-name>`. `CotXmlBuilder` adds the prefix to a UID that lacks it and,
   like the plugin, sends these events already stale. `CotXmlParser` resolves

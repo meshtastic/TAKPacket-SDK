@@ -549,12 +549,7 @@ public class CotXmlBuilder {
                 // packet.callsign). The parser routes <sender-callsign>'s
                 // body into packet.callsign on the way in; here we route it
                 // back out.
-                if (packet.callsign.isNotEmpty()) {
-                    sb
-                        .append("    <sender-callsign>")
-                        .append(esc(packet.callsign))
-                        .append("</sender-callsign>\n")
-                }
+                TakTalkXml.appendSenderCallsign(sb, packet.callsign, ::esc)
                 if (payload.roomId.isNotEmpty()) {
                     sb
                         .append("    <chatroom-id>")

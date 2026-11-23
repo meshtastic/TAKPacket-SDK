@@ -230,13 +230,34 @@ class TakTalkXmlTest {
     fun roomRequestUsesThePrefixWithoutAHyphen() {
         val xml = builder.build(packet("y-", "", TakPacketV2Data.Payload.TakTalkRoomRequest(roomId)))
         val uid = xml.substringAfter("""uid="""").substringBefore('"')
-        assertTrue(Regex("ROOM-REQUEST[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}").matches(uid), uid)
+        // A version 4, RFC 4122 variant UUID straight after the prefix.
+        assertTrue(Regex("ROOM-REQUEST[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}").matches(uid), uid)
         assertTrue(xml.contains("<chatroom-id>$roomId</chatroom-id>"), xml)
         assertFalse(xml.contains("<chatroom-name>"), xml)
 
         val back = throughTheMesh(xml)
         assertEquals(TakPacketV2Data.Payload.TakTalkRoomRequest(roomId), back.payload)
         assertEquals(uid, back.uid)
+    }
+
+    @Test
+    fun senderCallsignIsWrittenEvenWhenEmpty() {
+        // The plugin's receiver reads <sender-callsign> unguarded: leaving it out crashes it.
+        val payloads =
+            listOf(
+                TakPacketV2Data.Payload.VoiceProfile(profileId, "Alpha Lead", ByteArray(4)),
+                TakPacketV2Data.Payload.VoiceProfileRequest(),
+                TakPacketV2Data.Payload.TakTalkRoomRequest(roomId),
+                TakPacketV2Data.Payload.TakTalkRoom(roomId, "Gate team", listOf("BRAVO-2")),
+            )
+        for (payload in payloads) {
+            val noCallsign = packet("y-", "ROOM-DATA-$roomId", payload).toBuilder().callsign("").build()
+            val xml = builder.build(noCallsign)
+            assertTrue(xml.contains("<sender-callsign/>"), "${payload::class.simpleName}: $xml")
+            val back = parser.parse(xml)
+            assertEquals("", back.callsign)
+            assertEquals(payload, back.payload)
+        }
     }
 
     @Test

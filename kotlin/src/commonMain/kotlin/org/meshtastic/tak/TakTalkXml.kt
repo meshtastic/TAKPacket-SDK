@@ -29,8 +29,15 @@ internal object TakTalkXml {
     /** Line length of Android's `Base64.DEFAULT`, which the plugin encodes `voice-data` with. */
     private const val BASE64_LINE: Int = 76
 
-    private const val UUID_GROUPS = "8-4-4-4-12"
+    private const val UUID_BYTES = 16
+    private const val UUID_VERSION_BYTE = 6
+    private const val UUID_VARIANT_BYTE = 8
+    private const val LOW_NIBBLE = 0x0F
+    private const val VERSION_4 = 0x40
+    private const val LOW_SIX_BITS = 0x3F
+    private const val VARIANT_RFC4122 = 0x80
     private const val HEX_RADIX = 16
+    private const val UUID_GROUPS = "8-4-4-4-12"
 
     /** The UID prefix the plugin routes [payload] by, or null for any other payload. */
     fun uidPrefixFor(payload: TakPacketV2Data.Payload): String? =
@@ -61,6 +68,24 @@ internal object TakTalkXml {
     }
 
     /**
+     * `<sender-callsign>`, which every TAKTALK `y-` event carries instead of `<contact>`.
+     * Written even when [callsign] is empty (`<sender-callsign/>`): the plugin's receiver
+     * reads the element without checking that it exists, so leaving it out crashes the
+     * receiver rather than leaving the sender blank.
+     */
+    fun appendSenderCallsign(
+        sb: StringBuilder,
+        callsign: String,
+        esc: (String) -> String,
+    ) {
+        if (callsign.isEmpty()) {
+            sb.append("    <sender-callsign/>\n")
+        } else {
+            sb.append("    <sender-callsign>").append(esc(callsign)).append("</sender-callsign>\n")
+        }
+    }
+
+    /**
      * The `<detail>` children of a voice profile, voice profile request or room request,
      * as the plugin writes them; [esc] escapes XML text. Every one starts with
      * `<sender-callsign>`. The request carries nothing else, so a
@@ -72,9 +97,7 @@ internal object TakTalkXml {
         packet: TakPacketV2Data,
         esc: (String) -> String,
     ) {
-        if (packet.callsign.isNotEmpty()) {
-            sb.append("    <sender-callsign>").append(esc(packet.callsign)).append("</sender-callsign>\n")
-        }
+        appendSenderCallsign(sb, packet.callsign, esc)
         when (val payload = packet.payload) {
             is TakPacketV2Data.Payload.VoiceProfile -> {
                 sb.append("    <voice-data>").append(encodeVoiceData(payload.profileData)).append("</voice-data>\n")
@@ -131,8 +154,14 @@ internal object TakTalkXml {
         }
     }
 
-    private fun randomUuid(): String =
-        UUID_GROUPS.split("-").joinToString("-") { group ->
-            (1..group.toInt()).joinToString("") { Random.nextInt(HEX_RADIX).toString(HEX_RADIX) }
+    /** A random (version 4, RFC 4122 variant) UUID in its canonical lowercase form. */
+    private fun randomUuid(): String {
+        val bytes = Random.nextBytes(UUID_BYTES)
+        bytes[UUID_VERSION_BYTE] = ((bytes[UUID_VERSION_BYTE].toInt() and LOW_NIBBLE) or VERSION_4).toByte()
+        bytes[UUID_VARIANT_BYTE] = ((bytes[UUID_VARIANT_BYTE].toInt() and LOW_SIX_BITS) or VARIANT_RFC4122).toByte()
+        var hex = bytes.joinToString("") { (it.toInt() and BYTE_MASK).toString(HEX_RADIX).padStart(2, '0') }
+        return UUID_GROUPS.split("-").joinToString("-") { group ->
+            hex.take(group.toInt()).also { hex = hex.drop(group.toInt()) }
         }
+    }
 }
