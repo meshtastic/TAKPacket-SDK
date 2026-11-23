@@ -303,15 +303,8 @@ public class CotXmlBuilder {
         // by UID prefix, and receivers expect the type it sends.
         val cotType = if (TakTalkXml.uidPrefixFor(packet.payload) != null) "y-" else packet.cotTypeString()
         val uid = TakTalkXml.routedUid(packet.uid, packet.payload)
-        // For most CoT types, missing/Unspecified how falls back to "m-g"
-        // (the most common machine-generated value). TAKTALK m-t-t and y- events
-        // use the literal how="null" instead: the plugin's CotSenderUtil never sets
-        // how, so ATAK's serializer writes out the null and every plugin event
-        // carries how='null'. Reproducing it keeps the round trip faithful.
-        val how =
-            packet.howString().ifEmpty {
-                if (cotType == "m-t-t" || cotType == "y-") "null" else "m-g"
-            }
+        // Missing/Unspecified how falls back to "m-g".
+        val how = packet.howString().ifEmpty { "m-g" }
 
         var lat = packet.latitudeI / 1e7
         var lon = packet.longitudeI / 1e7

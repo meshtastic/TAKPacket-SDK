@@ -164,13 +164,8 @@ export function buildCotXml(packet: TAKPacketV2): string {
   const stale = new Date(Date.now() + staleSecs * 1000).toISOString();
 
   const cotType = typeToString(packet.cotTypeId ?? 0) ?? packet.cotTypeStr ?? "";
-  // For most CoT types, missing/Unspecified how falls back to "m-g"
-  // (the most common machine-generated value). TAKTALK m-t-t and y- events
-  // use the literal how="null" instead: the plugin's CotSenderUtil never sets
-  // how, so ATAK's serializer writes out the null and every plugin event
-  // carries how='null'. Reproducing it keeps the round trip faithful.
-  const how = howToString(packet.how ?? 0)
-    ?? ((cotType === "m-t-t" || cotType === "y-") ? "null" : "m-g");
+  // Missing/Unspecified how falls back to "m-g".
+  const how = howToString(packet.how ?? 0) ?? "m-g";
   let lat = (packet.latitudeI ?? 0) / 1e7;
   let lon = (packet.longitudeI ?? 0) / 1e7;
   const routePayload = packet.route;

@@ -114,6 +114,9 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ### Changed
 
+- All bindings: `CotXmlBuilder` no longer writes `how="null"` for TAKTALK
+  `m-t-t` and `y-` events; a missing `how` falls back to `"m-g"` for every type.
+
 - Kotlin: a TAKTALK message's `<voice>` element now carries
   `TakTalk.voiceProfileId` as its body, and `CotXmlBuilder` writes it for
   every `m-t-t`, `<voice/>` when there is no ID. `CotXmlParser` reads the ID

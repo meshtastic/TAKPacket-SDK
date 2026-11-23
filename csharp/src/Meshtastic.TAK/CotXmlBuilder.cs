@@ -200,13 +200,8 @@ public class CotXmlBuilder
         var staleStr = stale.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
         var cotType = CotTypeMapper.TypeToString((int)pkt.CotTypeId) ?? pkt.CotTypeStr ?? "";
-        // For most CoT types, missing/Unspecified how falls back to "m-g"
-        // (the most common machine-generated value). TAKTALK m-t-t and y- events
-        // use the literal how="null" instead: the plugin's CotSenderUtil never sets
-        // how, so ATAK's serializer writes out the null and every plugin event
-        // carries how='null'. Reproducing it keeps the round trip faithful.
-        var how = CotTypeMapper.HowToString((int)pkt.How)
-                  ?? ((cotType == "m-t-t" || cotType == "y-") ? "null" : "m-g");
+        // Missing/Unspecified how falls back to "m-g".
+        var how = CotTypeMapper.HowToString((int)pkt.How) ?? "m-g";
         var lat = pkt.LatitudeI / 1e7;
         var lon = pkt.LongitudeI / 1e7;
         if (pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route
