@@ -304,11 +304,10 @@ public class CotXmlBuilder {
         val cotType = if (TakTalkXml.uidPrefixFor(packet.payload) != null) "y-" else packet.cotTypeString()
         val uid = TakTalkXml.routedUid(packet.uid, packet.payload)
         // For most CoT types, missing/Unspecified how falls back to "m-g"
-        // (the most common machine-generated value).  TAKTALK m-t-t and y-
-        // events are special-cased to use ATAK's "null" how convention —
-        // the TAKTALK plugin's inbound classifier appears to gate on this
-        // value, so a source how="null" that round-trips as "m-g" prevents
-        // TTS playback on the receive side.
+        // (the most common machine-generated value). TAKTALK m-t-t and y- events
+        // use the literal how="null" instead: the plugin's CotSenderUtil never sets
+        // how, so ATAK's serializer writes out the null and every plugin event
+        // carries how='null'. Reproducing it keeps the round trip faithful.
         val how =
             packet.howString().ifEmpty {
                 if (cotType == "m-t-t" || cotType == "y-") "null" else "m-g"

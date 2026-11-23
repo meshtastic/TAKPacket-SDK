@@ -113,10 +113,11 @@ public class CotXmlBuilder {
         let stale = Self.isoFmt.string(from: decodeDate.addingTimeInterval(TimeInterval(staleSecs)))
 
         let cotType = CotTypeMapper.typeToString(packet.cotTypeID) ?? packet.cotTypeStr
-        // For most CoT types, missing/Unspecified how falls back to "m-g".
-        // TAKTALK m-t-t and y- are special-cased to use ATAK's "null" how
-        // convention — the plugin's inbound classifier gates on this value
-        // for TTS routing, so source how="null" must NOT round-trip as "m-g".
+        // For most CoT types, missing/Unspecified how falls back to "m-g"
+        // (the most common machine-generated value). TAKTALK m-t-t and y- events
+        // use the literal how="null" instead: the plugin's CotSenderUtil never sets
+        // how, so ATAK's serializer writes out the null and every plugin event
+        // carries how='null'. Reproducing it keeps the round trip faithful.
         let how = CotTypeMapper.howToString(packet.how)
             ?? ((cotType == "m-t-t" || cotType == "y-") ? "null" : "m-g")
 
