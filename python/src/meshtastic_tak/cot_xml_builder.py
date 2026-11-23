@@ -103,8 +103,7 @@ class CotXmlBuilder:
         floor) regardless, so an honest ``start`` never shortens an event's life. Colors are emitted in
         ATAK's signed-int32 form, resolving the palette ``Team`` enum to its
         canonical ARGB and falling back to the exact ``_argb`` bits for custom
-        colors. Default TAK endpoints and TAK-Talk ``how="null"`` conventions
-        are reproduced so the output matches real ATAK captures.
+        colors. Default TAK endpoints are reproduced so the output matches real ATAK captures.
 
         Args:
             packet: The packet to render.
@@ -136,14 +135,8 @@ class CotXmlBuilder:
         stale_str = stale.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
         cot_type = CotTypeMapper.type_to_string(packet.cot_type_id) or packet.cot_type_str or ""
-        # For most CoT types, missing/Unspecified how falls back to "m-g".
-        # TAKTALK m-t-t and y- are special-cased to use ATAK's "null" how
-        # convention — the plugin's inbound classifier gates on this value
-        # for TTS routing, so source how="null" must NOT round-trip as "m-g".
-        how = (
-            CotTypeMapper.how_to_string(packet.how)
-            or ("null" if cot_type in ("m-t-t", "y-") else "m-g")
-        )
+        # Missing/Unspecified how falls back to "m-g".
+        how = CotTypeMapper.how_to_string(packet.how) or "m-g"
         lat = packet.latitude_i / 1e7
         lon = packet.longitude_i / 1e7
         if (packet.WhichOneof("payload_variant") == "route"

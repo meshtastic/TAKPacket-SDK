@@ -15,8 +15,7 @@ import Foundation
 /// byte-identical to the original capture: a stable, ATAK-parseable
 /// reconstruction, not a verbatim copy. Several reconstructions are
 /// deliberately ATAK-shaped — e.g. a contact endpoint is always emitted as
-/// `*:-1:stcp` (TAK "reply via this server"), TAK-Talk `m-t-t` / `y-` events
-/// use `how="null"`, and a packet with no payload variant and an `a-f-*` type
+/// `*:-1:stcp` (TAK "reply via this server"), and a packet with no payload variant and an `a-f-*` type
 /// rebuilds as an implicit PLI position report.
 ///
 /// All emitted text is XML-escaped. A new instance is cheap; the type holds no
@@ -87,7 +86,7 @@ public class CotXmlBuilder {
     ///
     /// Reconstruction is semantically faithful but not byte-identical to the
     /// original capture; see the type-level discussion of the ATAK-specific
-    /// reconstructions (contact endpoint, TAK-Talk `how="null"`, route anchor
+    /// reconstructions (contact endpoint, route anchor
     /// from the first waypoint, etc.).
     ///
     /// - Parameter packet: The decoded packet to render.
@@ -113,12 +112,8 @@ public class CotXmlBuilder {
         let stale = Self.isoFmt.string(from: decodeDate.addingTimeInterval(TimeInterval(staleSecs)))
 
         let cotType = CotTypeMapper.typeToString(packet.cotTypeID) ?? packet.cotTypeStr
-        // For most CoT types, missing/Unspecified how falls back to "m-g".
-        // TAKTALK m-t-t and y- are special-cased to use ATAK's "null" how
-        // convention — the plugin's inbound classifier gates on this value
-        // for TTS routing, so source how="null" must NOT round-trip as "m-g".
-        let how = CotTypeMapper.howToString(packet.how)
-            ?? ((cotType == "m-t-t" || cotType == "y-") ? "null" : "m-g")
+        // Missing/Unspecified how falls back to "m-g".
+        let how = CotTypeMapper.howToString(packet.how) ?? "m-g"
 
         var lat = Double(packet.latitudeI) / 1e7
         var lon = Double(packet.longitudeI) / 1e7

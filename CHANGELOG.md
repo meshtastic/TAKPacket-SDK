@@ -91,19 +91,52 @@ One version covers all five bindings, so a release is a single tag and a single 
   receiver's default voice. Its constructor and `copy` gain the parameter, so
   code compiled against an earlier SDK needs recompiling. A voice profile's opaque model data is usually larger than
   one frame, so send it with `fragmentIfOversize = true` and a fragmenter whose
-  `maxSourceFragments` covers it (the default 8 carries about 1.7 KB). All three are packet-level only for
-  now: `CotXmlParser` never produces them and `CotXmlBuilder` renders just the
-  envelope. A receiver on an earlier SDK, or on the Swift, Python, TypeScript
-  or C# bindings, decodes an unfragmented one as a PLI, since it does not know
-  the arm; one without fragment support rejects a fragmented voice profile.
+  `maxSourceFragments` covers it (the default 8 carries about 1.7 KB).
+
+  All three round-trip as CoT XML the way the ATAK TAKTALK plugin writes
+  them: type `y-`, routed by UID prefix (`TAKTALK-RESPONSE-`,
+  `TAKTALK-REQUEST-`, and `ROOM-REQUEST` with no trailing hyphen), each with
+  `<sender-callsign>`, written even when the callsign is empty since the
+  plugin's receiver reads it unguarded; the room broadcast now does the same.
+  The room request adds `<chatroom-id>`; the voice profile
+  adds `<voice-data>` (Base64 in 76-character lines), `<voice-id>` and
+  `<voice-name>`. `CotXmlBuilder` adds the prefix to a UID that lacks it and,
+  like the plugin, sends these events already stale. `CotXmlParser` resolves
+  character references before decoding `<voice-data>` strictly, so a corrupt
+  profile throws `IllegalArgumentException` instead of arriving as wrong
+  bytes. The request XML has no profile ID, so a
+  `VoiceProfileRequest.voiceProfileId` doesn't survive it; set
+  `TakPacketSdk.logger` to see that and other dropped fields logged.
+
+  A receiver on an earlier SDK, or on the Swift, Python, TypeScript or C#
+  bindings, decodes an unfragmented one as a PLI, since it does not know the
+  arm; one without fragment support rejects a fragmented voice profile.
 
 ### Changed
+
+- All bindings: `CotXmlBuilder` no longer writes `how="null"` for TAKTALK
+  `m-t-t` and `y-` events; a missing `how` falls back to `"m-g"` for every type.
+
+- Kotlin: a TAKTALK message's `<voice>` element now carries
+  `TakTalk.voiceProfileId` as its body, and `CotXmlBuilder` writes it for
+  every `m-t-t`, `<voice/>` when there is no ID. `CotXmlParser` reads the ID
+  from it and no longer sets `fromVoice` from the element being present:
+  `fromVoice` has no CoT XML counterpart, so a parsed message has it false and
+  the builder doesn't render it. The two `<voice/>` fixtures' goldens change
+  accordingly (`from_voice` is no longer set). The Swift, Python, TypeScript
+  and C# parsers still set `from_voice` from `<voice>` and ignore its body.
 
 - Kotlin: `org.meshtastic:protobufs` 2.8.3, for the TAKTALK voice profile and
   request messages.
   Consumers that pin their own `protobufs` need 2.8.3 or later.
 
 ### Fixed
+
+- Kotlin: `CotXmlParser` dropped entity references from element bodies, so
+  `A &amp; B` parsed as `A  B` and `&#65;` disappeared, in every text field.
+  The reader now expands them. Declared entities are still refused; an
+  undeclared reference is malformed XML and now throws
+  `IllegalArgumentException`.
 
 - The documented LoRa MTU is now 225 bytes, not 237, in `WIRE_FORMAT.md`, every
   binding's README and API docs, and each binding's compression tests.
