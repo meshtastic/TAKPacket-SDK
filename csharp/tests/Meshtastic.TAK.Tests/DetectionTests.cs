@@ -372,15 +372,14 @@ public class DetectionTests
 
     // === Shared fixtures ===
 
-    // Parses a fixture and checks it against Kotlin's goldens. Message equality, not bytes:
-    // Wire writes fields in .proto declaration order, where detection (47) sits ahead of marti
-    // and the payload oneof, while Google.Protobuf writes them in field-number order, so tag 47
-    // lands in a different place. The fixtures' start is months old, so neither side encodes
-    // start_epoch_lo14 and the comparison doesn't depend on the clock.
+    // Parses a fixture and checks it against Kotlin's goldens, byte for byte: Kotlin writes tag 47
+    // itself, after every other field, which is where Google.Protobuf's field-number order puts it.
+    // The fixtures' start is months old, so neither side encodes start_epoch_lo14 and the
+    // comparison doesn't depend on the clock.
     private TAKPacketV2 ParseFixtureAgainstKotlin(string name)
     {
         var parsed = _parser.Parse(LoadXml(name));
-        Assert.Equal(TAKPacketV2.Parser.ParseFrom(LoadProtobuf(name)), parsed);
+        Assert.Equal(Convert.ToHexString(LoadProtobuf(name)), Convert.ToHexString(parsed.ToByteArray()));
         Assert.Equal(parsed.Detection, _compressor.Decompress(LoadGolden(name)).Detection);
         return parsed;
     }

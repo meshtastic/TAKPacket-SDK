@@ -131,8 +131,8 @@ One version covers all five bindings, so a release is a single tag and a single 
   The compressors send a detection that is not an aircraft track with the
   non-aircraft dictionary, whatever its CoT type. By type alone an `a-u-A-…`
   UAS marker would take the 4 KB aircraft dictionary, which is built for
-  aircraft tracks; the two UAS fixtures come out 20 and 13 bytes smaller this
-  way, at 158 and 141 bytes. An aircraft track keeps the aircraft dictionary.
+  aircraft tracks; the two UAS fixtures come out 22 and 13 bytes smaller this
+  way, at 156 and 140 bytes. An aircraft track keeps the aircraft dictionary.
   Receivers need no change, since the dictionary ID travels in the flags byte,
   and `selectDictId` itself still picks by type alone.
 
@@ -144,9 +144,9 @@ One version covers all five bindings, so a release is a single tag and a single 
   parameter, so its all-args constructor and `copy()` change in
   `kotlin/api/*.api`. Source-compatible, but code compiled against an earlier
   version that calls either needs a recompile. `DetectionData` has a
-  Java-friendly `Builder`. Kotlin now uses `org.meshtastic:protobufs` 2.8.4,
-  up from the 2.8.3 under Changed; consumers that pin their own `protobufs`
-  need 2.8.4 or later.
+  Java-friendly `Builder`. No published `org.meshtastic:protobufs` has
+  `TAKDetection` yet, so Kotlin writes and reads the field itself and stays on
+  2.8.3: consumers need no newer `protobufs`.
 
   The Swift, Python and C# generated classes are regenerated for it, which also
   brings in `VoiceProfile`, `VoiceProfileRequest` and `TakTalkRoomRequest`

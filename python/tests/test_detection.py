@@ -384,13 +384,10 @@ def test_fixture_parses_to_the_kotlin_goldens(name):
     pkt = parser.parse(load_fixture_xml(name))
     assert pkt.detection == FIXTURES[name]
 
-    # Compared as messages, not bytes. Wire writes fields in .proto declaration
-    # order, where detection sits before marti and the payload oneof, while this
-    # runtime writes them in field-number order, so tag 47 lands elsewhere.
-    golden = atak_pb2.TAKPacketV2()
+    # Byte for byte: Kotlin writes tag 47 itself, after every other field, which
+    # is where this runtime's field-number order puts it.
     with open(os.path.join(PROTOBUF_DIR, f"{name}.pb"), "rb") as f:
-        golden.ParseFromString(f.read())
-    assert golden == pkt
+        assert pkt.SerializeToString().hex() == f.read().hex()
 
     assert compressor.decompress(load_golden(name)).detection == pkt.detection
 

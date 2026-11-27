@@ -301,14 +301,13 @@ describe("TAKDetection fixtures", () => {
 
   it.each(DETECTION_FIXTURES)("%s equals Kotlin's .pb and .bin goldens", async (name) => {
     const parsed = parseCotXml(loadFixtureXml(name));
-    // Compared as messages, not bytes: Wire writes fields in .proto declaration order,
-    // where `detection` sits before `marti` and the payload oneof, while protobufjs
-    // writes them in field-number order, so tag 47 lands in a different place.
+    // Byte for byte: Kotlin writes tag 47 itself, after every other field, which is
+    // where protobufjs's field-number order puts it.
     const T = await getTAKPacketV2Type();
-    const asMessage = (bytes: Uint8Array) => T.toObject(T.decode(bytes), { defaults: true });
     const golden = loadGoldenProtobuf(name);
     expect(golden, `testdata/protobuf/${name}.pb is missing`).not.toBeNull();
-    expect(asMessage(T.encode(T.create(parsed)).finish())).toEqual(asMessage(golden!));
+    const hex = (bytes: Uint8Array) => Buffer.from(bytes).toString("hex");
+    expect(hex(T.encode(T.create(parsed)).finish())).toBe(hex(golden!));
 
     const frame = loadGolden(name);
     expect(frame, `testdata/golden/${name}.bin is missing`).not.toBeNull();

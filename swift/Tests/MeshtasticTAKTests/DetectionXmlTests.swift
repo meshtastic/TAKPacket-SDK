@@ -375,11 +375,10 @@ struct DetectionXmlSuite {
         #expect(parsed.hasDetection)
         #expect(parsed.detection == expected)
 
-        // Compared as messages, not bytes. Wire writes fields in .proto declaration order,
-        // where detection sits before marti and the payload oneof; SwiftProtobuf writes
-        // them in field-number order, so tag 47 lands somewhere else.
+        // Byte for byte: Kotlin writes tag 47 itself, after every other field, which is where
+        // SwiftProtobuf's field-number order puts it.
         let pb = try #require(TestFixtures.loadProtobuf(name), "missing \(name).pb")
-        #expect(try TAKPacketV2(serializedBytes: pb) == parsed)
+        #expect(try parsed.serializedData() == pb)
 
         let bin = try #require(TestFixtures.loadGolden(name), "missing \(name).bin")
         let fromBin = try compressor.decompress(bin)

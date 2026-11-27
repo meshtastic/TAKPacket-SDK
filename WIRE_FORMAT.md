@@ -169,7 +169,7 @@ Else:
 
 Aircraft types have the Air battle dimension indicator `A` as the 3rd hierarchical atom in the CoT type string (e.g., `a-f-A-M-H`, `a-n-A-C-F`). All other types (ground, sea, tasking, bits, drawings) use the non-aircraft dictionary.
 
-The exception exists because the 4 KB aircraft dictionary is built for aircraft tracks. A UAS detection such as `a-u-A-M-H-Q` is aircraft-typed but carries a marker, which the non-aircraft dictionary compresses better: the two UAS fixtures come out 20 and 13 bytes smaller with it. A detection that is an aircraft track keeps the aircraft dictionary. The choice is the sender's alone, since the receiver reads the dictionary ID from the flags byte.
+The exception exists because the 4 KB aircraft dictionary is built for aircraft tracks. A UAS detection such as `a-u-A-M-H-Q` is aircraft-typed but carries a marker, which the non-aircraft dictionary compresses better: the two UAS fixtures come out 22 and 13 bytes smaller with it. A detection that is an aircraft track keeps the aircraft dictionary. The choice is the sender's alone, since the receiver reads the dictionary ID from the flags byte.
 
 ## 6. Protobuf Schema
 
@@ -237,7 +237,7 @@ message TAKPacketV2 {
 }
 ```
 
-The fields are listed in the order the `.proto` declares them, which is not tag order. That order reaches the wire: Kotlin's Wire runtime writes fields in declaration order, while the protoc-based runtimes (Swift, Python, C#, TypeScript) write them in tag order. A packet carrying `start_epoch_lo14` or `detection` therefore serializes with those fields in a different position per binding. Decoders accept either order, so frames interoperate, but such a packet's protobuf bytes are not identical across bindings.
+The fields are listed in the order the `.proto` declares them, which is not tag order. Kotlin's Wire runtime writes fields in declaration order, while the protoc-based runtimes (Swift, Python, C#, TypeScript) write them in tag order, so a packet carrying `start_epoch_lo14` serializes it in a different position per binding. Decoders accept either order, so frames interoperate, but such a packet's protobuf bytes are not identical across bindings. `detection` is declared ahead of `marti` too, but Kotlin writes it itself, after every other field, which is where tag order puts it (see Field 47).
 
 The `payload_variant` oneof has 15 typed cases (tags 31–42 and 44–46); a packet with **no** `payload_variant` set is an implicit PLI position report, for 16 payload variants in total. The `CotType` enum covers 126 well-known CoT types (`CotType_Other` = 0 through `CotType_y` = 126). Unknown types use `CotType_Other` (0) with the raw type string in `cot_type_str`.
 
@@ -270,6 +270,8 @@ In CoT XML it is one self-closing child of `<detail>`, each attribute left out a
 None of these names is one the parsers classify an event by, or that `CotMeshSanitizer` strips, so the annotation never changes an event's payload variant.
 
 A detection that is not an aircraft track is compressed with the non-aircraft dictionary whatever its CoT type; see §5.
+
+Kotlin builds on a published `org.meshtastic:protobufs` that predates `TAKDetection`, so it writes the field itself, as an unknown field after every other field, and reads it from the packet's bytes. Its bytes match the protoc-based bindings'.
 
 Firmware never reads the field: `atak.options` marks it `FT_IGNORE`, so the stack-allocated nanopb `TAKPacketV2` does not grow.
 

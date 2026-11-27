@@ -4,7 +4,7 @@
 
 This is a cross-platform SDK for converting ATAK Cursor-on-Target (CoT) XML to Meshtastic's TAKPacketV2 protobuf wire format with zstd dictionary compression. Five parallel implementations (Kotlin, Swift, Python, TypeScript, C#) produce cross-decodable payloads for LoRa mesh transport on port 78 with a 225-byte MTU.
 
-> The intermediate protobuf goldens (`.pb`) are byte-identical across bindings (except the four `detection_*` ones: Kotlin's Wire writes fields in declaration order, the others in tag order, and `detection` is declared ahead of the payload oneof), but the *compressed* bytes (`.bin`) may differ slightly per binding (zstd encoders differ). Cross-language tests assert decodability + a size tolerance, NOT compressed-byte-identity.
+> The intermediate protobuf goldens (`.pb`) are byte-identical across bindings, but the *compressed* bytes (`.bin`) may differ slightly per binding (zstd encoders differ). Cross-language tests assert decodability + a size tolerance, NOT compressed-byte-identity.
 
 ## Code organization
 

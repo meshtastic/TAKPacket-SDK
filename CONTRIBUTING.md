@@ -14,9 +14,7 @@ produce cross-decodable wire payloads, validated by 51 shared test fixtures unde
 [`testdata/`](testdata/).
 
 > **Interop nuance:** every binding decodes every other binding's frames, and the intermediate
-> protobuf goldens (`.pb`) are byte-identical across bindings, except the four `detection_*`
-> goldens: Kotlin's Wire writes fields in `.proto` declaration order and the others in tag order,
-> and `detection` is declared ahead of the payload oneof. The *compressed* bytes (`.bin`) may
+> protobuf goldens (`.pb`) are byte-identical across bindings. The *compressed* bytes (`.bin`) may
 > differ slightly per binding (zstd encoders differ), so cross-language tests assert
 > **decodability + a size tolerance**, never compressed-byte-identity.
 
