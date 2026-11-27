@@ -435,4 +435,38 @@ public class DetectionTests
             CepM = 25,
         }, pkt.Detection);
     }
+
+    // --- Dictionary ---------------------------------------------------------
+    // SelectDictId picks by CoT type, which would send an a-u-A-... UAS marker with the 4 KB
+    // aircraft dictionary. The compressor sends a detection that is not an aircraft track with
+    // the non-aircraft dictionary instead.
+
+    private int WireDictId(TAKPacketV2 pkt) => _compressor.Compress(pkt)[0];
+
+    [Fact]
+    public void ADetectionMarkerUsesTheNonAircraftDictionaryWhateverItsType()
+    {
+        var uas = _parser.Parse(LoadXml("detection_uas_remoteid"));
+        Assert.Equal(DictionaryProvider.DictIdAircraft, DictionaryProvider.SelectDictId(
+            (int)uas.CotTypeId, string.IsNullOrEmpty(uas.CotTypeStr) ? null : uas.CotTypeStr));
+        Assert.Equal(DictionaryProvider.DictIdNonAircraft, WireDictId(uas));
+    }
+
+    [Fact]
+    public void TheSameMarkerWithoutItsDetectionKeepsTheAircraftDictionary()
+    {
+        var uas = _parser.Parse(LoadXml("detection_uas_remoteid"));
+        uas.Detection = null;
+        Assert.Equal(DictionaryProvider.DictIdAircraft, WireDictId(uas));
+    }
+
+    [Fact]
+    public void AnAircraftTrackKeepsTheAircraftDictionaryWithADetection()
+    {
+        var detection = _parser.Parse(LoadXml("detection_uas_remoteid")).Detection;
+        var track = _parser.Parse(LoadXml("aircraft_adsb"));
+        Assert.Equal(TAKPacketV2.PayloadVariantOneofCase.Aircraft, track.PayloadVariantCase);
+        track.Detection = detection;
+        Assert.Equal(DictionaryProvider.DictIdAircraft, WireDictId(track));
+    }
 }

@@ -10,6 +10,19 @@ import type { TAKPacketV2 } from "./types.js";
 const MAX_DECOMPRESSED_SIZE = 4096;
 
 /**
+ * The dictionary to compress `packet` with: the one {@link selectDictId} picks
+ * for its CoT type, except that a detection that is not an aircraft track takes
+ * the non-aircraft dictionary whatever its type. The 4 KB aircraft dictionary is
+ * built for aircraft tracks, and the non-aircraft one compresses a detection
+ * marker smaller. The ID travels in the flags byte, so a receiver decodes either
+ * choice.
+ */
+function dictIdFor(packet: TAKPacketV2): number {
+  if (packet.detection != null && packet.aircraft == null) return DICT_ID_NON_AIRCRAFT;
+  return selectDictId(packet.cotTypeId ?? 0, packet.cotTypeStr ?? undefined);
+}
+
+/**
  * The 4-byte zstd frame magic (little-endian 0xFD2FB528). Stripped on compress
  * and prepended on decompress: the SDK is both ends and identifies the frame
  * from its own 1-byte flags prefix, so the magic is pure overhead. Done in app
@@ -166,7 +179,9 @@ export class TakCompressor {
    * Compress a {@link TAKPacketV2} into a wire payload: `[flags][zstd body]`.
    *
    * Serializes the packet to protobuf, picks the dictionary from the packet's
-   * CoT type ({@link selectDictId}), compresses as one independent zstd frame
+   * CoT type ({@link selectDictId}, except that a detection that is not an
+   * aircraft track always uses the non-aircraft dictionary), compresses as one
+   * independent zstd frame
    * (level 19, content-size/checksum/dictID frame fields off), and strips the
    * 4-byte zstd magic. If the raw protobuf is no larger than the compressed
    * body, emits the skip-compress form `[0xFF][raw protobuf]` instead so the
@@ -203,9 +218,7 @@ export class TakCompressor {
     const msg = TAKPacketV2Type.create(packet);
     const protobufBytes = Buffer.from(TAKPacketV2Type.encode(msg).finish());
 
-    const cotTypeId = packet.cotTypeId ?? 0;
-    const cotTypeStr = packet.cotTypeStr ?? undefined;
-    const dictId = selectDictId(cotTypeId, cotTypeStr);
+    const dictId = dictIdFor(packet);
 
     const compressor = this.compressors.get(dictId);
     if (!compressor) throw new Error(`No compressor for dict ${dictId}`);

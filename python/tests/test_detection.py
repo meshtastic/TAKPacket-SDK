@@ -9,6 +9,7 @@ import os
 import pytest
 
 from meshtastic_tak import CotXmlBuilder, CotXmlParser, TakCompressor, atak_pb2
+from meshtastic_tak.dictionary_provider import DICT_ID_AIRCRAFT, DICT_ID_NON_AIRCRAFT, DictionaryProvider
 from conftest import PROTOBUF_DIR, load_fixture_xml, load_golden
 
 parser = CotXmlParser()
@@ -391,3 +392,33 @@ def test_detection_uas_sensor_anchored_keeps_its_sensor():
     assert s.HasField("range_m")
     assert s.range_m == 2000
     assert s.type == atak_pb2.SensorFov.SensorType_Rf
+
+
+# --- Dictionary -----------------------------------------------------------------
+# select_dict_id picks by CoT type, which would send an a-u-A-... UAS marker with
+# the 4 KB aircraft dictionary. The compressor sends a detection that is not an
+# aircraft track with the non-aircraft dictionary instead.
+
+
+def _wire_dict_id(pkt: atak_pb2.TAKPacketV2) -> int:
+    return compressor.compress(pkt)[0]
+
+
+def test_a_detection_marker_uses_the_non_aircraft_dictionary_whatever_its_type():
+    uas = parser.parse(load_fixture_xml("detection_uas_remoteid"))
+    assert DictionaryProvider.select_dict_id(uas.cot_type_id, uas.cot_type_str or None) == DICT_ID_AIRCRAFT
+    assert _wire_dict_id(uas) == DICT_ID_NON_AIRCRAFT
+
+
+def test_the_same_marker_without_its_detection_keeps_the_aircraft_dictionary():
+    uas = parser.parse(load_fixture_xml("detection_uas_remoteid"))
+    uas.ClearField("detection")
+    assert _wire_dict_id(uas) == DICT_ID_AIRCRAFT
+
+
+def test_an_aircraft_track_keeps_the_aircraft_dictionary_with_a_detection():
+    detection = parser.parse(load_fixture_xml("detection_uas_remoteid")).detection
+    track = parser.parse(load_fixture_xml("aircraft_adsb"))
+    assert track.WhichOneof("payload_variant") == "aircraft"
+    track.detection.CopyFrom(detection)
+    assert _wire_dict_id(track) == DICT_ID_AIRCRAFT

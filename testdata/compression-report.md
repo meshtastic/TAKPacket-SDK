@@ -1,5 +1,5 @@
 # TAKPacket-SDK Compression Report
-Generated: 2026-11-26 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)
+Generated: 2026-11-27 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)
 
 ## Summary
 | Metric | Value |
@@ -25,8 +25,8 @@ Generated: 2026-11-26 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-tra
 | delete_event | t-x-d-d | 476B | 45B | 45B | 10.6x | non-aircraft |
 | detection_ground_vehicle | a-u-G-E-V | 633B | 143B | 116B | 5.5x | non-aircraft |
 | detection_uas_operator | a-u-G | 568B | 148B | 132B | 4.3x | non-aircraft |
-| detection_uas_remoteid | a-u-A-M-H-Q | 733B | 189B | 178B | 4.1x | aircraft |
-| detection_uas_sensor_anchored | a-u-A-M-H-Q | 642B | 167B | 154B | 4.2x | aircraft |
+| detection_uas_remoteid | a-u-A-M-H-Q | 733B | 189B | 158B | 4.6x | non-aircraft |
+| detection_uas_sensor_anchored | a-u-A-M-H-Q | 642B | 167B | 141B | 4.6x | non-aircraft |
 | drawing_circle | u-d-c-c | 933B | 114B | 71B | 13.1x | non-aircraft |
 | drawing_circle_large | u-d-c-c | 626B | 109B | 90B | 7.0x | non-aircraft |
 | drawing_ellipse | u-d-c-e | 646B | 77B | 60B | 10.8x | non-aircraft |
@@ -111,11 +111,11 @@ aircraft_hostile      123B |###########################
 casevac               130B |############################
 detection_uas_operator  132B |#############################
 chat_taktalk_dm       137B |##############################
+detection_uas_sensor_anchored  141B |###############################
 marker_goto_itak      142B |###############################
-detection_uas_sensor_anchored  154B |##################################
+detection_uas_remoteid  158B |###################################
 casevac_medline       163B |####################################
 chat_taktalk_voice_profile  165B |####################################
-detection_uas_remoteid  178B |#######################################
 route_itak_3wp        181B |########################################
 drawing_telestration  193B |##########################################
 LoRa MTU              225B |##################################################

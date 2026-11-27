@@ -71,6 +71,8 @@ public static class DictionaryProvider
     /// raw CoT type string (used for unknown types carried as
     /// <c>cot_type_str</c>). Aircraft types select <see cref="DictIdAircraft"/>;
     /// everything else selects <see cref="DictIdNonAircraft"/>.
+    /// <see cref="TakCompressor.Compress"/> makes one exception: a packet with a
+    /// detection that is not an aircraft track always uses <see cref="DictIdNonAircraft"/>.
     /// </remarks>
     /// <param name="cotTypeId">The numeric <c>CotType</c> enum ID, or 0 if unknown.</param>
     /// <param name="cotTypeStr">The raw CoT type string, consulted only when

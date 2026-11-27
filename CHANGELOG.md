@@ -126,6 +126,14 @@ One version covers all five bindings, so a release is a single tag and a single 
   tokens. Its `cep` is also written as the event's `<point ce>`; events
   without the annotation keep `ce="9999999"`. Four new fixtures cover it.
 
+  The compressors send a detection that is not an aircraft track with the
+  non-aircraft dictionary, whatever its CoT type. By type alone an `a-u-A-…`
+  UAS marker would take the 4 KB aircraft dictionary, which is built for
+  aircraft tracks; the two UAS fixtures come out 20 and 13 bytes smaller this
+  way, at 158 and 141 bytes. An aircraft track keeps the aircraft dictionary.
+  Receivers need no change, since the dictionary ID travels in the flags byte,
+  and `selectDictId` itself still picks by type alone.
+
   Wire-compatible: the field is optional, so an older peer skips it, and no
   existing golden changes. Firmware never reads it (`FT_IGNORE` in
   `atak.options`).

@@ -118,6 +118,10 @@ class DictionaryProvider:
         ``cot_type_str`` so forward-version aircraft packets still pick the
         aircraft dictionary.
 
+        :meth:`TakCompressor.compress` makes one exception: a packet with a
+        detection that is not an aircraft track always uses
+        :data:`DICT_ID_NON_AIRCRAFT`.
+
         Args:
             cot_type_id: The packet's ``CotType`` enum tag.
             cot_type_str: The packet's carried CoT type string, used only when

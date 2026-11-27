@@ -88,7 +88,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 - **Skip-compress:** if the raw protobuf ≤ the zstd body, emit `[0xFF][raw protobuf]` instead. Tiny/incompressible packets never expand (worst case = raw + 1 flags byte). The `0xFF` path already existed on decode in all bindings.
 - **Max decompressed size:** 4,096 bytes (security guard, reject anything larger)
 - **Compression level:** 19 requested everywhere, but the Kotlin binding's `org.meshtastic:kzstd` encoder treats `level` as a documented no-op (single fixed strategy) — only the libzstd-based Swift/Python/TS/C# encoders actually vary output with it
-- **Aircraft classification:** 3rd atom of CoT type string = "A" (e.g. `a-n-A-C-F`)
+- **Aircraft classification:** 3rd atom of CoT type string = "A" (e.g. `a-n-A-C-F`) selects the aircraft dict. **Exception:** a packet with a `detection` (tag 47) whose payload isn't an aircraft track always uses dict 0, because the 4 KB aircraft dict compresses detection markers poorly. Every binding's compressor applies it; the public `selectDictId` stays type-only.
 
 > **Resilience invariant (HARD CONSTRAINT — never violate):** every packet must be fully, independently decodable from its own bytes + the static shipped dict. ZERO cross-packet state. Use the one-shot compress/decompress API only — NEVER the zstd streaming API (`compressStream`/`ZSTD_compressStream2`). The dict is static/shipped, never adapted from runtime traffic. `ResilienceTest` in every binding guards this. LoRa is lossy; losing one packet must never affect any other.
 

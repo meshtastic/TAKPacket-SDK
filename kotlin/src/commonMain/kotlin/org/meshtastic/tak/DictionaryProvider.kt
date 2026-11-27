@@ -63,6 +63,9 @@ public object DictionaryProvider {
      * ([CotTypeMapper.isAircraftString]). Air-domain types map to
      * [DICT_ID_AIRCRAFT], everything else to [DICT_ID_NON_AIRCRAFT].
      *
+     * [TakCompressor.compress] makes one exception: a packet with a detection
+     * that is not an aircraft track always uses [DICT_ID_NON_AIRCRAFT].
+     *
      * @param cotTypeId the packet's `cot_type_id` enum value.
      * @param cotTypeStr the raw CoT type string, used only when [cotTypeId] is
      *        [CotTypeMapper.COTTYPE_OTHER]; may be `null`.

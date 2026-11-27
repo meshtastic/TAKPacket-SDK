@@ -383,4 +383,43 @@ struct DetectionXmlSuite {
         #expect(anchored.sensorFov.hasRangeM && anchored.sensorFov.rangeM == 2000)
         #expect(anchored.sensorFov.type == .rf)
     }
+
+    // MARK: Dictionary
+    // selectDictId picks by CoT type, which would send an a-u-A-... UAS marker with the
+    // 4 KB aircraft dictionary. The compressor sends a detection that is not an aircraft
+    // track with the non-aircraft dictionary instead.
+
+    private func wireDictId(_ packet: TAKPacketV2) throws -> Int {
+        guard let flags = try compressor.compress(packet).first else { return -1 }
+        return Int(flags)
+    }
+
+    @Test("a detection marker uses the non-aircraft dictionary whatever its type")
+    func aDetectionMarkerUsesTheNonAircraftDictionary() throws {
+        let uas = try parser.parse(try TestFixtures.loadFixture("detection_uas_remoteid"))
+        let byType = DictionaryProvider.selectDictId(
+            cotTypeId: uas.cotTypeID,
+            cotTypeStr: uas.cotTypeStr.isEmpty ? nil : uas.cotTypeStr
+        )
+        #expect(byType == DictionaryProvider.DICT_ID_AIRCRAFT)
+        #expect(try wireDictId(uas) == DictionaryProvider.DICT_ID_NON_AIRCRAFT)
+    }
+
+    @Test("the same marker without its detection keeps the aircraft dictionary")
+    func theSameMarkerWithoutItsDetectionKeepsTheAircraftDictionary() throws {
+        var uas = try parser.parse(try TestFixtures.loadFixture("detection_uas_remoteid"))
+        uas.clearDetection()
+        #expect(try wireDictId(uas) == DictionaryProvider.DICT_ID_AIRCRAFT)
+    }
+
+    @Test("an aircraft track keeps the aircraft dictionary with a detection")
+    func anAircraftTrackKeepsTheAircraftDictionaryWithADetection() throws {
+        let detection = try parser.parse(try TestFixtures.loadFixture("detection_uas_remoteid")).detection
+        var track = try parser.parse(try TestFixtures.loadFixture("aircraft_adsb"))
+        var isTrack = false
+        if case .aircraft(_)? = track.payloadVariant { isTrack = true }
+        #expect(isTrack)
+        track.detection = detection
+        #expect(try wireDictId(track) == DictionaryProvider.DICT_ID_AIRCRAFT)
+    }
 }

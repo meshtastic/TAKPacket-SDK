@@ -20,6 +20,21 @@ MAX_DECOMPRESSED_SIZE = 4096
 _ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
 
 
+def _dict_id_for(packet: atak_pb2.TAKPacketV2) -> int:
+    """The dictionary to compress ``packet`` with.
+
+    The one :meth:`DictionaryProvider.select_dict_id` picks for its CoT type,
+    except that a detection that is not an aircraft track takes the
+    non-aircraft dictionary whatever its type. The 4 KB aircraft dictionary is
+    built for aircraft tracks, and the non-aircraft one compresses a detection
+    marker smaller. The ID travels in the flags byte, so a receiver decodes
+    either choice.
+    """
+    if packet.HasField("detection") and packet.WhichOneof("payload_variant") != "aircraft":
+        return DICT_ID_NON_AIRCRAFT
+    return DictionaryProvider.select_dict_id(packet.cot_type_id, packet.cot_type_str or None)
+
+
 @dataclass
 class CompressionResult:
     """Stats and bytes from :meth:`TakCompressor.compress_with_stats`.
@@ -153,7 +168,9 @@ class TakCompressor:
     def compress(self, packet: atak_pb2.TAKPacketV2) -> bytes:
         """Compress a ``TAKPacketV2`` into a wire payload.
 
-        Serializes the packet, picks the dictionary from its CoT type, and
+        Serializes the packet, picks the dictionary from its CoT type (except
+        that a detection that is not an aircraft track always uses the
+        non-aircraft dictionary), and
         emits ``[1 byte flags][zstd body]`` with the 4-byte frame magic
         stripped. If compression does not pay (the raw protobuf is no larger
         than the zstd body), emits the skip-compress form
@@ -173,7 +190,7 @@ class TakCompressor:
                 magic (which would break the strip/prepend contract).
         """
         protobuf_bytes = packet.SerializeToString()
-        dict_id = DictionaryProvider.select_dict_id(packet.cot_type_id, packet.cot_type_str or None)
+        dict_id = _dict_id_for(packet)
 
         cctx = self._compressors.get(dict_id)
         if cctx is None:

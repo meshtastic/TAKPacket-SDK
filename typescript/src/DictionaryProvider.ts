@@ -96,6 +96,9 @@ export function getDictionary(dictId: number): Buffer | null {
  * the enum via {@link isAircraft}; otherwise it falls back to classifying the
  * raw `cotTypeStr` with {@link isAircraftString}.
  *
+ * `TakCompressor.compress` makes one exception: a packet with a detection that
+ * is not an aircraft track always uses {@link DICT_ID_NON_AIRCRAFT}.
+ *
  * @param cotTypeId  - The packet's `CotType` enum value.
  * @param cotTypeStr - The raw CoT type string, used only when `cotTypeId` is
  *                     {@link COTTYPE_OTHER}.

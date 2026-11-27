@@ -70,7 +70,7 @@ keeps those two bytes.
 
 | ID | Name | Dictionary Size | Usage |
 |----|------|-----------------|-------|
-| `0x00` | Non-aircraft | 524,288 bytes | PLI, GeoChat, ground units, shapes, markers, routes, ranging, alerts, casevac, emergency, task, TAKTALK, delete events |
+| `0x00` | Non-aircraft | 524,288 bytes | PLI, GeoChat, ground units, shapes, markers, routes, ranging, alerts, casevac, emergency, task, TAKTALK, delete events, and any detection that is not an aircraft track (see §5) |
 | `0x01` | Aircraft | 4,096 bytes | ADS-B tracks, military air, helicopters |
 | `0x02`-`0x3C` | Reserved | — | Reserved for future dictionary types |
 | `0x3D`, `0x3E` | Never assigned | — | `0xFD` and `0xFE` mask to these with `& 0x3F`, so they must never name a dictionary |
@@ -154,10 +154,12 @@ The payload is a raw serialized `TAKPacketV2` protobuf message with no compressi
 
 ## 5. Dictionary Selection
 
-The sending application selects the dictionary based on the CoT event type:
+The sending application selects the dictionary from the CoT event type, with one exception for detections:
 
 ```
-Parse the CoT type string (e.g., "a-f-G-U-C")
+If the packet carries a detection (field 47) and its payload is not an aircraft track:
+    Use non-aircraft dictionary (ID 0x00)
+Otherwise, parse the CoT type string (e.g., "a-f-G-U-C")
 Split by "-" into atoms: ["a", "f", "G", "U", "C"]
 If the 3rd atom (index 2) is "A":
     Use aircraft dictionary (ID 0x01)
@@ -166,6 +168,8 @@ Else:
 ```
 
 Aircraft types have the Air battle dimension indicator `A` as the 3rd hierarchical atom in the CoT type string (e.g., `a-f-A-M-H`, `a-n-A-C-F`). All other types (ground, sea, tasking, bits, drawings) use the non-aircraft dictionary.
+
+The exception exists because the 4 KB aircraft dictionary is built for aircraft tracks. A UAS detection such as `a-u-A-M-H-Q` is aircraft-typed but carries a marker, which the non-aircraft dictionary compresses better: the two UAS fixtures come out 20 and 13 bytes smaller with it. A detection that is an aircraft track keeps the aircraft dictionary. The choice is the sender's alone, since the receiver reads the dictionary ID from the flags byte.
 
 ## 6. Protobuf Schema
 
@@ -264,6 +268,8 @@ In CoT XML it is one self-closing child of `<detail>`, each attribute left out a
 - `cep` is also the event's `<point ce>`. The builder writes it there, and the parser reads `<point ce>` when the element has no `cep`. An event without the element keeps `ce="9999999"`.
 
 None of these names is one the parsers classify an event by, or that `CotMeshSanitizer` strips, so the annotation never changes an event's payload variant.
+
+A detection that is not an aircraft track is compressed with the non-aircraft dictionary whatever its CoT type; see §5.
 
 Firmware never reads the field: `atak.options` marks it `FT_IGNORE`, so the stack-allocated nanopb `TAKPacketV2` does not grow.
 

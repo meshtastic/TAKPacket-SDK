@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { TakCompressor } from "../src/TakCompressor.js";
+import { DICT_ID_AIRCRAFT, DICT_ID_NON_AIRCRAFT, selectDictId } from "../src/DictionaryProvider.js";
 import { parseCotXml } from "../src/CotXmlParser.js";
 import { buildCotXml } from "../src/CotXmlBuilder.js";
 import { getTAKPacketV2Type, loadProto } from "../src/proto.js";
@@ -298,5 +299,30 @@ describe("TAKDetection fixtures", () => {
     expect(s.fovHorizontalDeg).toBe(360);
     expect(s.rangeM).toBe(2000);
     expect(s.type).toBe(SENSOR_TYPE_RF);
+  });
+});
+
+// selectDictId picks by CoT type, which would send an a-u-A-... UAS marker with the
+// 4 KB aircraft dictionary. The compressor sends a detection that is not an aircraft
+// track with the non-aircraft dictionary instead.
+describe("detection dictionary choice", () => {
+  const wireDictId = async (p: TAKPacketV2): Promise<number> => (await compressor.compress(p))[0];
+
+  it("sends a detection marker with the non-aircraft dictionary whatever its type", async () => {
+    const uas = parseCotXml(loadFixtureXml("detection_uas_remoteid"));
+    expect(selectDictId(uas.cotTypeId ?? 0, uas.cotTypeStr ?? undefined)).toBe(DICT_ID_AIRCRAFT);
+    expect(await wireDictId(uas)).toBe(DICT_ID_NON_AIRCRAFT);
+  });
+
+  it("keeps the aircraft dictionary for the same marker without its detection", async () => {
+    const uas = { ...parseCotXml(loadFixtureXml("detection_uas_remoteid")), detection: undefined };
+    expect(await wireDictId(uas)).toBe(DICT_ID_AIRCRAFT);
+  });
+
+  it("keeps the aircraft dictionary for an aircraft track with a detection", async () => {
+    const { detection } = parseCotXml(loadFixtureXml("detection_uas_remoteid"));
+    const track = parseCotXml(loadFixtureXml("aircraft_adsb"));
+    expect(track.aircraft).toBeDefined();
+    expect(await wireDictId({ ...track, detection })).toBe(DICT_ID_AIRCRAFT);
   });
 });

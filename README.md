@@ -66,8 +66,8 @@ Three optional annotations ride alongside any of these: `<environment>` (tempera
 ```mermaid
 flowchart TD
     A[TAKPacketV2 protobuf bytes] --> B{Classify CoT type}
-    B -->|"Air domain\n(3rd atom = 'A')"| C["Aircraft dictionary\n(4KB) — dict ID 0x01"]
-    B -->|"Ground / chat / shapes /\nmarkers / routes / alerts"| D["Non-aircraft dictionary\n(512KB) — dict ID 0x00"]
+    B -->|"Air domain\n(3rd atom = 'A'), unless\na detection that isn't\nan aircraft track"| C["Aircraft dictionary\n(4KB) — dict ID 0x01"]
+    B -->|"Ground / chat / shapes /\nmarkers / routes / alerts,\nand detections that aren't\naircraft tracks"| D["Non-aircraft dictionary\n(512KB) — dict ID 0x00"]
     C --> E["zstd compress with dictionary\n(dictID / contentSize / checksum off)"]
     D --> E
     E --> S["Strip 4-byte zstd magic\n(re-prepended on decode)"]
@@ -104,7 +104,8 @@ Flags byte:
   bits 0-5: Dictionary ID — written by the sender after classification,
             read by the receiver to select the matching dictionary
     0x00 = Non-aircraft (PLI, chat, ground, shapes, markers,
-                         routes, ranging, alerts)
+                         routes, ranging, alerts, and detections
+                         that aren't aircraft tracks)
     0x01 = Aircraft (3rd atom = 'A' — ADS-B, military air tracks, helicopters)
     0x02-0x3E = Reserved for future dictionaries
   bits 6-7: Reserved / version
