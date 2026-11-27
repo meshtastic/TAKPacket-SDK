@@ -411,8 +411,11 @@ export interface TAKDetection {
   cepM?: number;
   /** Calibrated received power at the reporting sensor, in dBm; 0 = unknown. */
   rssiDbm?: number;
-  /** UAS ID from a Remote ID broadcast, at most 20 characters, kept only when `kind` is Uas. */
-  uasId?: string;
+  /**
+   * UAS ID from a Remote ID broadcast, at most 20 bytes, kept only when `kind` is Uas: ASCII text
+   * for a serial number or CAA registration, the broadcast's bytes for any other ID type.
+   */
+  uasId?: Uint8Array | Buffer;
   /** TAKDetection.UasIdType (ASTM F3411): 0=Unspecified, 1=SerialNumber, ..., 4=SpecificSession */
   uasIdType?: number;
   /** TAKDetection.UasStatus (ASTM F3411): 0=Unspecified, 1=Ground, ..., 4=SystemFailure */

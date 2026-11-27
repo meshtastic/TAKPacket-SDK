@@ -148,7 +148,7 @@ struct DetectionXmlSuite {
         $0.sensorAnchored = true
         $0.cepM = 12
         $0.rssiDbm = -71
-        $0.uasID = uasId
+        $0.uasID = Data(uasId.utf8)
         $0.uasIDType = .serialNumber
         $0.uasStatus = .airborne
     }
@@ -241,34 +241,54 @@ struct DetectionXmlSuite {
         #expect(xml.contains(#"ce="9999999""#), "\(xml)")
     }
 
-    @Test("the UAS ID is cut to 20 code points and kept only for a UAS")
+    @Test("the UAS ID is cut to 20 bytes and kept only for a UAS")
     func theUasIdIsCutTo20AndKeptOnlyForAUas() throws {
         let long = "ZZZZFTEST000000000001EXTRA"
-        #expect(long.unicodeScalars.count == 26)
-        #expect(try detection(#"<__detection kind="uas" uasId="\#(long)"/>"#)?.uasID == String(long.prefix(20)))
+        #expect(long.utf8.count == 26)
+        #expect(try detection(#"<__detection kind="uas" uasId="\#(long)"/>"#)?.uasID == Data(long.utf8.prefix(20)))
 
-        // A character outside the BMP counts once and is never split.
-        let kept = String(repeating: "A", count: 19) + "\u{1D400}"
-        let astral = try detection(#"<__detection kind="uas" uasId="\#(kept)B"/>"#)?.uasID
-        #expect(astral == kept)
-        #expect(astral?.unicodeScalars.count == 20)
+        // Text beyond ASCII counts in UTF-8 bytes.
+        let accented = String(repeating: "A", count: 19) + "\u{E9}"
+        #expect(try detection(#"<__detection kind="uas" uasId="\#(accented)"/>"#)?.uasID == Data(accented.utf8.prefix(20)))
 
         for kind in ["uas_operator", "uas_home", "person", "vehicle", "other", "unspecified"] {
-            #expect(try detection(#"<__detection kind="\#(kind)" uasId="\#(uasId)"/>"#)?.uasID == "", "\(kind)")
+            #expect(try detection(#"<__detection kind="\#(kind)" uasId="\#(uasId)"/>"#)?.uasID == Data(), "\(kind)")
         }
-        #expect(try detection(#"<__detection uasId="\#(uasId)"/>"#)?.uasID == "")
+        #expect(try detection(#"<__detection uasId="\#(uasId)"/>"#)?.uasID == Data())
 
         // The builder holds a packet built in code to the same rule.
-        let person = builder.build(packet(.with { $0.kind = .person; $0.uasID = uasId }))
+        let person = builder.build(packet(.with { $0.kind = .person; $0.uasID = Data(uasId.utf8) }))
         #expect(!person.contains(uasId), "\(person)")
-        let cut = builder.build(packet(.with { $0.kind = .uas; $0.uasID = long }))
+        let cut = builder.build(packet(.with { $0.kind = .uas; $0.uasID = Data(long.utf8) }))
         #expect(cut.contains(#"uasId="\#(long.prefix(20))""#), "\(cut)")
+    }
 
-        // Written with the builder's attribute escaping, so a quote can't end the value early.
-        let quoted = uasId + "\"&<"
-        let escaped = builder.build(packet(.with { $0.kind = .uas; $0.uasID = quoted }))
-        #expect(escaped.contains(#"uasId="ZZZZ8TEST0001&quot;&amp;&lt;""#), "\(escaped)")
-        #expect(try detection(fromXml: escaped)?.uasID == quoted)
+    @Test("a binary UAS ID travels as hex")
+    func aBinaryUasIdTravelsAsHex() throws {
+        // A UTM-assigned UUID is 16 raw bytes, most of them outside the text set.
+        let uuid = Data([0x12, 0x3E, 0x45, 0x67, 0xE8, 0x9B, 0x42, 0xD3, 0xA4, 0x56, 0x42, 0x66, 0x14, 0x17, 0x40, 0x00])
+        let d = TAKDetection.with { $0.kind = .uas; $0.uasID = uuid; $0.uasIDType = .utmAssigned }
+        let xml = builder.build(packet(d))
+        #expect(xml.contains(#"uasId="hex:123e4567e89b42d3a456426614174000""#), "\(xml)")
+        #expect(try detection(fromXml: xml) == d)
+        #expect(try overTheWire(packet(d)).detection == d)
+
+        // Hex reads in any case; a value that is not whole hex digits is dropped.
+        #expect(try detection(#"<__detection kind="uas" uasId="HEX:123E4567E89B42D3A456426614174000"/>"#)?.uasID == uuid)
+        for bad in ["hex:123", "hex:12zz", "hex:+1", "hex:"] {
+            #expect(try detection(#"<__detection kind="uas" uasId="\#(bad)"/>"#)?.uasID == Data(), "\(bad)")
+        }
+        // Hex longer than 20 bytes is cut like text.
+        let longHex = String(repeating: "11", count: 25)
+        #expect(try detection(#"<__detection kind="uas" uasId="hex:\#(longHex)"/>"#)?.uasID == Data(repeating: 0x11, count: 20))
+
+        // One byte outside letters, digits, '-', '.' and '_' sends the whole ID as hex.
+        let spaced = builder.build(packet(.with { $0.kind = .uas; $0.uasID = Data("ZZZZ8 TEST".utf8) }))
+        #expect(spaced.contains(#"uasId="hex:5a5a5a5a382054455354""#), "\(spaced)")
+        let quoted = Data("ZZZZ8\"&<".utf8)
+        let quotedXml = builder.build(packet(.with { $0.kind = .uas; $0.uasID = quoted }))
+        #expect(quotedXml.contains(#"uasId="hex:5a5a5a5a3822263c""#), "\(quotedXml)")
+        #expect(try detection(fromXml: quotedXml)?.uasID == quoted)
     }
 
     @Test("cep falls back to the point's ce")
@@ -319,7 +339,7 @@ struct DetectionXmlSuite {
             $0.trend = .closing
             $0.cepM = 12
             $0.rssiDbm = -71
-            $0.uasID = uasId
+            $0.uasID = Data(uasId.utf8)
             $0.uasIDType = .serialNumber
             $0.uasStatus = .airborne
         }),

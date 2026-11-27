@@ -119,11 +119,13 @@ One version covers all five bindings, so a release is a single tag and a single 
   report, confidence, track state and trend, a count, whether the point is the
   sensor rather than the object, horizontal uncertainty and received power. Its
   only identifier is the UAS ID that Remote ID broadcasts, kept only for kind
-  `uas`. Affiliation stays in the CoT type.
+  `uas`. It travels as up to 20 bytes, so the binary UUID and session-ID forms
+  survive as well as text serial numbers. Affiliation stays in the CoT type.
 
   In CoT XML it is one `<__detection>` child of `<detail>`, parsed and built
   the same way in all five bindings; `WIRE_FORMAT.md` has the attributes and
-  tokens. Its `cep` is also written as the event's `<point ce>`; events
+  tokens. A text UAS ID is written as itself and any other as `hex:` and its
+  bytes. Its `cep` is also written as the event's `<point ce>`; events
   without the annotation keep `ce="9999999"`. Four new fixtures cover it.
 
   The compressors send a detection that is not an aircraft track with the

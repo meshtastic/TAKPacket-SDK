@@ -910,9 +910,9 @@ class CotXmlBuilder:
             parts.append(f'cep="{cep}"')
         if d.rssi_dbm != 0:
             parts.append(f'rssi="{d.rssi_dbm}"')
-        uas_id = d.uas_id[:detection_xml.UAS_ID_MAX_CHARS]
+        uas_id = d.uas_id[:detection_xml.UAS_ID_MAX_BYTES]
         if d.kind == atak_pb2.TAKDetection.Kind_Uas and uas_id:
-            parts.append(f'uasId="{_esc(uas_id)}"')
+            parts.append(f'uasId="{detection_xml.uas_id_attribute(uas_id)}"')
         id_type = _detection_token(detection_xml.UAS_ID_TYPE_TOKENS, d.uas_id_type)
         if id_type:
             parts.append(f'uasIdType="{id_type}"')

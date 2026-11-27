@@ -426,7 +426,7 @@ public class CotXmlBuilder {
         }
 
         // Passive-sensor detection, payload-agnostic like the two annotations above.
-        packet.detection?.let { DetectionXml.append(sb, it, ::esc) }
+        packet.detection?.let { DetectionXml.append(sb, it) }
 
         // Payload-specific detail elements
         when (val payload = packet.payload) {

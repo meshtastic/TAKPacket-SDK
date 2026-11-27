@@ -209,9 +209,8 @@ def _parse_detection(elem: ET.Element, point_ce: str | None) -> atak_pb2.TAKDete
     rssi = _detection_number(elem.get("rssi"))
     if rssi is not None:
         d.rssi_dbm = rssi
-    # Slicing a str counts code points, so a character outside the BMP is never split.
     if d.kind == atak_pb2.TAKDetection.Kind_Uas:
-        d.uas_id = elem.get("uasId", "")[:detection_xml.UAS_ID_MAX_CHARS]
+        d.uas_id = detection_xml.parse_uas_id(elem.get("uasId"))
     d.uas_id_type = _detection_enum(elem.get("uasIdType"), _DETECTION_UAS_ID_TYPES)
     d.uas_status = _detection_enum(elem.get("uasStatus"), _DETECTION_UAS_STATUSES)
     return d

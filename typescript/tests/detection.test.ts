@@ -34,7 +34,7 @@ const SENSOR_TYPE_RF = 5;
 /** A present detection with every field at its default, the way it decodes. */
 const DEFAULTS: TAKDetection = {
   kind: 0, sources: 0, confidence: 0, state: 0, trend: 0, count: 0, sensorAnchored: false,
-  cepM: 0, rssiDbm: 0, uasId: "", uasIdType: 0, uasStatus: 0,
+  cepM: 0, rssiDbm: 0, uasId: Buffer.alloc(0), uasIdType: 0, uasStatus: 0,
 };
 
 /** A minimal event whose <detail> carries `detail`. */
@@ -121,7 +121,7 @@ describe("TAKDetection", () => {
   it("keeps the full element through parse, wire, rebuild and reparse", async () => {
     const expected: TAKDetection = {
       kind: Kind.Uas, sources: Source.RemoteId | Source.Rf, confidence: 87, state: State.Active,
-      trend: Trend.Closing, count: 2, sensorAnchored: true, cepM: 12, rssiDbm: -71, uasId: UAS_ID,
+      trend: Trend.Closing, count: 2, sensorAnchored: true, cepM: 12, rssiDbm: -71, uasId: Buffer.from(UAS_ID),
       uasIdType: UasIdType.SerialNumber, uasStatus: UasStatus.Airborne,
     };
     const parsed = parseCotXml(event(FULL_ELEMENT));
@@ -198,21 +198,48 @@ describe("TAKDetection", () => {
     }
   });
 
-  it("cuts the UAS ID to 20 code points and keeps it only for a UAS", () => {
+  it("cuts the UAS ID to 20 bytes and keeps it only for a UAS", () => {
     const long = UAS_ID.repeat(2); // 26 characters
-    expect(detection(`<__detection kind="uas" uasId="${long}"/>`)!.uasId).toBe(long.slice(0, 20));
-    // A character outside the BMP counts once and is never split.
-    const astral = "A".repeat(19) + "\u{1D400}" + "B";
-    expect(detection(`<__detection kind="uas" uasId="${astral}"/>`)!.uasId).toBe("A".repeat(19) + "\u{1D400}");
+    expect(detection(`<__detection kind="uas" uasId="${long}"/>`)!.uasId).toEqual(Buffer.from(long.slice(0, 20)));
+    // Text beyond ASCII counts in UTF-8 bytes.
+    const accented = "A".repeat(19) + "é";
+    expect(detection(`<__detection kind="uas" uasId="${accented}"/>`)!.uasId)
+      .toEqual(Buffer.from(accented, "utf8").subarray(0, 20));
 
     for (const kind of ["uas_operator", "uas_home", "person", "vehicle", "other", "unspecified"]) {
-      expect(detection(`<__detection kind="${kind}" uasId="${UAS_ID}"/>`)!.uasId, kind).toBe("");
+      expect(detection(`<__detection kind="${kind}" uasId="${UAS_ID}"/>`)!.uasId, kind).toEqual(Buffer.alloc(0));
     }
-    expect(detection(`<__detection uasId="${UAS_ID}"/>`)!.uasId).toBe("");
+    expect(detection(`<__detection uasId="${UAS_ID}"/>`)!.uasId).toEqual(Buffer.alloc(0));
 
     // The builder holds a packet built in code to the same rule.
-    expect(buildCotXml(packet({ kind: Kind.Person, uasId: UAS_ID }))).not.toContain(UAS_ID);
-    expect(buildCotXml(packet({ kind: Kind.Uas, uasId: long }))).toContain(`uasId="${long.slice(0, 20)}"`);
+    expect(buildCotXml(packet({ kind: Kind.Person, uasId: Buffer.from(UAS_ID) }))).not.toContain(UAS_ID);
+    expect(buildCotXml(packet({ kind: Kind.Uas, uasId: Buffer.from(long) }))).toContain(`uasId="${long.slice(0, 20)}"`);
+  });
+
+  it("sends a binary UAS ID as hex", async () => {
+    // A UTM-assigned UUID is 16 raw bytes, most of them outside the text set.
+    const uuid = Buffer.from("123e4567e89b42d3a456426614174000", "hex");
+    const d: TAKDetection = { ...DEFAULTS, kind: Kind.Uas, uasId: uuid, uasIdType: UasIdType.UtmAssigned };
+    const xml = buildCotXml(packet(d));
+    expect(xml).toContain(`uasId="hex:123e4567e89b42d3a456426614174000"`);
+    expect(parseCotXml(xml).detection).toEqual(d);
+    expect((await throughTheWire(packet(d))).detection).toEqual(d);
+
+    // Hex reads in any case; a value that is not whole hex digits is dropped.
+    expect(detection(`<__detection kind="uas" uasId="HEX:123E4567E89B42D3A456426614174000"/>`)!.uasId).toEqual(uuid);
+    for (const bad of ["hex:123", "hex:12zz", "hex:+1", "hex:"]) {
+      expect(detection(`<__detection kind="uas" uasId="${bad}"/>`)!.uasId, bad).toEqual(Buffer.alloc(0));
+    }
+    // Hex longer than 20 bytes is cut like text.
+    expect(detection(`<__detection kind="uas" uasId="hex:${"11".repeat(25)}"/>`)!.uasId).toEqual(Buffer.alloc(20, 0x11));
+
+    // One byte outside letters, digits, '-', '.' and '_' sends the whole ID as hex.
+    expect(buildCotXml(packet({ kind: Kind.Uas, uasId: Buffer.from("ZZZZ8 TEST") })))
+      .toContain(`uasId="hex:5a5a5a5a382054455354"`);
+    const quoted = Buffer.from(`ZZZZ8"&<`);
+    const quotedXml = buildCotXml(packet({ kind: Kind.Uas, uasId: quoted }));
+    expect(quotedXml).toContain(`uasId="hex:5a5a5a5a3822263c"`);
+    expect(parseCotXml(quotedXml).detection!.uasId).toEqual(quoted);
   });
 
   it("falls back to the point's ce for a missing cep", () => {
@@ -250,7 +277,7 @@ describe("TAKDetection", () => {
 const DETECTION_FIXTURES: Array<[string, TAKDetection]> = [
   ["detection_uas_remoteid", {
     ...DEFAULTS, kind: Kind.Uas, sources: Source.RemoteId | Source.Rf, confidence: 87, state: State.Active,
-    trend: Trend.Closing, cepM: 12, rssiDbm: -71, uasId: UAS_ID, uasIdType: UasIdType.SerialNumber,
+    trend: Trend.Closing, cepM: 12, rssiDbm: -71, uasId: Buffer.from(UAS_ID), uasIdType: UasIdType.SerialNumber,
     uasStatus: UasStatus.Airborne,
   }],
   ["detection_uas_sensor_anchored", {

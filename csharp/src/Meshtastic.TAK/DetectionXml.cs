@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
+using Google.Protobuf;
 using Meshtastic.Protobufs;
 
 namespace Meshtastic.TAK;
@@ -21,8 +22,13 @@ namespace Meshtastic.TAK;
 /// <para>An enum attribute carries the value's name in lowercase snake_case (<c>UasOperator</c>
 /// is <c>uas_operator</c>), and <c>sources</c> is a space-separated list of them. Reading ignores
 /// case, takes an unknown token as unspecified and skips one in <c>sources</c>.
-/// <c>confidence</c> is clamped to 0-100, <c>count</c> and <c>cep</c> to zero or more, and
-/// <c>uasId</c> is cut to 20 code points and kept only when the kind is <c>Uas</c>.</para>
+/// <c>confidence</c> is clamped to 0-100, and <c>count</c> and <c>cep</c> to zero or more.</para>
+/// <para><c>uasId</c> holds up to 20 bytes and is kept only when the kind is <c>Uas</c>. An ID made
+/// only of ASCII letters, digits, <c>-</c>, <c>.</c> and <c>_</c>, as serial numbers and CAA
+/// registrations are, is written as that text; any other is written as <c>hex:</c> and its bytes
+/// in lowercase hex, so neither form needs escaping. Reading takes a value that starts with
+/// <c>hex:</c> (in any case) as hex, and drops it unless the rest is whole hex digits; any other
+/// value is the ID's UTF-8 text. Either way the ID is cut to 20 bytes.</para>
 /// <para><c>cep</c> is also the event's <c>&lt;point ce&gt;</c>: the builder writes it there,
 /// and the parser reads <c>&lt;point ce&gt;</c> when the element has no <c>cep</c>. An event
 /// without the element keeps <c>ce="9999999"</c>.</para>
@@ -38,8 +44,12 @@ internal static class DetectionXml
     /// <summary>CoT's "unknown" circular error, written to <c>&lt;point ce&gt;</c> when there is no cep to carry.</summary>
     public const int UnknownCe = 9_999_999;
 
-    private const int UasIdMaxCodePoints = 20;
+    private const int UasIdMaxBytes = 20;
     private const int ConfidenceMax = 100;
+
+    // A uasId of only these characters is written as text; any other is written as hex.
+    private const string UasIdTextChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._";
+    private const string UasIdHexPrefix = "hex:";
 
     // What Kotlin splits sources on (Java's \s): ASCII whitespace only.
     private static readonly char[] SourceSeparators = { ' ', '\t', '\n', '\v', '\f', '\r' };
@@ -117,7 +127,7 @@ internal static class DetectionXml
             SensorAnchored = string.Equals(Attr("sensorAnchored")?.Trim(), "true", StringComparison.OrdinalIgnoreCase),
             CepM = (uint)Math.Max(cep ?? 0, 0),
             RssiDbm = Number(Attr("rssi")) ?? 0,
-            UasId = kind == TAKDetection.Types.Kind.Uas ? TakeCodePoints(Attr("uasId") ?? "", UasIdMaxCodePoints) : "",
+            UasId = kind == TAKDetection.Types.Kind.Uas ? ParseUasId(Attr("uasId")) : ByteString.Empty,
             UasIdType = UasIdTypes.Read(Attr("uasIdType")),
             UasStatus = UasStatuses.Read(Attr("uasStatus")),
         };
@@ -131,11 +141,11 @@ internal static class DetectionXml
     }
 
     /// <summary>
-    /// Appends the element as a <c>&lt;detail&gt;</c> child line, escaping <c>uasId</c> with
-    /// <paramref name="esc"/>. Unsigned fields are read as their Int32 value, which is how the
-    /// Kotlin model holds them, so a value out of range on the wire is clamped or left out.
+    /// Appends the element as a <c>&lt;detail&gt;</c> child line. No value it writes needs
+    /// escaping. Unsigned fields are read as their Int32 value, which is how the Kotlin model
+    /// holds them, so a value out of range on the wire is clamped or left out.
     /// </summary>
-    public static void Append(StringBuilder sb, TAKDetection detection, Func<string, string> esc)
+    public static void Append(StringBuilder sb, TAKDetection detection)
     {
         sb.Append("    <").Append(Element);
         Attr(sb, "kind", Kinds.Write(detection.Kind));
@@ -157,8 +167,8 @@ internal static class DetectionXml
         var cep = unchecked((int)detection.CepM);
         if (cep > 0) Attr(sb, "cep", cep.ToString(CultureInfo.InvariantCulture));
         if (detection.RssiDbm != 0) Attr(sb, "rssi", detection.RssiDbm.ToString(CultureInfo.InvariantCulture));
-        var uasId = detection.Kind == TAKDetection.Types.Kind.Uas ? TakeCodePoints(detection.UasId, UasIdMaxCodePoints) : "";
-        if (uasId.Length > 0) Attr(sb, "uasId", esc(uasId));
+        if (detection.Kind == TAKDetection.Types.Kind.Uas && !detection.UasId.IsEmpty)
+            Attr(sb, "uasId", UasIdAttribute(detection.UasId.Span[..Math.Min(detection.UasId.Length, UasIdMaxBytes)]));
         Attr(sb, "uasIdType", UasIdTypes.Write(detection.UasIdType));
         Attr(sb, "uasStatus", UasStatuses.Write(detection.UasStatus));
         sb.AppendLine("/>");
@@ -185,13 +195,34 @@ internal static class DetectionXml
     private static int? Number(string? raw) =>
         raw != null && CotXmlParser.ToDoubleOrNull(raw.Trim()) is { } d ? CotXmlParser.RoundToInt(d) : null;
 
-    /// <summary>The first <paramref name="n"/> Unicode code points, never splitting a surrogate pair.</summary>
-    private static string TakeCodePoints(string s, int n)
+    // A uasId attribute's bytes: hex after "hex:" (in any case), else the text's UTF-8, cut to
+    // 20. A hex value whose rest is not an even number of hex digits gives no ID.
+    private static ByteString ParseUasId(string? raw)
     {
-        var end = 0;
-        for (var taken = 0; taken < n && end < s.Length; taken++)
-            end += char.IsHighSurrogate(s[end]) && end + 1 < s.Length && char.IsLowSurrogate(s[end + 1]) ? 2 : 1;
-        return s.Substring(0, end);
+        if (raw == null) return ByteString.Empty;
+        byte[] bytes;
+        if (raw.StartsWith(UasIdHexPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            var digits = raw.Substring(UasIdHexPrefix.Length);
+            if (digits.Length % 2 != 0 || !digits.All(Uri.IsHexDigit)) return ByteString.Empty;
+            bytes = Convert.FromHexString(digits);
+        }
+        else
+        {
+            bytes = Encoding.UTF8.GetBytes(raw);
+        }
+        return ByteString.CopyFrom(bytes, 0, Math.Min(bytes.Length, UasIdMaxBytes));
+    }
+
+    // The uasId attribute: the ID's text when every byte is in UasIdTextChars, else "hex:" and
+    // its bytes in lowercase hex.
+    private static string UasIdAttribute(ReadOnlySpan<byte> id)
+    {
+        foreach (var b in id)
+        {
+            if (UasIdTextChars.IndexOf((char)b) < 0) return UasIdHexPrefix + Convert.ToHexString(id).ToLowerInvariant();
+        }
+        return Encoding.ASCII.GetString(id);
     }
 
     /// <summary>One enum's tokens, both ways.</summary>

@@ -252,7 +252,7 @@ Remarks are optional. When the compressed packet would exceed the LoRa MTU, the 
 
 ### Field 47: Detection
 
-`optional TAKDetection detection = 47` carries metadata for an event that reports an object a passive sensor found: an uncrewed aircraft (UAS), its operator or home point, a person or a vehicle. The event itself still carries the object's position, CoT type and links. Affiliation is not in the message: the CoT type carries it, and the producer chooses it. Its only identifier is `uas_id`, the UAS ID that Remote ID broadcasts, kept only when `kind` is `Kind_Uas`. `TAKDetection.UasIdType` and `TAKDetection.UasStatus` take their values from ASTM F3411.
+`optional TAKDetection detection = 47` carries metadata for an event that reports an object a passive sensor found: an uncrewed aircraft (UAS), its operator or home point, a person or a vehicle. The event itself still carries the object's position, CoT type and links. Affiliation is not in the message: the CoT type carries it, and the producer chooses it. Its only identifier is `uas_id`, the UAS ID that Remote ID broadcasts, kept only when `kind` is `Kind_Uas`. It is `bytes`, at most 20: a serial number or CAA registration is ASCII text without the broadcast's NUL fill, and any other ID type, such as a UTM-assigned UUID or a specific-session ID, is the broadcast's raw bytes. `TAKDetection.UasIdType` and `TAKDetection.UasStatus` take their values from ASTM F3411.
 
 In CoT XML it is one self-closing child of `<detail>`, each attribute left out at its default:
 
@@ -264,7 +264,7 @@ In CoT XML it is one self-closing child of `<detail>`, each attribute left out a
 
 - Enum attributes carry the value's suffix in lowercase snake_case (`Kind_UasOperator` is `uas_operator`). `sources` is a space-separated list of `Source` tokens, and its proto field is their bitwise OR. Reading ignores case, takes an unknown token as unspecified and skips one in `sources`.
 - Numbers are plain decimals, rounded half up. `confidence` is clamped to 0–100, and `count` and `cep` to zero or more.
-- `uasId` is cut to 20 characters and dropped unless `kind` is `uas`.
+- `uasId` is dropped unless `kind` is `uas`. An ID made only of ASCII letters, digits, `-`, `.` and `_`, as serial numbers and CAA registrations are, is written as that text; any other is written as `hex:` followed by its bytes in lowercase hex, so neither form needs escaping. Reading takes a value that starts with `hex:` (in any case) as hex, and drops it unless the rest is an even number of hex digits; any other value is the ID's UTF-8 text. Either way the ID is cut to 20 bytes.
 - `cep` is also the event's `<point ce>`. The builder writes it there, and the parser reads `<point ce>` when the element has no `cep`. An event without the element keeps `ce="9999999"`.
 
 None of these names is one the parsers classify an event by, or that `CotMeshSanitizer` strips, so the annotation never changes an event's payload variant.

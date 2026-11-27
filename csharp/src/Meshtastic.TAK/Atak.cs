@@ -162,7 +162,7 @@ namespace Meshtastic.Protobufs {
             "QUtEZXRlY3Rpb24uU3RhdGUSLQoFdHJlbmQYBSABKA4yHi5tZXNodGFzdGlj",
             "LlRBS0RldGVjdGlvbi5UcmVuZBINCgVjb3VudBgGIAEoDRIXCg9zZW5zb3Jf",
             "YW5jaG9yZWQYByABKAgSDQoFY2VwX20YCCABKA0SEAoIcnNzaV9kYm0YCSAB",
-            "KBESDgoGdWFzX2lkGAogASgJEjcKC3Vhc19pZF90eXBlGAsgASgOMiIubWVz",
+            "KBESDgoGdWFzX2lkGAogASgMEjcKC3Vhc19pZF90eXBlGAsgASgOMiIubWVz",
             "aHRhc3RpYy5UQUtEZXRlY3Rpb24uVWFzSWRUeXBlEjYKCnVhc19zdGF0dXMY",
             "DCABKA4yIi5tZXNodGFzdGljLlRBS0RldGVjdGlvbi5VYXNTdGF0dXMihQEK",
             "BEtpbmQSFAoQS2luZF9VbnNwZWNpZmllZBAAEgwKCEtpbmRfVWFzEAESFAoQ",
@@ -10921,15 +10921,17 @@ namespace Meshtastic.Protobufs {
 
     /// <summary>Field number for the "uas_id" field.</summary>
     public const int UasIdFieldNumber = 10;
-    private string uasId_ = "";
+    private pb::ByteString uasId_ = pb::ByteString.Empty;
     /// <summary>
     ///
-    /// UAS ID from a Remote ID broadcast, at most 20 characters. Set only when
-    /// kind is Kind_Uas.
+    /// UAS ID from a Remote ID broadcast, at most 20 bytes. A serial number or
+    /// CAA registration (see uas_id_type) is ASCII text without the broadcast's
+    /// trailing NUL fill; any other ID type carries the field's bytes as
+    /// broadcast. Set only when kind is Kind_Uas.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string UasId {
+    public pb::ByteString UasId {
       get { return uasId_; }
       set {
         uasId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
@@ -11070,7 +11072,7 @@ namespace Meshtastic.Protobufs {
       }
       if (UasId.Length != 0) {
         output.WriteRawTag(82);
-        output.WriteString(UasId);
+        output.WriteBytes(UasId);
       }
       if (UasIdType != global::Meshtastic.Protobufs.TAKDetection.Types.UasIdType.Unspecified) {
         output.WriteRawTag(88);
@@ -11128,7 +11130,7 @@ namespace Meshtastic.Protobufs {
       }
       if (UasId.Length != 0) {
         output.WriteRawTag(82);
-        output.WriteString(UasId);
+        output.WriteBytes(UasId);
       }
       if (UasIdType != global::Meshtastic.Protobufs.TAKDetection.Types.UasIdType.Unspecified) {
         output.WriteRawTag(88);
@@ -11176,7 +11178,7 @@ namespace Meshtastic.Protobufs {
         size += 1 + pb::CodedOutputStream.ComputeSInt32Size(RssiDbm);
       }
       if (UasId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(UasId);
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(UasId);
       }
       if (UasIdType != global::Meshtastic.Protobufs.TAKDetection.Types.UasIdType.Unspecified) {
         size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) UasIdType);
@@ -11288,7 +11290,7 @@ namespace Meshtastic.Protobufs {
             break;
           }
           case 82: {
-            UasId = input.ReadString();
+            UasId = input.ReadBytes();
             break;
           }
           case 88: {
@@ -11355,7 +11357,7 @@ namespace Meshtastic.Protobufs {
             break;
           }
           case 82: {
-            UasId = input.ReadString();
+            UasId = input.ReadBytes();
             break;
           }
           case 88: {

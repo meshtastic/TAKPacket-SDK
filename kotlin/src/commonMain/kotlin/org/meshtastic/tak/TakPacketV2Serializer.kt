@@ -863,7 +863,7 @@ private fun TakPacketV2Data.DetectionData.toWire(): TAKDetection =
             wb.sensor_anchored = sensorAnchored
             wb.cep_m = cepMeters
             wb.rssi_dbm = rssiDbm
-            wb.uas_id = uasId
+            wb.uas_id = uasId.toByteString()
             wb.uas_id_type = TAKDetection.UasIdType.fromValue(uasIdType.value) ?: TAKDetection.UasIdType.UasIdType_Unspecified
             wb.uas_status = TAKDetection.UasStatus.fromValue(uasStatus.value) ?: TAKDetection.UasStatus.UasStatus_Unspecified
         }.build()
@@ -879,7 +879,7 @@ private fun TAKDetection.toData(): TakPacketV2Data.DetectionData =
         sensorAnchored = sensor_anchored,
         cepMeters = cep_m,
         rssiDbm = rssi_dbm,
-        uasId = uas_id,
+        uasId = uas_id.toByteArray(),
         uasIdType = TakPacketV2Data.DetectionData.UasIdType.fromValue(uas_id_type.value),
         uasStatus = TakPacketV2Data.DetectionData.UasStatus.fromValue(uas_status.value),
     )

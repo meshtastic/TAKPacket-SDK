@@ -3411,9 +3411,11 @@ public nonisolated struct TAKDetection: Sendable {
   public var rssiDbm: Int32 = 0
 
   ///
-  /// UAS ID from a Remote ID broadcast, at most 20 characters. Set only when
-  /// kind is Kind_Uas.
-  public var uasID: String = String()
+  /// UAS ID from a Remote ID broadcast, at most 20 bytes. A serial number or
+  /// CAA registration (see uas_id_type) is ASCII text without the broadcast's
+  /// trailing NUL fill; any other ID type carries the field's bytes as
+  /// broadcast. Set only when kind is Kind_Uas.
+  public var uasID: Data = Data()
 
   ///
   /// Type of uas_id.
@@ -5984,7 +5986,7 @@ nonisolated extension TAKDetection: SwiftProtobuf.Message, SwiftProtobuf._Messag
       case 7: try { try decoder.decodeSingularBoolField(value: &self.sensorAnchored) }()
       case 8: try { try decoder.decodeSingularUInt32Field(value: &self.cepM) }()
       case 9: try { try decoder.decodeSingularSInt32Field(value: &self.rssiDbm) }()
-      case 10: try { try decoder.decodeSingularStringField(value: &self.uasID) }()
+      case 10: try { try decoder.decodeSingularBytesField(value: &self.uasID) }()
       case 11: try { try decoder.decodeSingularEnumField(value: &self.uasIDType) }()
       case 12: try { try decoder.decodeSingularEnumField(value: &self.uasStatus) }()
       default: break
@@ -6021,7 +6023,7 @@ nonisolated extension TAKDetection: SwiftProtobuf.Message, SwiftProtobuf._Messag
       try visitor.visitSingularSInt32Field(value: self.rssiDbm, fieldNumber: 9)
     }
     if !self.uasID.isEmpty {
-      try visitor.visitSingularStringField(value: self.uasID, fieldNumber: 10)
+      try visitor.visitSingularBytesField(value: self.uasID, fieldNumber: 10)
     }
     if self.uasIDType != .unspecified {
       try visitor.visitSingularEnumField(value: self.uasIDType, fieldNumber: 11)

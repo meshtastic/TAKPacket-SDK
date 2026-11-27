@@ -14,8 +14,14 @@ import Foundation
 /// An enum attribute carries the value's name in lowercase snake_case (`uasOperator` is
 /// `uas_operator`), and `sources` is a space-separated list of them. Reading ignores case,
 /// takes an unknown token as unspecified and skips one in `sources`. `confidence` is clamped
-/// to 0-100, `count` and `cep` to zero or more, and `uasId` is cut to 20 code points and kept
-/// only when the kind is `uas`.
+/// to 0-100, and `count` and `cep` to zero or more.
+///
+/// `uasId` holds up to 20 bytes and is kept only when the kind is `uas`. An ID made only of
+/// ASCII letters, digits, `-`, `.` and `_`, as serial numbers and CAA registrations are, is
+/// written as that text; any other is written as `hex:` and its bytes in lowercase hex, so
+/// neither form needs escaping. Reading takes a value that starts with `hex:` (in any case) as
+/// hex, and drops it unless the rest is whole hex digits; any other value is the ID's UTF-8
+/// text. Either way the ID is cut to 20 bytes.
 ///
 /// `cep` is also the event's `<point ce>`: the builder writes it there, and the parser reads
 /// `<point ce>` when the element has no `cep`. An event without the element keeps
@@ -26,8 +32,13 @@ enum DetectionXml {
     /// CoT's "unknown" circular error, written to `<point ce>` when there is no cep to carry.
     static let unknownCe: Int32 = 9_999_999
 
-    private static let uasIdMaxScalars = 20
+    private static let uasIdMaxBytes = 20
     private static let confidenceMax: Int32 = 100
+
+    // A uasId of only these bytes is written as text; any other is written as hex.
+    private static let uasIdTextBytes = Set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._".utf8)
+    private static let uasIdHexPrefix = Array("hex:".utf8)
+    private static let hexDigits = Array("0123456789abcdef".utf8)
 
     // Spelled out, because the generated case names are not the XML tokens (`remoteID`).
     private static let kinds: [(value: TAKDetection.Kind, token: String)] = [
@@ -79,7 +90,7 @@ enum DetectionXml {
         let cep = number(attributes["cep"]) ?? number(pointCe).flatMap { $0 < unknownCe ? $0 : nil }
         d.cepM = UInt32(max(cep ?? 0, 0))
         d.rssiDbm = number(attributes["rssi"]) ?? 0
-        if d.kind == .uas { d.uasID = uasIdPrefix(attributes["uasId"] ?? "") }
+        if d.kind == .uas { d.uasID = parseUasId(attributes["uasId"]) }
         d.uasIDType = lookup(attributes["uasIdType"], in: uasIdTypes) ?? .unspecified
         d.uasStatus = lookup(attributes["uasStatus"], in: uasStatuses) ?? .unspecified
         return d
@@ -91,10 +102,10 @@ enum DetectionXml {
         return packet.hasDetection && cep > 0 ? cep : unknownCe
     }
 
-    /// The element as a `<detail>` child line, escaping `uasId` with `esc`. Unsigned fields
-    /// are read as Int32, as Kotlin's model holds them, so an out-of-range wire value is
+    /// The element as a `<detail>` child line. No value it writes needs escaping. Unsigned
+    /// fields are read as Int32, as Kotlin's model holds them, so an out-of-range wire value is
     /// clamped or left out.
-    static func emit(_ detection: TAKDetection, esc: (String) -> String) -> String {
+    static func emit(_ detection: TAKDetection) -> String {
         var s = "    <\(element)"
         func attr(_ name: String, _ value: String) { s += " \(name)=\"\(value)\"" }
 
@@ -112,8 +123,8 @@ enum DetectionXml {
         let cep = Int32(bitPattern: detection.cepM)
         if cep > 0 { attr("cep", "\(cep)") }
         if detection.rssiDbm != 0 { attr("rssi", "\(detection.rssiDbm)") }
-        let uasId = detection.kind == .uas ? uasIdPrefix(detection.uasID) : ""
-        if !uasId.isEmpty { attr("uasId", esc(uasId)) }
+        let uasId = detection.kind == .uas ? Data(detection.uasID.prefix(uasIdMaxBytes)) : Data()
+        if !uasId.isEmpty { attr("uasId", uasIdAttribute(uasId)) }
         if detection.uasIDType != .unspecified, let t = token(detection.uasIDType, in: uasIdTypes) {
             attr("uasIdType", t)
         }
@@ -150,8 +161,37 @@ enum DetectionXml {
         raw.flatMap { CotXmlParser.parseDouble(trim($0)) }.map(CotXmlParser.roundToInt)
     }
 
-    /// The first 20 code points: a scalar outside the BMP counts once and is never split.
-    private static func uasIdPrefix(_ s: String) -> String {
-        String(String.UnicodeScalarView(s.unicodeScalars.prefix(uasIdMaxScalars)))
+    /// A `uasId` attribute's bytes: hex after `hex:` (in any case), else the text's UTF-8, cut
+    /// to 20. A hex value whose rest is not an even number of hex digits gives no ID.
+    private static func parseUasId(_ raw: String?) -> Data {
+        guard let raw else { return Data() }
+        let utf8 = Array(raw.utf8)
+        let isHex = utf8.count >= uasIdHexPrefix.count
+            && zip(utf8, uasIdHexPrefix).allSatisfy { asciiLowercased($0) == $1 }
+        guard isHex else { return Data(utf8.prefix(uasIdMaxBytes)) }
+        let digits = utf8.dropFirst(uasIdHexPrefix.count)
+        let values = digits.compactMap(hexValue)
+        guard values.count == digits.count, values.count % 2 == 0 else { return Data() }
+        let bytes = stride(from: 0, to: values.count, by: 2).map { values[$0] << 4 | values[$0 + 1] }
+        return Data(bytes.prefix(uasIdMaxBytes))
+    }
+
+    /// The `uasId` attribute: the ID's text when every byte is a plain ID character, else
+    /// `hex:` and its bytes in lowercase hex.
+    private static func uasIdAttribute(_ id: Data) -> String {
+        if id.allSatisfy({ uasIdTextBytes.contains($0) }) { return String(decoding: id, as: UTF8.self) }
+        let hex = id.flatMap { [hexDigits[Int($0 >> 4)], hexDigits[Int($0 & 0x0F)]] }
+        return String(decoding: uasIdHexPrefix + hex, as: UTF8.self)
+    }
+
+    private static func asciiLowercased(_ b: UInt8) -> UInt8 { (0x41...0x5A).contains(b) ? b + 0x20 : b }
+
+    private static func hexValue(_ b: UInt8) -> UInt8? {
+        switch b {
+        case 0x30...0x39: return b - 0x30
+        case 0x61...0x66: return b - 0x61 + 10
+        case 0x41...0x46: return b - 0x41 + 10
+        default: return nil
+        }
     }
 }

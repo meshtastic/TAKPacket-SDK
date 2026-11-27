@@ -76,7 +76,15 @@ const DETECTION_SOURCES = ["remote_id", "rf", "acoustic", "radar", "optical", "t
 const DETECTION_KIND_UAS = 1;
 /** CoT's "unknown" circular error, written to `<point ce>` when there is no cep to carry. */
 const UNKNOWN_CE = 9999999;
-const UAS_ID_MAX_CODE_POINTS = 20;
+const UAS_ID_MAX_BYTES = 20;
+/** A `uasId` of only these bytes is written as text; any other is written as hex. */
+const UAS_ID_TEXT = /^[A-Za-z0-9._-]*$/;
+
+/** The `uasId` attribute: the ID's text when every byte is a plain ID character, else `hex:` and lowercase hex. */
+function uasIdAttribute(id: Buffer): string {
+  const text = id.toString("latin1");
+  return UAS_ID_TEXT.test(text) ? text : `hex:${id.toString("hex")}`;
+}
 
 // --- GeoChat ReceiptType -----------------------------------------------
 const RECEIPT_TYPE_NONE = 0;
@@ -859,11 +867,10 @@ function emitDetection(lines: string[], detection: TAKDetection): void {
   const rssi = detection.rssiDbm ?? 0;
   if (rssi !== 0) parts.push(`rssi="${rssi}"`);
 
-  // Cut by code points, so a character outside the BMP is never split.
-  const uasId = kind === DETECTION_KIND_UAS
-    ? Array.from(detection.uasId ?? "").slice(0, UAS_ID_MAX_CODE_POINTS).join("")
-    : "";
-  if (uasId) parts.push(`uasId="${esc(uasId)}"`);
+  const uasId = kind === DETECTION_KIND_UAS && detection.uasId
+    ? Buffer.from(detection.uasId).subarray(0, UAS_ID_MAX_BYTES)
+    : Buffer.alloc(0);
+  if (uasId.length > 0) parts.push(`uasId="${uasIdAttribute(uasId)}"`);
 
   const uasIdType = token(DETECTION_UAS_ID_TYPES, detection.uasIdType);
   if (uasIdType) parts.push(`uasIdType="${uasIdType}"`);

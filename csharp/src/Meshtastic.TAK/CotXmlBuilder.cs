@@ -320,7 +320,7 @@ public class CotXmlBuilder
         }
 
         // Passive-sensor detection, payload-agnostic like the two annotations above.
-        if (pkt.Detection != null) DetectionXml.Append(sb, pkt.Detection, Esc);
+        if (pkt.Detection != null) DetectionXml.Append(sb, pkt.Detection);
 
         switch (pkt.PayloadVariantCase)
         {

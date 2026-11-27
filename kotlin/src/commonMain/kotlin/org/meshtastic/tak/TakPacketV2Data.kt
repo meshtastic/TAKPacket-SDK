@@ -351,10 +351,11 @@ public data class TakPacketV2Data(
         /** Calibrated received power at the reporting sensor, in dBm. 0 = unknown. */
         val rssiDbm: Int = 0,
         /**
-         * UAS ID from a Remote ID broadcast, at most 20 characters. The parser and the
-         * builder keep it only when [kind] is [Kind.Uas].
+         * UAS ID from a Remote ID broadcast, at most 20 bytes: ASCII text for a serial number
+         * or a CAA registration, without the broadcast's NUL fill, and the broadcast's bytes for
+         * any other [uasIdType]. The parser and the builder keep it only when [kind] is [Kind.Uas].
          */
-        val uasId: String = "",
+        val uasId: ByteArray = ByteArray(0),
         /** Type of [uasId]. */
         val uasIdType: UasIdType = UasIdType.Unspecified,
         /** Operational status from a Remote ID broadcast. */
@@ -365,6 +366,32 @@ public data class TakPacketV2Data(
 
         /** Starts a [Builder] from this value. */
         public fun toBuilder(): Builder = Builder(this)
+
+        // uasId is a ByteArray, which the generated members would compare by reference.
+        override fun equals(other: Any?): Boolean =
+            other is DetectionData &&
+                kind == other.kind &&
+                sources == other.sources &&
+                confidence == other.confidence &&
+                state == other.state &&
+                trend == other.trend &&
+                count == other.count &&
+                sensorAnchored == other.sensorAnchored &&
+                cepMeters == other.cepMeters &&
+                rssiDbm == other.rssiDbm &&
+                uasId.contentEquals(other.uasId) &&
+                uasIdType == other.uasIdType &&
+                uasStatus == other.uasStatus
+
+        override fun hashCode(): Int =
+            listOf(kind, sources, confidence, state, trend, count, sensorAnchored, cepMeters, rssiDbm, uasIdType, uasStatus)
+                .hashCode() * 31 + uasId.contentHashCode()
+
+        override fun toString(): String =
+            "DetectionData(kind=$kind, sources=$sources, confidence=$confidence, state=$state, trend=$trend, " +
+                "count=$count, sensorAnchored=$sensorAnchored, cepMeters=$cepMeters, rssiDbm=$rssiDbm, " +
+                "uasId=${uasId.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }}, " +
+                "uasIdType=$uasIdType, uasStatus=$uasStatus)"
 
         /**
          * Fluent builder for [DetectionData], for Java callers that would otherwise have to
@@ -395,7 +422,10 @@ public data class TakPacketV2Data(
 
             public fun rssiDbm(rssiDbm: Int): Builder = apply { current = current.copy(rssiDbm = rssiDbm) }
 
-            public fun uasId(uasId: String): Builder = apply { current = current.copy(uasId = uasId) }
+            public fun uasId(uasId: ByteArray): Builder = apply { current = current.copy(uasId = uasId) }
+
+            /** Sets [DetectionData.uasId] to [uasId]'s UTF-8 bytes, for a text ID such as a serial number. */
+            public fun uasId(uasId: String): Builder = uasId(uasId.encodeToByteArray())
 
             public fun uasIdType(uasIdType: UasIdType): Builder = apply { current = current.copy(uasIdType = uasIdType) }
 

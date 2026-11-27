@@ -363,7 +363,22 @@ const DETECTION_SOURCES = ["remote_id", "rf", "acoustic", "radar", "optical", "t
 const DETECTION_KIND_UAS = 1;
 /** CoT's "unknown" circular error: a `<point ce>` this large carries no cep. */
 const UNKNOWN_CE = 9999999;
-const UAS_ID_MAX_CODE_POINTS = 20;
+const UAS_ID_MAX_BYTES = 20;
+const UAS_ID_HEX_PREFIX = "hex:";
+
+/**
+ * A `uasId` attribute's bytes: hex after `hex:` (in any case), else the text's UTF-8, cut to 20.
+ * A hex value whose rest is not an even number of hex digits gives no ID.
+ */
+function parseUasId(raw: string | undefined): Buffer {
+  if (raw === undefined) return Buffer.alloc(0);
+  if (raw.slice(0, UAS_ID_HEX_PREFIX.length).toLowerCase() === UAS_ID_HEX_PREFIX) {
+    const digits = raw.slice(UAS_ID_HEX_PREFIX.length);
+    if (digits.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(digits)) return Buffer.alloc(0);
+    return Buffer.from(Buffer.from(digits, "hex").subarray(0, UAS_ID_MAX_BYTES));
+  }
+  return Buffer.from(Buffer.from(raw, "utf8").subarray(0, UAS_ID_MAX_BYTES));
+}
 
 /** An enum token's value, ignoring case; an absent or unknown token is 0 (unspecified). */
 function detectionToken(raw: string | undefined, tokens: readonly string[]): number {
@@ -396,10 +411,7 @@ function parseDetection(node: unknown, pointCe: string | undefined): TAKDetectio
     sensorAnchored: attrOf(node, "sensorAnchored")?.trim().toLowerCase() === "true",
     cepM: Math.max(0, cep),
     rssiDbm: parseRounded(attrOf(node, "rssi")) ?? 0,
-    // Cut by code points, so a character outside the BMP is never split.
-    uasId: kind === DETECTION_KIND_UAS
-      ? Array.from(attrOf(node, "uasId") ?? "").slice(0, UAS_ID_MAX_CODE_POINTS).join("")
-      : "",
+    uasId: kind === DETECTION_KIND_UAS ? parseUasId(attrOf(node, "uasId")) : Buffer.alloc(0),
     uasIdType: detectionToken(attrOf(node, "uasIdType"), DETECTION_UAS_ID_TYPES),
     uasStatus: detectionToken(attrOf(node, "uasStatus"), DETECTION_UAS_STATUSES),
   };

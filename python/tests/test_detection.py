@@ -164,7 +164,7 @@ def test_the_full_element_survives_the_mesh():
         sensor_anchored=True,
         cep_m=12,
         rssi_dbm=-71,
-        uas_id=UAS_ID,
+        uas_id=UAS_ID.encode(),
         uas_id_type=D.UasIdType_SerialNumber,
         uas_status=D.UasStatus_Airborne,
     )
@@ -255,31 +255,47 @@ def test_the_builder_clamps_a_value_that_arrived_out_of_range():
     assert 'ce="9999999"' in xml, xml
 
 
-def test_the_uas_id_is_cut_to_20_characters_and_kept_only_for_a_uas():
+def test_the_uas_id_is_cut_to_20_bytes_and_kept_only_for_a_uas():
     long_id = "ZZZZFTEST000000000001EXTRA"  # 26 characters
-    assert _detection(f'<__detection kind="uas" uasId="{long_id}"/>').uas_id == long_id[:20]
-    # A character outside the BMP counts once and is never split.
-    astral = "A" * 19 + "\U0001D400" + "B"
-    assert _detection(f'<__detection kind="uas" uasId="{astral}"/>').uas_id == (
-        "A" * 19 + "\U0001D400"
-    )
+    assert _detection(f'<__detection kind="uas" uasId="{long_id}"/>').uas_id == long_id[:20].encode()
+    # Text beyond ASCII counts in UTF-8 bytes.
+    accented = "A" * 19 + "é"
+    assert _detection(f'<__detection kind="uas" uasId="{accented}"/>').uas_id == accented.encode()[:20]
 
     for kind in ("uas_operator", "uas_home", "person", "vehicle", "other", "unspecified"):
-        assert _detection(f'<__detection kind="{kind}" uasId="{UAS_ID}"/>').uas_id == "", kind
-    assert _detection(f'<__detection uasId="{UAS_ID}"/>').uas_id == ""
+        assert _detection(f'<__detection kind="{kind}" uasId="{UAS_ID}"/>').uas_id == b"", kind
+    assert _detection(f'<__detection uasId="{UAS_ID}"/>').uas_id == b""
 
     # The builder holds a packet built in code to the same rule.
-    xml = builder.build(_packet(D(kind=D.Kind_Person, uas_id=UAS_ID)))
+    xml = builder.build(_packet(D(kind=D.Kind_Person, uas_id=UAS_ID.encode())))
     assert UAS_ID not in xml, xml
-    cut = builder.build(_packet(D(kind=D.Kind_Uas, uas_id=long_id)))
+    cut = builder.build(_packet(D(kind=D.Kind_Uas, uas_id=long_id.encode())))
     assert f'uasId="{long_id[:20]}"' in cut, cut
 
 
-def test_the_uas_id_is_escaped_including_quotes():
-    uas_id = UAS_ID + '"&<'
-    xml = builder.build(_packet(D(kind=D.Kind_Uas, uas_id=uas_id)))
-    assert f'uasId="{UAS_ID}&quot;&amp;&lt;"' in xml, xml
-    assert parser.parse(xml).detection.uas_id == uas_id
+def test_a_binary_uas_id_travels_as_hex():
+    # A UTM-assigned UUID is 16 raw bytes, most of them outside the text set.
+    uuid = bytes.fromhex("123e4567e89b42d3a456426614174000")
+    d = D(kind=D.Kind_Uas, uas_id=uuid, uas_id_type=D.UasIdType_UtmAssigned)
+    xml = builder.build(_packet(d))
+    assert 'uasId="hex:123e4567e89b42d3a456426614174000"' in xml, xml
+    assert parser.parse(xml).detection == d
+    assert _through_the_wire(_packet(d)).detection == d
+
+    # Hex reads in any case; a value that is not whole hex digits is dropped.
+    upper = '<__detection kind="uas" uasId="HEX:123E4567E89B42D3A456426614174000"/>'
+    assert _detection(upper).uas_id == uuid
+    for bad in ("hex:123", "hex:12zz", "hex:+1", "hex:"):
+        assert _detection(f'<__detection kind="uas" uasId="{bad}"/>').uas_id == b"", bad
+    # Hex longer than 20 bytes is cut like text.
+    assert _detection(f'<__detection kind="uas" uasId="hex:{"11" * 25}"/>').uas_id == b"\x11" * 20
+
+    # One byte outside letters, digits, '-', '.' and '_' sends the whole ID as hex.
+    spaced = builder.build(_packet(D(kind=D.Kind_Uas, uas_id=b"ZZZZ8 TEST")))
+    assert 'uasId="hex:5a5a5a5a382054455354"' in spaced, spaced
+    quoted = builder.build(_packet(D(kind=D.Kind_Uas, uas_id=b'ZZZZ8"&<')))
+    assert 'uasId="hex:5a5a5a5a3822263c"' in quoted, quoted
+    assert parser.parse(quoted).detection.uas_id == b'ZZZZ8"&<'
 
 
 @pytest.mark.parametrize(
@@ -331,7 +347,7 @@ FIXTURES = {
         trend=D.Trend_Closing,
         cep_m=12,
         rssi_dbm=-71,
-        uas_id=UAS_ID,
+        uas_id=UAS_ID.encode(),
         uas_id_type=D.UasIdType_SerialNumber,
         uas_status=D.UasStatus_Airborne,
     ),

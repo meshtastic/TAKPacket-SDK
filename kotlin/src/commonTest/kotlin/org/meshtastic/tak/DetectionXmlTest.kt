@@ -8,6 +8,7 @@ import org.meshtastic.tak.TakPacketV2Data.DetectionData.Trend
 import org.meshtastic.tak.TakPacketV2Data.DetectionData.UasIdType
 import org.meshtastic.tak.TakPacketV2Data.DetectionData.UasStatus
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -191,7 +192,7 @@ class DetectionXmlTest {
                 sensorAnchored = true,
                 cepMeters = 12,
                 rssiDbm = -71,
-                uasId = uasId,
+                uasId = uasId.encodeToByteArray(),
                 uasIdType = UasIdType.SerialNumber,
                 uasStatus = UasStatus.Airborne,
             )
@@ -262,23 +263,46 @@ class DetectionXmlTest {
     }
 
     @Test
-    fun theUasIdIsCutTo20CharactersAndKeptOnlyForAUas() {
+    fun theUasIdIsCutTo20BytesAndKeptOnlyForAUas() {
         val long = "ZZZZFTEST000000000001EXTRA" // 26 characters
-        assertEquals(long.take(20), detection("""<__detection kind="uas" uasId="$long"/>""")?.uasId)
-        // A character outside the BMP counts once and is never split.
-        val astral = "A".repeat(19) + "𝐀" + "B"
-        assertEquals("A".repeat(19) + "𝐀", detection("""<__detection kind="uas" uasId="$astral"/>""")?.uasId)
+        assertContentEquals(long.take(20).encodeToByteArray(), detection("""<__detection kind="uas" uasId="$long"/>""")?.uasId)
+        // Text beyond ASCII counts in UTF-8 bytes.
+        val accented = "A".repeat(19) + "é"
+        assertContentEquals(accented.encodeToByteArray().copyOf(20), detection("""<__detection kind="uas" uasId="$accented"/>""")?.uasId)
 
         for (kind in listOf("uas_operator", "uas_home", "person", "vehicle", "other", "unspecified")) {
-            assertEquals("", detection("""<__detection kind="$kind" uasId="$uasId"/>""")?.uasId, kind)
+            assertContentEquals(ByteArray(0), detection("""<__detection kind="$kind" uasId="$uasId"/>""")?.uasId, kind)
         }
-        assertEquals("", detection("""<__detection uasId="$uasId"/>""")?.uasId)
+        assertContentEquals(ByteArray(0), detection("""<__detection uasId="$uasId"/>""")?.uasId)
 
         // The builder holds a packet built in code to the same rule.
-        val xml = builder.build(packet(DetectionData(kind = Kind.Person, uasId = uasId)))
+        val xml = builder.build(packet(DetectionData(kind = Kind.Person, uasId = uasId.encodeToByteArray())))
         assertFalse(xml.contains(uasId), xml)
-        val cut = builder.build(packet(DetectionData(kind = Kind.Uas, uasId = long)))
+        val cut = builder.build(packet(DetectionData(kind = Kind.Uas, uasId = long.encodeToByteArray())))
         assertTrue(cut.contains("""uasId="${long.take(20)}""""), cut)
+    }
+
+    @Test
+    fun aBinaryUasIdTravelsAsHex() {
+        // A UTM-assigned UUID is 16 raw bytes, most of them outside the text set.
+        val uuid = "123e4567e89b42d3a456426614174000".chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+        val d = DetectionData(kind = Kind.Uas, uasId = uuid, uasIdType = UasIdType.UtmAssigned)
+        val xml = builder.build(packet(d))
+        assertTrue(xml.contains("""uasId="hex:123e4567e89b42d3a456426614174000""""), xml)
+        assertEquals(d, parser.parse(xml).detection)
+        assertEquals(d, throughTheWire(packet(d)).detection)
+
+        // Hex reads in any case; a value that is not whole hex digits is dropped.
+        assertContentEquals(uuid, detection("""<__detection kind="uas" uasId="HEX:123E4567E89B42D3A456426614174000"/>""")?.uasId)
+        for (bad in listOf("hex:123", "hex:12zz", "hex:+1", "hex:")) {
+            assertContentEquals(ByteArray(0), detection("""<__detection kind="uas" uasId="$bad"/>""")?.uasId, bad)
+        }
+        // Hex longer than 20 bytes is cut like text.
+        assertContentEquals(ByteArray(20) { 0x11 }, detection("""<__detection kind="uas" uasId="hex:${"11".repeat(25)}"/>""")?.uasId)
+
+        // One byte outside letters, digits, '-', '.' and '_' sends the whole ID as hex.
+        val spaced = builder.build(packet(DetectionData(kind = Kind.Uas, uasId = "ZZZZ8 TEST".encodeToByteArray())))
+        assertTrue(spaced.contains("""uasId="hex:5a5a5a5a382054455354""""), spaced)
     }
 
     @Test

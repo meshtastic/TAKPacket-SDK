@@ -1,3 +1,5 @@
+using System.Text;
+using Google.Protobuf;
 using Meshtastic.TAK;
 using Meshtastic.Protobufs;
 
@@ -195,7 +197,7 @@ public class DetectionTests
             SensorAnchored = true,
             CepM = 12,
             RssiDbm = -71,
-            UasId = UasId,
+            UasId = ByteString.CopyFromUtf8(UasId),
             UasIdType = TAKDetection.Types.UasIdType.SerialNumber,
             UasStatus = TAKDetection.Types.UasStatus.Airborne,
         };
@@ -277,35 +279,56 @@ public class DetectionTests
     }
 
     [Fact]
-    public void TheUasIdIsCutTo20CodePointsAndKeptOnlyForAUas()
+    public void TheUasIdIsCutTo20BytesAndKeptOnlyForAUas()
     {
         const string longId = "ZZZZFTEST000000000001EXTRA"; // 26 characters
-        Assert.Equal(longId[..20], DetectionOf($"<__detection kind=\"uas\" uasId=\"{longId}\"/>")?.UasId);
-        // A character outside the BMP counts once and is never split.
-        var astral = char.ConvertFromUtf32(0x1D400);
+        Assert.Equal(ByteString.CopyFromUtf8(longId[..20]), DetectionOf($"<__detection kind=\"uas\" uasId=\"{longId}\"/>")?.UasId);
+        // Text beyond ASCII counts in UTF-8 bytes.
+        var accented = new string('A', 19) + "é";
         Assert.Equal(
-            new string('A', 19) + astral,
-            DetectionOf($"<__detection kind=\"uas\" uasId=\"{new string('A', 19) + astral + "B"}\"/>")?.UasId);
+            ByteString.CopyFrom(Encoding.UTF8.GetBytes(accented), 0, 20),
+            DetectionOf($"<__detection kind=\"uas\" uasId=\"{accented}\"/>")?.UasId);
 
         Assert.All(
             new[] { "uas_operator", "uas_home", "person", "vehicle", "other", "unspecified" },
-            kind => Assert.Equal("", DetectionOf($"<__detection kind=\"{kind}\" uasId=\"{UasId}\"/>")?.UasId));
-        Assert.Equal("", DetectionOf($"<__detection uasId=\"{UasId}\"/>")?.UasId);
+            kind => Assert.Equal(ByteString.Empty, DetectionOf($"<__detection kind=\"{kind}\" uasId=\"{UasId}\"/>")?.UasId));
+        Assert.Equal(ByteString.Empty, DetectionOf($"<__detection uasId=\"{UasId}\"/>")?.UasId);
 
         // The builder holds a packet built in code to the same rule.
-        var xml = _builder.Build(PacketWith(new TAKDetection { Kind = TAKDetection.Types.Kind.Person, UasId = UasId }));
+        var xml = _builder.Build(PacketWith(new TAKDetection { Kind = TAKDetection.Types.Kind.Person, UasId = ByteString.CopyFromUtf8(UasId) }));
         Assert.DoesNotContain(UasId, xml);
-        var cut = _builder.Build(PacketWith(new TAKDetection { Kind = TAKDetection.Types.Kind.Uas, UasId = longId }));
+        var cut = _builder.Build(PacketWith(new TAKDetection { Kind = TAKDetection.Types.Kind.Uas, UasId = ByteString.CopyFromUtf8(longId) }));
         Assert.Contains($"uasId=\"{longId[..20]}\"", cut);
     }
 
     [Fact]
-    public void TheUasIdIsEscapedInItsAttribute()
+    public void ABinaryUasIdTravelsAsHex()
     {
-        const string awkward = "ZZZZ8\"TEST<&'0001";
-        var xml = _builder.Build(PacketWith(new TAKDetection { Kind = TAKDetection.Types.Kind.Uas, UasId = awkward }));
-        Assert.Contains("uasId=\"ZZZZ8&quot;TEST&lt;&amp;&apos;0001\"", xml);
-        Assert.Equal(awkward, _parser.Parse(xml).Detection?.UasId);
+        // A UTM-assigned UUID is 16 raw bytes, most of them outside the text set.
+        var uuid = ByteString.CopyFrom(Convert.FromHexString("123e4567e89b42d3a456426614174000"));
+        var d = new TAKDetection { Kind = TAKDetection.Types.Kind.Uas, UasId = uuid, UasIdType = TAKDetection.Types.UasIdType.UtmAssigned };
+        var xml = _builder.Build(PacketWith(d));
+        Assert.Contains("uasId=\"hex:123e4567e89b42d3a456426614174000\"", xml);
+        Assert.Equal(d, _parser.Parse(xml).Detection);
+        Assert.Equal(d, ThroughTheWire(PacketWith(d)).Detection);
+
+        // Hex reads in any case; a value that is not whole hex digits is dropped.
+        Assert.Equal(uuid, DetectionOf("<__detection kind=\"uas\" uasId=\"HEX:123E4567E89B42D3A456426614174000\"/>")?.UasId);
+        Assert.All(
+            new[] { "hex:123", "hex:12zz", "hex:+1", "hex:" },
+            bad => Assert.Equal(ByteString.Empty, DetectionOf($"<__detection kind=\"uas\" uasId=\"{bad}\"/>")?.UasId));
+        // Hex longer than 20 bytes is cut like text.
+        Assert.Equal(
+            ByteString.CopyFrom(Enumerable.Repeat((byte)0x11, 20).ToArray()),
+            DetectionOf($"<__detection kind=\"uas\" uasId=\"hex:{string.Concat(Enumerable.Repeat("11", 25))}\"/>")?.UasId);
+
+        // One byte outside letters, digits, '-', '.' and '_' sends the whole ID as hex.
+        var spaced = _builder.Build(PacketWith(new TAKDetection { Kind = TAKDetection.Types.Kind.Uas, UasId = ByteString.CopyFromUtf8("ZZZZ8 TEST") }));
+        Assert.Contains("uasId=\"hex:5a5a5a5a382054455354\"", spaced);
+        var quoted = ByteString.CopyFromUtf8("ZZZZ8\"&<");
+        var quotedXml = _builder.Build(PacketWith(new TAKDetection { Kind = TAKDetection.Types.Kind.Uas, UasId = quoted }));
+        Assert.Contains("uasId=\"hex:5a5a5a5a3822263c\"", quotedXml);
+        Assert.Equal(quoted, _parser.Parse(quotedXml).Detection?.UasId);
     }
 
     [Fact]
@@ -375,7 +398,7 @@ public class DetectionTests
             Trend = TAKDetection.Types.Trend.Closing,
             CepM = 12,
             RssiDbm = -71,
-            UasId = UasId,
+            UasId = ByteString.CopyFromUtf8(UasId),
             UasIdType = TAKDetection.Types.UasIdType.SerialNumber,
             UasStatus = TAKDetection.Types.UasStatus.Airborne,
         }, pkt.Detection);
