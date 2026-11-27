@@ -208,6 +208,25 @@ One version covers all five bindings, so a release is a single tag and a single 
   a zero stays distinct from no value. The pass now keeps it, as the Kotlin,
   Swift, Python and C# parsers already did. No wire format or API changes.
 
+- C#: `CotXmlBuilder` now writes the same XML whatever the current culture is.
+  Integers were formatted in the current culture, so under sv-SE, nb-NO or
+  fi-FI a negative altitude or ARGB color came out with a U+2212 minus
+  (`hae="−22"`), and under ar-SA, fa-IR or he-IL with a bidi mark in front of
+  it. No binding's parser reads either form back, and the C# parser throws on
+  it. The `time`, `start` and `stale` timestamps used the culture's time
+  separator and calendar: fi-FI and da-DK wrote `06.28.05`, th-TH put the year
+  543 years ahead, and ar-SA and fa-IR wrote Hijri and Persian dates, which a
+  receiver reads as an event that went stale centuries ago.
+
+- C#: `CotXmlParser` now rounds like Kotlin, with a half going toward positive
+  infinity (Java's `Math.round`), so every scaled field gets the same integer
+  as in Kotlin's protobuf. Latitude, longitude, speed and course used banker's
+  rounding, so `course="0.125"` gave 12 where Kotlin gives 13. Altitude, RSSI,
+  ellipse radii, stroke weight, bullseye distance and range and bearing were
+  truncated, so `hae="-29.667"` gave -29 where Kotlin gives -30. Three fixtures
+  (`pli_full`, `chat_taktalk_dm`, `chat_taktalk_voice_profile`) parsed to a
+  different altitude than their Kotlin goldens.
+
 ## [0.10.0] - 2026-10-31
 
 ### Added
