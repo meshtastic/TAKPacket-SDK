@@ -270,6 +270,34 @@ public class CotXmlBuilder
         if (!string.IsNullOrEmpty(pkt.DeviceCallsign))
             sb.AppendLine($"    <uid Droid=\"{Esc(pkt.DeviceCallsign)}\"/>");
 
+        // Environment (weather annotation), payload-agnostic. temperature is always
+        // written; a zero wind direction or speed reads as unset, as it does in
+        // Kotlin after a wire round trip. Unsigned fields print as their Int32 reading.
+        if (pkt.Environment != null)
+        {
+            var env = pkt.Environment;
+            var tag = $"    <environment temperature=\"{F(env.TemperatureCX10 / 10.0)}\"";
+            if (env.WindDirectionDeg != 0) tag += $" windDirection=\"{unchecked((int)env.WindDirectionDeg)}\"";
+            if (env.WindSpeedCmS != 0) tag += $" windSpeed=\"{F(unchecked((int)env.WindSpeedCmS) / 100.0)}\"";
+            sb.AppendLine(tag + "/>");
+        }
+
+        // SensorFov (camera / FLIR / laser cone): geometry only, and never a type
+        // attribute. range is omitted when unset so the receiver applies its own
+        // default; a zero vfov or roll reads as unset, as it does in Kotlin.
+        if (pkt.SensorFov != null)
+        {
+            var sensor = pkt.SensorFov;
+            var tag = $"    <sensor azimuth=\"{unchecked((int)sensor.AzimuthDeg)}\"";
+            if (sensor.HasRangeM) tag += $" range=\"{unchecked((int)sensor.RangeM)}\"";
+            tag += $" fov=\"{unchecked((int)sensor.FovHorizontalDeg)}\"";
+            if (sensor.FovVerticalDeg != 0) tag += $" vfov=\"{unchecked((int)sensor.FovVerticalDeg)}\"";
+            tag += $" elevation=\"{sensor.ElevationDeg}\"";
+            if (sensor.RollDeg != 0) tag += $" roll=\"{sensor.RollDeg}\"";
+            if (!string.IsNullOrEmpty(sensor.Model)) tag += $" model=\"{Esc(sensor.Model)}\"";
+            sb.AppendLine(tag + "/>");
+        }
+
         switch (pkt.PayloadVariantCase)
         {
             case TAKPacketV2.PayloadVariantOneofCase.Chat:

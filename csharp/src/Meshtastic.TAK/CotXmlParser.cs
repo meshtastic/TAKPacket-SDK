@@ -689,6 +689,47 @@ public class CotXmlParser
                             martiDests.Add(cs);
                     }
                     break;
+                // <environment temperature=".." windDirection=".." windSpeed=".."/>
+                // Payload-agnostic weather annotation. Set only when at least one
+                // attribute parses, so an element with none keeps an earlier one.
+                case "environment":
+                    var envTemp = ToDoubleOrNull(el.Attribute("temperature")?.Value);
+                    var envWindDir = ToIntOrNull(el.Attribute("windDirection")?.Value);
+                    var envWindSpeed = ToDoubleOrNull(el.Attribute("windSpeed")?.Value);
+                    if (envTemp.HasValue || envWindDir.HasValue || envWindSpeed.HasValue)
+                    {
+                        // uint32 fields take the Int32's two's-complement bits, which is
+                        // what Wire writes for Kotlin's Int, so the bytes match Kotlin's.
+                        pkt.Environment = new TAKEnvironment
+                        {
+                            TemperatureCX10 = envTemp.HasValue ? RoundToInt(envTemp.Value * 10) : 0,
+                            WindDirectionDeg = envWindDir.HasValue ? unchecked((uint)envWindDir.Value) : 0,
+                            WindSpeedCmS = envWindSpeed.HasValue ? unchecked((uint)RoundToInt(envWindSpeed.Value * 100)) : 0,
+                        };
+                    }
+                    break;
+                // <sensor azimuth=".." range=".." fov=".." vfov=".." elevation=".."
+                // roll=".." model=".."/> FOV cone, payload-agnostic. Present even with
+                // no attributes, and the last one wins. type is never read from the
+                // XML: it is always inferred from model.
+                case "sensor":
+                    var sensorModel = el.Attribute("model")?.Value ?? "";
+                    var sensorFov = new SensorFov
+                    {
+                        Type = InferSensorType(sensorModel),
+                        AzimuthDeg = unchecked((uint)(RoundedAttr(el, "azimuth") ?? 270)),
+                        FovHorizontalDeg = unchecked((uint)(RoundedAttr(el, "fov") ?? 45)),
+                        FovVerticalDeg = unchecked((uint)(RoundedAttr(el, "vfov") ?? 0)),
+                        ElevationDeg = RoundedAttr(el, "elevation") ?? 0,
+                        RollDeg = RoundedAttr(el, "roll") ?? 0,
+                        Model = sensorModel,
+                    };
+                    // range_m is proto3 optional: left unset unless it parses, so a
+                    // range="0" stays present and a missing one stays absent.
+                    if (RoundedAttr(el, "range") is { } sensorRange)
+                        sensorFov.RangeM = unchecked((uint)sensorRange);
+                    pkt.SensorFov = sensorFov;
+                    break;
                 case "link":
                     HandleLink(el);
                     break;
@@ -1241,6 +1282,83 @@ public class CotXmlParser
             return null;
         }
         return StartEpoch.Truncate(seconds);
+    }
+
+    // --- <environment> / <sensor> number parsing ---------------------------
+    // These follow the Kotlin parser's String.toDoubleOrNull(), String.toIntOrNull()
+    // and Double.roundToInt(), so ordinary input serializes to Kotlin's bytes.
+
+    private static readonly Regex PlainDoubleRegex = new(
+        @"^[\t\n\v\f\r ]*[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[\t\n\v\f\r ]*\z",
+        RegexOptions.Compiled);
+
+    private static readonly Regex PlainIntRegex = new(@"^[+-]?[0-9]+\z", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Kotlin's <c>String.toDoubleOrNull()</c> for ordinary decimals: optional
+    /// surrounding ASCII whitespace, an optional sign, digits with an optional
+    /// fraction, and an optional exponent. Null for anything else, including the
+    /// NaN and Infinity spellings (which fail the pattern) and an overflow such as
+    /// <c>1e400</c> (which fails the finiteness check).
+    /// </summary>
+    private static double? ToDoubleOrNull(string? s)
+    {
+        // Deliberate deviation: Kotlin keeps NaN and Infinity (roundToInt then throws or clamps); this reads both as absent.
+        if (s == null || !PlainDoubleRegex.IsMatch(s)) return null;
+        return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) && double.IsFinite(d)
+            ? d : null;
+    }
+
+    /// <summary>
+    /// Kotlin's <c>String.toIntOrNull()</c>, limited to ASCII digits: one optional
+    /// leading sign, then digits only, no whitespace, and the value must fit an Int32.
+    /// </summary>
+    private static int? ToIntOrNull(string? s) =>
+        s != null && PlainIntRegex.IsMatch(s)
+            && int.TryParse(s, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var v)
+            ? v : null;
+
+    /// <summary>
+    /// Kotlin's <c>Double.roundToInt()</c>, which is Java's <c>Math.round</c>: a half
+    /// goes toward positive infinity (-2.5 gives -2), clamped to the Int32 range. Not
+    /// <c>Math.Round</c>, whose default is banker's rounding. Taken from the fractional
+    /// part rather than as <c>floor(d + 0.5)</c>, because that sum rounds
+    /// 0.49999999999999994 up to 1 where Java gives 0.
+    /// </summary>
+    private static int RoundToInt(double d)
+    {
+        var whole = Math.Floor(d);
+        var r = d - whole >= 0.5 ? whole + 1 : whole;
+        if (r >= int.MaxValue) return int.MaxValue;
+        if (r <= int.MinValue) return int.MinValue;
+        return (int)r;
+    }
+
+    /// <summary>The named attribute parsed as a double and rounded, or null.</summary>
+    private static int? RoundedAttr(XElement el, string name) =>
+        ToDoubleOrNull(el.Attribute(name)?.Value) is { } d ? RoundToInt(d) : null;
+
+    /// <summary>
+    /// Coarse sensor category inferred from a free-form model string, matching
+    /// Kotlin's <c>inferSensorType</c>. Substrings are tested in order, so
+    /// "FLIR radar" is Thermal.
+    /// </summary>
+    private static SensorFov.Types.SensorType InferSensorType(string? model)
+    {
+        if (string.IsNullOrEmpty(model)) return SensorFov.Types.SensorType.Unspecified;
+        var m = model.ToLowerInvariant();
+        if (m.Contains("flir") || m.Contains("thermal") || m.Contains("boson"))
+            return SensorFov.Types.SensorType.Thermal;
+        if (m.Contains("laser") || m.Contains("lrf"))
+            return SensorFov.Types.SensorType.Laser;
+        if (m.Contains("nvg") || m.Contains("night"))
+            return SensorFov.Types.SensorType.Nvg;
+        // Only "radar" and "rf-": a bare "rf" is too common a substring.
+        if (m.Contains("radar") || m.Contains("rf-"))
+            return SensorFov.Types.SensorType.Rf;
+        if (m.Contains("cam") || m.Contains("eo-") || m.Contains("optic"))
+            return SensorFov.Types.SensorType.Camera;
+        return SensorFov.Types.SensorType.Other;
     }
 
     private static uint ComputeStaleSeconds(string timeStr, string staleStr)
