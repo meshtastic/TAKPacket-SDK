@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -30,6 +31,31 @@ _GEO_SRC_MAP = {"GPS": 1, "USER": 2, "NETWORK": 3}
 # explicit offset before parsing.
 _TRAILING_ZULU = re.compile(r"[Zz]$")
 
+_INT32_MIN = -(2**31)
+_INT32_MAX = 2**31 - 1
+
+
+def _round_to_int(d: float) -> int:
+    """Round to the nearest integer as Kotlin's ``Double.roundToInt()`` does.
+
+    That is Java's ``Math.round``: a half goes toward positive infinity (2.5
+    gives 3, -2.5 gives -2), and the result is clamped to the Int32 range. Not
+    ``round()``, which rounds a half to the even neighbor (2.5 gives 2), and not
+    ``int()``, which truncates (-29.667 gives -29 where Kotlin gives -30).
+    Taken from the fractional part rather than as ``math.floor(d + 0.5)``,
+    because that sum rounds the largest double below 0.5 up to 1 where Java
+    gives 0. NaN gives 0, as Java's ``Math.round`` does (Kotlin's
+    ``roundToInt`` throws instead).
+    """
+    if math.isnan(d):
+        return 0
+    if d >= _INT32_MAX:
+        return _INT32_MAX
+    if d <= _INT32_MIN:
+        return _INT32_MIN
+    whole = math.floor(d)
+    return whole + 1 if d - whole >= 0.5 else whole
+
 
 def _scale_latitude_i(lat: float) -> int:
     """Scale a latitude degree value into protobuf's ``sfixed32 latitude_i = lat * 1e7``,
@@ -38,13 +64,13 @@ def _scale_latitude_i(lat: float) -> int:
     cast, producing a plausible-but-wrong coordinate on the wire.
     """
     clamped = max(-90.0, min(90.0, lat))
-    return int(round(clamped * 1e7))
+    return _round_to_int(clamped * 1e7)
 
 
 def _scale_longitude_i(lon: float) -> int:
     """Scale a longitude degree value into ``sfixed32 longitude_i``, clamped to ±180°."""
     clamped = max(-180.0, min(180.0, lon))
-    return int(round(clamped * 1e7))
+    return _round_to_int(clamped * 1e7)
 
 _ROUTE_METHOD_MAP = {
     "Driving": 1, "Walking": 2, "Flying": 3, "Swimming": 4, "Watercraft": 5,
@@ -224,7 +250,9 @@ class CotXmlParser:
         ``altitude`` is meters HAE (may be negative), shape radii are cm,
         range is cm, and bearing is degrees * 100. ATAK's stationary sentinels
         (negative ``speed`` / ``course``) are clamped to 0 for the uint32
-        fields.
+        fields. Every scaled value is rounded to the nearest integer as
+        Kotlin's ``roundToInt()`` does, a half going toward positive infinity,
+        so each field gets the same integer as in the Kotlin binding's protobuf.
 
         A bare event with no ``<detail>``, and any event whose detail matches
         no variant, becomes an implicit PLI (no payload variant set) — there is
@@ -280,7 +308,7 @@ class CotXmlParser:
         if point is not None:
             pkt.latitude_i = _scale_latitude_i(float(point.get("lat", "0")))
             pkt.longitude_i = _scale_longitude_i(float(point.get("lon", "0")))
-            pkt.altitude = int(float(point.get("hae", "0")))
+            pkt.altitude = _round_to_int(float(point.get("hae", "0")))
 
         # Detail elements
         detail = root.find("detail")
@@ -568,8 +596,8 @@ class CotXmlParser:
                 # ATAK writes speed="-1.0" for stationary / unknown; clamp
                 # negatives to 0 so protobuf serialization doesn't blow up
                 # with an OverflowError or corrupt the wire as 2^32 - N.
-                pkt.speed = max(0, int(float(elem.get("speed", "0")) * 100))
-                pkt.course = max(0, int(float(elem.get("course", "0")) * 100))
+                pkt.speed = max(0, _round_to_int(float(elem.get("speed", "0")) * 100))
+                pkt.course = max(0, _round_to_int(float(elem.get("course", "0")) * 100))
             elif tag == "takv":
                 pkt.tak_version = elem.get("version", "")
                 pkt.tak_device = elem.get("device", "")
@@ -584,7 +612,7 @@ class CotXmlParser:
             elif tag == "_radio":
                 rssi_str = elem.get("rssi")
                 if rssi_str:
-                    rssi_x10 = int(float(rssi_str) * 10)
+                    rssi_x10 = _round_to_int(float(rssi_str) * 10)
                     has_aircraft = True
                 gps_flag = elem.get("gps") == "true"
             elif tag == "_aircot_":
@@ -681,8 +709,8 @@ class CotXmlParser:
                     try:
                         major_m = float(ellipse.get("major", "0"))
                         minor_m = float(ellipse.get("minor", "0"))
-                        shape_major_cm = max(0, int(major_m * 100))
-                        shape_minor_cm = max(0, int(minor_m * 100))
+                        shape_major_cm = max(0, _round_to_int(major_m * 100))
+                        shape_minor_cm = max(0, _round_to_int(minor_m * 100))
                         shape_angle_deg = int(ellipse.get("angle", "360"))
                     except ValueError:
                         pass
@@ -696,7 +724,7 @@ class CotXmlParser:
             elif tag == "strokeWeight":
                 try:
                     w = float(elem.get("value", "0"))
-                    stroke_weight_x10 = max(0, int(w * 10))
+                    stroke_weight_x10 = max(0, _round_to_int(w * 10))
                 except ValueError:
                     pass
                 has_shape_data = True
@@ -723,7 +751,7 @@ class CotXmlParser:
                 has_shape_data = True
                 try:
                     dist = float(elem.get("distance", "0"))
-                    bullseye_distance_dm = max(0, int(dist * 10))
+                    bullseye_distance_dm = max(0, _round_to_int(dist * 10))
                 except ValueError:
                     pass
                 bullseye_bearing_ref = _BEARING_REF_MAP.get(elem.get("bearingRef", ""), 0)
@@ -741,14 +769,14 @@ class CotXmlParser:
             elif tag == "range":
                 try:
                     v = float(elem.get("value", "0"))
-                    rab_range_cm = max(0, int(v * 100))
+                    rab_range_cm = max(0, _round_to_int(v * 100))
                 except ValueError:
                     pass
                 has_rab_data = True
             elif tag == "bearing":
                 try:
                     v = float(elem.get("value", "0"))
-                    rab_bearing_cdeg = max(0, int(v * 100))
+                    rab_bearing_cdeg = max(0, _round_to_int(v * 100))
                 except ValueError:
                     pass
                 has_rab_data = True

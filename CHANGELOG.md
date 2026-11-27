@@ -151,6 +151,24 @@ One version covers all five bindings, so a release is a single tag and a single 
   bytes. Callers that sized `maxWireBytes` from the old documentation should
   use 225.
 
+- Python and Swift: `CotXmlParser` now rounds like Kotlin, with a half going
+  toward positive infinity (Java's `Math.round`), so every scaled field gets
+  the same integer as in Kotlin's protobuf. Python truncated altitude, speed,
+  course, RSSI, ellipse radii, stroke weight, bullseye distance and range and
+  bearing, so `course="0.125"` gave 12 where Kotlin gives 13, and it rounded
+  latitude and longitude half to even. Swift truncated the same fields apart
+  from speed and course, and rounded a negative half away from zero, so
+  `lon="-77.03530015"` gave -770353002 where Kotlin gives -770353001. In both,
+  `hae="-29.667"` gave -29 where Kotlin gives -30, and three fixtures
+  (`pli_full`, `chat_taktalk_dm`, `chat_taktalk_voice_profile`) parsed to a
+  different altitude than their Kotlin goldens.
+
+  Out-of-range and NaN values no longer crash Swift or make Python raise.
+  Swift stopped with a fatal conversion error on `hae="1e10"`, `hae="NaN"` or
+  `speed="1e10"`, and Python raised `ValueError` or `OverflowError`. A value
+  too large for its field now clamps to the Int32 range, as in Kotlin, and a
+  NaN gives 0, where Kotlin's parser rejects the event.
+
 ## [0.10.0] - 2026-10-31
 
 ### Added
