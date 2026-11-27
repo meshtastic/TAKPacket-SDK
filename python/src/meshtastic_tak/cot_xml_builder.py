@@ -63,6 +63,12 @@ def _argb_to_signed(argb: int) -> int:
     return argb - 0x100000000 if argb >= 0x80000000 else argb
 
 
+def _as_int32(value: int) -> int:
+    """Read a uint32 field as the signed int32 that Kotlin's ``Int`` prints."""
+    value &= 0xFFFFFFFF
+    return value - 0x100000000 if value >= 0x80000000 else value
+
+
 # Tag tokens that can never appear inside one <detail> element's content.
 _RAW_DETAIL_FOREIGN_TOKENS = ("<event", "</event", "<detail", "</detail")
 
@@ -199,6 +205,36 @@ class CotXmlBuilder:
 
         if packet.device_callsign:
             lines.append(f'    <uid Droid="{escape(packet.device_callsign)}"/>')
+
+        # Weather annotation, for any event type. temperature is always written;
+        # a zero wind direction or speed reads as unset.
+        if packet.HasField("environment"):
+            env = packet.environment
+            parts = [f'temperature="{env.temperature_c_x10 / 10.0}"']
+            if env.wind_direction_deg:
+                parts.append(f'windDirection="{_as_int32(env.wind_direction_deg)}"')
+            if env.wind_speed_cm_s:
+                parts.append(f'windSpeed="{_as_int32(env.wind_speed_cm_s) / 100.0}"')
+            lines.append(f'    <environment {" ".join(parts)}/>')
+
+        # Sensor cone geometry, for any event type. range is written whenever it
+        # is present, even as 0; absent, the receiver applies ATAK-CIV's 100 m
+        # default. A zero vfov or roll reads as unset. No type attribute: the
+        # parser infers the type from model.
+        if packet.HasField("sensor_fov"):
+            s = packet.sensor_fov
+            parts = [f'azimuth="{_as_int32(s.azimuth_deg)}"']
+            if s.HasField("range_m"):
+                parts.append(f'range="{_as_int32(s.range_m)}"')
+            parts.append(f'fov="{_as_int32(s.fov_horizontal_deg)}"')
+            if s.fov_vertical_deg:
+                parts.append(f'vfov="{_as_int32(s.fov_vertical_deg)}"')
+            parts.append(f'elevation="{s.elevation_deg}"')
+            if s.roll_deg:
+                parts.append(f'roll="{s.roll_deg}"')
+            if s.model:
+                parts.append(f'model="{escape(s.model)}"')
+            lines.append(f'    <sensor {" ".join(parts)}/>')
 
         # Payload-specific
         which = packet.WhichOneof("payload_variant")

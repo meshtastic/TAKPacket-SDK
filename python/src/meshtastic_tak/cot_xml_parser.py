@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -45,6 +46,95 @@ def _scale_longitude_i(lon: float) -> int:
     """Scale a longitude degree value into ``sfixed32 longitude_i``, clamped to ±180°."""
     clamped = max(-180.0, min(180.0, lon))
     return int(round(clamped * 1e7))
+
+
+# Numeric helpers for <environment> / <sensor>, matching Kotlin's parse of them.
+_INT32_MIN = -(2 ** 31)
+_INT32_MAX = 2 ** 31 - 1
+_DECIMAL_RE = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
+_INTEGER_RE = re.compile(r"[+-]?[0-9]+")
+
+
+def _parse_double(raw: str | None) -> float | None:
+    """Kotlin ``String.toDoubleOrNull()`` for ordinary decimals.
+
+    Accepts optional surrounding ASCII whitespace, an optional sign, and digits
+    with an optional fraction and exponent (``"45"``, ``"-5"``, ``".5"``,
+    ``"1e3"``). Returns ``None`` for anything else.
+    """
+    if raw is None:
+        return None
+    text = raw.strip(" \t\n\r\f\v")
+    if not _DECIMAL_RE.fullmatch(text):
+        return None
+    value = float(text)
+    # Kotlin throws on NaN and clamps Infinity; this port treats both as absent.
+    return value if math.isfinite(value) else None
+
+
+def _parse_int(raw: str | None) -> int | None:
+    """Kotlin ``String.toIntOrNull()``: one optional sign, then ASCII digits only.
+
+    No whitespace and no fraction (``" 270"`` and ``"270.5"`` give ``None``),
+    and the value must fit int32.
+    """
+    if raw is None or not _INTEGER_RE.fullmatch(raw):
+        return None
+    significant = raw.lstrip("+-").lstrip("0")
+    # Over 10 significant digits cannot fit int32, and could trip int()'s digit limit.
+    if len(significant) > 10:
+        return None
+    value = int(significant or "0")
+    if raw[0] == "-":
+        value = -value
+    return value if _INT32_MIN <= value <= _INT32_MAX else None
+
+
+def _round_to_int(value: float) -> int:
+    """Kotlin ``Double.roundToInt()``: ``floor(value + 0.5)``, clamped to int32.
+
+    Halves round up, so ``-2.5`` gives ``-2``. Taken from the fractional part, as
+    Java's ``Math.round`` is, so the ``+ 0.5`` cannot itself round up
+    (``0.49999999999999994`` gives 0).
+    """
+    if value >= _INT32_MAX:
+        return _INT32_MAX
+    if value <= _INT32_MIN:
+        return _INT32_MIN
+    whole = math.floor(value)
+    return whole + 1 if value - whole >= 0.5 else whole
+
+
+def _rounded(raw: str | None) -> int | None:
+    """Kotlin ``raw?.toDoubleOrNull()?.roundToInt()``."""
+    value = _parse_double(raw)
+    return None if value is None else _round_to_int(value)
+
+
+def _as_uint32(value: int) -> int:
+    """The int32's two's-complement bits, which is what Wire writes for a
+    negative Kotlin ``Int`` in a uint32 field."""
+    return value & 0xFFFFFFFF
+
+
+def _infer_sensor_type(model: str | None) -> int:
+    """Kotlin ``inferSensorType``: the first matching model substring wins."""
+    if not model:
+        return atak_pb2.SensorFov.SensorType_Unspecified
+    m = model.lower()
+    if "flir" in m or "thermal" in m or "boson" in m:
+        return atak_pb2.SensorFov.SensorType_Thermal
+    if "laser" in m or "lrf" in m:
+        return atak_pb2.SensorFov.SensorType_Laser
+    if "nvg" in m or "night" in m:
+        return atak_pb2.SensorFov.SensorType_Nvg
+    # Only "rf-": a bare "rf" is not Rf.
+    if "radar" in m or "rf-" in m:
+        return atak_pb2.SensorFov.SensorType_Rf
+    if "cam" in m or "eo-" in m or "optic" in m:
+        return atak_pb2.SensorFov.SensorType_Camera
+    return atak_pb2.SensorFov.SensorType_Other
+
 
 _ROUTE_METHOD_MAP = {
     "Driving": 1, "Walking": 2, "Flying": 3, "Swimming": 4, "Watercraft": 5,
@@ -671,6 +761,47 @@ class CotXmlParser:
                     cs = dest.get("callsign", "")
                     if cs:
                         marti_dests.append(cs)
+            # --- Weather / sensor-cone annotations (any event type) ---
+            elif tag == "environment":
+                temperature = _parse_double(elem.get("temperature"))
+                wind_direction = _parse_int(elem.get("windDirection"))
+                wind_speed = _parse_double(elem.get("windSpeed"))
+                # Set only when an attribute parses; it then replaces any earlier
+                # <environment>, while one with nothing parseable leaves it alone.
+                if temperature is not None or wind_direction is not None or wind_speed is not None:
+                    env = atak_pb2.TAKEnvironment()
+                    if temperature is not None:
+                        env.temperature_c_x10 = _round_to_int(temperature * 10)
+                    if wind_direction is not None:
+                        env.wind_direction_deg = _as_uint32(wind_direction)
+                    if wind_speed is not None:
+                        env.wind_speed_cm_s = _as_uint32(_round_to_int(wind_speed * 100))
+                    pkt.environment.CopyFrom(env)
+            elif tag == "sensor":
+                # Present even with no attributes (azimuth then defaults to 270
+                # and fov to 45, as in ATAK-CIV); the last <sensor> wins. The type
+                # is inferred from model, never read from a type attribute.
+                model = elem.get("model", "")
+                azimuth = _rounded(elem.get("azimuth"))
+                sensor_range = _rounded(elem.get("range"))
+                fov = _rounded(elem.get("fov"))
+                vfov = _rounded(elem.get("vfov"))
+                elevation = _rounded(elem.get("elevation"))
+                roll = _rounded(elem.get("roll"))
+                sensor = atak_pb2.SensorFov(
+                    type=_infer_sensor_type(model),
+                    azimuth_deg=_as_uint32(270 if azimuth is None else azimuth),
+                    fov_horizontal_deg=_as_uint32(45 if fov is None else fov),
+                    fov_vertical_deg=_as_uint32(0 if vfov is None else vfov),
+                    elevation_deg=0 if elevation is None else elevation,
+                    roll_deg=0 if roll is None else roll,
+                    model=model,
+                )
+                # optional uint32: no parseable range leaves it absent, while
+                # range="0" is present with 0.
+                if sensor_range is not None:
+                    sensor.range_m = _as_uint32(sensor_range)
+                pkt.sensor_fov.CopyFrom(sensor)
             elif tag == "link":
                 handle_link(elem)
             elif tag == "shape":
