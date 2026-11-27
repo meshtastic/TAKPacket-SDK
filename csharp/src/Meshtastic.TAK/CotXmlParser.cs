@@ -1373,11 +1373,18 @@ public class CotXmlParser
         return SensorFov.Types.SensorType.Other;
     }
 
+    /// <summary>
+    /// Seconds from the event's <c>time</c> to its <c>stale</c>, computed as Kotlin does: each
+    /// timestamp is rounded down to whole epoch seconds before subtracting, so 00.900 to 02.100
+    /// is 2 seconds, where truncating the 1.2-second difference gives 1. Zero when stale is not
+    /// after time, and capped at <see cref="int.MaxValue"/> (about 68 years): the Kotlin binding
+    /// keeps stale_seconds in a signed Int, so it reads anything larger back as negative.
+    /// </summary>
     private static uint ComputeStaleSeconds(string timeStr, string staleStr)
     {
         if (string.IsNullOrEmpty(timeStr) || string.IsNullOrEmpty(staleStr)) return 0;
         if (!DateTimeOffset.TryParse(timeStr, out var t) || !DateTimeOffset.TryParse(staleStr, out var s)) return 0;
-        var diff = (int)(s - t).TotalSeconds;
-        return diff > 0 ? (uint)diff : 0;
+        var diff = s.ToUnixTimeSeconds() - t.ToUnixTimeSeconds();
+        return diff > 0 ? (uint)Math.Min(diff, int.MaxValue) : 0;
     }
 }

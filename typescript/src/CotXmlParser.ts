@@ -680,14 +680,18 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
     }
   }
 
-  // Compute stale seconds
+  // Compute stale seconds as Kotlin does: each timestamp is rounded down to whole
+  // epoch seconds before subtracting, so 00.900 to 02.100 is 2 seconds, where
+  // rounding the 1.2-second difference gives 1. Capped at 2^31 - 1 (about 68
+  // years): the Kotlin binding keeps stale_seconds in a signed Int, so it reads
+  // anything larger back as negative.
   const timeStr = event["@_time"] ?? "";
   const staleStr = event["@_stale"] ?? "";
   let staleSeconds = 0;
   if (timeStr && staleStr) {
-    const t = new Date(timeStr).getTime();
-    const s = new Date(staleStr).getTime();
-    if (s > t) staleSeconds = Math.round((s - t) / 1000);
+    const t = Math.floor(new Date(timeStr).getTime() / 1000);
+    const s = Math.floor(new Date(staleStr).getTime() / 1000);
+    if (s > t) staleSeconds = Math.min(s - t, 0x7fffffff);
   }
 
   // Carry the event's `start` so a receiver can tell how old the report is.

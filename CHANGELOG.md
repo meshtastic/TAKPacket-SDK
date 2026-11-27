@@ -238,6 +238,24 @@ One version covers all five bindings, so a release is a single tag and a single 
   too large for its field now clamps to the Int32 range, as in Kotlin, and a
   NaN gives 0, where Kotlin's parser rejects the event.
 
+- All bindings: `CotXmlParser` computes `stale_seconds` the same way. C#,
+  Python, Swift and TypeScript now round `time` and `stale` each down to
+  whole epoch seconds before subtracting, as Kotlin does. C#, Python and
+  Swift truncated the difference and TypeScript rounded it, so they could be
+  a second off Kotlin whenever the two timestamps had different fractions:
+  `00.900` to `02.100` gave 1 where Kotlin gives 2, and TypeScript gave 2 for
+  `00.100` to `01.900` where Kotlin gives 1.
+
+  A span longer than about 68 years now caps at 2,147,483,647 seconds in all
+  five, as it already did in C#. Kotlin keeps `stale_seconds` in a signed
+  Int, so a receiver on the Kotlin binding reads a larger value as negative
+  and marks the event stale 45 seconds after it arrives. Kotlin's own parser
+  gave a negative `staleSeconds` for a span of 68 to 136 years, so those
+  events went stale 45 seconds after reaching another Kotlin client, and it
+  wrapped a longer span around to a shorter one: 174 years came out as about
+  38. Swift crashed on a span over about 136 years and Python raised
+  `ValueError` on one.
+
 ## [0.10.0] - 2026-10-31
 
 ### Added
