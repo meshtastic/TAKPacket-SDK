@@ -6,7 +6,7 @@ import type {
   TAKPacketV2, GeoChat, AircraftTrack, DrawnShape, Marker,
   RangeAndBearing, Route, RouteLink, CasevacReport, EmergencyAlert,
   TaskRequest, CotGeoPoint, ZMistEntry,
-  TakTalkMessage, TakTalkRoomData, TAKEnvironment, SensorFov,
+  TakTalkMessage, TakTalkRoomData, TAKEnvironment, SensorFov, TAKDetection,
 } from "./types.js";
 
 const TEAM_NAME_TO_ENUM: Record<string, number> = {
@@ -292,10 +292,17 @@ function roundToInt(d: number): number {
   return Math.min(INT32_MAX, Math.max(INT32_MIN, Math.round(d))) | 0;
 }
 
+/** A plain decimal rounded by {@link roundToInt}, or undefined. */
+function parseRounded(raw: string | undefined): number | undefined {
+  const d = parseDecimal(raw);
+  return d === undefined ? undefined : roundToInt(d);
+}
+
 // The uint32 fields below take the int32 as is: protobufjs writes it `>>> 0`,
-// the same bits Wire writes for Kotlin's Int. Neither message goes through
-// stripZeros, which would drop a present rangeM of 0; protobufjs 8 already
-// skips the other zero fields on encode.
+// the same bits Wire writes for Kotlin's Int. None of these messages goes
+// through stripZeros: it would drop a present rangeM of 0, and keeping every
+// field lets a parsed message compare equal to a decoded one. protobufjs 8
+// already skips zero fields on encode.
 
 /** One `<environment>` element, or undefined when none of its attributes parses. */
 function parseEnvironment(node: unknown): TAKEnvironment | undefined {
@@ -317,10 +324,7 @@ function parseEnvironment(node: unknown): TAKEnvironment | undefined {
  * back to ATAK-CIV's 270 and 45, and `type` is inferred from `model`, never read.
  */
 function parseSensor(node: unknown): SensorFov {
-  const whole = (name: string): number | undefined => {
-    const d = parseDecimal(attrOf(node, name));
-    return d === undefined ? undefined : roundToInt(d);
-  };
+  const whole = (name: string): number | undefined => parseRounded(attrOf(node, name));
   const model = attrOf(node, "model") ?? "";
   const range = whole("range");
   return {
@@ -336,6 +340,62 @@ function parseSensor(node: unknown): SensorFov {
   };
 }
 
+// --- <__detection> ----------------------------------------------------------
+
+// TAKDetection enum tokens, indexed by value: each value's name in lowercase
+// snake_case. CotXmlBuilder mirrors these tables.
+const DETECTION_KINDS = ["unspecified", "uas", "uas_operator", "uas_home", "person", "vehicle", "other"];
+const DETECTION_STATES = ["unspecified", "new", "active", "coasting", "lost"];
+const DETECTION_TRENDS = ["unspecified", "closing", "steady", "opening"];
+const DETECTION_UAS_ID_TYPES = ["unspecified", "serial_number", "caa_registration", "utm_assigned", "specific_session"];
+const DETECTION_UAS_STATUSES = ["unspecified", "ground", "airborne", "emergency", "system_failure"];
+/** TAKDetection.Source tokens by bit position: index i names the bit `1 << i`. */
+const DETECTION_SOURCES = ["remote_id", "rf", "acoustic", "radar", "optical", "thermal", "seismic", "magnetic"];
+const DETECTION_KIND_UAS = 1;
+/** CoT's "unknown" circular error: a `<point ce>` this large carries no cep. */
+const UNKNOWN_CE = 9999999;
+const UAS_ID_MAX_CODE_POINTS = 20;
+
+/** An enum token's value, ignoring case; an absent or unknown token is 0 (unspecified). */
+function detectionToken(raw: string | undefined, tokens: readonly string[]): number {
+  const i = raw === undefined ? -1 : tokens.indexOf(raw.trim().toLowerCase());
+  return i < 0 ? 0 : i;
+}
+
+/**
+ * One `<__detection>` element. Present even with no attributes: absent numbers
+ * and unknown tokens read as 0. `pointCe` is the event's `<point ce>`, which
+ * stands in for a missing `cep`.
+ */
+function parseDetection(node: unknown, pointCe: string | undefined): TAKDetection {
+  const kind = detectionToken(attrOf(node, "kind"), DETECTION_KINDS);
+  let sources = 0;
+  // Split on ASCII whitespace, as Java's `\s` does; unknown tokens are skipped.
+  for (const token of (attrOf(node, "sources") ?? "").trim().split(/[\t\n\v\f\r ]+/)) {
+    const bit = DETECTION_SOURCES.indexOf(token.toLowerCase());
+    if (bit >= 0) sources |= 1 << bit;
+  }
+  const ce = parseRounded(pointCe);
+  const cep = parseRounded(attrOf(node, "cep")) ?? (ce !== undefined && ce < UNKNOWN_CE ? ce : 0);
+  return {
+    kind,
+    sources,
+    confidence: Math.min(100, Math.max(0, parseRounded(attrOf(node, "confidence")) ?? 0)),
+    state: detectionToken(attrOf(node, "state"), DETECTION_STATES),
+    trend: detectionToken(attrOf(node, "trend"), DETECTION_TRENDS),
+    count: Math.max(0, parseRounded(attrOf(node, "count")) ?? 0),
+    sensorAnchored: attrOf(node, "sensorAnchored")?.trim().toLowerCase() === "true",
+    cepM: Math.max(0, cep),
+    rssiDbm: parseRounded(attrOf(node, "rssi")) ?? 0,
+    // Cut by code points, so a character outside the BMP is never split.
+    uasId: kind === DETECTION_KIND_UAS
+      ? Array.from(attrOf(node, "uasId") ?? "").slice(0, UAS_ID_MAX_CODE_POINTS).join("")
+      : "",
+    uasIdType: detectionToken(attrOf(node, "uasIdType"), DETECTION_UAS_ID_TYPES),
+    uasStatus: detectionToken(attrOf(node, "uasStatus"), DETECTION_UAS_STATUSES),
+  };
+}
+
 /**
  * Parse a CoT XML event string into a {@link TAKPacketV2} data object.
  *
@@ -345,8 +405,8 @@ function parseSensor(node: unknown): SensorFov {
  * drawn shape, marker, range-and-bearing, route, casevac, emergency, task, or
  * TAKTALK message/room. An event with no recognized payload (and an `a-f-*`
  * type) yields an implicit PLI: a packet with no payload variant set. Optional
- * top-level annotations (`environment`, `sensorFov`, `marti` directed-routing
- * recipients) attach to any event type.
+ * top-level annotations (`environment`, `sensorFov`, `detection`, `marti`
+ * directed-routing recipients) attach to any event type.
  *
  * @remarks
  * Field values are converted to the protobuf wire units: `latitudeI`/
@@ -1250,6 +1310,11 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   }
   const sensors = toArray<unknown>(detail.sensor);
   if (sensors.length > 0) pkt.sensorFov = parseSensor(sensors[sensors.length - 1]);
+  // Passive-sensor detection, payload-agnostic too. The last <__detection> wins.
+  const detections = toArray<unknown>(detail.__detection);
+  if (detections.length > 0) {
+    pkt.detection = parseDetection(detections[detections.length - 1], attrOf(point, "ce"));
+  }
 
   // Directed-routing recipients. Only attach the Marti message when there
   // is at least one destination — an empty marti is the same as no marti

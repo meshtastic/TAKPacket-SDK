@@ -49,6 +49,7 @@ describe("RoundTrip", () => {
     // decoded messages compare whole.
     expect(decompressed.environment).toEqual(packet.environment);
     expect(decompressed.sensorFov).toEqual(packet.sensorFov);
+    expect(decompressed.detection).toEqual(packet.detection);
 
     // Payload-specific field assertions
     if (packet.chat) {
