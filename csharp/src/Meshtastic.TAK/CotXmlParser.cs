@@ -22,7 +22,10 @@ namespace Meshtastic.TAK;
 /// to degrees×1e7 (clamped to the legal ±90°/±180° range), speed to cm/s, course
 /// to degrees×100, shape radii to centimeters, altitude to meters HAE (may be
 /// negative). ATAK's stationary sentinels (e.g. <c>speed="-1.0"</c>) are clamped
-/// to 0 before the unsigned cast. All numeric parsing uses the invariant culture.</para>
+/// to 0 before the unsigned cast. All numeric parsing uses the invariant culture.
+/// Every scaled value is rounded to the nearest integer as Kotlin's
+/// <c>roundToInt()</c> does, a half going toward positive infinity, so each field
+/// gets the same integer as in the Kotlin binding's protobuf.</para>
 /// <para>Security: input containing a <c>&lt;!DOCTYPE&gt;</c> or
 /// <c>&lt;!ENTITY&gt;</c> declaration is rejected up front to prevent XXE and
 /// entity-expansion attacks.</para>
@@ -96,7 +99,7 @@ public class CotXmlParser
     private static int ScaleLatitudeI(double lat)
     {
         var clamped = Math.Max(-90.0, Math.Min(90.0, lat));
-        return (int)Math.Round(clamped * 1e7);
+        return RoundToInt(clamped * 1e7);
     }
 
     /// <summary>
@@ -105,7 +108,26 @@ public class CotXmlParser
     private static int ScaleLongitudeI(double lon)
     {
         var clamped = Math.Max(-180.0, Math.Min(180.0, lon));
-        return (int)Math.Round(clamped * 1e7);
+        return RoundToInt(clamped * 1e7);
+    }
+
+    /// <summary>
+    /// Kotlin's <c>Double.roundToInt()</c>, which is Java's <c>Math.round</c>: a half
+    /// goes toward positive infinity (2.5 gives 3, -2.5 gives -2), clamped to the Int32
+    /// range. Not <c>Math.Round</c>, whose default is banker's rounding (2.5 gives 2), and
+    /// not a cast, which truncates (-29.667 gives -29 where Kotlin gives -30). Taken from
+    /// the fractional part rather than as <c>floor(d + 0.5)</c>, because that sum rounds
+    /// the largest double below 0.5 up to 1 where Java gives 0. NaN gives 0, as Java's
+    /// <c>Math.round</c> does (Kotlin's <c>roundToInt</c> throws instead).
+    /// </summary>
+    private static int RoundToInt(double d)
+    {
+        if (double.IsNaN(d)) return 0;
+        var whole = Math.Floor(d);
+        var r = d - whole >= 0.5 ? whole + 1 : whole;
+        if (r >= int.MaxValue) return int.MaxValue;
+        if (r <= int.MinValue) return int.MinValue;
+        return (int)r;
     }
 
     // --- CasevacReport / EmergencyAlert / TaskRequest mappings -----------
@@ -310,7 +332,7 @@ public class CotXmlParser
         {
             pkt.LatitudeI = ScaleLatitudeI(double.Parse(point.Attribute("lat")?.Value ?? "0", CultureInfo.InvariantCulture));
             pkt.LongitudeI = ScaleLongitudeI(double.Parse(point.Attribute("lon")?.Value ?? "0", CultureInfo.InvariantCulture));
-            pkt.Altitude = (int)double.Parse(point.Attribute("hae")?.Value ?? "0", CultureInfo.InvariantCulture);
+            pkt.Altitude = RoundToInt(double.Parse(point.Attribute("hae")?.Value ?? "0", CultureInfo.InvariantCulture));
         }
 
         var detail = evt.Element("detail");
@@ -568,8 +590,8 @@ public class CotXmlParser
                     // huge value). Clamp to 0 first.
                     var spdCs = double.Parse(el.Attribute("speed")?.Value ?? "0", CultureInfo.InvariantCulture) * 100;
                     var crsCs = double.Parse(el.Attribute("course")?.Value ?? "0", CultureInfo.InvariantCulture) * 100;
-                    pkt.Speed = (uint)Math.Max(0, Math.Round(spdCs));
-                    pkt.Course = (uint)Math.Max(0, Math.Round(crsCs));
+                    pkt.Speed = (uint)Math.Max(0, RoundToInt(spdCs));
+                    pkt.Course = (uint)Math.Max(0, RoundToInt(crsCs));
                     break;
                 case "takv":
                     pkt.TakVersion = el.Attribute("version")?.Value ?? "";
@@ -586,7 +608,7 @@ public class CotXmlParser
                     break;
                 case "_radio":
                     if (el.Attribute("rssi")?.Value is { } rssi)
-                    { rssiX10 = (int)(double.Parse(rssi, CultureInfo.InvariantCulture) * 10); hasAircraft = true; }
+                    { rssiX10 = RoundToInt(double.Parse(rssi, CultureInfo.InvariantCulture) * 10); hasAircraft = true; }
                     gps = el.Attribute("gps")?.Value == "true";
                     break;
                 case "_aircot_":
@@ -699,8 +721,8 @@ public class CotXmlParser
                     {
                         var majorM = double.Parse(ellipse.Attribute("major")?.Value ?? "0", CultureInfo.InvariantCulture);
                         var minorM = double.Parse(ellipse.Attribute("minor")?.Value ?? "0", CultureInfo.InvariantCulture);
-                        shapeMajorCm = (uint)Math.Max(0, majorM * 100);
-                        shapeMinorCm = (uint)Math.Max(0, minorM * 100);
+                        shapeMajorCm = (uint)Math.Max(0, RoundToInt(majorM * 100));
+                        shapeMinorCm = (uint)Math.Max(0, RoundToInt(minorM * 100));
                         if (uint.TryParse(ellipse.Attribute("angle")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ang))
                             shapeAngleDeg = ang;
                     }
@@ -713,7 +735,7 @@ public class CotXmlParser
                     break;
                 case "strokeWeight":
                     if (double.TryParse(el.Attribute("value")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var sw))
-                        strokeWeightX10 = (uint)Math.Max(0, sw * 10);
+                        strokeWeightX10 = (uint)Math.Max(0, RoundToInt(sw * 10));
                     hasShapeData = true;
                     break;
                 case "fillColor":
@@ -737,7 +759,7 @@ public class CotXmlParser
                 case "bullseye":
                     hasShapeData = true;
                     if (double.TryParse(el.Attribute("distance")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var dist))
-                        bullseyeDistanceDm = (uint)Math.Max(0, dist * 10);
+                        bullseyeDistanceDm = (uint)Math.Max(0, RoundToInt(dist * 10));
                     bullseyeBearingRef = BearingRefMap.GetValueOrDefault(
                         el.Attribute("bearingRef")?.Value ?? "", 0u);
                     uint flags = 0;
@@ -750,12 +772,12 @@ public class CotXmlParser
                     break;
                 case "range":
                     if (double.TryParse(el.Attribute("value")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var rangeVal))
-                        rabRangeCm = (uint)Math.Max(0, rangeVal * 100);
+                        rabRangeCm = (uint)Math.Max(0, RoundToInt(rangeVal * 100));
                     hasRabData = true;
                     break;
                 case "bearing":
                     if (double.TryParse(el.Attribute("value")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var bearingVal))
-                        rabBearingCdeg = (uint)Math.Max(0, bearingVal * 100);
+                        rabBearingCdeg = (uint)Math.Max(0, RoundToInt(bearingVal * 100));
                     hasRabData = true;
                     break;
                 case "__routeinfo":
