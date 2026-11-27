@@ -112,6 +112,37 @@ One version covers all five bindings, so a release is a single tag and a single 
   bindings, decodes an unfragmented one as a PLI, since it does not know the
   arm; one without fragment support rejects a fragmented voice profile.
 
+- Kotlin, Swift, Python, C# and TypeScript: the `TAKPacketV2.detection`
+  annotation (tag 47), metadata for an event that reports an object a passive
+  sensor found: an uncrewed aircraft, its operator or home point, a person or a
+  vehicle. It carries the object's kind, the kinds of sensing behind the
+  report, confidence, track state and trend, a count, whether the point is the
+  sensor rather than the object, horizontal uncertainty and received power. Its
+  only identifier is the UAS ID that Remote ID broadcasts, kept only for kind
+  `uas`. Affiliation stays in the CoT type.
+
+  In CoT XML it is one `<__detection>` child of `<detail>`, parsed and built
+  the same way in all five bindings; `WIRE_FORMAT.md` has the attributes and
+  tokens. Its `cep` is also written as the event's `<point ce>`; events
+  without the annotation keep `ce="9999999"`. Four new fixtures cover it.
+
+  Wire-compatible: the field is optional, so an older peer skips it, and no
+  existing golden changes. Firmware never reads it (`FT_IGNORE` in
+  `atak.options`).
+
+  Kotlin: `TakPacketV2Data` gains a trailing `detection: DetectionData?`
+  parameter, so its all-args constructor and `copy()` change in
+  `kotlin/api/*.api`. Source-compatible, but code compiled against an earlier
+  version that calls either needs a recompile. `DetectionData` has a
+  Java-friendly `Builder`. Kotlin now uses `org.meshtastic:protobufs` 2.8.4,
+  up from the 2.8.3 under Changed; consumers that pin their own `protobufs`
+  need 2.8.4 or later.
+
+  The Swift, Python and C# generated classes are regenerated for it, which also
+  brings in `VoiceProfile`, `VoiceProfileRequest` and `TakTalkRoomRequest`
+  (tags 44-46) and `FieldMetadata.sensitive`: earlier submodule bumps never
+  regenerated them. Nothing hand-written in those bindings uses them yet.
+
 ### Changed
 
 - All bindings: `CotXmlBuilder` no longer writes `how="null"` for TAKTALK

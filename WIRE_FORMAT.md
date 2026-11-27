@@ -200,7 +200,15 @@ message TAKPacketV2 {
   string cot_type_str = 23;      // Fallback for unknown CoT types
   string remarks = 24;           // Optional <remarks> free text (non-chat types)
 
-  reserved 30;                        // former `bool pli` arm — PLI is now implicit
+  // Annotations: optional, and attach to any payload_variant
+  optional TAKEnvironment environment = 25;  // <environment>: temperature, wind
+  optional SensorFov sensor_fov = 26;        // <sensor>: field-of-view cone
+  optional uint32 start_epoch_lo14 = 43;     // Low 14 bits of the event's start, epoch seconds UTC
+  optional TAKDetection detection = 47;      // <__detection>: passive-sensor metadata (below)
+
+  reserved 27, 28, 30;           // 27, 28 kept for annotations; 30 was the `bool pli` arm
+  optional Marti marti = 29;     // <marti> directed-routing recipients; unset = broadcast
+
   oneof payload_variant {
     // (no `pli` arm) A packet with NO payload_variant set is an implicit
     // PLI position report. The old `bool pli = 30` was removed because the
@@ -218,11 +226,16 @@ message TAKPacketV2 {
     TaskRequest task = 40;            // Tasking / engagement request
     TakTalkMessage taktalk = 41;      // TAKTALK chat message (m-t-t)
     TakTalkRoomData taktalk_room = 42; // TAKTALK room/membership broadcast (y-)
+    VoiceProfile voice_profile = 44;   // TAKTALK synthetic speech profile
+    VoiceProfileRequest voice_profile_request = 45; // Request for a peer's voice profile (y-)
+    TakTalkRoomRequest taktalk_room_request = 46;   // Request for a room's name and roster (y-)
   }
 }
 ```
 
-The `payload_variant` oneof has 12 typed cases (tags 31–42); a packet with **no** `payload_variant` set is an implicit PLI position report, for 13 payload variants in total. The `CotType` enum covers 126 well-known CoT types (`CotType_Other` = 0 through `CotType_y` = 126). Unknown types use `CotType_Other` (0) with the raw type string in `cot_type_str`.
+The fields are listed in the order the `.proto` declares them, which is not tag order. That order reaches the wire: Kotlin's Wire runtime writes fields in declaration order, while the protoc-based runtimes (Swift, Python, C#, TypeScript) write them in tag order. A packet carrying `start_epoch_lo14` or `detection` therefore serializes with those fields in a different position per binding. Decoders accept either order, so frames interoperate, but such a packet's protobuf bytes are not identical across bindings.
+
+The `payload_variant` oneof has 15 typed cases (tags 31–42 and 44–46); a packet with **no** `payload_variant` set is an implicit PLI position report, for 16 payload variants in total. The `CotType` enum covers 126 well-known CoT types (`CotType_Other` = 0 through `CotType_y` = 126). Unknown types use `CotType_Other` (0) with the raw type string in `cot_type_str`.
 
 ### Field 24: Remarks
 
@@ -232,6 +245,27 @@ The top-level `string remarks = 24` field carries free-text annotations (`<remar
 - **Aircraft payloads** — remarks are synthesized from the structured ICAO/registration/flight/squawk fields on rebuild
 
 Remarks are optional. When the compressed packet would exceed the LoRa MTU, the `compressWithRemarksFallback()` helper automatically clears the remarks field and re-compresses before giving up.
+
+### Field 47: Detection
+
+`optional TAKDetection detection = 47` carries metadata for an event that reports an object a passive sensor found: an uncrewed aircraft (UAS), its operator or home point, a person or a vehicle. The event itself still carries the object's position, CoT type and links. Affiliation is not in the message: the CoT type carries it, and the producer chooses it. Its only identifier is `uas_id`, the UAS ID that Remote ID broadcasts, kept only when `kind` is `Kind_Uas`. `TAKDetection.UasIdType` and `TAKDetection.UasStatus` take their values from ASTM F3411.
+
+In CoT XML it is one self-closing child of `<detail>`, each attribute left out at its default:
+
+```xml
+<__detection kind="uas" sources="remote_id rf" confidence="87" state="active" trend="closing"
+    count="2" sensorAnchored="true" cep="12" rssi="-71" uasId="..." uasIdType="serial_number"
+    uasStatus="airborne"/>
+```
+
+- Enum attributes carry the value's suffix in lowercase snake_case (`Kind_UasOperator` is `uas_operator`). `sources` is a space-separated list of `Source` tokens, and its proto field is their bitwise OR. Reading ignores case, takes an unknown token as unspecified and skips one in `sources`.
+- Numbers are plain decimals, rounded half up. `confidence` is clamped to 0–100, and `count` and `cep` to zero or more.
+- `uasId` is cut to 20 characters and dropped unless `kind` is `uas`.
+- `cep` is also the event's `<point ce>`. The builder writes it there, and the parser reads `<point ce>` when the element has no `cep`. An event without the element keeps `ce="9999999"`.
+
+None of these names is one the parsers classify an event by, or that `CotMeshSanitizer` strips, so the annotation never changes an event's payload variant.
+
+Firmware never reads the field: `atak.options` marks it `FT_IGNORE`, so the stack-allocated nanopb `TAKPacketV2` does not grow.
 
 ## 7. Transport
 

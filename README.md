@@ -4,7 +4,7 @@
 
 Shared libraries for converting ATAK Cursor-on-Target (CoT) XML to Meshtastic's TAKPacketV2 protobuf format and compressing it for LoRa transport using zstd dictionary compression.
 
-This SDK is the single source of truth for CoT conversion and compression across all Meshtastic client platforms. Each language implementation produces interoperable compressed payloads, validated by 47 shared test fixtures and 1,000+ cross-platform tests.
+This SDK is the single source of truth for CoT conversion and compression across all Meshtastic client platforms. Each language implementation produces interoperable compressed payloads, validated by 51 shared test fixtures and 1,000+ cross-platform tests.
 
 ## Documentation
 
@@ -27,7 +27,7 @@ flowchart TD
     subgraph send ["Sending App"]
         A["CoT XML<br/>(~400-2300 B)"]
         B["TAKPacketV2<br/>Protobuf"]
-        C["Wire Payload<br/>(median 93B,<br/>max 211B)"]
+        C["Wire Payload<br/>(median 93B,<br/>max 193B)"]
         A -->|"CotMeshSanitizer<br/>→ CotXmlParser"| B
         B -->|TakCompressor| C
     end
@@ -59,6 +59,8 @@ flowchart TD
 - **Tasking requests** — engagement / observation / recon / rescue tasks with priority, status, target, assignee, and note
 - **Delete events** — fall into the PLI envelope with the `t-x-d-d` CoT type string
 
+Three optional annotations ride alongside any of these: `<environment>` (temperature and wind), `<sensor>` (a sensor's field-of-view cone) and `<__detection>` (what a passive sensor reports about the object the event stands for; see [`WIRE_FORMAT.md`](WIRE_FORMAT.md#field-47-detection)).
+
 ### 2. Compression Pipeline
 
 ```mermaid
@@ -80,11 +82,11 @@ Two pre-trained zstd dictionaries are used because aircraft and non-aircraft CoT
 
 | Metric | Value |
 |---|---|
-| Total test messages | 47 |
-| 100% under 237B LoRa MTU | ✅ YES |
+| Total test messages | 51 |
+| 100% under 225B LoRa MTU | ✅ YES |
 | Median compressed size | **93B** |
-| Median compression ratio | **7.0×** |
-| Worst case | 211B (89% of LoRa MTU — `route_itak_3wp`) |
+| Median compression ratio | **7.1×** |
+| Worst case | 193B (85% of LoRa MTU — `drawing_telestration`) |
 
 See [`testdata/compression-report.md`](testdata/compression-report.md) for the per-fixture breakdown, regenerated on every Kotlin test run.
 
@@ -804,7 +806,7 @@ Sampled from [`testdata/compression-report.md`](testdata/compression-report.md),
 | Route (iTAK, 3 waypoints) | `route_itak_3wp` | 771 B | 211 B | 3.7x | ✅ |
 | Marker (spot) | `marker_spot` | 723 B | 74 B | 9.8x | ✅ |
 
-Median compression ratio across all 47 fixture types: **7.0×** (400-2300 bytes XML → 39-211 bytes wire).
+Median compression ratio across all 51 fixtures: **7.1×** (407-2130 bytes XML → 33-193 bytes wire).
 
 ### Wire Optimizations
 
@@ -975,7 +977,7 @@ Each platform implements the same components with identical behavior:
 
 All five language implementations share the same test vectors in `testdata/`:
 
-- **`cot_xml/`** — 47 input CoT XML fixtures captured from real ATAK-CIV, iTAK, and WebTAK clients (coordinates scrubbed to synthetic test ranges so no real user locations leak), covering 7 PLI variants (incl. iTAK, WebTAK, TAK Aware, stationary, sensor), 3 GeoChat bodies + delivered/read receipts + 2 TAKTALK-flavored chats, 2 aircraft tracks, CASEVAC (bare + full 9-line), delete events, 8 drawings (circle, circle large, ellipse, freeform, polygon, rectangle, rectangle iTAK, telestration), 6 markers (2525, GoTo, GoTo iTAK, icon set, spot, tank), 3 ranging (bullseye, circle, line), 2 routes (3-waypoint canonical + iTAK variant), emergency alerts (911 + cancel), tasking, 4 TAKTALK payloads (room data, text, voice, voice+marti), and the alert_tic / waypoint envelopes.
+- **`cot_xml/`** — 51 input CoT XML fixtures, most captured from real ATAK-CIV, iTAK, and WebTAK clients (coordinates scrubbed to synthetic test ranges so no real user locations leak), covering 7 PLI variants (incl. iTAK, WebTAK, TAK Aware, stationary, sensor), 3 GeoChat bodies + delivered/read receipts + 2 TAKTALK-flavored chats, 2 aircraft tracks, CASEVAC (bare + full 9-line), delete events, 8 drawings (circle, circle large, ellipse, freeform, polygon, rectangle, rectangle iTAK, telestration), 6 markers (2525, GoTo, GoTo iTAK, icon set, spot, tank), 3 ranging (bullseye, circle, line), 2 routes (3-waypoint canonical + iTAK variant), emergency alerts (911 + cancel), tasking, 4 TAKTALK payloads (room data, text, voice, voice+marti), 4 synthetic passive-sensor detections (a UAS with its Remote ID annotation, a sensor-anchored UAS, a UAS operator, two ground vehicles), and the alert_tic / waypoint envelopes.
 - **`protobuf/`** — Expected `TAKPacketV2` protobuf bytes (pre-compression), written by Kotlin's `CompressionTest`, consumed by every other platform for exact-match validation.
 - **`golden/`** — Expected compressed wire payloads, byte-for-byte identical across platforms.
 - **`sanitizer/`** — `CotMeshSanitizer` input/expected XML pairs (`strip.{in,out}.xml`, `normalize.{in,out}.xml`) that lock the mesh-hygiene transforms to byte-for-byte parity across all five bindings.

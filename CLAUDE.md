@@ -4,9 +4,9 @@ Instructions for Claude Code sessions working on this repository.
 
 ## What this repo is
 
-TAKPacket-SDK is a cross-platform library that converts ATAK Cursor-on-Target (CoT) XML into Meshtastic's `TAKPacketV2` protobuf format and compresses it with zstd dictionary compression for LoRa mesh transport (225-byte MTU, port 78). Five parallel implementations — Kotlin, Swift, Python, TypeScript, C# — produce cross-decodable wire payloads validated by 47 shared test fixtures.
+TAKPacket-SDK is a cross-platform library that converts ATAK Cursor-on-Target (CoT) XML into Meshtastic's `TAKPacketV2` protobuf format and compresses it with zstd dictionary compression for LoRa mesh transport (225-byte MTU, port 78). Five parallel implementations — Kotlin, Swift, Python, TypeScript, C# — produce cross-decodable wire payloads validated by 51 shared test fixtures.
 
-> **Interop nuance (important):** every binding can decode any other binding's frames, and the intermediate protobuf goldens (`.pb`) are byte-identical across bindings (protobuf serialization is deterministic). The *compressed* bytes (`.bin`) may differ slightly per binding (zstd encoders differ), so cross-language tests assert **decodability + a size tolerance**, NOT compressed-byte-identity. Do not write a test that requires byte-identical compressed output across languages.
+> **Interop nuance (important):** every binding can decode any other binding's frames, and the intermediate protobuf goldens (`.pb`) are byte-identical across bindings (protobuf serialization is deterministic) — except where field order differs: Kotlin's Wire runtime writes fields in `.proto` declaration order, the others in tag order, and `start_epoch_lo14` (43) and `detection` (47) are declared ahead of `marti` and the payload oneof. So the four `detection_*` goldens are Kotlin-ordered, and the other bindings compare them as decoded messages, not bytes. The *compressed* bytes (`.bin`) may differ slightly per binding (zstd encoders differ), so cross-language tests assert **decodability + a size tolerance**, NOT compressed-byte-identity. Do not write a test that requires byte-identical compressed output across languages.
 
 ## Repository layout
 
@@ -15,9 +15,9 @@ protobufs/           Git submodule (meshtastic/protobufs @ master)
                      Single source of truth: meshtastic/atak.proto
 dictionaries/        Canonical zstd dictionaries (non-aircraft 512KB proto-trained, aircraft 4KB)
 testdata/
-  cot_xml/           47 CoT XML fixtures (input)
-  golden/            47 .bin compressed wire payloads (Kotlin-generated)
-  protobuf/          47 .pb intermediate protobuf bytes (Kotlin-generated)
+  cot_xml/           51 CoT XML fixtures (input)
+  golden/            51 .bin compressed wire payloads (Kotlin-generated)
+  protobuf/          51 .pb intermediate protobuf bytes (Kotlin-generated)
   fragment/          golden fragment sets: <case>.inner + <case>.frames + manifest.json (Kotlin-generated, FragmentGoldenTest; verified every run, regenerate with REGENERATE_FRAGMENT_GOLDENS=1)
   malformed/         malformed input test files
   compression-report.md   Auto-generated size report
@@ -95,7 +95,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 ## Key data model patterns
 
 - **`TakPacketV2Data`** has 26 envelope fields + `Payload` sealed class with its oneof variants (Chat, Aircraft, RawDetail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest, TakTalk, TakTalkRoom, and in Kotlin only VoiceProfile, VoiceProfileRequest and TakTalkRoomRequest, which are `y-` events the TAKTALK plugin routes by UID prefix; a TakTalk's `<voice>` body is its voiceProfileId, and fromVoice has no XML counterpart). **PLI is implicit**: there is no PLI oneof arm — a packet with NO payload variant + an `a-f-*` cot type IS a PLI. Proto tag 30 is reserved.
-- **`EnvironmentData`** and **`SensorFovData`** are optional top-level annotations (not payload variants) — they attach to any event type
+- **`EnvironmentData`**, **`SensorFovData`** and **`DetectionData`** are optional top-level annotations (not payload variants) — they attach to any event type. `DetectionData` (tag 47, `<__detection>`) is passive-sensor metadata; its XML contract lives in `DetectionXml.kt` and `WIRE_FORMAT.md`, and its only identifier is the Remote ID UAS ID, kept only for kind `uas`
 - **Delta encoding:** Route waypoints (`Route.Link.point`) and R&B anchor use `CotGeoPoint` lat/lon deltas. **DrawnShape vertices** are two PACKED `repeated sint32` columns — `vertex_lat_deltas` (tag 18) + `vertex_lon_deltas` (tag 19), zigzag deltas from the envelope `latitude_i`/`longitude_i`. Old `repeated CotGeoPoint vertices = 12` is reserved. (CotGeoPoint still exists for Route/R&B.)
 - **Dual color encoding:** Every color field carries both a `Team` palette enum (compact) and an exact `_argb` int32 (lossless fallback)
 - **Remarks fallback:** `compressWithRemarksFallback()` tries with remarks, strips them if over MTU, returns null if still too big
@@ -132,7 +132,7 @@ cd kotlin && ./gradlew publishToMavenLocal        # then build Android with -Pus
 
 ## Test fixture rules
 
-- Most of the 47 fixtures are clustered near Truth or Consequences, NM (~33.13, -107.25); newer redacted fixtures use DC-area public landmarks (see PII section)
+- Most of the 51 fixtures are clustered near Truth or Consequences, NM (~33.13, -107.25); newer redacted fixtures use DC-area public landmarks (see PII section)
 - Aircraft fixtures use the same area at different altitudes
 - `delete_event.xml` uses 0,0 (intentional — delete events have no location)
 - Adding a fixture: just drop the `.xml` file; `TestFixtures.kt` auto-discovers from `testdata/cot_xml/`

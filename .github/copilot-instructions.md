@@ -4,7 +4,7 @@
 
 This is a cross-platform SDK for converting ATAK Cursor-on-Target (CoT) XML to Meshtastic's TAKPacketV2 protobuf wire format with zstd dictionary compression. Five parallel implementations (Kotlin, Swift, Python, TypeScript, C#) produce cross-decodable payloads for LoRa mesh transport on port 78 with a 225-byte MTU.
 
-> The intermediate protobuf goldens (`.pb`) are byte-identical across bindings, but the *compressed* bytes (`.bin`) may differ slightly per binding (zstd encoders differ). Cross-language tests assert decodability + a size tolerance, NOT compressed-byte-identity.
+> The intermediate protobuf goldens (`.pb`) are byte-identical across bindings (except the four `detection_*` ones: Kotlin's Wire writes fields in declaration order, the others in tag order, and `detection` is declared ahead of the payload oneof), but the *compressed* bytes (`.bin`) may differ slightly per binding (zstd encoders differ). Cross-language tests assert decodability + a size tolerance, NOT compressed-byte-identity.
 
 ## Code organization
 
@@ -23,11 +23,11 @@ Kotlin is the canonical implementation. It generates the golden test artifacts (
 
 The protobuf schema lives in the `protobufs` git submodule (branch `takv2_geometry`). The key file is `protobufs/meshtastic/atak.proto`. Kotlin uses Wire 6.2.0 for codegen; other platforms use pre-generated bindings that are checked in.
 
-**`TAKPacketV2`** has 26 top-level fields (tags 1-26) plus a `payload_variant` oneof at tags 31-42 with 13 typed payload cases: GeoChat, AircraftTrack, raw_detail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest, TakTalkMessage, TakTalkRoomData. **PLI is implicit (v0.4.0):** the former `bool pli = 30` oneof arm was removed — a packet with NO payload variant + an `a-f-*` cot type IS a PLI.
+**`TAKPacketV2`** has top-level fields at tags 1-26, 29, 43 and 47, plus a `payload_variant` oneof at tags 31-42 and 44-46 with 15 typed payload cases: GeoChat, AircraftTrack, raw_detail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest, TakTalkMessage, TakTalkRoomData, VoiceProfile, VoiceProfileRequest, TakTalkRoomRequest. **PLI is implicit (v0.4.0):** the former `bool pli = 30` oneof arm was removed — a packet with NO payload variant + an `a-f-*` cot type IS a PLI.
 
 `DrawnShape` geometry (v0.4.0) is two PACKED `repeated sint32` columns — `vertex_lat_deltas = 18` and `vertex_lon_deltas = 19` (zigzag deltas from envelope lat/lon); old `repeated CotGeoPoint vertices = 12` is reserved.
 
-Tags 25-26 are payload-agnostic annotations: `optional TAKEnvironment environment = 25` and `optional SensorFov sensor_fov = 26`. Tag 29 = `marti` (directed-routing recipients). Tags 27, 28, 30 are reserved (30 was the removed `bool pli` — reserve dropped oneof tags at the MESSAGE level, never inside the oneof; that's invalid proto3).
+Tags 25-26 are payload-agnostic annotations: `optional TAKEnvironment environment = 25` and `optional SensorFov sensor_fov = 26`, and so is tag 47, `optional TAKDetection detection` (passive-sensor metadata, `<__detection>` in CoT XML; see `WIRE_FORMAT.md`). Tag 29 = `marti` (directed-routing recipients). Tag 43 = `start_epoch_lo14`. Tags 27, 28, 30 are reserved (30 was the removed `bool pli` — reserve dropped oneof tags at the MESSAGE level, never inside the oneof; that's invalid proto3).
 
 ## Critical constants
 

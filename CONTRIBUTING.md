@@ -10,18 +10,20 @@ companion and does not duplicate it wholesale.
 TAKPacket-SDK converts ATAK Cursor-on-Target (CoT) XML into Meshtastic's `TAKPacketV2` protobuf
 and compresses it with zstd dictionary compression for LoRa mesh transport (225-byte MTU,
 port 78). **Five parallel implementations** — Kotlin (canonical), Swift, Python, TypeScript, C# —
-produce cross-decodable wire payloads, validated by 47 shared test fixtures under
+produce cross-decodable wire payloads, validated by 51 shared test fixtures under
 [`testdata/`](testdata/).
 
 > **Interop nuance:** every binding decodes every other binding's frames, and the intermediate
-> protobuf goldens (`.pb`) are byte-identical across bindings. The *compressed* bytes (`.bin`) may
+> protobuf goldens (`.pb`) are byte-identical across bindings, except the four `detection_*`
+> goldens: Kotlin's Wire writes fields in `.proto` declaration order and the others in tag order,
+> and `detection` is declared ahead of the payload oneof. The *compressed* bytes (`.bin`) may
 > differ slightly per binding (zstd encoders differ), so cross-language tests assert
 > **decodability + a size tolerance**, never compressed-byte-identity.
 
 ```
 protobufs/     Git submodule (meshtastic/protobufs) — proto schema source of truth
 dictionaries/  Canonical zstd dictionaries
-testdata/      47 CoT XML fixtures + .pb/.bin goldens + sanitizer fixtures
+testdata/      51 CoT XML fixtures + .pb/.bin goldens + sanitizer fixtures
 kotlin/ swift/ python/ typescript/ csharp/   the five bindings
 ```
 
