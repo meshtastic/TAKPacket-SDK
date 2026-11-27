@@ -54,6 +54,8 @@ struct RoundTripSuite {
             Array(packet.marti.destCallsign) == Array(decompressed.marti.destCallsign),
             "marti mismatch in \(fixture)"
         )
+        #expect(packet.hasDetection == decompressed.hasDetection, "detection presence mismatch in \(fixture)")
+        #expect(packet.detection == decompressed.detection, "detection mismatch in \(fixture)")
 
         // Payload-specific field assertions
         switch packet.payloadVariant {

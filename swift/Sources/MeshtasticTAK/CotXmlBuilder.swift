@@ -131,7 +131,8 @@ public class CotXmlBuilder {
         var s = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         s += "<event version=\"2.0\" uid=\"\(esc(packet.uid))\" type=\"\(esc(cotType))\" how=\"\(esc(how))\" "
         s += "time=\"\(now)\" start=\"\(now)\" stale=\"\(stale)\">\n"
-        s += "  <point lat=\"\(lat)\" lon=\"\(lon)\" hae=\"\(packet.altitude)\" ce=\"9999999\" le=\"9999999\"/>\n"
+        // ce carries a detection's horizontal uncertainty; anything else keeps CoT's "unknown".
+        s += "  <point lat=\"\(lat)\" lon=\"\(lon)\" hae=\"\(packet.altitude)\" ce=\"\(DetectionXml.pointCe(packet))\" le=\"9999999\"/>\n"
         s += "  <detail>\n"
 
         // Contact — skip for routes (ATAK/iTAK expect <contact> after __routeinfo, no endpoint).
@@ -216,6 +217,11 @@ public class CotXmlBuilder {
             if fov.rollDeg != 0 { s += " roll=\"\(fov.rollDeg)\"" }
             if !fov.model.isEmpty { s += " model=\"\(esc(fov.model))\"" }
             s += "/>\n"
+        }
+
+        // Passive-sensor detection, payload-agnostic like the two annotations above.
+        if packet.hasDetection {
+            s += DetectionXml.emit(packet.detection, esc: esc)
         }
 
         // Payload-specific elements

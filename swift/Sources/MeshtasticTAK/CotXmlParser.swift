@@ -133,6 +133,8 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var timeStr = ""
     private var staleStr = ""
     private var startStr = ""
+    // The event's <point ce>, which backs up a detection's cep.
+    private var pointCe: String?
     private var inRemarks = false
 
     // --- TAKTALK m-t-t accumulators -----------------------------------
@@ -332,6 +334,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         squawk = 0; category = ""; rssiX10 = 0; gps = false; cotHostId = ""
         chatTo = nil; chatToCallsign = nil
         timeStr = ""; staleStr = ""; startStr = ""
+        pointCe = nil
         inRemarks = false
         // --- Reset TAKTALK accumulators ---
         hasTakTalkData = false
@@ -832,6 +835,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             packet.latitudeI = Self.scaleLatitudeI(lat)
             packet.longitudeI = Self.scaleLongitudeI(lon)
             packet.altitude = Int32(hae)
+            pointCe = attributes["ce"]
 
         case "contact":
             packet.callsign = attributes["callsign"] ?? ""
@@ -983,6 +987,11 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             fov.rollDeg = rounded("roll") ?? 0
             fov.model = model ?? ""
             packet.sensorFov = fov
+
+        // Passive-sensor detection, payload-agnostic like the two annotations
+        // above. Present even with no attributes; the last element wins.
+        case DetectionXml.element:
+            packet.detection = DetectionXml.parse(attributes, pointCe: pointCe)
 
         case "link":
             handleLink(attributes: attributes)
@@ -1479,7 +1488,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     /// ASCII whitespace, an optional sign, digits with an optional fraction, and an
     /// optional exponent. `Double(_:)` alone rejects the whitespace and accepts hex,
     /// `inf` and `nan`, so the shape is checked first.
-    private static func parseDouble(_ raw: String?) -> Double? {
+    static func parseDouble(_ raw: String?) -> Double? {
         guard let s = raw?.trimmingCharacters(in: asciiWhitespace),
               s.range(of: #"^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?$"#,
                       options: .regularExpression) != nil,
@@ -1498,7 +1507,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     /// tie rounds up, so -2.5 gives -2 where `.rounded()` gives -3. Taken from the
     /// fractional part, because `floor(d + 0.5)` rounds 0.49999999999999994 up to 1
     /// where Java gives 0. `d` is never NaN here.
-    private static func roundToInt(_ d: Double) -> Int32 {
+    static func roundToInt(_ d: Double) -> Int32 {
         let whole = d.rounded(.down)
         let r = d - whole >= 0.5 ? whole + 1 : whole
         if r >= 2_147_483_647 { return .max }
