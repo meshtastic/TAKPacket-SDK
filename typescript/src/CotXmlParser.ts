@@ -213,28 +213,37 @@ function toArray<T>(x: T | T[] | undefined | null): T[] {
 }
 
 /**
- * protobufjs serializes scalar fields that are explicitly passed to
- * `create()`, even when they hold the proto3 default value (0, "", false).
- * Proto3 wire format elides defaults; this helper mimics that behavior by
- * removing keys whose values are the zero-value for their type, so the
- * resulting byte stream matches what a proto3-native encoder produces.
+ * Fields declared `optional` in atak.proto whose zero is a value rather than an
+ * absence. A proto3 encoder writes an `optional` field that was set, even at its
+ * default, so {@link stripZeros} keeps these whatever they hold. The parser says
+ * "not supplied" by leaving the key out, never by writing 0.
  *
- * Only touches the top-level keys — nested objects are left to the caller.
+ * `startEpochLo14` is the only scalar one `stripZeros` ever sees; the other
+ * `optional` fields on `TAKPacketV2` are messages, which it never removes. `start`
+ * mod 16384 is 0 for one second in every 16384 (about every 4.55 hours), and
+ * stripping that zero made a real start read as absent, so the receiver fell back
+ * to its decode time.
  */
+const PRESENCE_FIELDS: ReadonlySet<string> = new Set(["startEpochLo14"]);
+
 /**
  * protobufjs serializes scalar fields that are explicitly passed to
  * `create()`, even when they hold the proto3 default value (0, "", false).
  * Proto3 wire format elides defaults; this helper mimics that behavior by
  * removing keys whose values are the zero-value for their type, so the
  * resulting byte stream matches what a proto3-native encoder produces.
+ * Fields in {@link PRESENCE_FIELDS} are kept even at zero, because proto3
+ * does not elide an `optional` field that was set.
  *
  * Only touches the top-level keys — nested objects are left to the caller.
  */
 function stripZeros<T extends object>(obj: T): T {
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-    if (v === 0 || v === "" || v === false) continue;
-    if (Array.isArray(v) && v.length === 0) continue;
+    if (!PRESENCE_FIELDS.has(k)) {
+      if (v === 0 || v === "" || v === false) continue;
+      if (Array.isArray(v) && v.length === 0) continue;
+    }
     result[k] = v;
   }
   return result as T;
