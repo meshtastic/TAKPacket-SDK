@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from . import atak_pb2
 from . import atak_palette
 from .cot_type_mapper import CotTypeMapper
+from . import detection_xml
 from . import start_epoch
 
 _TEAM_NAME_TO_ENUM = {
@@ -134,6 +135,78 @@ def _infer_sensor_type(model: str | None) -> int:
     if "cam" in m or "eo-" in m or "optic" in m:
         return atak_pb2.SensorFov.SensorType_Camera
     return atak_pb2.SensorFov.SensorType_Other
+
+
+# <__detection> reading, matching the Kotlin binding's DetectionXml.parse.
+# Kotlin's trim() drops these: what str.strip() drops, except U+0085, which it keeps.
+_KOTLIN_WHITESPACE = "".join(map(chr, (
+    *range(0x09, 0x0E), *range(0x1C, 0x21), 0xA0, 0x1680, *range(0x2000, 0x200B),
+    0x2028, 0x2029, 0x202F, 0x205F, 0x3000,
+)))
+# Kotlin splits sources on Regex("\\s+"), which matches ASCII whitespace only.
+_SOURCES_SEPARATOR_RE = re.compile(r"[ \t\n\x0b\x0c\r]+")
+
+_DETECTION_KINDS = {t: v for v, t in detection_xml.KIND_TOKENS.items()}
+_DETECTION_SOURCES = {t: v for v, t in detection_xml.SOURCE_TOKENS.items()}
+_DETECTION_STATES = {t: v for v, t in detection_xml.STATE_TOKENS.items()}
+_DETECTION_TRENDS = {t: v for v, t in detection_xml.TREND_TOKENS.items()}
+_DETECTION_UAS_ID_TYPES = {t: v for v, t in detection_xml.UAS_ID_TYPE_TOKENS.items()}
+_DETECTION_UAS_STATUSES = {t: v for v, t in detection_xml.UAS_STATUS_TOKENS.items()}
+
+
+def _detection_number(raw: str | None) -> int | None:
+    """A ``<__detection>`` number, or ``<point ce>``: a plain decimal rounded half up.
+
+    Trimmed the way Kotlin trims, then read as :func:`_rounded` reads it, so
+    ``NaN``, ``Infinity``, hex, an ``f`` suffix and anything too large to be
+    finite are absent.
+    """
+    return None if raw is None else _rounded(raw.strip(_KOTLIN_WHITESPACE))
+
+
+def _detection_enum(raw: str | None, table: dict) -> int:
+    """An enum attribute's value: trimmed and lowercased; unknown or absent is 0."""
+    return 0 if raw is None else table.get(raw.strip(_KOTLIN_WHITESPACE).lower(), 0)
+
+
+def _parse_detection(elem: ET.Element, point_ce: str | None) -> atak_pb2.TAKDetection:
+    """Read one ``<__detection>`` element; ``point_ce`` stands in for a missing ``cep``."""
+    d = atak_pb2.TAKDetection()
+    d.kind = _detection_enum(elem.get("kind"), _DETECTION_KINDS)
+    sources = elem.get("sources")
+    if sources is not None:
+        for token in _SOURCES_SEPARATOR_RE.split(sources.strip(_KOTLIN_WHITESPACE)):
+            # An unknown token sets no bit.
+            d.sources |= _DETECTION_SOURCES.get(token.lower(), 0)
+    confidence = _detection_number(elem.get("confidence"))
+    if confidence is not None:
+        d.confidence = min(max(confidence, 0), detection_xml.CONFIDENCE_MAX)
+    d.state = _detection_enum(elem.get("state"), _DETECTION_STATES)
+    d.trend = _detection_enum(elem.get("trend"), _DETECTION_TRENDS)
+    count = _detection_number(elem.get("count"))
+    if count is not None:
+        d.count = max(count, 0)
+    anchored = elem.get("sensorAnchored")
+    d.sensor_anchored = (
+        anchored is not None and anchored.strip(_KOTLIN_WHITESPACE).lower() == "true"
+    )
+    cep = _detection_number(elem.get("cep"))
+    if cep is None:
+        point_cep = _detection_number(point_ce)
+        # 9999999 is CoT's "unknown", not a measurement.
+        if point_cep is not None and point_cep < detection_xml.UNKNOWN_CE:
+            cep = point_cep
+    if cep is not None:
+        d.cep_m = max(cep, 0)
+    rssi = _detection_number(elem.get("rssi"))
+    if rssi is not None:
+        d.rssi_dbm = rssi
+    # Slicing a str counts code points, so a character outside the BMP is never split.
+    if d.kind == atak_pb2.TAKDetection.Kind_Uas:
+        d.uas_id = elem.get("uasId", "")[:detection_xml.UAS_ID_MAX_CHARS]
+    d.uas_id_type = _detection_enum(elem.get("uasIdType"), _DETECTION_UAS_ID_TYPES)
+    d.uas_status = _detection_enum(elem.get("uasStatus"), _DETECTION_UAS_STATUSES)
+    return d
 
 
 _ROUTE_METHOD_MAP = {
@@ -367,6 +440,8 @@ class CotXmlParser:
 
         # Point
         point = root.find("point")
+        # <__detection> falls back to <point ce> when it has no cep of its own.
+        point_ce = None if point is None else point.get("ce")
         if point is not None:
             pkt.latitude_i = _scale_latitude_i(float(point.get("lat", "0")))
             pkt.longitude_i = _scale_longitude_i(float(point.get("lon", "0")))
@@ -802,6 +877,10 @@ class CotXmlParser:
                 if sensor_range is not None:
                     sensor.range_m = _as_uint32(sensor_range)
                 pkt.sensor_fov.CopyFrom(sensor)
+            elif tag == detection_xml.ELEMENT:
+                # Passive-sensor detection, for any event type. Present even with
+                # no attributes; the last one wins.
+                pkt.detection.CopyFrom(_parse_detection(elem, point_ce))
             elif tag == "link":
                 handle_link(elem)
             elif tag == "shape":

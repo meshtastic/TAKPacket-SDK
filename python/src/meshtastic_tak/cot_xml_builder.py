@@ -7,6 +7,7 @@ from xml.sax.saxutils import escape
 from . import atak_pb2
 from . import atak_palette
 from .cot_type_mapper import CotTypeMapper
+from . import detection_xml
 from . import start_epoch
 
 _TEAM_ENUM_TO_NAME = {
@@ -67,6 +68,11 @@ def _as_int32(value: int) -> int:
     """Read a uint32 field as the signed int32 that Kotlin's ``Int`` prints."""
     value &= 0xFFFFFFFF
     return value - 0x100000000 if value >= 0x80000000 else value
+
+
+def _detection_token(tokens: dict, value: int) -> str | None:
+    """A ``<__detection>`` enum value's token; ``None`` for 0 (Unspecified) or a value without one."""
+    return tokens.get(value) if value else None
 
 
 # Tag tokens that can never appear inside one <detail> element's content.
@@ -150,12 +156,16 @@ class CotXmlBuilder:
                 and len(packet.route.links) > 0):
             lat = packet.route.links[0].point.lat_delta_i / 1e7
             lon = packet.route.links[0].point.lon_delta_i / 1e7
+        # ce carries a detection's horizontal uncertainty; anything else keeps CoT's "unknown".
+        ce = detection_xml.UNKNOWN_CE
+        if packet.HasField("detection") and _as_int32(packet.detection.cep_m) > 0:
+            ce = _as_int32(packet.detection.cep_m)
 
         lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
             f'<event version="2.0" uid="{escape(packet.uid)}" type="{escape(cot_type)}" '
             f'how="{escape(how)}" time="{time_str}" start="{time_str}" stale="{stale_str}">',
-            f'  <point lat="{lat}" lon="{lon}" hae="{packet.altitude}" ce="9999999" le="9999999"/>',
+            f'  <point lat="{lat}" lon="{lon}" hae="{packet.altitude}" ce="{ce}" le="9999999"/>',
             '  <detail>',
         ]
 
@@ -235,6 +245,10 @@ class CotXmlBuilder:
             if s.model:
                 parts.append(f'model="{escape(s.model)}"')
             lines.append(f'    <sensor {" ".join(parts)}/>')
+
+        # Passive-sensor detection, for any event type like the two annotations above.
+        if packet.HasField("detection"):
+            self._emit_detection(lines, packet.detection)
 
         # Payload-specific
         which = packet.WhichOneof("payload_variant")
@@ -834,3 +848,62 @@ class CotXmlBuilder:
                 f'    <link uid="{escape(t.target_uid)}" '
                 f'relation="p-p" type="a-f-G"/>'
             )
+
+    # --- Detection annotation -------------------------------------------
+
+    def _emit_detection(self, lines: list, d) -> None:
+        """Append the ``<__detection>`` line for a ``TAKDetection`` to ``lines``.
+
+        Attributes follow a fixed order, each left out at its default. An enum
+        value without a token, and a source bit without one, are left out too;
+        they still travel on the wire. ``confidence``, ``count`` and ``cep`` are
+        read as signed int32, as the Kotlin binding holds them, so a value that
+        arrived out of range is clamped or left out. Mutates ``lines`` in place.
+
+        Args:
+            lines: The output line list to append to.
+            d: The ``TAKDetection`` annotation message.
+        """
+        parts = []
+        kind = _detection_token(detection_xml.KIND_TOKENS, d.kind)
+        if kind:
+            parts.append(f'kind="{kind}"')
+        sources = " ".join(
+            t for bit, t in detection_xml.SOURCE_TOKENS.items() if d.sources & bit
+        )
+        if sources:
+            parts.append(f'sources="{sources}"')
+        confidence = min(max(_as_int32(d.confidence), 0), detection_xml.CONFIDENCE_MAX)
+        if confidence > 0:
+            parts.append(f'confidence="{confidence}"')
+        state = _detection_token(detection_xml.STATE_TOKENS, d.state)
+        if state:
+            parts.append(f'state="{state}"')
+        trend = _detection_token(detection_xml.TREND_TOKENS, d.trend)
+        if trend:
+            parts.append(f'trend="{trend}"')
+        count = _as_int32(d.count)
+        if count > 0:
+            parts.append(f'count="{count}"')
+        if d.sensor_anchored:
+            parts.append('sensorAnchored="true"')
+        cep = _as_int32(d.cep_m)
+        if cep > 0:
+            parts.append(f'cep="{cep}"')
+        if d.rssi_dbm != 0:
+            parts.append(f'rssi="{d.rssi_dbm}"')
+        uas_id = d.uas_id[:detection_xml.UAS_ID_MAX_CHARS]
+        if d.kind == atak_pb2.TAKDetection.Kind_Uas and uas_id:
+            # escape() leaves '"' alone, and the attribute is quoted with it.
+            quoted = escape(uas_id, {'"': "&quot;"})
+            parts.append(f'uasId="{quoted}"')
+        id_type = _detection_token(detection_xml.UAS_ID_TYPE_TOKENS, d.uas_id_type)
+        if id_type:
+            parts.append(f'uasIdType="{id_type}"')
+        status = _detection_token(detection_xml.UAS_STATUS_TOKENS, d.uas_status)
+        if status:
+            parts.append(f'uasStatus="{status}"')
+        if parts:
+            lines.append(f'    <{detection_xml.ELEMENT} {" ".join(parts)}/>')
+        else:
+            lines.append(f'    <{detection_xml.ELEMENT}/>')
