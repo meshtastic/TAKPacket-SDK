@@ -1,9 +1,8 @@
 """``stale_seconds`` is computed as Kotlin's parser computes it,
 ``stale.epochSeconds - time.epochSeconds``: each timestamp is rounded down to
 whole epoch seconds before subtracting. Every expected value below is what the
-Kotlin parser produces for the same XML, except the last two, where Kotlin's
-Int overflows.
-Truncating or rounding the difference instead disagrees with Kotlin whenever
+Kotlin parser produces for the same XML, as Kotlin's own StaleSecondsTest
+checks. Truncating or rounding the difference instead disagrees with Kotlin whenever
 the two timestamps carry different fractions of a second.
 """
 
@@ -39,9 +38,8 @@ def _event(time: str, stale: str) -> str:
         # Rounded down, not toward zero: -2 and -1 whole seconds.
         ("1969-12-31T23:59:58.500Z", "1969-12-31T23:59:59.400Z", 1),
         ("2026-01-01T01:00:00.900+01:00", "2026-01-01T00:00:02.100Z", 2),
-        # Past 68 years every binding caps at Int32 max. Kotlin sends 2335219200 for
-        # 74 years, which its own receiver reads back as a negative Int, and wraps
-        # 174 years around to 1195925504.
+        # Past 68 years every binding caps at Int32 max, because the Kotlin binding
+        # reads a larger value back as a negative Int.
         ("2026-01-01T00:00:00Z", "2100-01-01T00:00:00Z", 2147483647),
         ("2026-01-01T00:00:00Z", "2200-01-01T00:00:00Z", 2147483647),
     ],

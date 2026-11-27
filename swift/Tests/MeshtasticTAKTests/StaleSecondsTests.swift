@@ -7,9 +7,9 @@ import Testing
 // `stale_seconds` is computed as Kotlin's parser computes it,
 // `stale.epochSeconds - time.epochSeconds`: each timestamp is rounded down to whole
 // epoch seconds before subtracting. Every expected value below is what the Kotlin
-// parser produces for the same XML, except the last two, where Kotlin's Int
-// overflows. Truncating or rounding the difference instead disagrees with Kotlin
-// whenever the two timestamps carry different fractions of a second.
+// parser produces for the same XML, as Kotlin's own StaleSecondsTest checks.
+// Truncating or rounding the difference instead disagrees with Kotlin whenever the
+// two timestamps carry different fractions of a second.
 
 private func event(time: String, stale: String) -> String {
     #"<event version="2.0" uid="STALE-1" type="a-f-G-U-C" how="m-g" "#
@@ -32,9 +32,8 @@ private let staleCases: [(time: String, stale: String, staleSeconds: UInt32)] = 
     // Rounded down, not toward zero: -2 and -1 whole seconds.
     ("1969-12-31T23:59:58.500Z", "1969-12-31T23:59:59.400Z", 1),
     ("2026-01-01T01:00:00.900+01:00", "2026-01-01T00:00:02.100Z", 2),
-    // Past 68 years every binding caps at Int32.max. Kotlin sends 2335219200 for 74
-    // years, which its own receiver reads back as a negative Int, and wraps 174 years
-    // around to 1195925504. UInt32(_:) trapped on the 174 years here.
+    // Past 68 years every binding caps at Int32.max, because the Kotlin binding reads a
+    // larger value back as a negative Int. UInt32(_:) trapped on the 174 years here.
     ("2026-01-01T00:00:00Z", "2100-01-01T00:00:00Z", UInt32(Int32.max)),
     ("2026-01-01T00:00:00Z", "2200-01-01T00:00:00Z", UInt32(Int32.max)),
 ]

@@ -1299,6 +1299,12 @@ public class CotXmlParser {
      * ISO-8601 instant strings ATAK emits (`2026-03-15T19:00:00Z`, with or
      * without fractional seconds), matching `DateTimeFormatter.ISO_INSTANT`.
      * Any parse failure returns 0, identical to the original try/catch.
+     *
+     * Capped at [Int.MAX_VALUE] seconds (about 68 years), as every other binding caps
+     * it. [TakPacketV2Data.staleSeconds] is a signed Int, so a longer span would come
+     * out negative and [CotXmlBuilder] would give the event its 45-second minimum
+     * instead. Uncapped, `toInt()` also wraps a span over 136 years around to a
+     * shorter one.
      */
     private fun computeStaleSeconds(
         timeStr: String,
@@ -1309,7 +1315,7 @@ public class CotXmlParser {
             val time = Instant.parse(timeStr)
             val stale = Instant.parse(staleStr)
             val diff = stale.epochSeconds - time.epochSeconds
-            if (diff > 0) diff.toInt() else 0
+            if (diff > 0) diff.coerceAtMost(Int.MAX_VALUE.toLong()).toInt() else 0
         } catch (e: Exception) {
             0
         }
