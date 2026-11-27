@@ -151,6 +151,14 @@ One version covers all five bindings, so a release is a single tag and a single 
   bytes. Callers that sized `maxWireBytes` from the old documentation should
   use 225.
 
+- TypeScript: `parseCotXml` dropped `startEpochLo14` when the event's `start`
+  was 0 mod 16384, one second in every 16384 (about every 4.55 hours), so the
+  receiver rebuilt that event with its own decode time instead of the sender's
+  `start`. The parser's final `stripZeros` pass removes proto3 default values
+  and took that 0 for one, though `start_epoch_lo14` is `optional` precisely so
+  a zero stays distinct from no value. The pass now keeps it, as the Kotlin,
+  Swift, Python and C# parsers already did. No wire format or API changes.
+
 ## [0.10.0] - 2026-10-31
 
 ### Added
