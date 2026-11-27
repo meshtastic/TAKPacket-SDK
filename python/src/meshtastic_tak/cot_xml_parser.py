@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -1179,15 +1180,20 @@ class CotXmlParser:
             stale_str: The CoT ``stale`` (expiry) timestamp, ISO-8601.
 
         Returns:
-            ``stale - time`` in whole seconds, clamped to ``0``; ``0`` if
-            either timestamp is missing or unparseable.
+            Seconds from ``time`` to ``stale``, computed as Kotlin does: each
+            timestamp is rounded down to whole epoch seconds before
+            subtracting, so 00.900 to 02.100 is 2 seconds, where truncating the
+            1.2-second difference gives 1. ``0`` if stale is not after time or
+            either timestamp is missing or unparseable. Capped at ``2**31 - 1``
+            (about 68 years): the Kotlin binding keeps ``stale_seconds`` in a
+            signed Int, so it reads anything larger back as negative.
         """
         if not time_str or not stale_str:
             return 0
         try:
             t = datetime.fromisoformat(time_str.replace("Z", "+00:00"))
             s = datetime.fromisoformat(stale_str.replace("Z", "+00:00"))
-            diff = int((s - t).total_seconds())
-            return diff if diff > 0 else 0
-        except (ValueError, TypeError):
+            diff = math.floor(s.timestamp()) - math.floor(t.timestamp())
+            return min(diff, 2**31 - 1) if diff > 0 else 0
+        except (ValueError, TypeError, OverflowError, OSError):
             return 0

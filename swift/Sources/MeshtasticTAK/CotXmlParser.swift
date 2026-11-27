@@ -1426,13 +1426,20 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         return StartEpoch.truncate(seconds)
     }
 
+    /// Seconds from the event's `time` to its `stale`, computed as Kotlin does: each
+    /// timestamp is rounded down to whole epoch seconds before subtracting, so 00.900 to
+    /// 02.100 is 2 seconds, where truncating the 1.2-second difference gives 1. Zero when
+    /// stale is not after time, and capped at `Int32.max` (about 68 years): the Kotlin
+    /// binding keeps `stale_seconds` in a signed Int, so it reads anything larger back as
+    /// negative.
     private func computeStaleSeconds(_ timeStr: String, _ staleStr: String) -> UInt32 {
         guard !timeStr.isEmpty, !staleStr.isEmpty else { return 0 }
 
         guard let time = Self.isoFmtFrac.date(from: timeStr) ?? Self.isoFmtNoFrac.date(from: timeStr),
               let stale = Self.isoFmtFrac.date(from: staleStr) ?? Self.isoFmtNoFrac.date(from: staleStr) else { return 0 }
 
-        let diff = stale.timeIntervalSince(time)
-        return diff > 0 ? UInt32(diff) : 0
+        let diff = Int64(stale.timeIntervalSince1970.rounded(.down))
+            - Int64(time.timeIntervalSince1970.rounded(.down))
+        return diff > 0 ? UInt32(min(diff, Int64(Int32.max))) : 0
     }
 }

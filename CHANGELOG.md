@@ -151,6 +151,21 @@ One version covers all five bindings, so a release is a single tag and a single 
   bytes. Callers that sized `maxWireBytes` from the old documentation should
   use 225.
 
+- C#, Python, Swift and TypeScript: `CotXmlParser` now computes
+  `stale_seconds` as Kotlin does, rounding `time` and `stale` each down to
+  whole epoch seconds before subtracting. C#, Python and Swift truncated the
+  difference and TypeScript rounded it, so they could be a second off Kotlin
+  whenever the two timestamps had different fractions: `00.900` to `02.100`
+  gave 1 where Kotlin gives 2, and TypeScript gave 2 for `00.100` to `01.900`
+  where Kotlin gives 1.
+
+  A span longer than about 68 years now caps at 2,147,483,647 seconds in all
+  four, as it already did in C#. Kotlin keeps `stale_seconds` in a signed
+  Int, so a receiver on the Kotlin binding reads a larger value as negative
+  and marks the event stale 45 seconds after it arrives. Swift crashed on a
+  span over about 136 years and Python raised `ValueError` on one. Kotlin
+  itself still sends the uncapped value.
+
 ## [0.10.0] - 2026-10-31
 
 ### Added
