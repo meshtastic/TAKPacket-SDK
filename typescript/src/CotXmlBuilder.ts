@@ -242,6 +242,35 @@ export function buildCotXml(packet: TAKPacketV2): string {
   const deviceCallsign = packet.deviceCallsign ?? "";
   if (deviceCallsign) lines.push(`    <uid Droid="${esc(deviceCallsign)}"/>`);
 
+  // Weather and sensor-cone annotations attach to any payload. `| 0` prints a
+  // uint32 as its int32 reading, the way Kotlin's Int prints it.
+  const environment = packet.environment;
+  if (environment) {
+    let tag = `    <environment temperature="${(environment.temperatureCX10 ?? 0) / 10}"`;
+    const windDirection = (environment.windDirectionDeg ?? 0) | 0;
+    if (windDirection !== 0) tag += ` windDirection="${windDirection}"`;
+    const windSpeedCmS = (environment.windSpeedCmS ?? 0) | 0;
+    if (windSpeedCmS !== 0) tag += ` windSpeed="${windSpeedCmS / 100}"`;
+    lines.push(tag + "/>");
+  }
+
+  // Geometry only. No `type` attribute: the parser infers SensorType from `model`.
+  const sensor = packet.sensorFov;
+  if (sensor) {
+    let tag = `    <sensor azimuth="${(sensor.azimuthDeg ?? 0) | 0}"`;
+    // range_m has explicit presence: written whenever set, 0 included.
+    if (sensor.rangeM != null) tag += ` range="${sensor.rangeM | 0}"`;
+    tag += ` fov="${(sensor.fovHorizontalDeg ?? 0) | 0}"`;
+    const vfov = (sensor.fovVerticalDeg ?? 0) | 0;
+    if (vfov !== 0) tag += ` vfov="${vfov}"`;
+    tag += ` elevation="${sensor.elevationDeg ?? 0}"`;
+    const roll = sensor.rollDeg ?? 0;
+    if (roll !== 0) tag += ` roll="${roll}"`;
+    const model = sensor.model ?? "";
+    if (model) tag += ` model="${esc(model)}"`;
+    lines.push(tag + "/>");
+  }
+
   // Payload-specific
   const chat = packet.chat;
   const aircraft = packet.aircraft;

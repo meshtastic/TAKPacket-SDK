@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 import { TakCompressor } from "../src/TakCompressor.js";
 import { parseCotXml } from "../src/CotXmlParser.js";
 import { buildCotXml } from "../src/CotXmlBuilder.js";
-import { FIXTURES, loadFixtureXml } from "./helpers.js";
+import { getTAKPacketV2Type } from "../src/proto.js";
+import type { TAKPacketV2 } from "../src/types.js";
+import { FIXTURES, loadFixtureXml, loadGoldenProtobuf } from "./helpers.js";
 
 const compressor = new TakCompressor();
 
@@ -43,6 +45,10 @@ describe("RoundTrip", () => {
     // directed b-t-f DMs. TAKTALK gates voice TTS on this list matching
     // the receiver's callsign — regressions silently break voice.
     expect(decompressed.marti?.destCallsign ?? []).toEqual(packet.marti?.destCallsign ?? []);
+    // Payload-agnostic annotations; the parser fills every field, so the
+    // decoded messages compare whole.
+    expect(decompressed.environment).toEqual(packet.environment);
+    expect(decompressed.sensorFov).toEqual(packet.sensorFov);
 
     // Payload-specific field assertions
     if (packet.chat) {
@@ -264,5 +270,151 @@ describe("RoundTrip", () => {
     expect(decompressed.cotTypeId).toBe(1);
     expect(decompressed.callsign).toBe("TEST");
     expect(decompressed.latitudeI).toBe(340522000);
+  });
+});
+
+/**
+ * `<environment>` and `<sensor>`, ported from Kotlin. The target is what a mesh
+ * receiver sees, so most cases go through the wire before they are checked.
+ */
+describe("Environment and SensorFov", () => {
+  // SensorFov.SensorType
+  const UNSPECIFIED = 0, CAMERA = 1, THERMAL = 2, LASER = 3, NVG = 4, RF = 5, OTHER = 6;
+
+  /** A minimal PLI whose <detail> carries `inner`. */
+  const withDetail = (inner: string) =>
+    `<event version="2.0" uid="ALPHA-1" type="a-f-G-U-C" how="m-g" ` +
+    `time="2026-03-15T14:22:10Z" start="2026-03-15T14:22:10Z" stale="2026-03-15T14:22:55Z">` +
+    `<point lat="38.8895" lon="-77.0353" hae="0" ce="9999999" le="9999999"/>` +
+    `<detail><contact callsign="ALPHA-1"/>${inner}</detail></event>`;
+
+  const overTheWire = async (xml: string): Promise<TAKPacketV2> =>
+    compressor.decompress(await compressor.compress(parseCotXml(xml)));
+
+  function expectFixtureAnnotations(pkt: TAKPacketV2): void {
+    expect(pkt.environment).toEqual({ temperatureCX10: 225, windDirectionDeg: 270, windSpeedCmS: 1200 });
+    const s = pkt.sensorFov;
+    expect(s).toBeDefined();
+    expect(s!.type).toBe(THERMAL);
+    expect(s!.azimuthDeg).toBe(45);
+    expect(s!.rangeM).toBe(2500);
+    expect(s!.fovHorizontalDeg).toBe(45);
+    expect(s!.fovVerticalDeg).toBe(30);
+    expect(s!.elevationDeg).toBe(-5);
+    expect(s!.rollDeg).toBe(0);
+    expect(s!.model).toBe("FLIR-Boson-640");
+  }
+
+  it("pli_with_sensor keeps both annotations through parse, wire and rebuild", async () => {
+    const pkt = parseCotXml(loadFixtureXml("pli_with_sensor"));
+    expectFixtureAnnotations(pkt);
+
+    const rt = await compressor.decompress(await compressor.compress(pkt));
+    expectFixtureAnnotations(rt);
+
+    // Template interpolation prints 12 where Kotlin prints 12.0.
+    const xml = buildCotXml(rt);
+    expect(xml).toContain(`<environment temperature="22.5" windDirection="270" windSpeed="12"/>`);
+    expect(xml).toContain(`<sensor azimuth="45" range="2500" fov="45" vfov="30" elevation="-5" model="FLIR-Boson-640"/>`);
+    expect(xml).not.toMatch(/<sensor\b[^>]* type=/);
+
+    expectFixtureAnnotations(parseCotXml(xml));
+  });
+
+  it("pli_with_sensor serializes byte-identical to Kotlin's .pb golden", async () => {
+    const golden = loadGoldenProtobuf("pli_with_sensor");
+    expect(golden, "testdata/protobuf/pli_with_sensor.pb is missing").not.toBeNull();
+    const TAKPacketV2Type = await getTAKPacketV2Type();
+    const pkt = parseCotXml(loadFixtureXml("pli_with_sensor"));
+    const bytes = Buffer.from(TAKPacketV2Type.encode(TAKPacketV2Type.create(pkt)).finish());
+    expect(bytes.toString("hex")).toBe(golden!.toString("hex"));
+  });
+
+  it("treats a bare <sensor/> as present with ATAK-CIV's defaults", async () => {
+    const xml = withDetail("<sensor/>");
+    const rt = await overTheWire(xml);
+    for (const pkt of [parseCotXml(xml), rt]) {
+      expect(pkt.sensorFov).toEqual({
+        type: UNSPECIFIED, azimuthDeg: 270, fovHorizontalDeg: 45, fovVerticalDeg: 0,
+        elevationDeg: 0, rollDeg: 0, model: "",
+      });
+      expect(pkt.sensorFov!.rangeM).toBeUndefined();
+    }
+    expect(buildCotXml(rt)).toContain(`<sensor azimuth="270" fov="45" elevation="0"/>`);
+  });
+
+  it("keeps range=\"0\" present through the wire and the rebuild", async () => {
+    const xml = withDetail(`<sensor range="0"/>`);
+    expect(parseCotXml(xml).sensorFov!.rangeM).toBe(0);
+    const rt = await overTheWire(xml);
+    expect(rt.sensorFov!.rangeM).toBe(0);
+    expect(buildCotXml(rt)).toContain(`<sensor azimuth="270" range="0" fov="45" elevation="0"/>`);
+  });
+
+  it("keeps an <environment> with only a temperature", async () => {
+    const xml = withDetail(`<environment temperature="-3"/>`);
+    const rt = await overTheWire(xml);
+    for (const pkt of [parseCotXml(xml), rt]) {
+      expect(pkt.environment).toEqual({ temperatureCX10: -30, windDirectionDeg: 0, windSpeedCmS: 0 });
+    }
+    expect(buildCotXml(rt)).toContain(`<environment temperature="-3"/>`);
+  });
+
+  it.each([
+    [`<environment windDirection="270.5"/>`, "wind direction must be a whole number"],
+    [`<environment/>`, "no attributes"],
+    [`<environment temperature="abc"/>`, "unparseable temperature"],
+  ])("drops %s (%s)", (element, _why) => {
+    const pkt = parseCotXml(withDetail(element));
+    expect(pkt.environment).toBeUndefined();
+    expect(buildCotXml(pkt)).not.toContain("<environment");
+  });
+
+  it("lets a later readable <environment> replace an earlier one, and the last <sensor> win", () => {
+    const pkt = parseCotXml(withDetail(
+      `<environment temperature="10"/><environment windDirection="90"/><environment temperature="abc"/>` +
+      `<sensor azimuth="10" model="FLIR"/><sensor azimuth="20"/>`,
+    ));
+    expect(pkt.environment).toEqual({ temperatureCX10: 0, windDirectionDeg: 90, windSpeedCmS: 0 });
+    expect(pkt.sensorFov!.azimuthDeg).toBe(20);
+    expect(pkt.sensorFov!.model).toBe("");
+  });
+
+  it("rounds the way Kotlin's roundToInt does", () => {
+    const s = parseCotXml(withDetail(`<sensor azimuth="44.5" elevation="-2.5"/>`)).sensorFov!;
+    expect(s.azimuthDeg).toBe(45);
+    expect(s.elevationDeg).toBe(-2); // halves go up, not away from zero
+    // Java's Math.round gives 0 here; floor(d + 0.5) would give 1.
+    expect(parseCotXml(withDetail(`<sensor roll="0.49999999999999994"/>`)).sensorFov!.rollDeg).toBe(0);
+    // 22.45 * 10 is exactly 224.5 as a double, so it rounds up like any half.
+    expect(parseCotXml(withDetail(`<environment temperature="22.45"/>`)).environment!.temperatureCX10).toBe(225);
+    // 1.005 * 100 is 100.49999999999999 as a double, so this one rounds down.
+    expect(parseCotXml(withDetail(`<environment windSpeed="1.005"/>`)).environment!.windSpeedCmS).toBe(100);
+  });
+
+  it("writes a negative uint32 as its two's-complement bits and rebuilds it signed", async () => {
+    const TAKPacketV2Type = await getTAKPacketV2Type();
+    const pkt = parseCotXml(withDetail(`<sensor azimuth="-10"/>`));
+    const bytes = Buffer.from(TAKPacketV2Type.encode(TAKPacketV2Type.create(pkt)).finish());
+    // sensor_fov (tag 26) = { azimuth_deg: 0xFFFFFFF6, fov_horizontal_deg: 45 }. The
+    // azimuth varint is what Wire writes for Kotlin's Int -10.
+    expect(bytes.toString("hex")).toContain("d2010810f6ffffff0f202d");
+    expect(buildCotXml(await overTheWire(withDetail(`<sensor azimuth="-10"/>`)))).toContain(`<sensor azimuth="-10" fov="45"`);
+  });
+
+  const sensorTypes: Array<[string | undefined, number]> = [
+    [undefined, UNSPECIFIED], ["", UNSPECIFIED],
+    ["FLIR-Boson-640", THERMAL], ["thermal cam", THERMAL], ["Boson", THERMAL],
+    ["LRF-3000", LASER], ["laser", LASER],
+    ["NVG-21", NVG], ["night vision", NVG],
+    ["radar", RF], ["rf-detector", RF], ["RF-Scanner", RF],
+    ["rfscanner", OTHER], ["rf", OTHER],
+    ["EO-IR", CAMERA], ["camera", CAMERA], ["optic", CAMERA],
+    ["widget", OTHER],
+    ["FLIR radar", THERMAL], // keyword order matters
+  ];
+  it.each(sensorTypes)("infers the sensor type from model %j", (model, expected) => {
+    const element = model === undefined ? "<sensor/>" : `<sensor model="${model}"/>`;
+    expect(parseCotXml(withDetail(element)).sensorFov!.type).toBe(expected);
   });
 });

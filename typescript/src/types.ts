@@ -371,7 +371,10 @@ export interface SensorFov {
   type?: number;
   /** Center azimuth of the cone in whole degrees. */
   azimuthDeg?: number;
-  /** Sensor range in meters. */
+  /**
+   * Sensor range in meters, or `undefined` when unset (receivers then use
+   * ATAK-CIV's 100 m default). Optional on the wire, so 0 stays distinguishable.
+   */
   rangeM?: number;
   /** Horizontal field-of-view width in whole degrees. */
   fovHorizontalDeg?: number;

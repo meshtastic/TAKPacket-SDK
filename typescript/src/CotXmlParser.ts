@@ -6,7 +6,7 @@ import type {
   TAKPacketV2, GeoChat, AircraftTrack, DrawnShape, Marker,
   RangeAndBearing, Route, RouteLink, CasevacReport, EmergencyAlert,
   TaskRequest, CotGeoPoint, ZMistEntry,
-  TakTalkMessage, TakTalkRoomData,
+  TakTalkMessage, TakTalkRoomData, TAKEnvironment, SensorFov,
 } from "./types.js";
 
 const TEAM_NAME_TO_ENUM: Record<string, number> = {
@@ -163,6 +163,31 @@ const RECEIPT_TYPE_NONE = 0;
 const RECEIPT_TYPE_DELIVERED = 1;
 const RECEIPT_TYPE_READ = 2;
 
+// SensorFov.SensorType constants
+const SENSOR_TYPE_UNSPECIFIED = 0;
+const SENSOR_TYPE_CAMERA = 1;
+const SENSOR_TYPE_THERMAL = 2;
+const SENSOR_TYPE_LASER = 3;
+const SENSOR_TYPE_NVG = 4;
+const SENSOR_TYPE_RF = 5;
+const SENSOR_TYPE_OTHER = 6;
+
+/**
+ * Coarse sensor class from ATAK's free-form `model` string. Keywords are
+ * tested in order, so "FLIR radar" is Thermal; a bare "rf" is Other.
+ */
+function inferSensorType(model: string): number {
+  if (model.length === 0) return SENSOR_TYPE_UNSPECIFIED;
+  const m = model.toLowerCase();
+  const has = (...keys: string[]) => keys.some((k) => m.includes(k));
+  if (has("flir", "thermal", "boson")) return SENSOR_TYPE_THERMAL;
+  if (has("laser", "lrf")) return SENSOR_TYPE_LASER;
+  if (has("nvg", "night")) return SENSOR_TYPE_NVG;
+  if (has("radar", "rf-")) return SENSOR_TYPE_RF;
+  if (has("cam", "eo-", "optic")) return SENSOR_TYPE_CAMERA;
+  return SENSOR_TYPE_OTHER;
+}
+
 /**
  * Extract the inner bytes of the `<detail>` element from a CoT XML event,
  * exactly as they appear in the source — no XML normalization, no
@@ -225,6 +250,90 @@ function makeGeoPoint(latDeltaI: number, lonDeltaI: number): CotGeoPoint {
   if (latDeltaI !== 0) gp.latDeltaI = latDeltaI;
   if (lonDeltaI !== 0) gp.lonDeltaI = lonDeltaI;
   return gp;
+}
+
+// --- <environment> / <sensor> attribute helpers ---------------------------
+
+const INT32_MIN = -2147483648;
+const INT32_MAX = 2147483647;
+const DECIMAL_RE = /^[\t\n\v\f\r ]*[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[\t\n\v\f\r ]*$/;
+const INTEGER_RE = /^[+-]?[0-9]+$/;
+
+/** A string attribute of a fast-xml-parser node. A bare `<sensor/>` arrives as "". */
+function attrOf(node: unknown, name: string): string | undefined {
+  if (node === null || typeof node !== "object") return undefined;
+  const v = (node as Record<string, unknown>)[`@_${name}`];
+  return typeof v === "string" ? v : undefined;
+}
+
+/**
+ * Kotlin's `String.toDoubleOrNull()` for plain decimals. `parseFloat` reads
+ * "12abc" as 12 and `Number("")` is 0, so the shape is checked first.
+ */
+function parseDecimal(raw: string | undefined): number | undefined {
+  if (raw === undefined || !DECIMAL_RE.test(raw)) return undefined;
+  const d = Number(raw);
+  // Deliberate deviation: Kotlin throws on NaN and clamps Infinity; both count as absent here.
+  return Number.isFinite(d) ? d : undefined;
+}
+
+/** Kotlin's `String.toIntOrNull()`: optional sign, ASCII digits only, int32 range. */
+function parseInt32(raw: string | undefined): number | undefined {
+  if (raw === undefined || !INTEGER_RE.test(raw)) return undefined;
+  const n = Number(raw);
+  return n >= INT32_MIN && n <= INT32_MAX ? n | 0 : undefined;
+}
+
+/**
+ * Kotlin's `Double.roundToInt()`: halves round up (-2.5 -> -2), clamped to
+ * int32. `| 0` folds -0 into 0.
+ */
+function roundToInt(d: number): number {
+  return Math.min(INT32_MAX, Math.max(INT32_MIN, Math.round(d))) | 0;
+}
+
+// The uint32 fields below take the int32 as is: protobufjs writes it `>>> 0`,
+// the same bits Wire writes for Kotlin's Int. Neither message goes through
+// stripZeros, which would drop a present rangeM of 0; protobufjs 8 already
+// skips the other zero fields on encode.
+
+/** One `<environment>` element, or undefined when none of its attributes parses. */
+function parseEnvironment(node: unknown): TAKEnvironment | undefined {
+  const temperature = parseDecimal(attrOf(node, "temperature"));
+  const windDirection = parseInt32(attrOf(node, "windDirection"));
+  const windSpeed = parseDecimal(attrOf(node, "windSpeed"));
+  if (temperature === undefined && windDirection === undefined && windSpeed === undefined) {
+    return undefined;
+  }
+  return {
+    temperatureCX10: temperature === undefined ? 0 : roundToInt(temperature * 10),
+    windDirectionDeg: windDirection ?? 0,
+    windSpeedCmS: windSpeed === undefined ? 0 : roundToInt(windSpeed * 100),
+  };
+}
+
+/**
+ * One `<sensor>` element. Present even with no attributes: azimuth and fov fall
+ * back to ATAK-CIV's 270 and 45, and `type` is inferred from `model`, never read.
+ */
+function parseSensor(node: unknown): SensorFov {
+  const whole = (name: string): number | undefined => {
+    const d = parseDecimal(attrOf(node, name));
+    return d === undefined ? undefined : roundToInt(d);
+  };
+  const model = attrOf(node, "model") ?? "";
+  const range = whole("range");
+  return {
+    type: inferSensorType(model),
+    azimuthDeg: whole("azimuth") ?? 270,
+    // proto3 `optional`: set only when it parses, so range="0" stays distinct from no range.
+    ...(range === undefined ? {} : { rangeM: range }),
+    fovHorizontalDeg: whole("fov") ?? 45,
+    fovVerticalDeg: whole("vfov") ?? 0,
+    elevationDeg: whole("elevation") ?? 0,
+    rollDeg: whole("roll") ?? 0,
+    model,
+  };
 }
 
 /**
@@ -1132,6 +1241,15 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   if (!hasChat && remarksText) {
     pkt.remarks = remarksText;
   }
+
+  // Weather and sensor-cone annotations, payload-agnostic like marti. A later
+  // <environment> that parses replaces an earlier one; the last <sensor> wins.
+  for (const node of toArray<unknown>(detail.environment)) {
+    const environment = parseEnvironment(node);
+    if (environment) pkt.environment = environment;
+  }
+  const sensors = toArray<unknown>(detail.sensor);
+  if (sensors.length > 0) pkt.sensorFov = parseSensor(sensors[sensors.length - 1]);
 
   // Directed-routing recipients. Only attach the Marti message when there
   // is at least one destination — an empty marti is the same as no marti
