@@ -178,6 +178,15 @@ One version covers all five bindings, so a release is a single tag and a single 
   undeclared reference is malformed XML and now throws
   `IllegalArgumentException`.
 
+- Python: `CotXmlBuilder` left `"` unescaped in attribute values, so a
+  callsign, UID, chatroom, marti `dest` callsign, iconset path or any other
+  value containing one ended its attribute early, and the receiver couldn't
+  parse the event. It now escapes `& < > " '` as
+  `&amp; &lt; &gt; &quot; &apos;` in every attribute value and element body,
+  as the Kotlin, Swift, TypeScript and C# builders do. Element text such as
+  `<remarks>` therefore carries `&quot;` and `&apos;` where it had bare quotes;
+  it parses back to the same text.
+
 - The documented LoRa MTU is now 225 bytes, not 237, in `WIRE_FORMAT.md`, every
   binding's README and API docs, and each binding's compression tests.
 
