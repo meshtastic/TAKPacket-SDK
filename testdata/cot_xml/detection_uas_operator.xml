@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="19fbd806-4fcb-4d11-81f2-0d60735ccd55" type="a-u-G" how="m-r" time="2026-03-15T15:00:00Z" start="2026-03-15T15:00:00Z" stale="2026-03-15T15:01:00Z">
+  <point lat="33.1231" lon="-107.2533" hae="1292.0" ce="15.0" le="9999999.0"/>
+  <detail>
+    <contact callsign="UAS-1 OPERATOR"/>
+    <link uid="f0d0310c-10c0-4fe2-bd09-a296ba7fb756" type="a-u-A-M-H-Q" parent_callsign="UAS-1" relation="p-p"/>
+    <__detection kind="uas_operator" sources="remote_id" confidence="87" state="active"/>
+  </detail>
+</event>

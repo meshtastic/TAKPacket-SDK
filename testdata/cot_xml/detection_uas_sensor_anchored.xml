@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="ee15efa5-0b0c-4a9d-a730-049db70e4387" type="a-u-A-M-H-Q" how="m-r" time="2026-03-15T15:00:00Z" start="2026-03-15T15:00:00Z" stale="2026-03-15T15:01:00Z">
+  <point lat="33.1250" lon="-107.2500" hae="1290.0" ce="9999999.0" le="9999999.0"/>
+  <detail>
+    <contact callsign="UAS-2"/>
+    <link uid="ANDROID-0000000000000012" type="a-f-G-E-S" parent_callsign="SENSOR-1" relation="p-p"/>
+    <sensor azimuth="0" fov="360" range="2000" model="rf-detector"/>
+    <__detection kind="uas" sources="rf" confidence="60" state="new" sensorAnchored="true" rssi="-84"/>
+  </detail>
+</event>

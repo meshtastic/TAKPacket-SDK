@@ -1,13 +1,13 @@
 # TAKPacket-SDK Compression Report
-Generated: 2026-11-23 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)
+Generated: 2026-11-26 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-trained, zstd-19)
 
 ## Summary
 | Metric | Value |
 |--------|-------|
-| Total test messages | 47 |
+| Total test messages | 51 |
 | 100% under 225B | YES |
-| Median compressed size | 89B |
-| Median compression ratio | 7.3x |
+| Median compressed size | 93B |
+| Median compression ratio | 7.1x |
 | Worst case | 193B (85% of LoRa MTU) |
 
 ## Per-Message Results
@@ -23,6 +23,10 @@ Generated: 2026-11-23 | Dictionary: non-aircraft 512KB + aircraft 4KB (proto-tra
 | chat_taktalk_dm | b-t-f | 1138B | 217B | 137B | 8.3x | non-aircraft |
 | chat_taktalk_voice_profile | b-t-f | 1195B | 257B | 165B | 7.2x | non-aircraft |
 | delete_event | t-x-d-d | 476B | 45B | 45B | 10.6x | non-aircraft |
+| detection_ground_vehicle | a-u-G-E-V | 633B | 143B | 116B | 5.5x | non-aircraft |
+| detection_uas_operator | a-u-G | 568B | 148B | 132B | 4.3x | non-aircraft |
+| detection_uas_remoteid | a-u-A-M-H-Q | 733B | 189B | 178B | 4.1x | aircraft |
+| detection_uas_sensor_anchored | a-u-A-M-H-Q | 642B | 167B | 154B | 4.2x | aircraft |
 | drawing_circle | u-d-c-c | 933B | 114B | 71B | 13.1x | non-aircraft |
 | drawing_circle_large | u-d-c-c | 626B | 109B | 90B | 7.0x | non-aircraft |
 | drawing_ellipse | u-d-c-e | 646B | 77B | 60B | 10.8x | non-aircraft |
@@ -100,14 +104,18 @@ aircraft_adsb         112B |########################
 pli_webtak            112B |########################
 drawing_polygon       115B |#########################
 pli_with_sensor       115B |#########################
+detection_ground_vehicle  116B |#########################
 drawing_rectangle_itak  117B |##########################
 route_3wp             122B |###########################
 aircraft_hostile      123B |###########################
 casevac               130B |############################
+detection_uas_operator  132B |#############################
 chat_taktalk_dm       137B |##############################
 marker_goto_itak      142B |###############################
+detection_uas_sensor_anchored  154B |##################################
 casevac_medline       163B |####################################
 chat_taktalk_voice_profile  165B |####################################
+detection_uas_remoteid  178B |#######################################
 route_itak_3wp        181B |########################################
 drawing_telestration  193B |##########################################
 LoRa MTU              225B |##################################################
