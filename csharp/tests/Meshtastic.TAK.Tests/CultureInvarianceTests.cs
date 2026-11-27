@@ -54,6 +54,32 @@ public class CultureInvarianceTests
         }
     }
 
+    // The calendar each calendar culture is here for. A culture's default calendar comes
+    // from the platform's CLDR data, and that moves: CLDR 46 made Gregorian the default in
+    // Saudi Arabia, so on an ICU built from it ar-SA formats a CoT time just as the
+    // invariant culture does.
+    private static readonly Dictionary<string, Type> Calendars = new()
+    {
+        ["th-TH"] = typeof(ThaiBuddhistCalendar),
+        ["ar-SA"] = typeof(UmAlQuraCalendar),
+        ["fa-IR"] = typeof(PersianCalendar),
+    };
+
+    /// <summary>
+    /// A new <paramref name="name"/> culture, set to the calendar <see cref="Calendars"/>
+    /// gives it rather than to its default.
+    /// </summary>
+    private static CultureInfo Culture(string name)
+    {
+        var culture = new CultureInfo(name);
+        if (Calendars.TryGetValue(name, out var type))
+        {
+            culture.DateTimeFormat.Calendar = culture.OptionalCalendars.FirstOrDefault(c => c.GetType() == type)
+                ?? throw new InvalidOperationException($"{name} offers no {type.Name} here");
+        }
+        return culture;
+    }
+
     private static TAKPacketV2 Envelope(CotType type, string uid) => new()
     {
         CotTypeId = type,
@@ -146,7 +172,7 @@ public class CultureInvarianceTests
     [InlineData("fa-IR")] // Persian calendar
     public void Build_UnderCultureWithItsOwnClockOrCalendar_WritesGregorianIsoTimes(string cultureName)
     {
-        var culture = new CultureInfo(cultureName);
+        var culture = Culture(cultureName);
         // The premise: this culture really does format a CoT time differently.
         var probe = new DateTimeOffset(2026, 11, 27, 6, 28, 5, 123, TimeSpan.Zero);
         Assert.NotEqual(
@@ -188,7 +214,7 @@ public class CultureInvarianceTests
     [MemberData(nameof(HostileCultures))]
     public void EveryFixture_ParsesAndBuildsTheSameUnderAnyCulture(string cultureName)
     {
-        var culture = new CultureInfo(cultureName);
+        var culture = Culture(cultureName);
         var failures = new List<string>();
         foreach (var path in Directory.EnumerateFiles(Path.Combine(TestDataDir, "cot_xml"), "*.xml")
                      .Order(StringComparer.Ordinal))
