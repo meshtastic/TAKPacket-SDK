@@ -367,7 +367,7 @@ final class org.meshtastic.tak/TakMeshReceiver { // org.meshtastic.tak/TakMeshRe
 }
 
 final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacketV2Data|null[0]
-    constructor <init>(kotlin/Int = ..., kotlin/String? = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., org.meshtastic.tak/TakPacketV2Data.EnvironmentData? = ..., org.meshtastic.tak/TakPacketV2Data.SensorFovData? = ..., kotlin.collections/List<kotlin/String> = ..., org.meshtastic.tak/TakPacketV2Data.Payload = ..., kotlin/Int? = ...) // org.meshtastic.tak/TakPacketV2Data.<init>|<init>(kotlin.Int;kotlin.String?;kotlin.Int;kotlin.String;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.String;kotlin.String;kotlin.Int;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;org.meshtastic.tak.TakPacketV2Data.EnvironmentData?;org.meshtastic.tak.TakPacketV2Data.SensorFovData?;kotlin.collections.List<kotlin.String>;org.meshtastic.tak.TakPacketV2Data.Payload;kotlin.Int?){}[0]
+    constructor <init>(kotlin/Int = ..., kotlin/String? = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., org.meshtastic.tak/TakPacketV2Data.EnvironmentData? = ..., org.meshtastic.tak/TakPacketV2Data.SensorFovData? = ..., kotlin.collections/List<kotlin/String> = ..., org.meshtastic.tak/TakPacketV2Data.Payload = ..., kotlin/Int? = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData? = ...) // org.meshtastic.tak/TakPacketV2Data.<init>|<init>(kotlin.Int;kotlin.String?;kotlin.Int;kotlin.String;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.String;kotlin.String;kotlin.Int;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;org.meshtastic.tak.TakPacketV2Data.EnvironmentData?;org.meshtastic.tak.TakPacketV2Data.SensorFovData?;kotlin.collections.List<kotlin.String>;org.meshtastic.tak.TakPacketV2Data.Payload;kotlin.Int?;org.meshtastic.tak.TakPacketV2Data.DetectionData?){}[0]
 
     final val altSrc // org.meshtastic.tak/TakPacketV2Data.altSrc|{}altSrc[0]
         final fun <get-altSrc>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.altSrc.<get-altSrc>|<get-altSrc>(){}[0]
@@ -383,6 +383,8 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
         final fun <get-cotTypeStr>(): kotlin/String? // org.meshtastic.tak/TakPacketV2Data.cotTypeStr.<get-cotTypeStr>|<get-cotTypeStr>(){}[0]
     final val course // org.meshtastic.tak/TakPacketV2Data.course|{}course[0]
         final fun <get-course>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.course.<get-course>|<get-course>(){}[0]
+    final val detection // org.meshtastic.tak/TakPacketV2Data.detection|{}detection[0]
+        final fun <get-detection>(): org.meshtastic.tak/TakPacketV2Data.DetectionData? // org.meshtastic.tak/TakPacketV2Data.detection.<get-detection>|<get-detection>(){}[0]
     final val deviceCallsign // org.meshtastic.tak/TakPacketV2Data.deviceCallsign|{}deviceCallsign[0]
         final fun <get-deviceCallsign>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.deviceCallsign.<get-deviceCallsign>|<get-deviceCallsign>(){}[0]
     final val endpoint // org.meshtastic.tak/TakPacketV2Data.endpoint|{}endpoint[0]
@@ -451,13 +453,14 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
     final fun component28(): org.meshtastic.tak/TakPacketV2Data.Payload // org.meshtastic.tak/TakPacketV2Data.component28|component28(){}[0]
     final fun component29(): kotlin/Int? // org.meshtastic.tak/TakPacketV2Data.component29|component29(){}[0]
     final fun component3(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.component3|component3(){}[0]
+    final fun component30(): org.meshtastic.tak/TakPacketV2Data.DetectionData? // org.meshtastic.tak/TakPacketV2Data.component30|component30(){}[0]
     final fun component4(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.component4|component4(){}[0]
     final fun component5(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.component5|component5(){}[0]
     final fun component6(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.component6|component6(){}[0]
     final fun component7(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.component7|component7(){}[0]
     final fun component8(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.component8|component8(){}[0]
     final fun component9(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.component9|component9(){}[0]
-    final fun copy(kotlin/Int = ..., kotlin/String? = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., org.meshtastic.tak/TakPacketV2Data.EnvironmentData? = ..., org.meshtastic.tak/TakPacketV2Data.SensorFovData? = ..., kotlin.collections/List<kotlin/String> = ..., org.meshtastic.tak/TakPacketV2Data.Payload = ..., kotlin/Int? = ...): org.meshtastic.tak/TakPacketV2Data // org.meshtastic.tak/TakPacketV2Data.copy|copy(kotlin.Int;kotlin.String?;kotlin.Int;kotlin.String;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.String;kotlin.String;kotlin.Int;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;org.meshtastic.tak.TakPacketV2Data.EnvironmentData?;org.meshtastic.tak.TakPacketV2Data.SensorFovData?;kotlin.collections.List<kotlin.String>;org.meshtastic.tak.TakPacketV2Data.Payload;kotlin.Int?){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/String? = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/Int = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., kotlin/String = ..., org.meshtastic.tak/TakPacketV2Data.EnvironmentData? = ..., org.meshtastic.tak/TakPacketV2Data.SensorFovData? = ..., kotlin.collections/List<kotlin/String> = ..., org.meshtastic.tak/TakPacketV2Data.Payload = ..., kotlin/Int? = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData? = ...): org.meshtastic.tak/TakPacketV2Data // org.meshtastic.tak/TakPacketV2Data.copy|copy(kotlin.Int;kotlin.String?;kotlin.Int;kotlin.String;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.String;kotlin.String;kotlin.Int;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;kotlin.String;org.meshtastic.tak.TakPacketV2Data.EnvironmentData?;org.meshtastic.tak.TakPacketV2Data.SensorFovData?;kotlin.collections.List<kotlin.String>;org.meshtastic.tak.TakPacketV2Data.Payload;kotlin.Int?;org.meshtastic.tak.TakPacketV2Data.DetectionData?){}[0]
     final fun cotTypeString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.cotTypeString|cotTypeString(){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.hashCode|hashCode(){}[0]
@@ -478,6 +481,7 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
         final fun cotTypeId(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.cotTypeId|cotTypeId(kotlin.Int){}[0]
         final fun cotTypeStr(kotlin/String?): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.cotTypeStr|cotTypeStr(kotlin.String?){}[0]
         final fun course(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.course|course(kotlin.Int){}[0]
+        final fun detection(org.meshtastic.tak/TakPacketV2Data.DetectionData?): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.detection|detection(org.meshtastic.tak.TakPacketV2Data.DetectionData?){}[0]
         final fun deviceCallsign(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.deviceCallsign|deviceCallsign(kotlin.String){}[0]
         final fun endpoint(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.endpoint|endpoint(kotlin.String){}[0]
         final fun environment(org.meshtastic.tak/TakPacketV2Data.EnvironmentData?): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.environment|environment(org.meshtastic.tak.TakPacketV2Data.EnvironmentData?){}[0]
@@ -504,6 +508,194 @@ final class org.meshtastic.tak/TakPacketV2Data { // org.meshtastic.tak/TakPacket
         final fun takVersion(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.takVersion|takVersion(kotlin.String){}[0]
         final fun team(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.team|team(kotlin.Int){}[0]
         final fun uid(kotlin/String): org.meshtastic.tak/TakPacketV2Data.Builder // org.meshtastic.tak/TakPacketV2Data.Builder.uid|uid(kotlin.String){}[0]
+    }
+
+    final class DetectionData { // org.meshtastic.tak/TakPacketV2Data.DetectionData|null[0]
+        constructor <init>(org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind = ..., kotlin/Int = ..., kotlin/Int = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData.State = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus = ...) // org.meshtastic.tak/TakPacketV2Data.DetectionData.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.DetectionData.Kind;kotlin.Int;kotlin.Int;org.meshtastic.tak.TakPacketV2Data.DetectionData.State;org.meshtastic.tak.TakPacketV2Data.DetectionData.Trend;kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.String;org.meshtastic.tak.TakPacketV2Data.DetectionData.UasIdType;org.meshtastic.tak.TakPacketV2Data.DetectionData.UasStatus){}[0]
+
+        final val cepMeters // org.meshtastic.tak/TakPacketV2Data.DetectionData.cepMeters|{}cepMeters[0]
+            final fun <get-cepMeters>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.cepMeters.<get-cepMeters>|<get-cepMeters>(){}[0]
+        final val confidence // org.meshtastic.tak/TakPacketV2Data.DetectionData.confidence|{}confidence[0]
+            final fun <get-confidence>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.confidence.<get-confidence>|<get-confidence>(){}[0]
+        final val count // org.meshtastic.tak/TakPacketV2Data.DetectionData.count|{}count[0]
+            final fun <get-count>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.count.<get-count>|<get-count>(){}[0]
+        final val kind // org.meshtastic.tak/TakPacketV2Data.DetectionData.kind|{}kind[0]
+            final fun <get-kind>(): org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind // org.meshtastic.tak/TakPacketV2Data.DetectionData.kind.<get-kind>|<get-kind>(){}[0]
+        final val rssiDbm // org.meshtastic.tak/TakPacketV2Data.DetectionData.rssiDbm|{}rssiDbm[0]
+            final fun <get-rssiDbm>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.rssiDbm.<get-rssiDbm>|<get-rssiDbm>(){}[0]
+        final val sensorAnchored // org.meshtastic.tak/TakPacketV2Data.DetectionData.sensorAnchored|{}sensorAnchored[0]
+            final fun <get-sensorAnchored>(): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.DetectionData.sensorAnchored.<get-sensorAnchored>|<get-sensorAnchored>(){}[0]
+        final val sources // org.meshtastic.tak/TakPacketV2Data.DetectionData.sources|{}sources[0]
+            final fun <get-sources>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.sources.<get-sources>|<get-sources>(){}[0]
+        final val state // org.meshtastic.tak/TakPacketV2Data.DetectionData.state|{}state[0]
+            final fun <get-state>(): org.meshtastic.tak/TakPacketV2Data.DetectionData.State // org.meshtastic.tak/TakPacketV2Data.DetectionData.state.<get-state>|<get-state>(){}[0]
+        final val trend // org.meshtastic.tak/TakPacketV2Data.DetectionData.trend|{}trend[0]
+            final fun <get-trend>(): org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend // org.meshtastic.tak/TakPacketV2Data.DetectionData.trend.<get-trend>|<get-trend>(){}[0]
+        final val uasId // org.meshtastic.tak/TakPacketV2Data.DetectionData.uasId|{}uasId[0]
+            final fun <get-uasId>(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.DetectionData.uasId.<get-uasId>|<get-uasId>(){}[0]
+        final val uasIdType // org.meshtastic.tak/TakPacketV2Data.DetectionData.uasIdType|{}uasIdType[0]
+            final fun <get-uasIdType>(): org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType // org.meshtastic.tak/TakPacketV2Data.DetectionData.uasIdType.<get-uasIdType>|<get-uasIdType>(){}[0]
+        final val uasStatus // org.meshtastic.tak/TakPacketV2Data.DetectionData.uasStatus|{}uasStatus[0]
+            final fun <get-uasStatus>(): org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus // org.meshtastic.tak/TakPacketV2Data.DetectionData.uasStatus.<get-uasStatus>|<get-uasStatus>(){}[0]
+
+        final fun component1(): org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind // org.meshtastic.tak/TakPacketV2Data.DetectionData.component1|component1(){}[0]
+        final fun component10(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.DetectionData.component10|component10(){}[0]
+        final fun component11(): org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType // org.meshtastic.tak/TakPacketV2Data.DetectionData.component11|component11(){}[0]
+        final fun component12(): org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus // org.meshtastic.tak/TakPacketV2Data.DetectionData.component12|component12(){}[0]
+        final fun component2(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.component3|component3(){}[0]
+        final fun component4(): org.meshtastic.tak/TakPacketV2Data.DetectionData.State // org.meshtastic.tak/TakPacketV2Data.DetectionData.component4|component4(){}[0]
+        final fun component5(): org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend // org.meshtastic.tak/TakPacketV2Data.DetectionData.component5|component5(){}[0]
+        final fun component6(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.component6|component6(){}[0]
+        final fun component7(): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.DetectionData.component7|component7(){}[0]
+        final fun component8(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.component8|component8(){}[0]
+        final fun component9(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.component9|component9(){}[0]
+        final fun copy(org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind = ..., kotlin/Int = ..., kotlin/Int = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData.State = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend = ..., kotlin/Int = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType = ..., org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus = ...): org.meshtastic.tak/TakPacketV2Data.DetectionData // org.meshtastic.tak/TakPacketV2Data.DetectionData.copy|copy(org.meshtastic.tak.TakPacketV2Data.DetectionData.Kind;kotlin.Int;kotlin.Int;org.meshtastic.tak.TakPacketV2Data.DetectionData.State;org.meshtastic.tak.TakPacketV2Data.DetectionData.Trend;kotlin.Int;kotlin.Boolean;kotlin.Int;kotlin.Int;kotlin.String;org.meshtastic.tak.TakPacketV2Data.DetectionData.UasIdType;org.meshtastic.tak.TakPacketV2Data.DetectionData.UasStatus){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.DetectionData.equals|equals(kotlin.Any?){}[0]
+        final fun hasSource(org.meshtastic.tak/TakPacketV2Data.DetectionData.Source): kotlin/Boolean // org.meshtastic.tak/TakPacketV2Data.DetectionData.hasSource|hasSource(org.meshtastic.tak.TakPacketV2Data.DetectionData.Source){}[0]
+        final fun hashCode(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.hashCode|hashCode(){}[0]
+        final fun toBuilder(): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.toBuilder|toBuilder(){}[0]
+        final fun toString(): kotlin/String // org.meshtastic.tak/TakPacketV2Data.DetectionData.toString|toString(){}[0]
+
+        final enum class Kind : kotlin/Enum<org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind> { // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind|null[0]
+            enum entry Other // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.Other|null[0]
+            enum entry Person // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.Person|null[0]
+            enum entry Uas // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.Uas|null[0]
+            enum entry UasHome // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.UasHome|null[0]
+            enum entry UasOperator // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.UasOperator|null[0]
+            enum entry Unspecified // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.Unspecified|null[0]
+            enum entry Vehicle // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.Vehicle|null[0]
+
+            final val entries // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.entries|#static{}entries[0]
+                final fun <get-entries>(): kotlin.enums/EnumEntries<org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind> // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.entries.<get-entries>|<get-entries>#static(){}[0]
+            final val value // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.value|{}value[0]
+                final fun <get-value>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.value.<get-value>|<get-value>(){}[0]
+
+            final fun valueOf(kotlin/String): org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.valueOf|valueOf#static(kotlin.String){}[0]
+            final fun values(): kotlin/Array<org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind> // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.values|values#static(){}[0]
+
+            final object Companion { // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.Companion|null[0]
+                final fun fromValue(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind // org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind.Companion.fromValue|fromValue(kotlin.Int){}[0]
+            }
+        }
+
+        final enum class Source : kotlin/Enum<org.meshtastic.tak/TakPacketV2Data.DetectionData.Source> { // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source|null[0]
+            enum entry Acoustic // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.Acoustic|null[0]
+            enum entry Magnetic // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.Magnetic|null[0]
+            enum entry Optical // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.Optical|null[0]
+            enum entry Radar // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.Radar|null[0]
+            enum entry RemoteId // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.RemoteId|null[0]
+            enum entry Rf // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.Rf|null[0]
+            enum entry Seismic // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.Seismic|null[0]
+            enum entry Thermal // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.Thermal|null[0]
+            enum entry Unspecified // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.Unspecified|null[0]
+
+            final val entries // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.entries|#static{}entries[0]
+                final fun <get-entries>(): kotlin.enums/EnumEntries<org.meshtastic.tak/TakPacketV2Data.DetectionData.Source> // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.entries.<get-entries>|<get-entries>#static(){}[0]
+            final val value // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.value|{}value[0]
+                final fun <get-value>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.value.<get-value>|<get-value>(){}[0]
+
+            final fun valueOf(kotlin/String): org.meshtastic.tak/TakPacketV2Data.DetectionData.Source // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.valueOf|valueOf#static(kotlin.String){}[0]
+            final fun values(): kotlin/Array<org.meshtastic.tak/TakPacketV2Data.DetectionData.Source> // org.meshtastic.tak/TakPacketV2Data.DetectionData.Source.values|values#static(){}[0]
+        }
+
+        final enum class State : kotlin/Enum<org.meshtastic.tak/TakPacketV2Data.DetectionData.State> { // org.meshtastic.tak/TakPacketV2Data.DetectionData.State|null[0]
+            enum entry Active // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.Active|null[0]
+            enum entry Coasting // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.Coasting|null[0]
+            enum entry Lost // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.Lost|null[0]
+            enum entry New // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.New|null[0]
+            enum entry Unspecified // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.Unspecified|null[0]
+
+            final val entries // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.entries|#static{}entries[0]
+                final fun <get-entries>(): kotlin.enums/EnumEntries<org.meshtastic.tak/TakPacketV2Data.DetectionData.State> // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.entries.<get-entries>|<get-entries>#static(){}[0]
+            final val value // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.value|{}value[0]
+                final fun <get-value>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.value.<get-value>|<get-value>(){}[0]
+
+            final fun valueOf(kotlin/String): org.meshtastic.tak/TakPacketV2Data.DetectionData.State // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.valueOf|valueOf#static(kotlin.String){}[0]
+            final fun values(): kotlin/Array<org.meshtastic.tak/TakPacketV2Data.DetectionData.State> // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.values|values#static(){}[0]
+
+            final object Companion { // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.Companion|null[0]
+                final fun fromValue(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.State // org.meshtastic.tak/TakPacketV2Data.DetectionData.State.Companion.fromValue|fromValue(kotlin.Int){}[0]
+            }
+        }
+
+        final enum class Trend : kotlin/Enum<org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend> { // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend|null[0]
+            enum entry Closing // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.Closing|null[0]
+            enum entry Opening // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.Opening|null[0]
+            enum entry Steady // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.Steady|null[0]
+            enum entry Unspecified // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.Unspecified|null[0]
+
+            final val entries // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.entries|#static{}entries[0]
+                final fun <get-entries>(): kotlin.enums/EnumEntries<org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend> // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.entries.<get-entries>|<get-entries>#static(){}[0]
+            final val value // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.value|{}value[0]
+                final fun <get-value>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.value.<get-value>|<get-value>(){}[0]
+
+            final fun valueOf(kotlin/String): org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.valueOf|valueOf#static(kotlin.String){}[0]
+            final fun values(): kotlin/Array<org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend> // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.values|values#static(){}[0]
+
+            final object Companion { // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.Companion|null[0]
+                final fun fromValue(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend // org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend.Companion.fromValue|fromValue(kotlin.Int){}[0]
+            }
+        }
+
+        final enum class UasIdType : kotlin/Enum<org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType> { // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType|null[0]
+            enum entry CaaRegistration // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.CaaRegistration|null[0]
+            enum entry SerialNumber // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.SerialNumber|null[0]
+            enum entry SpecificSession // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.SpecificSession|null[0]
+            enum entry Unspecified // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.Unspecified|null[0]
+            enum entry UtmAssigned // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.UtmAssigned|null[0]
+
+            final val entries // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.entries|#static{}entries[0]
+                final fun <get-entries>(): kotlin.enums/EnumEntries<org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType> // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.entries.<get-entries>|<get-entries>#static(){}[0]
+            final val value // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.value|{}value[0]
+                final fun <get-value>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.value.<get-value>|<get-value>(){}[0]
+
+            final fun valueOf(kotlin/String): org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.valueOf|valueOf#static(kotlin.String){}[0]
+            final fun values(): kotlin/Array<org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType> // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.values|values#static(){}[0]
+
+            final object Companion { // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.Companion|null[0]
+                final fun fromValue(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType.Companion.fromValue|fromValue(kotlin.Int){}[0]
+            }
+        }
+
+        final enum class UasStatus : kotlin/Enum<org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus> { // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus|null[0]
+            enum entry Airborne // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.Airborne|null[0]
+            enum entry Emergency // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.Emergency|null[0]
+            enum entry Ground // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.Ground|null[0]
+            enum entry SystemFailure // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.SystemFailure|null[0]
+            enum entry Unspecified // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.Unspecified|null[0]
+
+            final val entries // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.entries|#static{}entries[0]
+                final fun <get-entries>(): kotlin.enums/EnumEntries<org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus> // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.entries.<get-entries>|<get-entries>#static(){}[0]
+            final val value // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.value|{}value[0]
+                final fun <get-value>(): kotlin/Int // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.value.<get-value>|<get-value>(){}[0]
+
+            final fun valueOf(kotlin/String): org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.valueOf|valueOf#static(kotlin.String){}[0]
+            final fun values(): kotlin/Array<org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus> // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.values|values#static(){}[0]
+
+            final object Companion { // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.Companion|null[0]
+                final fun fromValue(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus // org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus.Companion.fromValue|fromValue(kotlin.Int){}[0]
+            }
+        }
+
+        final class Builder { // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder|null[0]
+            constructor <init>(org.meshtastic.tak/TakPacketV2Data.DetectionData = ...) // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.<init>|<init>(org.meshtastic.tak.TakPacketV2Data.DetectionData){}[0]
+
+            final fun addSource(org.meshtastic.tak/TakPacketV2Data.DetectionData.Source): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.addSource|addSource(org.meshtastic.tak.TakPacketV2Data.DetectionData.Source){}[0]
+            final fun build(): org.meshtastic.tak/TakPacketV2Data.DetectionData // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.build|build(){}[0]
+            final fun cepMeters(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.cepMeters|cepMeters(kotlin.Int){}[0]
+            final fun confidence(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.confidence|confidence(kotlin.Int){}[0]
+            final fun count(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.count|count(kotlin.Int){}[0]
+            final fun kind(org.meshtastic.tak/TakPacketV2Data.DetectionData.Kind): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.kind|kind(org.meshtastic.tak.TakPacketV2Data.DetectionData.Kind){}[0]
+            final fun rssiDbm(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.rssiDbm|rssiDbm(kotlin.Int){}[0]
+            final fun sensorAnchored(kotlin/Boolean): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.sensorAnchored|sensorAnchored(kotlin.Boolean){}[0]
+            final fun sources(kotlin/Int): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.sources|sources(kotlin.Int){}[0]
+            final fun state(org.meshtastic.tak/TakPacketV2Data.DetectionData.State): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.state|state(org.meshtastic.tak.TakPacketV2Data.DetectionData.State){}[0]
+            final fun trend(org.meshtastic.tak/TakPacketV2Data.DetectionData.Trend): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.trend|trend(org.meshtastic.tak.TakPacketV2Data.DetectionData.Trend){}[0]
+            final fun uasId(kotlin/String): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.uasId|uasId(kotlin.String){}[0]
+            final fun uasIdType(org.meshtastic.tak/TakPacketV2Data.DetectionData.UasIdType): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.uasIdType|uasIdType(org.meshtastic.tak.TakPacketV2Data.DetectionData.UasIdType){}[0]
+            final fun uasStatus(org.meshtastic.tak/TakPacketV2Data.DetectionData.UasStatus): org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder // org.meshtastic.tak/TakPacketV2Data.DetectionData.Builder.uasStatus|uasStatus(org.meshtastic.tak.TakPacketV2Data.DetectionData.UasStatus){}[0]
+        }
     }
 
     final class EnvironmentData { // org.meshtastic.tak/TakPacketV2Data.EnvironmentData|null[0]

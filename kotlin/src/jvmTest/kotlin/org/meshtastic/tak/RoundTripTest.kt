@@ -59,6 +59,8 @@ class RoundTripTest {
         // this list matching the receiver's callsign so a regression here
         // silently breaks voice messaging end-to-end.
         assertEquals(packet.marti, decompressed.marti, "marti mismatch in $fixture")
+        // Passive-sensor annotation (tag 47). Crosses the wire losslessly, so every field compares.
+        assertEquals(packet.detection, decompressed.detection, "detection mismatch in $fixture")
 
         // Verify payload type matches
         assertEquals(

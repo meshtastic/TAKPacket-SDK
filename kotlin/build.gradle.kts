@@ -392,7 +392,7 @@ abstract class GenerateInlinedFixtures : DefaultTask() {
                 append("package org.meshtastic.tak\n\n")
                 append("import kotlin.io.encoding.Base64\n\n")
                 append("/**\n")
-                append(" * The 47 CoT XML test fixtures with their golden wire frames AND their\n")
+                append(" * The shared CoT XML test fixtures with their golden wire frames AND their\n")
                 append(" * intermediate `.pb` protobuf bytes, inlined so the commonTest suites run\n")
                 append(" * on targets that can't read `../testdata` (Native / JS / Wasm). XML drives\n")
                 append(" * parse → compress; the golden frames drive decode (works on every target\n")

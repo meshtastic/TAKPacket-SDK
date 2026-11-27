@@ -258,6 +258,10 @@ public class CotXmlParser {
         var environmentData: TakPacketV2Data.EnvironmentData? = null
         var sensorFovData: TakPacketV2Data.SensorFovData? = null
 
+        // --- Detection annotation; <point ce> backs up its cep ----------
+        var detectionData: TakPacketV2Data.DetectionData? = null
+        var pointCe: String? = null
+
         try {
             while (reader.hasNext()) {
                 when (reader.next()) {
@@ -281,6 +285,7 @@ public class CotXmlParser {
                                 lat = reader.getAttributeValue(null, "lat")?.toDoubleOrNull() ?: 0.0
                                 lon = reader.getAttributeValue(null, "lon")?.toDoubleOrNull() ?: 0.0
                                 hae = reader.getAttributeValue(null, "hae")?.toDoubleOrNull() ?: 0.0
+                                pointCe = reader.getAttributeValue(null, "ce")
                             }
 
                             "detail" -> {
@@ -698,6 +703,10 @@ public class CotXmlParser {
                                                 ?.roundToInt(),
                                         model = model,
                                     )
+                            }
+
+                            DetectionXml.ELEMENT -> {
+                                detectionData = DetectionXml.parse({ reader.getAttributeValue(null, it) }, pointCe)
                             }
 
                             "link" -> {
@@ -1258,6 +1267,7 @@ public class CotXmlParser {
             sensorFov = sensorFovData,
             marti = martiDests.toList(),
             payload = payload,
+            detection = detectionData,
         )
     }
 

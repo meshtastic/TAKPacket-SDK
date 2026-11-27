@@ -477,8 +477,8 @@ public final class org/meshtastic/tak/TakPacketSdk {
 
 public final class org/meshtastic/tak/TakPacketV2Data {
 	public fun <init> ()V
-	public fun <init> (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;)V
-	public synthetic fun <init> (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;)V
+	public synthetic fun <init> (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component10 ()I
 	public final fun component11 ()I
@@ -502,14 +502,15 @@ public final class org/meshtastic/tak/TakPacketV2Data {
 	public final fun component28 ()Lorg/meshtastic/tak/TakPacketV2Data$Payload;
 	public final fun component29 ()Ljava/lang/Integer;
 	public final fun component3 ()I
+	public final fun component30 ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;
 	public final fun component4 ()Ljava/lang/String;
 	public final fun component5 ()I
 	public final fun component6 ()I
 	public final fun component7 ()I
 	public final fun component8 ()I
 	public final fun component9 ()I
-	public final fun copy (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;)Lorg/meshtastic/tak/TakPacketV2Data;
-	public static synthetic fun copy$default (Lorg/meshtastic/tak/TakPacketV2Data;ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;ILjava/lang/Object;)Lorg/meshtastic/tak/TakPacketV2Data;
+	public final fun copy (ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;)Lorg/meshtastic/tak/TakPacketV2Data;
+	public static synthetic fun copy$default (Lorg/meshtastic/tak/TakPacketV2Data;ILjava/lang/String;ILjava/lang/String;IIIIIIIIIILjava/lang/String;Ljava/lang/String;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;Lorg/meshtastic/tak/TakPacketV2Data$SensorFovData;Ljava/util/List;Lorg/meshtastic/tak/TakPacketV2Data$Payload;Ljava/lang/Integer;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;ILjava/lang/Object;)Lorg/meshtastic/tak/TakPacketV2Data;
 	public final fun cotTypeString ()Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAltSrc ()I
@@ -519,6 +520,7 @@ public final class org/meshtastic/tak/TakPacketV2Data {
 	public final fun getCotTypeId ()I
 	public final fun getCotTypeStr ()Ljava/lang/String;
 	public final fun getCourse ()I
+	public final fun getDetection ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;
 	public final fun getDeviceCallsign ()Ljava/lang/String;
 	public final fun getEndpoint ()Ljava/lang/String;
 	public final fun getEnvironment ()Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;
@@ -561,6 +563,7 @@ public final class org/meshtastic/tak/TakPacketV2Data$Builder {
 	public final fun cotTypeId (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
 	public final fun cotTypeStr (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
 	public final fun course (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+	public final fun detection (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
 	public final fun deviceCallsign (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
 	public final fun endpoint (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
 	public final fun environment (Lorg/meshtastic/tak/TakPacketV2Data$EnvironmentData;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
@@ -587,6 +590,165 @@ public final class org/meshtastic/tak/TakPacketV2Data$Builder {
 	public final fun takVersion (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
 	public final fun team (I)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
 	public final fun uid (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$Builder;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;IILorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;IZIILjava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;IILorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;IZIILjava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public final fun component10 ()Ljava/lang/String;
+	public final fun component11 ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+	public final fun component12 ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+	public final fun component5 ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;
+	public final fun component6 ()I
+	public final fun component7 ()Z
+	public final fun component8 ()I
+	public final fun component9 ()I
+	public final fun copy (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;IILorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;IZIILjava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;
+	public static synthetic fun copy$default (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;IILorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;IZIILjava/lang/String;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;ILjava/lang/Object;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCepMeters ()I
+	public final fun getConfidence ()I
+	public final fun getCount ()I
+	public final fun getKind ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public final fun getRssiDbm ()I
+	public final fun getSensorAnchored ()Z
+	public final fun getSources ()I
+	public final fun getState ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+	public final fun getTrend ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;
+	public final fun getUasId ()Ljava/lang/String;
+	public final fun getUasIdType ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+	public final fun getUasStatus ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
+	public final fun hasSource (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;)Z
+	public fun hashCode ()I
+	public final fun toBuilder ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$Builder {
+	public fun <init> ()V
+	public fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;)V
+	public synthetic fun <init> (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addSource (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun build ()Lorg/meshtastic/tak/TakPacketV2Data$DetectionData;
+	public final fun cepMeters (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun confidence (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun count (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun kind (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun rssiDbm (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun sensorAnchored (Z)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun sources (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun state (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun trend (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun uasId (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun uasIdType (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+	public final fun uasStatus (Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Builder;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$Kind : java/lang/Enum {
+	public static final field Companion Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind$Companion;
+	public static final field Other Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public static final field Person Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public static final field Uas Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public static final field UasHome Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public static final field UasOperator Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public static final field Unspecified Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public static final field Vehicle Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()I
+	public static fun valueOf (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+	public static fun values ()[Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$Kind$Companion {
+	public final fun fromValue (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Kind;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$Source : java/lang/Enum {
+	public static final field Acoustic Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static final field Magnetic Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static final field Optical Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static final field Radar Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static final field RemoteId Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static final field Rf Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static final field Seismic Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static final field Thermal Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static final field Unspecified Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()I
+	public static fun valueOf (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+	public static fun values ()[Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Source;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$State : java/lang/Enum {
+	public static final field Active Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+	public static final field Coasting Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+	public static final field Companion Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State$Companion;
+	public static final field Lost Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+	public static final field New Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+	public static final field Unspecified Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()I
+	public static fun valueOf (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+	public static fun values ()[Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$State$Companion {
+	public final fun fromValue (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$State;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$Trend : java/lang/Enum {
+	public static final field Closing Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;
+	public static final field Companion Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend$Companion;
+	public static final field Opening Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;
+	public static final field Steady Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;
+	public static final field Unspecified Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()I
+	public static fun valueOf (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;
+	public static fun values ()[Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$Trend$Companion {
+	public final fun fromValue (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$Trend;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType : java/lang/Enum {
+	public static final field CaaRegistration Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+	public static final field Companion Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType$Companion;
+	public static final field SerialNumber Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+	public static final field SpecificSession Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+	public static final field Unspecified Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+	public static final field UtmAssigned Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()I
+	public static fun valueOf (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+	public static fun values ()[Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType$Companion {
+	public final fun fromValue (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasIdType;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus : java/lang/Enum {
+	public static final field Airborne Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
+	public static final field Companion Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus$Companion;
+	public static final field Emergency Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
+	public static final field Ground Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
+	public static final field SystemFailure Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
+	public static final field Unspecified Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()I
+	public static fun valueOf (Ljava/lang/String;)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
+	public static fun values ()[Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
+}
+
+public final class org/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus$Companion {
+	public final fun fromValue (I)Lorg/meshtastic/tak/TakPacketV2Data$DetectionData$UasStatus;
 }
 
 public final class org/meshtastic/tak/TakPacketV2Data$EnvironmentData {

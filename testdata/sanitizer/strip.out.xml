@@ -14,6 +14,7 @@
     
     
     <status battery="64"/>
+    <__detection kind="uas" sources="remote_id rf" confidence="87" state="active" trend="closing" count="2" sensorAnchored="true" cep="12" rssi="-71" uasId="ZZZZ8TEST0001" uasIdType="serial_number" uasStatus="airborne"/>
     <voice/>
     <marti><dest callsign="ETHEL"/></marti>
     <link point="33.1300,-107.2500"/>

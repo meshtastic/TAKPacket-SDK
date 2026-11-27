@@ -10,7 +10,7 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 
 /**
- * End-to-end coverage for the `start` timestamp, which the 47 fixtures cannot provide.
+ * End-to-end coverage for the `start` timestamp, which the shared fixtures cannot provide.
  *
  * Every fixture is stamped months in the past, so the parser correctly refuses to
  * encode its `start` (out of the 14-bit window) and the builder falls back to the

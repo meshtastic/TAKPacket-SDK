@@ -22,8 +22,8 @@ private fun scaleDegrees(
  *
  * Shape: 26 envelope fields (the always-present scalars below) plus a single
  * [payload] of type [Payload] (a sealed hierarchy with one variant per `oneof`
- * arm). Two optional top-level annotations — [environment] and [sensorFov] —
- * attach to any payload variant. **PLI is implicit:** there is no `bool pli`
+ * arm). Three optional top-level annotations — [environment], [sensorFov] and
+ * [detection] — attach to any payload variant. **PLI is implicit:** there is no `bool pli`
  * field; a packet whose [payload] is [Payload.None] (modeled here as
  * [Payload.Pli]) and whose [cotTypeId] is an `a-f-*` friendly type IS a PLI
  * position report.
@@ -126,6 +126,13 @@ public data class TakPacketV2Data(
     // products pin this library. Appending also matches the proto, where the field is
     // tag 43, the highest.
     val startEpochLo14: Int? = null,
+    /**
+     * Passive-sensor metadata from a `<__detection>` CoT detail element, present when
+     * this event reports an object a sensor found. Attaches to any payload variant.
+     * `null` means the source XML had no `<__detection>` element. Last for the same
+     * reason as [startEpochLo14]; the proto tag is 47.
+     */
+    val detection: DetectionData? = null,
 ) {
     /** Starts a [Builder] from this value. */
     public fun toBuilder(): Builder = Builder(this)
@@ -195,6 +202,8 @@ public data class TakPacketV2Data(
         public fun payload(payload: Payload): Builder = apply { current = current.copy(payload = payload) }
 
         public fun startEpochLo14(startEpochLo14: Int?): Builder = apply { current = current.copy(startEpochLo14 = startEpochLo14) }
+
+        public fun detection(detection: DetectionData?): Builder = apply { current = current.copy(detection = detection) }
 
         /** Sets [TakPacketV2Data.cotTypeId] from a CoT type string, keeping the string itself only when it has no enum value (as the parser does). */
         public fun cotType(type: String): Builder =
@@ -307,6 +316,280 @@ public data class TakPacketV2Data(
                  * [Unspecified] for any unknown value (forward-compatible).
                  */
                 public fun fromValue(value: Int): SensorType = entries.firstOrNull { it.value == value } ?: Unspecified
+            }
+        }
+    }
+
+    /**
+     * Passive-sensor metadata from a CoT `<__detection>` detail element: what a sensor
+     * reports about the object this event stands for, an uncrewed aircraft (UAS), its
+     * operator or home point, a person or a vehicle. Maps to the `TAKDetection` proto
+     * message at tag 47.
+     *
+     * The event itself still carries the object's position, CoT type and links.
+     * Affiliation is not here: the CoT type carries it, and the producer chooses it.
+     * The only identifier is [uasId], the UAS ID that Remote ID broadcasts.
+     */
+    @Suppress("MagicNumber") // the enums below carry the proto's wire values
+    public data class DetectionData(
+        /** What the reported object is. */
+        val kind: Kind = Kind.Unspecified,
+        /** Kinds of sensing behind the report: a bitwise OR of [Source.value] bits. 0 = not stated. */
+        val sources: Int = 0,
+        /** Producer's confidence in the report, in percent (0–100). 0 = unknown. */
+        val confidence: Int = 0,
+        /** Where the reported track is in its life cycle. */
+        val state: State = State.Unspecified,
+        /** Whether the object is closing on or opening from the reporting sensor. */
+        val trend: Trend = Trend.Unspecified,
+        /** Number of objects this event stands for. 0 = one. */
+        val count: Int = 0,
+        /** True when the event's point is the reporting sensor, because the object's position is unknown. */
+        val sensorAnchored: Boolean = false,
+        /** Horizontal position uncertainty in meters, also written as the CoT point's `ce`. 0 = unknown. */
+        val cepMeters: Int = 0,
+        /** Calibrated received power at the reporting sensor, in dBm. 0 = unknown. */
+        val rssiDbm: Int = 0,
+        /**
+         * UAS ID from a Remote ID broadcast, at most 20 characters. The parser and the
+         * builder keep it only when [kind] is [Kind.Uas].
+         */
+        val uasId: String = "",
+        /** Type of [uasId]. */
+        val uasIdType: UasIdType = UasIdType.Unspecified,
+        /** Operational status from a Remote ID broadcast. */
+        val uasStatus: UasStatus = UasStatus.Unspecified,
+    ) {
+        /** Whether [sources] has [source]'s bit set. Always false for [Source.Unspecified]. */
+        public fun hasSource(source: Source): Boolean = (sources and source.value) != 0
+
+        /** Starts a [Builder] from this value. */
+        public fun toBuilder(): Builder = Builder(this)
+
+        /**
+         * Fluent builder for [DetectionData], for Java callers that would otherwise have to
+         * pass every constructor argument. Fields left unset keep [DetectionData]'s own defaults.
+         */
+        @Suppress("TooManyFunctions") // one setter per field
+        public class Builder(
+            private var current: DetectionData = DetectionData(),
+        ) {
+            public fun kind(kind: Kind): Builder = apply { current = current.copy(kind = kind) }
+
+            public fun sources(sources: Int): Builder = apply { current = current.copy(sources = sources) }
+
+            /** Adds [source]'s bit to [DetectionData.sources]. */
+            public fun addSource(source: Source): Builder = apply { current = current.copy(sources = current.sources or source.value) }
+
+            public fun confidence(confidence: Int): Builder = apply { current = current.copy(confidence = confidence) }
+
+            public fun state(state: State): Builder = apply { current = current.copy(state = state) }
+
+            public fun trend(trend: Trend): Builder = apply { current = current.copy(trend = trend) }
+
+            public fun count(count: Int): Builder = apply { current = current.copy(count = count) }
+
+            public fun sensorAnchored(sensorAnchored: Boolean): Builder = apply { current = current.copy(sensorAnchored = sensorAnchored) }
+
+            public fun cepMeters(cepMeters: Int): Builder = apply { current = current.copy(cepMeters = cepMeters) }
+
+            public fun rssiDbm(rssiDbm: Int): Builder = apply { current = current.copy(rssiDbm = rssiDbm) }
+
+            public fun uasId(uasId: String): Builder = apply { current = current.copy(uasId = uasId) }
+
+            public fun uasIdType(uasIdType: UasIdType): Builder = apply { current = current.copy(uasIdType = uasIdType) }
+
+            public fun uasStatus(uasStatus: UasStatus): Builder = apply { current = current.copy(uasStatus = uasStatus) }
+
+            public fun build(): DetectionData = current
+        }
+
+        /**
+         * What the reported object is.
+         *
+         * @property value the wire enum int carried in the proto `TAKDetection.Kind`.
+         */
+        public enum class Kind(
+            public val value: Int,
+        ) {
+            /** Not stated. */
+            Unspecified(0),
+
+            /** Uncrewed aircraft. */
+            Uas(1),
+
+            /** Operator or control-station position. */
+            UasOperator(2),
+
+            /** Takeoff or home point. */
+            UasHome(3),
+
+            /** A person. */
+            Person(4),
+
+            /** A vehicle. */
+            Vehicle(5),
+
+            /** Any other object. */
+            Other(6),
+            ;
+
+            public companion object {
+                /** Map a wire enum int back to a [Kind], defaulting to [Unspecified] for any unknown value. */
+                public fun fromValue(value: Int): Kind = entries.firstOrNull { it.value == value } ?: Unspecified
+            }
+        }
+
+        /**
+         * Kind of sensing behind a report.
+         *
+         * @property value the bit this source sets in [DetectionData.sources].
+         */
+        public enum class Source(
+            public val value: Int,
+        ) {
+            /** No source stated. Sets no bit. */
+            Unspecified(0),
+
+            /** Remote ID broadcast (ASTM F3411). */
+            RemoteId(1),
+
+            /** Any other RF emission. */
+            Rf(2),
+
+            /** Sound. */
+            Acoustic(4),
+
+            /** Radar return. */
+            Radar(8),
+
+            /** Visible or infrared imaging. */
+            Optical(16),
+
+            /** PIR or thermopile. */
+            Thermal(32),
+
+            /** Ground vibration. */
+            Seismic(64),
+
+            /** Magnetic field change. */
+            Magnetic(128),
+        }
+
+        /**
+         * Where the reported track is in its life cycle.
+         *
+         * @property value the wire enum int carried in the proto `TAKDetection.State`.
+         */
+        public enum class State(
+            public val value: Int,
+        ) {
+            /** Not stated. */
+            Unspecified(0),
+
+            /** First report of the object. */
+            New(1),
+
+            /** Updated from a fresh measurement. */
+            Active(2),
+
+            /** No fresh measurement; the position is predicted. */
+            Coasting(3),
+
+            /** Final update; receivers may remove the object. */
+            Lost(4),
+            ;
+
+            public companion object {
+                /** Map a wire enum int back to a [State], defaulting to [Unspecified] for any unknown value. */
+                public fun fromValue(value: Int): State = entries.firstOrNull { it.value == value } ?: Unspecified
+            }
+        }
+
+        /**
+         * How the distance between the object and the reporting sensor is changing.
+         *
+         * @property value the wire enum int carried in the proto `TAKDetection.Trend`.
+         */
+        public enum class Trend(
+            public val value: Int,
+        ) {
+            /** Not stated. */
+            Unspecified(0),
+
+            /** Distance shrinking. */
+            Closing(1),
+
+            /** Distance holding. */
+            Steady(2),
+
+            /** Distance growing. */
+            Opening(3),
+            ;
+
+            public companion object {
+                /** Map a wire enum int back to a [Trend], defaulting to [Unspecified] for any unknown value. */
+                public fun fromValue(value: Int): Trend = entries.firstOrNull { it.value == value } ?: Unspecified
+            }
+        }
+
+        /**
+         * Type of [DetectionData.uasId]. Values match the ASTM F3411 UAS ID types.
+         *
+         * @property value the wire enum int carried in the proto `TAKDetection.UasIdType`.
+         */
+        public enum class UasIdType(
+            public val value: Int,
+        ) {
+            /** No ID type. */
+            Unspecified(0),
+
+            /** ANSI/CTA-2063-A serial number. */
+            SerialNumber(1),
+
+            /** Civil aviation authority registration ID. */
+            CaaRegistration(2),
+
+            /** UTM-assigned UUID. */
+            UtmAssigned(3),
+
+            /** Specific session ID. */
+            SpecificSession(4),
+            ;
+
+            public companion object {
+                /** Map a wire enum int back to a [UasIdType], defaulting to [Unspecified] for any unknown value. */
+                public fun fromValue(value: Int): UasIdType = entries.firstOrNull { it.value == value } ?: Unspecified
+            }
+        }
+
+        /**
+         * Operational status of the UAS. Values match the ASTM F3411 operational status.
+         *
+         * @property value the wire enum int carried in the proto `TAKDetection.UasStatus`.
+         */
+        public enum class UasStatus(
+            public val value: Int,
+        ) {
+            /** Status undeclared. */
+            Unspecified(0),
+
+            /** On the ground. */
+            Ground(1),
+
+            /** In flight. */
+            Airborne(2),
+
+            /** Emergency declared. */
+            Emergency(3),
+
+            /** Remote ID system failure. */
+            SystemFailure(4),
+            ;
+
+            public companion object {
+                /** Map a wire enum int back to a [UasStatus], defaulting to [Unspecified] for any unknown value. */
+                public fun fromValue(value: Int): UasStatus = entries.firstOrNull { it.value == value } ?: Unspecified
             }
         }
     }

@@ -16,6 +16,7 @@ import org.meshtastic.proto.MemberRole
 import org.meshtastic.proto.RangeAndBearing
 import org.meshtastic.proto.Route
 import org.meshtastic.proto.SensorFov
+import org.meshtastic.proto.TAKDetection
 import org.meshtastic.proto.TAKEnvironment
 import org.meshtastic.proto.TAKPacketV2
 import org.meshtastic.proto.TakTalkMessage
@@ -429,6 +430,7 @@ public object TakPacketV2Serializer {
                     // the source packet had no <environment> / <sensor> element).
                     wb.environment = environmentField
                     wb.sensor_fov = sensorFovField
+                    wb.detection = data.detection?.toWire()
                     // Directed-routing recipients (<marti><dest callsign='X'/>…</marti>).
                     // null = broadcast; non-null Marti carries 1+ dest callsigns.
                     wb.marti = martiField
@@ -734,6 +736,7 @@ public object TakPacketV2Serializer {
             // (broadcast packet) or when it has no dest_callsign entries.
             marti = proto.marti?.dest_callsign?.toList() ?: emptyList(),
             payload = payload,
+            detection = proto.detection?.toData(),
         )
     }
 
@@ -843,6 +846,43 @@ private fun TAKPacketV2.Builder.setTakTalkVoiceArms(payload: TakPacketV2Data.Pay
         else -> {}
     }
 }
+
+// The TAKDetection annotation (tag 47), also kept out of the serializer object to hold it under
+// detekt's LargeClass limit. Enum values the wire has and this model lacks fall back to
+// Unspecified, like every other enum here.
+private fun TakPacketV2Data.DetectionData.toWire(): TAKDetection =
+    TAKDetection
+        .Builder()
+        .also { wb ->
+            wb.kind = TAKDetection.Kind.fromValue(kind.value) ?: TAKDetection.Kind.Kind_Unspecified
+            wb.sources = sources
+            wb.confidence = confidence
+            wb.state = TAKDetection.State.fromValue(state.value) ?: TAKDetection.State.State_Unspecified
+            wb.trend = TAKDetection.Trend.fromValue(trend.value) ?: TAKDetection.Trend.Trend_Unspecified
+            wb.count = count
+            wb.sensor_anchored = sensorAnchored
+            wb.cep_m = cepMeters
+            wb.rssi_dbm = rssiDbm
+            wb.uas_id = uasId
+            wb.uas_id_type = TAKDetection.UasIdType.fromValue(uasIdType.value) ?: TAKDetection.UasIdType.UasIdType_Unspecified
+            wb.uas_status = TAKDetection.UasStatus.fromValue(uasStatus.value) ?: TAKDetection.UasStatus.UasStatus_Unspecified
+        }.build()
+
+private fun TAKDetection.toData(): TakPacketV2Data.DetectionData =
+    TakPacketV2Data.DetectionData(
+        kind = TakPacketV2Data.DetectionData.Kind.fromValue(kind.value),
+        sources = sources,
+        confidence = confidence,
+        state = TakPacketV2Data.DetectionData.State.fromValue(state.value),
+        trend = TakPacketV2Data.DetectionData.Trend.fromValue(trend.value),
+        count = count,
+        sensorAnchored = sensor_anchored,
+        cepMeters = cep_m,
+        rssiDbm = rssi_dbm,
+        uasId = uas_id,
+        uasIdType = TakPacketV2Data.DetectionData.UasIdType.fromValue(uas_id_type.value),
+        uasStatus = TakPacketV2Data.DetectionData.UasStatus.fromValue(uas_status.value),
+    )
 
 /** The TAKTALK voice profile or request this packet carries, or null when it carries none. */
 private fun TAKPacketV2.takTalkVoicePayload(): TakPacketV2Data.Payload? =

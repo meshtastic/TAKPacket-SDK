@@ -324,7 +324,8 @@ public class CotXmlBuilder {
         sb.append("""<event version="2.0" uid="${esc(uid)}" type="${esc(cotType)}" how="${esc(how)}" """)
         sb.append("""time="$timeStr" start="$timeStr" stale="$staleStr">""")
         sb.append("\n")
-        sb.append("""  <point lat="$lat" lon="$lon" hae="$hae" ce="9999999" le="9999999"/>""")
+        // ce carries a detection's horizontal uncertainty; anything else keeps CoT's "unknown".
+        sb.append("""  <point lat="$lat" lon="$lon" hae="$hae" ce="${DetectionXml.pointCe(packet.detection)}" le="9999999"/>""")
         sb.append("\n")
         sb.append("  <detail>\n")
 
@@ -423,6 +424,9 @@ public class CotXmlBuilder {
             s.model?.let { sb.append(""" model="${esc(it)}"""") }
             sb.append("/>\n")
         }
+
+        // Passive-sensor detection, payload-agnostic like the two annotations above.
+        packet.detection?.let { DetectionXml.append(sb, it, ::esc) }
 
         // Payload-specific detail elements
         when (val payload = packet.payload) {
