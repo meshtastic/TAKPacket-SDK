@@ -42,10 +42,13 @@ PII_PATTERN='\b[0-9]{1,3}\.[0-9]{5,}\b|ANDROID-[0-9a-f]{12,}|\b(192\.168|10\.|17
 #   \b12\.0{4,5}\b             — established synthetic Bay-of-Bengal placeholders (low-precision)
 #   \b9[01]\.0{4,5}\b          — same Bay-of-Bengal range
 #
+#   \b0\.49999999999999994\b   — rounding-edge test constant: the double just below 0.5
+#   \b100\.49999999999999\b    — rounding-edge test constant: 1.005 * 100 as a double
+#
 # Numbers > 200 with 5+ decimals are very unlikely to be lat/lon (lat is
 # -90..90, lon is -180..180); they're almost always ellipse radii, bearings,
 # or other non-coord measurements. Filter those out too.
-ALLOW_PATTERN='ANDROID-0+[0-9]+|ANDROID-589520ccfcd20f01|\b192\.0\.2\.|\b198\.51\.100\.|\b203\.0\.113\.|\b38\.[0-9]+|\b77\.0[0-9]+|\b33\.1[0-9]+|\b107\.2[0-9]+|\b12\.0{4,5}\b|\b9[01]\.0{4,5}\b|\b16\.1[0-9]+|\b10\.00[0-9]+|\b95\.00[0-9]+|\b15\.181230\b|\b33\.30720360300985\b|\b45\.5965567[0-9]+\b|\b[2-9][0-9]{2,}\.[0-9]+\b|\b1[0-9]{3,}\.[0-9]+\b'
+ALLOW_PATTERN='ANDROID-0+[0-9]+|ANDROID-589520ccfcd20f01|\b192\.0\.2\.|\b198\.51\.100\.|\b203\.0\.113\.|\b38\.[0-9]+|\b77\.0[0-9]+|\b33\.1[0-9]+|\b107\.2[0-9]+|\b12\.0{4,5}\b|\b9[01]\.0{4,5}\b|\b16\.1[0-9]+|\b10\.00[0-9]+|\b95\.00[0-9]+|\b15\.181230\b|\b33\.30720360300985\b|\b45\.5965567[0-9]+\b|\b0\.49999999999999994\b|\b100\.49999999999999\b|\b[2-9][0-9]{2,}\.[0-9]+\b|\b1[0-9]{3,}\.[0-9]+\b'
 
 # Files to scan: source + docs + fixtures + manifests.
 INCLUDE_GLOBS=(
