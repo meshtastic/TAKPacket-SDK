@@ -132,6 +132,15 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ### Fixed
 
+- Swift, Python, C# and TypeScript: `CotXmlParser` now reads `<environment>`
+  and `<sensor>`, and `CotXmlBuilder` writes them back, as Kotlin always has.
+  These four bindings dropped both elements on parse, and never rebuilt one
+  they received from a Kotlin sender. The rules are Kotlin's: a bare
+  `<sensor/>` has azimuth 270 and fov 45, the sensor type is inferred from
+  `model` (only `radar` or `rf-` gives RF), `range` stays unset unless it
+  parses, and the builder never writes a `type`. All five bindings now
+  produce the same protobuf for the `pli_with_sensor` fixture, byte for byte.
+
 - Kotlin: `CotXmlParser` dropped entity references from element bodies, so
   `A &amp; B` parsed as `A  B` and `&#65;` disappeared, in every text field.
   The reader now expands them. Declared entities are still refused; an
