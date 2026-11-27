@@ -730,6 +730,12 @@ public class CotXmlParser
                         sensorFov.RangeM = unchecked((uint)sensorRange);
                     pkt.SensorFov = sensorFov;
                     break;
+                // <__detection .../> passive-sensor detection, payload-agnostic like the
+                // two annotations above. Present even with no attributes, and the last one
+                // wins. The event's <point ce> backs up its cep.
+                case DetectionXml.Element:
+                    pkt.Detection = DetectionXml.Parse(el, point?.Attribute("ce")?.Value);
+                    break;
                 case "link":
                     HandleLink(el);
                     break;
@@ -1301,7 +1307,7 @@ public class CotXmlParser
     /// NaN and Infinity spellings (which fail the pattern) and an overflow such as
     /// <c>1e400</c> (which fails the finiteness check).
     /// </summary>
-    private static double? ToDoubleOrNull(string? s)
+    internal static double? ToDoubleOrNull(string? s)
     {
         // Deliberate deviation: Kotlin keeps NaN and Infinity (roundToInt then throws or clamps); this reads both as absent.
         if (s == null || !PlainDoubleRegex.IsMatch(s)) return null;
@@ -1325,7 +1331,7 @@ public class CotXmlParser
     /// part rather than as <c>floor(d + 0.5)</c>, because that sum rounds
     /// 0.49999999999999994 up to 1 where Java gives 0.
     /// </summary>
-    private static int RoundToInt(double d)
+    internal static int RoundToInt(double d)
     {
         var whole = Math.Floor(d);
         var r = d - whole >= 0.5 ? whole + 1 : whole;

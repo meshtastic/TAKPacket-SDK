@@ -215,7 +215,9 @@ public class CotXmlBuilder
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         sb.AppendLine($"<event version=\"2.0\" uid=\"{Esc(pkt.Uid)}\" type=\"{Esc(cotType)}\" how=\"{Esc(how)}\" time=\"{timeStr}\" start=\"{timeStr}\" stale=\"{staleStr}\">");
-        sb.AppendLine($"  <point lat=\"{F(lat)}\" lon=\"{F(lon)}\" hae=\"{pkt.Altitude}\" ce=\"9999999\" le=\"9999999\"/>");
+        // ce carries a detection's horizontal uncertainty; anything else keeps CoT's "unknown".
+        var ce = DetectionXml.PointCe(pkt.Detection).ToString(CultureInfo.InvariantCulture);
+        sb.AppendLine($"  <point lat=\"{F(lat)}\" lon=\"{F(lon)}\" hae=\"{pkt.Altitude}\" ce=\"{ce}\" le=\"9999999\"/>");
         sb.AppendLine("  <detail>");
 
         var isRoute = pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route;
@@ -297,6 +299,9 @@ public class CotXmlBuilder
             if (!string.IsNullOrEmpty(sensor.Model)) tag += $" model=\"{Esc(sensor.Model)}\"";
             sb.AppendLine(tag + "/>");
         }
+
+        // Passive-sensor detection, payload-agnostic like the two annotations above.
+        if (pkt.Detection != null) DetectionXml.Append(sb, pkt.Detection, Esc);
 
         switch (pkt.PayloadVariantCase)
         {

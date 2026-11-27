@@ -150,6 +150,8 @@ public class TakTests
         Assert.Equal(
             pkt.Marti?.DestCallsign?.ToArray() ?? Array.Empty<string>(),
             dec.Marti?.DestCallsign?.ToArray() ?? Array.Empty<string>());
+        // Passive-sensor detection annotation; null on both sides when absent.
+        Assert.Equal(pkt.Detection, dec.Detection);
 
         // Payload-specific field assertions
         Assert.Equal(pkt.PayloadVariantCase, dec.PayloadVariantCase);
