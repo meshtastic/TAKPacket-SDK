@@ -190,3 +190,206 @@ final class RoundTripTests: XCTestCase {
         XCTAssertEqual(decompressed.latitudeI, 340522000)
     }
 }
+
+// MARK: - <environment> and <sensor> annotations (Swift Testing)
+//
+// Mirrors Kotlin's behavior after a wire round trip, which is what a mesh
+// receiver sees. Kotlin converts units in its serializer; this binding's
+// parser writes the wire values directly, so they are asserted in wire units.
+
+@Suite("SensorEnvironment")
+struct SensorEnvironmentSuite {
+
+    let parser = CotXmlParser()
+    let builder = CotXmlBuilder()
+    let compressor = TakCompressor()
+
+    /// A PLI whose `<detail>` holds just `detail`.
+    private func event(_ detail: String) -> String {
+        """
+        <event version="2.0" uid="ALPHA-1" type="a-f-G-U-C" how="m-g" \
+        time="2026-03-15T16:12:00Z" start="2026-03-15T16:12:00Z" stale="2026-03-15T16:12:45Z">\
+        <point lat="38.8895" lon="-77.0353" hae="0.0" ce="9999999.0" le="9999999.0"/>\
+        <detail>\(detail)</detail></event>
+        """
+    }
+
+    private func overTheWire(_ packet: TAKPacketV2) throws -> TAKPacketV2 {
+        try compressor.decompress(try compressor.compress(packet))
+    }
+
+    /// The annotations `pli_with_sensor.xml` carries, in wire units.
+    private static let fixtureEnvironment: TAKEnvironment = {
+        var env = TAKEnvironment()
+        env.temperatureCX10 = 225  // 22.5 °C
+        env.windDirectionDeg = 270
+        env.windSpeedCmS = 1200  // 12.0 m/s
+        return env
+    }()
+
+    private static let fixtureSensor: SensorFov = {
+        var fov = SensorFov()
+        fov.type = .thermal
+        fov.azimuthDeg = 45
+        fov.rangeM = 2500
+        fov.fovHorizontalDeg = 45
+        fov.fovVerticalDeg = 30
+        fov.elevationDeg = -5
+        fov.rollDeg = 0
+        fov.model = "FLIR-Boson-640"
+        return fov
+    }()
+
+    private func expectFixtureAnnotations(
+        _ packet: TAKPacketV2, _ stage: String, sourceLocation: SourceLocation = #_sourceLocation
+    ) {
+        #expect(packet.hasEnvironment, "\(stage): environment missing", sourceLocation: sourceLocation)
+        #expect(packet.environment == Self.fixtureEnvironment, "\(stage)", sourceLocation: sourceLocation)
+        #expect(packet.hasSensorFov, "\(stage): sensor_fov missing", sourceLocation: sourceLocation)
+        #expect(packet.sensorFov.hasRangeM, "\(stage): range_m missing", sourceLocation: sourceLocation)
+        #expect(packet.sensorFov == Self.fixtureSensor, "\(stage)", sourceLocation: sourceLocation)
+    }
+
+    @Test("pli_with_sensor keeps both annotations through parse, wire, build and re-parse")
+    func fixtureRoundTrip() throws {
+        let packet = try parser.parse(try TestFixtures.loadFixture("pli_with_sensor"))
+        expectFixtureAnnotations(packet, "parse")
+
+        let received = try overTheWire(packet)
+        expectFixtureAnnotations(received, "wire")
+
+        let xml = builder.build(received)
+        #expect(xml.contains(#"<environment temperature="22.5" windDirection="270" windSpeed="12.0"/>"#), "\(xml)")
+        #expect(
+            xml.contains(#"<sensor azimuth="45" range="2500" fov="45" vfov="30" elevation="-5" model="FLIR-Boson-640"/>"#),
+            "\(xml)"
+        )
+        let sensorTag = xml.range(of: "<sensor[^>]*>", options: .regularExpression).map { String(xml[$0]) }
+        #expect(sensorTag?.contains(" type=") == false, "<sensor> must not carry a type attribute")
+
+        expectFixtureAnnotations(try parser.parse(xml), "re-parse")
+    }
+
+    @Test("pli_with_sensor serializes to the bytes of Kotlin's golden .pb")
+    func matchesKotlinProtobufGolden() throws {
+        let golden = try #require(TestFixtures.loadProtobuf("pli_with_sensor"))
+        let packet = try parser.parse(try TestFixtures.loadFixture("pli_with_sensor"))
+        #expect(try packet.serializedData() == golden)
+    }
+
+    @Test("a bare <sensor/> is present with ATAK-CIV's defaults and no range")
+    func bareSensor() throws {
+        let packet = try parser.parse(event("<sensor/>"))
+        #expect(packet.hasSensorFov)
+        let fov = packet.sensorFov
+        #expect(fov.azimuthDeg == 270)
+        #expect(fov.fovHorizontalDeg == 45)
+        #expect(!fov.hasRangeM)
+        #expect(fov.fovVerticalDeg == 0)
+        #expect(fov.elevationDeg == 0)
+        #expect(fov.rollDeg == 0)
+        #expect(fov.model.isEmpty)
+        #expect(fov.type == .unspecified)
+        #expect(builder.build(try overTheWire(packet)).contains(#"<sensor azimuth="270" fov="45" elevation="0"/>"#))
+    }
+
+    @Test("<environment> needs one parseable attribute, and the rest default to 0")
+    func environmentPartials() throws {
+        let packet = try parser.parse(event(#"<environment temperature="-3"/>"#))
+        #expect(packet.hasEnvironment)
+        #expect(packet.environment.temperatureCX10 == -30)
+        #expect(packet.environment.windDirectionDeg == 0)
+        #expect(packet.environment.windSpeedCmS == 0)
+        #expect(builder.build(try overTheWire(packet)).contains(#"<environment temperature="-3.0"/>"#))
+
+        // windDirection is an Int attribute, so "270.5" does not parse.
+        for detail in [#"<environment windDirection="270.5"/>"#, "<environment/>", #"<environment temperature="abc"/>"#] {
+            let unset = try parser.parse(event(detail))
+            #expect(!unset.hasEnvironment, "\(detail) should leave environment unset")
+        }
+    }
+
+    @Test("rounding is Kotlin's roundToInt applied after the double multiply")
+    func rounding() throws {
+        let fov = try parser.parse(event(#"<sensor azimuth="44.5" elevation="-2.5"/>"#)).sensorFov
+        #expect(fov.azimuthDeg == 45)
+        #expect(fov.elevationDeg == -2, "a tie goes up, not away from zero")
+        // Java's Math.round gives 0 here; floor(d + 0.5) would give 1.
+        #expect(try parser.parse(event(#"<sensor roll="0.49999999999999994"/>"#)).sensorFov.rollDeg == 0)
+
+        // 22.45 * 10 is exactly 224.5 as a double, so it ties up to 225, as Kotlin does.
+        #expect(try parser.parse(event(#"<environment temperature="22.45"/>"#)).environment.temperatureCX10 == 225)
+        // 1.005 * 100 is 100.49999999999999, just under the tie, so it rounds down.
+        #expect(try parser.parse(event(#"<environment windSpeed="1.005"/>"#)).environment.windSpeedCmS == 100)
+    }
+
+    @Test("inferSensorType follows Kotlin's keyword order", arguments: [
+        (nil, .unspecified), ("", .unspecified),
+        ("FLIR-Boson-640", .thermal), ("thermal cam", .thermal), ("Boson", .thermal),
+        ("LRF-3000", .laser), ("laser", .laser),
+        ("NVG-21", .nvg), ("night vision", .nvg),
+        ("radar", .rf), ("rf-detector", .rf), ("RF-Scanner", .rf),
+        ("rfscanner", .other), ("rf", .other),
+        ("EO-IR", .camera), ("camera", .camera), ("optic", .camera),
+        ("widget", .other),
+        ("FLIR radar", .thermal),
+    ] as [(String?, SensorFov.SensorType)])
+    func infersSensorType(_ model: String?, _ expected: SensorFov.SensorType) {
+        #expect(CotXmlParser.inferSensorType(model) == expected)
+    }
+
+    @Test("range=\"0\" stays present with value 0 and is rebuilt")
+    func zeroRangeStaysPresent() throws {
+        let packet = try parser.parse(event(#"<sensor range="0"/>"#))
+        #expect(packet.sensorFov.hasRangeM)
+        #expect(packet.sensorFov.rangeM == 0)
+        let received = try overTheWire(packet)
+        #expect(received.sensorFov.hasRangeM, "range_m presence lost on the wire")
+        #expect(builder.build(received).contains(#" range="0""#))
+    }
+
+    @Test("numbers parse like Kotlin's toDoubleOrNull and toIntOrNull, except NaN and Infinity")
+    func numberGrammar() throws {
+        // Doubles take surrounding whitespace, a sign, a bare fraction and an exponent.
+        let fov = try parser.parse(event(#"<sensor azimuth=" 45 " range="1e3" fov="+30" vfov=".5"/>"#)).sensorFov
+        #expect(fov.azimuthDeg == 45)
+        #expect(fov.rangeM == 1000)
+        #expect(fov.fovHorizontalDeg == 30)
+        #expect(fov.fovVerticalDeg == 1)
+
+        // NaN and Infinity read as absent, where Kotlin throws or clamps.
+        let odd = try parser.parse(event(#"<sensor azimuth="NaN" range="Infinity" fov="1e400"/>"#)).sensorFov
+        #expect(odd.azimuthDeg == 270)
+        #expect(!odd.hasRangeM)
+        #expect(odd.fovHorizontalDeg == 45)
+        let infinite = try parser.parse(event(#"<environment temperature="-Infinity" windSpeed="1e400"/>"#))
+        #expect(!infinite.hasEnvironment)
+
+        // windDirection takes a sign but no whitespace.
+        #expect(try parser.parse(event(#"<environment windDirection="+270"/>"#)).environment.windDirectionDeg == 270)
+        let spaced = try parser.parse(event(#"<environment windDirection=" 270"/>"#))
+        #expect(!spaced.hasEnvironment)
+    }
+
+    @Test("a negative value in an unsigned field keeps its Int32 bits and rebuilds as negative")
+    func negativeUnsignedValues() throws {
+        let detail = #"<environment windDirection="-10" windSpeed="-1.5"/><sensor azimuth="-90"/>"#
+        let packet = try overTheWire(try parser.parse(event(detail)))
+        #expect(packet.environment.windDirectionDeg == UInt32(truncatingIfNeeded: Int32(-10)))
+        #expect(packet.environment.windSpeedCmS == UInt32(truncatingIfNeeded: Int32(-150)))
+        #expect(packet.sensorFov.azimuthDeg == UInt32(truncatingIfNeeded: Int32(-90)))
+        let xml = builder.build(packet)
+        #expect(xml.contains(#"<environment temperature="0.0" windDirection="-10" windSpeed="-1.5"/>"#), "\(xml)")
+        #expect(xml.contains(#"<sensor azimuth="-90" fov="45" elevation="0"/>"#), "\(xml)")
+    }
+
+    @Test("only a parseable <environment> replaces an earlier one, and the last <sensor> wins")
+    func laterElements() throws {
+        let detail = #"<environment temperature="10"/><environment windSpeed="2"/><environment temperature="x"/>"#
+            + #"<sensor azimuth="10"/><sensor/>"#
+        let packet = try parser.parse(event(detail))
+        #expect(packet.environment.temperatureCX10 == 0)
+        #expect(packet.environment.windSpeedCmS == 200)
+        #expect(packet.sensorFov.azimuthDeg == 270)
+    }
+}

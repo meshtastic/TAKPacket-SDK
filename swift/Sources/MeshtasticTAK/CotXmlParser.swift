@@ -26,6 +26,8 @@ public enum CotXmlParserError: Error {
 /// | shape `major`/`minor` (m) | `major_cm` / `minor_cm` | centimeters (× 100) |
 /// | R&B `range` (m) | `range_cm` | centimeters (× 100) |
 /// | R&B `bearing` (deg) | `bearing_cdeg` | degrees × 100 |
+/// | `environment@temperature` (°C) | `temperature_c_x10` | deci-degrees Celsius (× 10) |
+/// | `environment@windSpeed` (m/s) | `wind_speed_cm_s` | cm/s (× 100) |
 ///
 /// ### Classification notes
 /// - A position report with no payload-specific `<detail>` produces a packet with
@@ -949,6 +951,39 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
                 martiDests.append(cs)
             }
 
+        // <environment> and <sensor> annotate any event type. Kotlin converts
+        // units in its serializer; here the proto is the model, so the parser
+        // writes the wire values directly. Unsigned fields take the Int32's bits,
+        // as Wire does with Kotlin's Int, so even negative input encodes the same.
+        case "environment":
+            // Only an element with a parseable attribute replaces an earlier one.
+            let temp = Self.parseDouble(attributes["temperature"])
+            let windDir = Self.parseInt(attributes["windDirection"])
+            let windSpeed = Self.parseDouble(attributes["windSpeed"])
+            if temp != nil || windDir != nil || windSpeed != nil {
+                var env = TAKEnvironment()
+                env.temperatureCX10 = temp.map { Self.roundToInt($0 * 10) } ?? 0
+                env.windDirectionDeg = windDir.map { UInt32(truncatingIfNeeded: $0) } ?? 0
+                env.windSpeedCmS = windSpeed.map { UInt32(truncatingIfNeeded: Self.roundToInt($0 * 100)) } ?? 0
+                packet.environment = env
+            }
+
+        case "sensor":
+            // Present even with no attributes. Missing ones take ATAK-CIV's
+            // defaults, except range, which stays unset so receivers apply theirs.
+            let model = attributes["model"]
+            let rounded = { (name: String) in Self.parseDouble(attributes[name]).map(Self.roundToInt) }
+            var fov = SensorFov()
+            fov.type = Self.inferSensorType(model)
+            fov.azimuthDeg = UInt32(truncatingIfNeeded: rounded("azimuth") ?? 270)
+            if let range = rounded("range") { fov.rangeM = UInt32(truncatingIfNeeded: range) }
+            fov.fovHorizontalDeg = UInt32(truncatingIfNeeded: rounded("fov") ?? 45)
+            fov.fovVerticalDeg = UInt32(truncatingIfNeeded: rounded("vfov") ?? 0)
+            fov.elevationDeg = rounded("elevation") ?? 0
+            fov.rollDeg = rounded("roll") ?? 0
+            fov.model = model ?? ""
+            packet.sensorFov = fov
+
         case "link":
             handleLink(attributes: attributes)
 
@@ -1434,5 +1469,55 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
         let diff = stale.timeIntervalSince(time)
         return diff > 0 ? UInt32(diff) : 0
+    }
+
+    // MARK: - Environment and sensor helpers
+
+    private static let asciiWhitespace = CharacterSet(charactersIn: " \t\n\r\u{0B}\u{0C}")
+
+    /// Kotlin's `String.toDoubleOrNull()` for plain decimals: optional surrounding
+    /// ASCII whitespace, an optional sign, digits with an optional fraction, and an
+    /// optional exponent. `Double(_:)` alone rejects the whitespace and accepts hex,
+    /// `inf` and `nan`, so the shape is checked first.
+    private static func parseDouble(_ raw: String?) -> Double? {
+        guard let s = raw?.trimmingCharacters(in: asciiWhitespace),
+              s.range(of: #"^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?$"#,
+                      options: .regularExpression) != nil,
+              let d = Double(s) else { return nil }
+        // Kotlin throws on NaN and clamps Infinity; reading both as absent is this port's one deliberate deviation.
+        return d.isFinite ? d : nil
+    }
+
+    /// Kotlin's `String.toIntOrNull()` for ASCII digits: an optional sign, then digits
+    /// that fit Int32, with no whitespace. `Int32(_:)` accepts exactly that.
+    private static func parseInt(_ raw: String?) -> Int32? {
+        raw.flatMap { Int32($0) }
+    }
+
+    /// Kotlin's `Double.roundToInt()`, which is Java's `Math.round`, clamped to Int32. A
+    /// tie rounds up, so -2.5 gives -2 where `.rounded()` gives -3. Taken from the
+    /// fractional part, because `floor(d + 0.5)` rounds 0.49999999999999994 up to 1
+    /// where Java gives 0. `d` is never NaN here.
+    private static func roundToInt(_ d: Double) -> Int32 {
+        let whole = d.rounded(.down)
+        let r = d - whole >= 0.5 ? whole + 1 : whole
+        if r >= 2_147_483_647 { return .max }
+        if r <= -2_147_483_648 { return .min }
+        return Int32(r)
+    }
+
+    /// Kotlin's `inferSensorType`: the first keyword group found in the lowercased
+    /// model wins, so "FLIR radar" is thermal. A bare "rf" is not a keyword.
+    static func inferSensorType(_ model: String?) -> SensorFov.SensorType {
+        guard let model = model, !model.isEmpty else { return .unspecified }
+        let m = model.lowercased()
+        // .literal matches the raw text, as Kotlin's `in` does; contains would compare whole Characters.
+        func has(_ keys: String...) -> Bool { keys.contains { m.range(of: $0, options: .literal) != nil } }
+        if has("flir", "thermal", "boson") { return .thermal }
+        if has("laser", "lrf") { return .laser }
+        if has("nvg", "night") { return .nvg }
+        if has("radar", "rf-") { return .rf }
+        if has("cam", "eo-", "optic") { return .camera }
+        return .other
     }
 }

@@ -193,6 +193,31 @@ public class CotXmlBuilder {
             s += "    <uid Droid=\"\(esc(packet.deviceCallsign))\"/>\n"
         }
 
+        // Environment and sensor annotate any payload, so they precede the
+        // payload-specific elements, as in Kotlin. Unsigned fields print as their
+        // Int32 reading, which is what Kotlin's Int model prints.
+        if packet.hasEnvironment {
+            let env = packet.environment
+            s += "    <environment temperature=\"\(Double(env.temperatureCX10) / 10.0)\""
+            if env.windDirectionDeg != 0 { s += " windDirection=\"\(Int32(bitPattern: env.windDirectionDeg))\"" }
+            if env.windSpeedCmS != 0 { s += " windSpeed=\"\(Double(Int32(bitPattern: env.windSpeedCmS)) / 100.0)\"" }
+            s += "/>\n"
+        }
+
+        // Geometry only: receivers restore the styling from their own defaults.
+        // No `type` attribute; the parser infers it from the model.
+        if packet.hasSensorFov {
+            let fov = packet.sensorFov
+            s += "    <sensor azimuth=\"\(Int32(bitPattern: fov.azimuthDeg))\""
+            if fov.hasRangeM { s += " range=\"\(Int32(bitPattern: fov.rangeM))\"" }
+            s += " fov=\"\(Int32(bitPattern: fov.fovHorizontalDeg))\""
+            if fov.fovVerticalDeg != 0 { s += " vfov=\"\(Int32(bitPattern: fov.fovVerticalDeg))\"" }
+            s += " elevation=\"\(fov.elevationDeg)\""
+            if fov.rollDeg != 0 { s += " roll=\"\(fov.rollDeg)\"" }
+            if !fov.model.isEmpty { s += " model=\"\(esc(fov.model))\"" }
+            s += "/>\n"
+        }
+
         // Payload-specific elements
         switch packet.payloadVariant {
         case .chat(let chat):
