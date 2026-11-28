@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="f0d0310c-10c0-4fe2-bd09-a296ba7fb756" type="a-u-A-M-H-Q" how="m-r" time="2026-03-15T15:00:00Z" start="2026-03-15T15:00:00Z" stale="2026-03-15T15:01:00Z">
+  <point lat="33.1286" lon="-107.2470" hae="1410.0" ce="12.0" le="9999999.0"/>
+  <detail>
+    <contact callsign="UAS-1"/>
+    <link uid="ANDROID-0000000000000012" type="a-f-G-E-S" parent_callsign="SENSOR-1" relation="p-p"/>
+    <track speed="8.5" course="135.0"/>
+    <__detection kind="uas" sources="remote_id rf" confidence="87" state="active" trend="closing" cep="12" rssi="-71" uasId="ZZZZ8TEST0001" uasIdType="serial_number" uasStatus="airborne"/>
+    <remarks>Moving southeast</remarks>
+  </detail>
+</event>

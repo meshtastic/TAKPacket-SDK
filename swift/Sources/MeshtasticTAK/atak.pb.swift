@@ -3358,6 +3358,459 @@ public nonisolated struct SensorFov: Sendable {
 }
 
 ///
+/// Metadata for an event reporting an object found by a passive sensor: an
+/// uncrewed aircraft (UAS), its operator or home point, a person or a vehicle.
+///
+/// Attaches to any TAKPacketV2, like TAKEnvironment and SensorFov. The event
+/// still carries the object's position, CoT type and links. Affiliation is not
+/// encoded here: the CoT type carries it, and the producer chooses it.
+///
+/// Carries no identifier except the UAS ID that Remote ID broadcasts.
+public nonisolated struct TAKDetection: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  ///
+  /// What the reported object is.
+  public var kind: TAKDetection.Kind = .unspecified
+
+  ///
+  /// Kinds of sensing behind this report: a bitwise OR of Source values.
+  /// 0 = not stated.
+  public var sources: UInt32 = 0
+
+  ///
+  /// Producer's confidence in the report, in percent (0-100). 0 = unknown.
+  public var confidence: UInt32 = 0
+
+  ///
+  /// Where the track is in its life cycle.
+  public var state: TAKDetection.State = .unspecified
+
+  ///
+  /// Whether the object is closing on or opening from the reporting sensor.
+  public var trend: TAKDetection.Trend = .unspecified
+
+  ///
+  /// Number of objects this event stands for. 0 = one.
+  public var count: UInt32 = 0
+
+  ///
+  /// True when the event's point is the reporting sensor, because the
+  /// object's position is unknown.
+  public var sensorAnchored: Bool = false
+
+  ///
+  /// Horizontal position uncertainty in meters, the CoT point's `ce`.
+  /// 0 = unknown.
+  public var cepM: UInt32 = 0
+
+  ///
+  /// Calibrated received power at the reporting sensor, in dBm. 0 = unknown.
+  public var rssiDbm: Int32 = 0
+
+  ///
+  /// UAS ID from a Remote ID broadcast, at most 20 bytes. A serial number or
+  /// CAA registration (see uas_id_type) is ASCII text without the broadcast's
+  /// trailing NUL fill; any other ID type carries the field's bytes as
+  /// broadcast. Set only when kind is Kind_Uas.
+  public var uasID: Data = Data()
+
+  ///
+  /// Type of uas_id.
+  public var uasIDType: TAKDetection.UasIdType = .unspecified
+
+  ///
+  /// Operational status from a Remote ID broadcast.
+  public var uasStatus: TAKDetection.UasStatus = .unspecified
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  ///
+  /// What the reported object is.
+  public nonisolated enum Kind: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+
+    /// kind not stated
+    case unspecified // = 0
+
+    /// uncrewed aircraft
+    case uas // = 1
+
+    /// operator or control-station position
+    case uasOperator // = 2
+
+    /// takeoff or home point
+    case uasHome // = 3
+
+    /// a person
+    case person // = 4
+
+    /// a vehicle
+    case vehicle // = 5
+
+    /// any other object
+    case other // = 6
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .uas
+      case 2: self = .uasOperator
+      case 3: self = .uasHome
+      case 4: self = .person
+      case 5: self = .vehicle
+      case 6: self = .other
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .uas: return 1
+      case .uasOperator: return 2
+      case .uasHome: return 3
+      case .person: return 4
+      case .vehicle: return 5
+      case .other: return 6
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [TAKDetection.Kind] = [
+      .unspecified,
+      .uas,
+      .uasOperator,
+      .uasHome,
+      .person,
+      .vehicle,
+      .other,
+    ]
+
+  }
+
+  ///
+  /// Kind of sensing behind a report. Values are bits: `sources` is their
+  /// bitwise OR.
+  public nonisolated enum Source: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+
+    /// no source stated
+    case unspecified // = 0
+
+    /// Remote ID broadcast (ASTM F3411)
+    case remoteID // = 1
+
+    /// any other RF emission
+    case rf // = 2
+
+    /// sound
+    case acoustic // = 4
+
+    /// radar return
+    case radar // = 8
+
+    /// visible or infrared imaging
+    case optical // = 16
+
+    /// PIR or thermopile
+    case thermal // = 32
+
+    /// ground vibration
+    case seismic // = 64
+
+    /// magnetic field change
+    case magnetic // = 128
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .remoteID
+      case 2: self = .rf
+      case 4: self = .acoustic
+      case 8: self = .radar
+      case 16: self = .optical
+      case 32: self = .thermal
+      case 64: self = .seismic
+      case 128: self = .magnetic
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .remoteID: return 1
+      case .rf: return 2
+      case .acoustic: return 4
+      case .radar: return 8
+      case .optical: return 16
+      case .thermal: return 32
+      case .seismic: return 64
+      case .magnetic: return 128
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [TAKDetection.Source] = [
+      .unspecified,
+      .remoteID,
+      .rf,
+      .acoustic,
+      .radar,
+      .optical,
+      .thermal,
+      .seismic,
+      .magnetic,
+    ]
+
+  }
+
+  ///
+  /// Where the reported track is in its life cycle.
+  public nonisolated enum State: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+
+    /// state not stated
+    case unspecified // = 0
+
+    /// first report of the object
+    case new // = 1
+
+    /// updated from a fresh measurement
+    case active // = 2
+
+    /// no fresh measurement; position predicted
+    case coasting // = 3
+
+    /// final update; receivers may remove the object
+    case lost // = 4
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .new
+      case 2: self = .active
+      case 3: self = .coasting
+      case 4: self = .lost
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .new: return 1
+      case .active: return 2
+      case .coasting: return 3
+      case .lost: return 4
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [TAKDetection.State] = [
+      .unspecified,
+      .new,
+      .active,
+      .coasting,
+      .lost,
+    ]
+
+  }
+
+  ///
+  /// How the distance between the object and the reporting sensor is changing.
+  public nonisolated enum Trend: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+
+    /// trend not stated
+    case unspecified // = 0
+
+    /// distance shrinking
+    case closing // = 1
+
+    /// distance holding
+    case steady // = 2
+
+    /// distance growing
+    case opening // = 3
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .closing
+      case 2: self = .steady
+      case 3: self = .opening
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .closing: return 1
+      case .steady: return 2
+      case .opening: return 3
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [TAKDetection.Trend] = [
+      .unspecified,
+      .closing,
+      .steady,
+      .opening,
+    ]
+
+  }
+
+  ///
+  /// Type of uas_id. Values match the ASTM F3411 UAS ID types.
+  public nonisolated enum UasIdType: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+
+    /// no ID type
+    case unspecified // = 0
+
+    /// ANSI/CTA-2063-A serial number
+    case serialNumber // = 1
+
+    /// civil aviation authority registration ID
+    case caaRegistration // = 2
+
+    /// UTM-assigned UUID
+    case utmAssigned // = 3
+
+    /// specific session ID
+    case specificSession // = 4
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .serialNumber
+      case 2: self = .caaRegistration
+      case 3: self = .utmAssigned
+      case 4: self = .specificSession
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .serialNumber: return 1
+      case .caaRegistration: return 2
+      case .utmAssigned: return 3
+      case .specificSession: return 4
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [TAKDetection.UasIdType] = [
+      .unspecified,
+      .serialNumber,
+      .caaRegistration,
+      .utmAssigned,
+      .specificSession,
+    ]
+
+  }
+
+  ///
+  /// Operational status of the UAS. Values match the ASTM F3411 operational
+  /// status.
+  public nonisolated enum UasStatus: SwiftProtobuf.Enum, Swift.CaseIterable {
+    public typealias RawValue = Int
+
+    /// status undeclared
+    case unspecified // = 0
+
+    /// on the ground
+    case ground // = 1
+
+    /// in flight
+    case airborne // = 2
+
+    /// emergency declared
+    case emergency // = 3
+
+    /// Remote ID system failure
+    case systemFailure // = 4
+    case UNRECOGNIZED(Int)
+
+    public init() {
+      self = .unspecified
+    }
+
+    public init?(rawValue: Int) {
+      switch rawValue {
+      case 0: self = .unspecified
+      case 1: self = .ground
+      case 2: self = .airborne
+      case 3: self = .emergency
+      case 4: self = .systemFailure
+      default: self = .UNRECOGNIZED(rawValue)
+      }
+    }
+
+    public var rawValue: Int {
+      switch self {
+      case .unspecified: return 0
+      case .ground: return 1
+      case .airborne: return 2
+      case .emergency: return 3
+      case .systemFailure: return 4
+      case .UNRECOGNIZED(let i): return i
+      }
+    }
+
+    // The compiler won't synthesize support with the UNRECOGNIZED case.
+    public static let allCases: [TAKDetection.UasStatus] = [
+      .unspecified,
+      .ground,
+      .airborne,
+      .emergency,
+      .systemFailure,
+    ]
+
+  }
+
+  public init() {}
+}
+
+///
 /// TAKTALK chat message payload (CoT type m-t-t).
 ///
 /// TAKTALK is an ATAK plugin for voice + text team messaging. The voice
@@ -3399,6 +3852,11 @@ public nonisolated struct TakTalkMessage: Sendable {
   /// originated as push-to-talk speech-to-text. Lets receivers show a mic
   /// icon. Proto3 only encodes when true so empty payload cost is 0 bytes.
   public var fromVoice: Bool = false
+
+  ///
+  /// Voice profile to speak this message with on the receiver, matching
+  /// VoiceProfile.voice_profile_id. Empty = the receiver's default voice.
+  public var voiceProfileID: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3444,6 +3902,73 @@ public nonisolated struct TakTalkRoomData: Sendable {
   /// CoT carries them as a single <chatroom-participants>A,B,C</> element
   /// which parsers split / builders join on ','.
   public var participants: [String] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+///
+/// A synthetic speech profile, so receivers can render a sender's TAKTALK
+/// messages in that sender's own voice.
+///
+/// Opaque model data, not audio: sent once per peer on request and cached,
+/// after which only text crosses the mesh. profile_data is compact binary
+/// that gains nothing from the TAK dictionary, so send it uncompressed.
+public nonisolated struct VoiceProfile: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  ///
+  /// Stable identifier for this profile, matching
+  /// TakTalkMessage.voice_profile_id and GeoChat.voice_profile_id.
+  public var voiceProfileID: String = String()
+
+  ///
+  /// Friendly display name for the voice (e.g. "Alpha Lead").
+  public var voiceProfileName: String = String()
+
+  ///
+  /// The profile itself, opaque to this schema.
+  public var profileData: Data = Data()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+///
+/// Request for a peer's voice profile (CoT type y-).
+///
+/// Addressed with Marti; the reply is a VoiceProfile.
+public nonisolated struct VoiceProfileRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  ///
+  /// Profile wanted, matching VoiceProfile.voice_profile_id. Empty = whichever
+  /// profile the peer is currently using.
+  public var voiceProfileID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+///
+/// Request for a room's name and roster (CoT type y-).
+///
+/// Addressed with Marti; the reply is a TakTalkRoomData.
+public nonisolated struct TakTalkRoomRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  ///
+  /// Room UUID wanted, matching TakTalkRoomData.room_id.
+  public var roomID: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3697,64 +4222,11 @@ public nonisolated struct TAKPacketV2: @unchecked Sendable {
   public mutating func clearSensorFov() {_uniqueStorage()._sensorFov = nil}
 
   ///
-  /// Low 14 bits of the event's `start` time, as epoch seconds.
-  ///
-  /// Restores a value the format otherwise drops entirely. The parser reads `time`
-  /// and `stale` only to derive `stale_seconds`, and never reads `start` at all, so
-  /// the builder has nothing to rebuild it from and sets `time = start = now` at
-  /// decode. A CoT that spent 40 s crossing the mesh therefore arrives stamped as
-  /// the freshest thing on the map, and no receiver can tell a 2-second-old
-  /// position from a 40-second-old one, which makes correct ordering of two
-  /// reports for one UID impossible.
-  ///
-  /// 14 bits rather than a full timestamp: any tag at 16 or above costs a 2-byte
-  /// key, and a value below 16384 fits a 2-byte varint where epoch seconds needs
-  /// five, so the field costs 4 bytes on the wire instead of 7.
-  ///
-  /// SENDERS: populate this only when `start` is within 8192 s of transmission,
-  /// and omit it otherwise. The encoding cannot express an older start and a
-  /// receiver cannot detect one: an out-of-range value reconstructs silently as a
-  /// plausible recent time in the wrong window. Transit and clock skew spend part
-  /// of that budget, so treat roughly two hours as the practical limit.
-  ///
-  /// RECEIVERS: rebuild the full value by selecting the candidate NEAREST your own
-  /// clock. Do not splice the low bits onto your current window.
-  ///
-  ///   delta = ((carried - now) % 16384 + 24576) % 16384 - 8192   // [-8192, 8191]
-  ///   start = now + delta
-  ///
-  /// (The + 24576 keeps the second remainder non-negative under both C and Python
-  /// remainder semantics.)
-  ///
-  /// The naive `(now & ~0x3FFF) | carried` is wrong at a window boundary in BOTH
-  /// directions, not just one. For a boundary B, a sender `start` of B read by a
-  /// receiver whose clock is at B - 1 yields B - 16384: a fresh event that appears
-  /// 4.55 hours old, which no future-side sanity check will catch. Nearest-
-  /// candidate is exact whenever the true start is within 8192 s of the receiver's
-  /// clock, which subsumes any realistic transit plus skew.
-  ///
-  /// Treat the result as trustworthy for ORDERING packets from a single sender,
-  /// where a constant clock offset cancels out. Before using it as an absolute
-  /// age, bound it: reject a start more than a few seconds in the future, or more
-  /// than about an hour in the past, and fall back to decode time. Keep both
-  /// bounds well inside the 8192 s half-window, because past that the
-  /// reconstruction is wrong rather than merely implausible.
-  ///
-  /// Ordering assumes the producer advances `start` on each emission, which ATAK
-  /// does because it sets `start = time`. A producer that holds `start` fixed
-  /// across updates cannot be ordered by this field.
-  ///
-  /// `optional` is deliberate, despite the v0.4.0 `altitude` experiment above
-  /// finding `optional` net-negative: that regressed because a genuine 0 m
-  /// altitude is common, whereas `start` mod 16384 is 0 for one second in 16384.
-  /// Here explicit presence costs essentially nothing and distinguishes "sender
-  /// did not populate this" from a legitimate zero.
-  ///
-  /// Tag 43 rather than the 27 held above for "future top-level annotations",
-  /// which is what this is: un-reserving 27 trips buf's RESERVED_MESSAGE_NO_DELETE
-  /// under the FILE breaking category this module enables, and every tag at 16 or
-  /// above costs the same 2-byte key, so the fresh tag is free. Move it to 27 if
-  /// you would rather except the rule.
+  /// Low 14 bits of the event's `start` time, as epoch seconds UTC. 14 bits rather
+  /// than a full timestamp, so the field costs 4 bytes on the wire instead of 7.
+  /// Order and deduplicates packets from a single sender. Valid only when within an
+  /// hour of current wall time. `optional` is deliberate. It costs essentially
+  /// nothing and distinguishes "sender did not populate this" from a legitimate zero.
   public var startEpochLo14: UInt32 {
     get {_storage._startEpochLo14 ?? 0}
     set {_uniqueStorage()._startEpochLo14 = newValue}
@@ -3763,6 +4235,18 @@ public nonisolated struct TAKPacketV2: @unchecked Sendable {
   public var hasStartEpochLo14: Bool {_storage._startEpochLo14 != nil}
   /// Clears the value of `startEpochLo14`. Subsequent reads from it will return its default value.
   public mutating func clearStartEpochLo14() {_uniqueStorage()._startEpochLo14 = nil}
+
+  ///
+  /// Passive-sensor metadata, present when this event reports an object a
+  /// sensor found rather than the sender itself. See TAKDetection.
+  public var detection: TAKDetection {
+    get {_storage._detection ?? TAKDetection()}
+    set {_uniqueStorage()._detection = newValue}
+  }
+  /// Returns true if `detection` has been explicitly set.
+  public var hasDetection: Bool {_storage._detection != nil}
+  /// Clears the value of `detection`. Subsequent reads from it will return its default value.
+  public mutating func clearDetection() {_uniqueStorage()._detection = nil}
 
   ///
   /// Directed-routing recipient list (CoT <marti><dest callsign='X'/>…</marti>).
@@ -3917,6 +4401,38 @@ public nonisolated struct TAKPacketV2: @unchecked Sendable {
     set {_uniqueStorage()._payloadVariant = .taktalkRoom(newValue)}
   }
 
+  ///
+  /// Sender's synthetic speech profile. See VoiceProfile.
+  public var voiceProfile: VoiceProfile {
+    get {
+      if case .voiceProfile(let v)? = _storage._payloadVariant {return v}
+      return VoiceProfile()
+    }
+    set {_uniqueStorage()._payloadVariant = .voiceProfile(newValue)}
+  }
+
+  ///
+  /// Request for a peer's voice profile (CoT type y-).
+  /// See VoiceProfileRequest.
+  public var voiceProfileRequest: VoiceProfileRequest {
+    get {
+      if case .voiceProfileRequest(let v)? = _storage._payloadVariant {return v}
+      return VoiceProfileRequest()
+    }
+    set {_uniqueStorage()._payloadVariant = .voiceProfileRequest(newValue)}
+  }
+
+  ///
+  /// Request for a room's name and roster (CoT type y-).
+  /// See TakTalkRoomRequest.
+  public var taktalkRoomRequest: TakTalkRoomRequest {
+    get {
+      if case .taktalkRoomRequest(let v)? = _storage._payloadVariant {return v}
+      return TakTalkRoomRequest()
+    }
+    set {_uniqueStorage()._payloadVariant = .taktalkRoomRequest(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   ///
@@ -3966,6 +4482,17 @@ public nonisolated struct TAKPacketV2: @unchecked Sendable {
     /// Resolves room UUIDs (used in TakTalkMessage.chatroom_id and
     /// GeoChat.room_id) to display name + roster on receivers.
     case taktalkRoom(TakTalkRoomData)
+    ///
+    /// Sender's synthetic speech profile. See VoiceProfile.
+    case voiceProfile(VoiceProfile)
+    ///
+    /// Request for a peer's voice profile (CoT type y-).
+    /// See VoiceProfileRequest.
+    case voiceProfileRequest(VoiceProfileRequest)
+    ///
+    /// Request for a room's name and roster (CoT type y-).
+    /// See TakTalkRoomRequest.
+    case taktalkRoomRequest(TakTalkRoomRequest)
 
   }
 
@@ -5440,9 +5967,118 @@ nonisolated extension SensorFov.SensorType: SwiftProtobuf._ProtoNameProviding {
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0SensorType_Unspecified\0\u{1}SensorType_Camera\0\u{1}SensorType_Thermal\0\u{1}SensorType_Laser\0\u{1}SensorType_Nvg\0\u{1}SensorType_Rf\0\u{1}SensorType_Other\0")
 }
 
+nonisolated extension TAKDetection: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TAKDetection"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}kind\0\u{1}sources\0\u{1}confidence\0\u{1}state\0\u{1}trend\0\u{1}count\0\u{3}sensor_anchored\0\u{3}cep_m\0\u{3}rssi_dbm\0\u{3}uas_id\0\u{3}uas_id_type\0\u{3}uas_status\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularEnumField(value: &self.kind) }()
+      case 2: try { try decoder.decodeSingularUInt32Field(value: &self.sources) }()
+      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.confidence) }()
+      case 4: try { try decoder.decodeSingularEnumField(value: &self.state) }()
+      case 5: try { try decoder.decodeSingularEnumField(value: &self.trend) }()
+      case 6: try { try decoder.decodeSingularUInt32Field(value: &self.count) }()
+      case 7: try { try decoder.decodeSingularBoolField(value: &self.sensorAnchored) }()
+      case 8: try { try decoder.decodeSingularUInt32Field(value: &self.cepM) }()
+      case 9: try { try decoder.decodeSingularSInt32Field(value: &self.rssiDbm) }()
+      case 10: try { try decoder.decodeSingularBytesField(value: &self.uasID) }()
+      case 11: try { try decoder.decodeSingularEnumField(value: &self.uasIDType) }()
+      case 12: try { try decoder.decodeSingularEnumField(value: &self.uasStatus) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.kind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.kind, fieldNumber: 1)
+    }
+    if self.sources != 0 {
+      try visitor.visitSingularUInt32Field(value: self.sources, fieldNumber: 2)
+    }
+    if self.confidence != 0 {
+      try visitor.visitSingularUInt32Field(value: self.confidence, fieldNumber: 3)
+    }
+    if self.state != .unspecified {
+      try visitor.visitSingularEnumField(value: self.state, fieldNumber: 4)
+    }
+    if self.trend != .unspecified {
+      try visitor.visitSingularEnumField(value: self.trend, fieldNumber: 5)
+    }
+    if self.count != 0 {
+      try visitor.visitSingularUInt32Field(value: self.count, fieldNumber: 6)
+    }
+    if self.sensorAnchored != false {
+      try visitor.visitSingularBoolField(value: self.sensorAnchored, fieldNumber: 7)
+    }
+    if self.cepM != 0 {
+      try visitor.visitSingularUInt32Field(value: self.cepM, fieldNumber: 8)
+    }
+    if self.rssiDbm != 0 {
+      try visitor.visitSingularSInt32Field(value: self.rssiDbm, fieldNumber: 9)
+    }
+    if !self.uasID.isEmpty {
+      try visitor.visitSingularBytesField(value: self.uasID, fieldNumber: 10)
+    }
+    if self.uasIDType != .unspecified {
+      try visitor.visitSingularEnumField(value: self.uasIDType, fieldNumber: 11)
+    }
+    if self.uasStatus != .unspecified {
+      try visitor.visitSingularEnumField(value: self.uasStatus, fieldNumber: 12)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: TAKDetection, rhs: TAKDetection) -> Bool {
+    if lhs.kind != rhs.kind {return false}
+    if lhs.sources != rhs.sources {return false}
+    if lhs.confidence != rhs.confidence {return false}
+    if lhs.state != rhs.state {return false}
+    if lhs.trend != rhs.trend {return false}
+    if lhs.count != rhs.count {return false}
+    if lhs.sensorAnchored != rhs.sensorAnchored {return false}
+    if lhs.cepM != rhs.cepM {return false}
+    if lhs.rssiDbm != rhs.rssiDbm {return false}
+    if lhs.uasID != rhs.uasID {return false}
+    if lhs.uasIDType != rhs.uasIDType {return false}
+    if lhs.uasStatus != rhs.uasStatus {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension TAKDetection.Kind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Kind_Unspecified\0\u{1}Kind_Uas\0\u{1}Kind_UasOperator\0\u{1}Kind_UasHome\0\u{1}Kind_Person\0\u{1}Kind_Vehicle\0\u{1}Kind_Other\0")
+}
+
+nonisolated extension TAKDetection.Source: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Source_Unspecified\0\u{1}Source_RemoteId\0\u{1}Source_Rf\0\u{2}\u{2}Source_Acoustic\0\u{2}\u{4}Source_Radar\0\u{2}\u{8}Source_Optical\0\u{2}\u{10}Source_Thermal\0\u{2} Source_Seismic\0\u{2}@\u{1}Source_Magnetic\0")
+}
+
+nonisolated extension TAKDetection.State: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0State_Unspecified\0\u{1}State_New\0\u{1}State_Active\0\u{1}State_Coasting\0\u{1}State_Lost\0")
+}
+
+nonisolated extension TAKDetection.Trend: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0Trend_Unspecified\0\u{1}Trend_Closing\0\u{1}Trend_Steady\0\u{1}Trend_Opening\0")
+}
+
+nonisolated extension TAKDetection.UasIdType: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0UasIdType_Unspecified\0\u{1}UasIdType_SerialNumber\0\u{1}UasIdType_CaaRegistration\0\u{1}UasIdType_UtmAssigned\0\u{1}UasIdType_SpecificSession\0")
+}
+
+nonisolated extension TAKDetection.UasStatus: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0UasStatus_Unspecified\0\u{1}UasStatus_Ground\0\u{1}UasStatus_Airborne\0\u{1}UasStatus_Emergency\0\u{1}UasStatus_SystemFailure\0")
+}
+
 nonisolated extension TakTalkMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TakTalkMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{3}chatroom_id\0\u{1}lang\0\u{3}from_voice\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{3}chatroom_id\0\u{1}lang\0\u{3}from_voice\0\u{3}voice_profile_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -5454,6 +6090,7 @@ nonisolated extension TakTalkMessage: SwiftProtobuf.Message, SwiftProtobuf._Mess
       case 2: try { try decoder.decodeSingularStringField(value: &self.chatroomID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.lang) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.fromVoice) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.voiceProfileID) }()
       default: break
       }
     }
@@ -5472,6 +6109,9 @@ nonisolated extension TakTalkMessage: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if self.fromVoice != false {
       try visitor.visitSingularBoolField(value: self.fromVoice, fieldNumber: 4)
     }
+    if !self.voiceProfileID.isEmpty {
+      try visitor.visitSingularStringField(value: self.voiceProfileID, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -5480,6 +6120,7 @@ nonisolated extension TakTalkMessage: SwiftProtobuf.Message, SwiftProtobuf._Mess
     if lhs.chatroomID != rhs.chatroomID {return false}
     if lhs.lang != rhs.lang {return false}
     if lhs.fromVoice != rhs.fromVoice {return false}
+    if lhs.voiceProfileID != rhs.voiceProfileID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -5530,6 +6171,106 @@ nonisolated extension TakTalkRoomData: SwiftProtobuf.Message, SwiftProtobuf._Mes
   }
 }
 
+nonisolated extension VoiceProfile: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".VoiceProfile"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}voice_profile_id\0\u{3}voice_profile_name\0\u{3}profile_data\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.voiceProfileID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.voiceProfileName) }()
+      case 3: try { try decoder.decodeSingularBytesField(value: &self.profileData) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.voiceProfileID.isEmpty {
+      try visitor.visitSingularStringField(value: self.voiceProfileID, fieldNumber: 1)
+    }
+    if !self.voiceProfileName.isEmpty {
+      try visitor.visitSingularStringField(value: self.voiceProfileName, fieldNumber: 2)
+    }
+    if !self.profileData.isEmpty {
+      try visitor.visitSingularBytesField(value: self.profileData, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: VoiceProfile, rhs: VoiceProfile) -> Bool {
+    if lhs.voiceProfileID != rhs.voiceProfileID {return false}
+    if lhs.voiceProfileName != rhs.voiceProfileName {return false}
+    if lhs.profileData != rhs.profileData {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension VoiceProfileRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".VoiceProfileRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}voice_profile_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.voiceProfileID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.voiceProfileID.isEmpty {
+      try visitor.visitSingularStringField(value: self.voiceProfileID, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: VoiceProfileRequest, rhs: VoiceProfileRequest) -> Bool {
+    if lhs.voiceProfileID != rhs.voiceProfileID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension TakTalkRoomRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TakTalkRoomRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}room_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.roomID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.roomID.isEmpty {
+      try visitor.visitSingularStringField(value: self.roomID, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: TakTalkRoomRequest, rhs: TakTalkRoomRequest) -> Bool {
+    if lhs.roomID != rhs.roomID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Marti: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Marti"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}dest_callsign\0")
@@ -5562,7 +6303,7 @@ nonisolated extension Marti: SwiftProtobuf.Message, SwiftProtobuf._MessageImplem
 
 nonisolated extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".TAKPacketV2"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}cot_type_id\0\u{1}how\0\u{1}callsign\0\u{1}team\0\u{1}role\0\u{3}latitude_i\0\u{3}longitude_i\0\u{1}altitude\0\u{1}speed\0\u{1}course\0\u{1}battery\0\u{3}geo_src\0\u{3}alt_src\0\u{1}uid\0\u{3}device_callsign\0\u{3}stale_seconds\0\u{3}tak_version\0\u{3}tak_device\0\u{3}tak_platform\0\u{3}tak_os\0\u{1}endpoint\0\u{1}phone\0\u{3}cot_type_str\0\u{1}remarks\0\u{1}environment\0\u{3}sensor_fov\0\u{2}\u{3}marti\0\u{2}\u{2}chat\0\u{1}aircraft\0\u{3}raw_detail\0\u{1}shape\0\u{1}marker\0\u{1}rab\0\u{1}route\0\u{1}casevac\0\u{1}emergency\0\u{1}task\0\u{1}taktalk\0\u{3}taktalk_room\0\u{3}start_epoch_lo14\0\u{c}\u{1b}\u{1}\u{c}\u{1c}\u{1}\u{c}\u{1e}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}cot_type_id\0\u{1}how\0\u{1}callsign\0\u{1}team\0\u{1}role\0\u{3}latitude_i\0\u{3}longitude_i\0\u{1}altitude\0\u{1}speed\0\u{1}course\0\u{1}battery\0\u{3}geo_src\0\u{3}alt_src\0\u{1}uid\0\u{3}device_callsign\0\u{3}stale_seconds\0\u{3}tak_version\0\u{3}tak_device\0\u{3}tak_platform\0\u{3}tak_os\0\u{1}endpoint\0\u{1}phone\0\u{3}cot_type_str\0\u{1}remarks\0\u{1}environment\0\u{3}sensor_fov\0\u{2}\u{3}marti\0\u{2}\u{2}chat\0\u{1}aircraft\0\u{3}raw_detail\0\u{1}shape\0\u{1}marker\0\u{1}rab\0\u{1}route\0\u{1}casevac\0\u{1}emergency\0\u{1}task\0\u{1}taktalk\0\u{3}taktalk_room\0\u{3}start_epoch_lo14\0\u{3}voice_profile\0\u{3}voice_profile_request\0\u{3}taktalk_room_request\0\u{1}detection\0\u{c}\u{1b}\u{1}\u{c}\u{1c}\u{1}\u{c}\u{1e}\u{1}")
 
   fileprivate class _StorageClass {
     var _cotTypeID: CotType = .other
@@ -5592,6 +6333,7 @@ nonisolated extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._Message
     var _environment: TAKEnvironment? = nil
     var _sensorFov: SensorFov? = nil
     var _startEpochLo14: UInt32? = nil
+    var _detection: TAKDetection? = nil
     var _marti: Marti? = nil
     var _payloadVariant: TAKPacketV2.OneOf_PayloadVariant?
 
@@ -5631,6 +6373,7 @@ nonisolated extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._Message
       _environment = source._environment
       _sensorFov = source._sensorFov
       _startEpochLo14 = source._startEpochLo14
+      _detection = source._detection
       _marti = source._marti
       _payloadVariant = source._payloadVariant
     }
@@ -5830,6 +6573,46 @@ nonisolated extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._Message
           }
         }()
         case 43: try { try decoder.decodeSingularUInt32Field(value: &_storage._startEpochLo14) }()
+        case 44: try {
+          var v: VoiceProfile?
+          var hadOneofValue = false
+          if let current = _storage._payloadVariant {
+            hadOneofValue = true
+            if case .voiceProfile(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._payloadVariant = .voiceProfile(v)
+          }
+        }()
+        case 45: try {
+          var v: VoiceProfileRequest?
+          var hadOneofValue = false
+          if let current = _storage._payloadVariant {
+            hadOneofValue = true
+            if case .voiceProfileRequest(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._payloadVariant = .voiceProfileRequest(v)
+          }
+        }()
+        case 46: try {
+          var v: TakTalkRoomRequest?
+          var hadOneofValue = false
+          if let current = _storage._payloadVariant {
+            hadOneofValue = true
+            if case .taktalkRoomRequest(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._payloadVariant = .taktalkRoomRequest(v)
+          }
+        }()
+        case 47: try { try decoder.decodeSingularMessageField(value: &_storage._detection) }()
         default: break
         }
       }
@@ -5972,10 +6755,28 @@ nonisolated extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._Message
         guard case .taktalkRoom(let v)? = _storage._payloadVariant else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 42)
       }()
-      case nil: break
+      default: break
       }
       try { if let v = _storage._startEpochLo14 {
         try visitor.visitSingularUInt32Field(value: v, fieldNumber: 43)
+      } }()
+      switch _storage._payloadVariant {
+      case .voiceProfile?: try {
+        guard case .voiceProfile(let v)? = _storage._payloadVariant else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 44)
+      }()
+      case .voiceProfileRequest?: try {
+        guard case .voiceProfileRequest(let v)? = _storage._payloadVariant else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 45)
+      }()
+      case .taktalkRoomRequest?: try {
+        guard case .taktalkRoomRequest(let v)? = _storage._payloadVariant else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 46)
+      }()
+      default: break
+      }
+      try { if let v = _storage._detection {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 47)
       } }()
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -6013,6 +6814,7 @@ nonisolated extension TAKPacketV2: SwiftProtobuf.Message, SwiftProtobuf._Message
         if _storage._environment != rhs_storage._environment {return false}
         if _storage._sensorFov != rhs_storage._sensorFov {return false}
         if _storage._startEpochLo14 != rhs_storage._startEpochLo14 {return false}
+        if _storage._detection != rhs_storage._detection {return false}
         if _storage._marti != rhs_storage._marti {return false}
         if _storage._payloadVariant != rhs_storage._payloadVariant {return false}
         return true

@@ -30,6 +30,15 @@ class CotMeshSanitizerTest {
         assertTrue(out.contains("point=\"33.1300,-107.2500\""), "route waypoint point must survive")
         assertTrue(out.contains("callsign=\"ASPEN\""), "populated contact callsign must survive")
         assertTrue(out.contains("uid=\"SANITIZER-TEST\""), "event uid must survive (only <link> uids stripped)")
+        // The detection annotation survives whole: none of its names is one the strip rules match.
+        assertTrue(
+            out.contains(
+                "<__detection kind=\"uas\" sources=\"remote_id rf\" confidence=\"87\" state=\"active\" " +
+                    "trend=\"closing\" count=\"2\" sensorAnchored=\"true\" cep=\"12\" rssi=\"-71\" " +
+                    "uasId=\"ZZZZ8TEST0001\" uasIdType=\"serial_number\" uasStatus=\"airborne\"/>",
+            ),
+            "detection annotation must survive unchanged",
+        )
 
         // Non-essentials removed.
         listOf(

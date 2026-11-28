@@ -72,6 +72,9 @@ public enum DictionaryProvider {
     /// well-known enum is ``CotType/other`` (an unknown type carried as a raw
     /// string), the raw `cotTypeStr` is consulted instead.
     ///
+    /// ``TakCompressor/compress(_:)`` makes one exception: a packet with a
+    /// detection that is not an aircraft track always uses ``DICT_ID_NON_AIRCRAFT``.
+    ///
     /// - Parameters:
     ///   - cotTypeId: The well-known CoT type enum from the packet envelope.
     ///   - cotTypeStr: The raw CoT type string fallback, consulted only when

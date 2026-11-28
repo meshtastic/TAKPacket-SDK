@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 /**
  * Cross-platform full-pipeline coverage (`kotlin.test`, runs on every target).
  *
- * For each of the 47 inlined fixtures this exercises the SDK's actual code on
+ * For each inlined fixture this exercises the SDK's actual code on
  * the current platform — the xmlutil [CotXmlParser], [TakPacketV2Serializer],
  * the [ZstdCodec] actual, and the pure-Kotlin decoder:
  *
@@ -47,6 +47,8 @@ class RoundTripCommonTest {
         // marti gates TAKTALK voice routing — a regression here silently breaks
         // directed voice/text end-to-end (see CLAUDE.md + jvm RoundTripTest).
         assertEquals(expected.marti, actual.marti, "marti mismatch ($ctx)")
+        // The passive-sensor annotation crosses the wire losslessly.
+        assertEquals(expected.detection, actual.detection, "detection mismatch ($ctx)")
         // Payload variant identity is the single most important invariant: PLI is
         // implicit (no payload + a-f-* type), so a spurious/absent payload flips
         // the packet's meaning.

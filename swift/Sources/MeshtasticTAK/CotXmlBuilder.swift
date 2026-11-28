@@ -131,7 +131,8 @@ public class CotXmlBuilder {
         var s = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         s += "<event version=\"2.0\" uid=\"\(esc(packet.uid))\" type=\"\(esc(cotType))\" how=\"\(esc(how))\" "
         s += "time=\"\(now)\" start=\"\(now)\" stale=\"\(stale)\">\n"
-        s += "  <point lat=\"\(lat)\" lon=\"\(lon)\" hae=\"\(packet.altitude)\" ce=\"9999999\" le=\"9999999\"/>\n"
+        // ce carries a detection's horizontal uncertainty; anything else keeps CoT's "unknown".
+        s += "  <point lat=\"\(lat)\" lon=\"\(lon)\" hae=\"\(packet.altitude)\" ce=\"\(DetectionXml.pointCe(packet))\" le=\"9999999\"/>\n"
         s += "  <detail>\n"
 
         // Contact — skip for routes (ATAK/iTAK expect <contact> after __routeinfo, no endpoint).
@@ -191,6 +192,36 @@ public class CotXmlBuilder {
 
         if !packet.deviceCallsign.isEmpty {
             s += "    <uid Droid=\"\(esc(packet.deviceCallsign))\"/>\n"
+        }
+
+        // Environment and sensor annotate any payload, so they precede the
+        // payload-specific elements, as in Kotlin. Unsigned fields print as their
+        // Int32 reading, which is what Kotlin's Int model prints.
+        if packet.hasEnvironment {
+            let env = packet.environment
+            s += "    <environment temperature=\"\(Double(env.temperatureCX10) / 10.0)\""
+            if env.windDirectionDeg != 0 { s += " windDirection=\"\(Int32(bitPattern: env.windDirectionDeg))\"" }
+            if env.windSpeedCmS != 0 { s += " windSpeed=\"\(Double(Int32(bitPattern: env.windSpeedCmS)) / 100.0)\"" }
+            s += "/>\n"
+        }
+
+        // Geometry only: receivers restore the styling from their own defaults.
+        // No `type` attribute; the parser infers it from the model.
+        if packet.hasSensorFov {
+            let fov = packet.sensorFov
+            s += "    <sensor azimuth=\"\(Int32(bitPattern: fov.azimuthDeg))\""
+            if fov.hasRangeM { s += " range=\"\(Int32(bitPattern: fov.rangeM))\"" }
+            s += " fov=\"\(Int32(bitPattern: fov.fovHorizontalDeg))\""
+            if fov.fovVerticalDeg != 0 { s += " vfov=\"\(Int32(bitPattern: fov.fovVerticalDeg))\"" }
+            s += " elevation=\"\(fov.elevationDeg)\""
+            if fov.rollDeg != 0 { s += " roll=\"\(fov.rollDeg)\"" }
+            if !fov.model.isEmpty { s += " model=\"\(esc(fov.model))\"" }
+            s += "/>\n"
+        }
+
+        // Passive-sensor detection, payload-agnostic like the two annotations above.
+        if packet.hasDetection {
+            s += DetectionXml.emit(packet.detection)
         }
 
         // Payload-specific elements

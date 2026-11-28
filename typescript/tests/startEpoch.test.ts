@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { TakCompressor } from "../src/TakCompressor.js";
 import { parseCotXml } from "../src/CotXmlParser.js";
 import { buildCotXml } from "../src/CotXmlBuilder.js";
@@ -133,6 +133,30 @@ describe("StartEpoch round trip", () => {
     const absent: TAKPacketV2 = { uid: "ATOM-LO14-ABSENT", cotTypeStr: "a-f-G-U-C" };
     const rtAbsent = await compressor.decompress(await compressor.compress(absent));
     expect(rtAbsent.startEpochLo14 ?? undefined, "an absent start came back as 0").toBeUndefined();
+  });
+
+  it("carries a start on a window boundary through parse, wire and rebuild", async () => {
+    // The test above builds its packet by hand, so it never meets the parser's closing
+    // `stripZeros` pass, which took a lo14 of 0 for a proto3 default and dropped it.
+    // Only a start on a window boundary truncates to 0, and the real clock reaches one
+    // once every 16384 s, so the clock is faked, 90 s after the boundary.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const start = BOUNDARY;
+      vi.setSystemTime((start + 90) * 1000);
+      const pkt = parseCotXml(cot(iso(start), iso(start + 300)));
+      expect(pkt, "the parser dropped a lo14 of 0").toHaveProperty("startEpochLo14", 0);
+
+      const rt = await compressor.decompress(await compressor.compress(pkt));
+      expect(rt.startEpochLo14, "a lo14 of 0 did not survive the wire").toBe(0);
+
+      // The original instant, not the decode instant 90 s later.
+      const rebuilt = buildCotXml(rt);
+      expect(attr(rebuilt, "start")).toBe(iso(start));
+      expect(attr(rebuilt, "time")).toBe(iso(start));
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("falls back to the decode instant when the sender supplied nothing", () => {

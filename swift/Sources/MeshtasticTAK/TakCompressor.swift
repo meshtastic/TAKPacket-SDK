@@ -63,11 +63,34 @@ public class TakCompressor {
         self.compressionLevel = compressionLevel
     }
 
+    /// The dictionary to compress `packet` with: the one
+    /// ``DictionaryProvider/selectDictId(cotTypeId:cotTypeStr:)`` picks for its CoT type,
+    /// except that a detection that is not an aircraft track takes the non-aircraft
+    /// dictionary whatever its type. The 4 KB aircraft dictionary is built for aircraft
+    /// tracks, and the non-aircraft one compresses a detection marker smaller. The ID
+    /// travels in the flags byte, so a receiver decodes either choice.
+    static func dictId(for packet: TAKPacketV2) -> Int {
+        if packet.hasDetection, !isAircraftTrack(packet) {
+            return DictionaryProvider.DICT_ID_NON_AIRCRAFT
+        }
+        return DictionaryProvider.selectDictId(
+            cotTypeId: packet.cotTypeID,
+            cotTypeStr: packet.cotTypeStr.isEmpty ? nil : packet.cotTypeStr
+        )
+    }
+
+    private static func isAircraftTrack(_ packet: TAKPacketV2) -> Bool {
+        if case .aircraft(_)? = packet.payloadVariant { return true }
+        return false
+    }
+
     /// Compress a ``TAKPacketV2`` into a wire payload — `[flags byte][zstd body]`,
     /// or `[0xFF][raw protobuf]` when compression doesn't pay.
     ///
     /// Serializes the packet, selects the dictionary from its CoT type (via
-    /// ``DictionaryProvider/selectDictId(cotTypeId:cotTypeStr:)``), compresses
+    /// ``DictionaryProvider/selectDictId(cotTypeId:cotTypeStr:)``, except that a
+    /// detection that is not an aircraft track always uses the non-aircraft
+    /// dictionary), compresses
     /// with the redundant frame fields disabled and the zstd magic stripped, and
     /// applies the skip-compress guard. The returned payload is not checked
     /// against the 225-byte MTU — use ``compressWithRemarksFallback(_:maxWireBytes:)``
@@ -81,11 +104,8 @@ public class TakCompressor {
     ///   on a zstd error or unexpected frame header. May also rethrow a protobuf
     ///   serialization error.
     public func compress(_ packet: TAKPacketV2) throws -> Data {
-        let protobufBytes = try packet.serializedData()
-        let dictId = DictionaryProvider.selectDictId(
-            cotTypeId: packet.cotTypeID,
-            cotTypeStr: packet.cotTypeStr.isEmpty ? nil : packet.cotTypeStr
-        )
+        let protobufBytes = try DetectionXml.withSchemaUasId(packet).serializedData()
+        let dictId = Self.dictId(for: packet)
         guard let dictData = DictionaryProvider.getDictionary(dictId) else {
             throw TakCompressorError.noDictionary(dictId)
         }
@@ -148,7 +168,7 @@ public class TakCompressor {
             throw TakCompressorError.decompressionFailed("Payload size \(protobufBytes.count) exceeds limit \(maxDecompressedSize)")
         }
 
-        return try TAKPacketV2(serializedBytes: protobufBytes)
+        return DetectionXml.withSchemaUasId(try TAKPacketV2(serializedBytes: protobufBytes))
     }
 
     /// Compress a packet, stripping remarks if the result exceeds `maxWireBytes`.
@@ -236,7 +256,7 @@ public class TakCompressor {
     ///   the wire size, the emitted dictionary ID, and the wire payload.
     /// - Throws: The same errors as ``compress(_:)``.
     public func compressWithStats(_ packet: TAKPacketV2) throws -> CompressionResult {
-        let protobufBytes = try packet.serializedData()
+        let protobufBytes = try DetectionXml.withSchemaUasId(packet).serializedData()
         let wirePayload = try compress(packet)
         // Report the ACTUAL emitted mode from the flags byte — skip-compress may
         // have emitted 0xFF (uncompressed) when compression didn't pay.

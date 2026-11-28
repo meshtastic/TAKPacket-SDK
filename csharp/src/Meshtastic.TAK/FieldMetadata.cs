@@ -25,23 +25,24 @@ namespace Meshtastic.Protobufs {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "Ch9tZXNodGFzdGljL2ZpZWxkX21ldGFkYXRhLnByb3RvEgptZXNodGFzdGlj",
-            "GiBnb29nbGUvcHJvdG9idWYvZGVzY3JpcHRvci5wcm90byL8AQoNRmllbGRN",
+            "GiBnb29nbGUvcHJvdG9idWYvZGVzY3JpcHRvci5wcm90byKPAgoNRmllbGRN",
             "ZXRhZGF0YRIQCghkaXlfb25seRgBIAEoCBISCgphZG1pbl9vbmx5GAIgASgI",
             "EhEKCW1pbl92YWx1ZRgDIAEoARIRCgltYXhfdmFsdWUYBCABKAESDAoEdW5p",
             "dBgFIAEoCRISCgpkZXByZWNhdGVkGAYgASgIEg0KBWxhYmVsGAcgASgJEhMK",
             "C2Rlc2NyaXB0aW9uGAggASgJEhAKCGtleXdvcmRzGAkgASgJEhYKDnNpbmNl",
             "X2Zpcm13YXJlGAogASgJEhgKEGRlcHJlY2F0ZWRfc2luY2UYCyABKAkSFQoN",
-            "b2VtX2ZpeGVkX2dwcxgMIAEoCDpSCg5maWVsZF9tZXRhZGF0YRIdLmdvb2ds",
-            "ZS5wcm90b2J1Zi5GaWVsZE9wdGlvbnMYuY4DIAEoCzIZLm1lc2h0YXN0aWMu",
-            "RmllbGRNZXRhZGF0YTpbChNlbnVtX3ZhbHVlX21ldGFkYXRhEiEuZ29vZ2xl",
-            "LnByb3RvYnVmLkVudW1WYWx1ZU9wdGlvbnMYuY4DIAEoCzIZLm1lc2h0YXN0",
-            "aWMuRmllbGRNZXRhZGF0YUJpChRvcmcubWVzaHRhc3RpYy5wcm90b0ITRmll",
-            "bGRNZXRhZGF0YVByb3Rvc1oiZ2l0aHViLmNvbS9tZXNodGFzdGljL2dvL2dl",
-            "bmVyYXRlZKoCFE1lc2h0YXN0aWMuUHJvdG9idWZzugIA"));
+            "b2VtX2ZpeGVkX2dwcxgMIAEoCBIRCglzZW5zaXRpdmUYDSABKAg6UgoOZmll",
+            "bGRfbWV0YWRhdGESHS5nb29nbGUucHJvdG9idWYuRmllbGRPcHRpb25zGLmO",
+            "AyABKAsyGS5tZXNodGFzdGljLkZpZWxkTWV0YWRhdGE6WwoTZW51bV92YWx1",
+            "ZV9tZXRhZGF0YRIhLmdvb2dsZS5wcm90b2J1Zi5FbnVtVmFsdWVPcHRpb25z",
+            "GLmOAyABKAsyGS5tZXNodGFzdGljLkZpZWxkTWV0YWRhdGFCaQoUb3JnLm1l",
+            "c2h0YXN0aWMucHJvdG9CE0ZpZWxkTWV0YWRhdGFQcm90b3NaImdpdGh1Yi5j",
+            "b20vbWVzaHRhc3RpYy9nby9nZW5lcmF0ZWSqAhRNZXNodGFzdGljLlByb3Rv",
+            "YnVmc7oCAA=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.Reflection.DescriptorReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, new pb::Extension[] { FieldMetadataExtensions.FieldMetadata, FieldMetadataExtensions.EnumValueMetadata }, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.FieldMetadata), global::Meshtastic.Protobufs.FieldMetadata.Parser, new[]{ "DiyOnly", "AdminOnly", "MinValue", "MaxValue", "Unit", "Deprecated", "Label", "Description", "Keywords", "SinceFirmware", "DeprecatedSince", "OemFixedGps" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Meshtastic.Protobufs.FieldMetadata), global::Meshtastic.Protobufs.FieldMetadata.Parser, new[]{ "DiyOnly", "AdminOnly", "MinValue", "MaxValue", "Unit", "Deprecated", "Label", "Description", "Keywords", "SinceFirmware", "DeprecatedSince", "OemFixedGps", "Sensitive" }, null, null, null, null)
           }));
     }
     #endregion
@@ -200,6 +201,7 @@ namespace Meshtastic.Protobufs {
       sinceFirmware_ = other.sinceFirmware_;
       deprecatedSince_ = other.deprecatedSince_;
       oemFixedGps_ = other.oemFixedGps_;
+      sensitive_ = other.sensitive_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -635,6 +637,50 @@ namespace Meshtastic.Protobufs {
       _hasBits0 &= ~32;
     }
 
+    /// <summary>Field number for the "sensitive" field.</summary>
+    public const int SensitiveFieldNumber = 13;
+    private readonly static bool SensitiveDefaultValue = false;
+
+    private bool sensitive_;
+    /// <summary>
+    ///
+    /// Field holds a SECRET: a password, PIN, passphrase or key whose value grants
+    /// access to the node, to its network, or to the traffic it carries. Knowing a
+    /// public key or a username does not, so neither is marked.
+    ///
+    /// Apps should mask the value by default (a password-style control with an
+    /// explicit reveal), keep it out of logs, crash reports, analytics and debug
+    /// dumps, and not include it in a shared export, QR code or screenshot without
+    /// the user knowingly choosing to.
+    ///
+    /// Handling metadata, not protection: it changes nothing on the wire, and the
+    /// firmware treats the field no differently. It marks the field alone. A
+    /// message that merely CONTAINS a sensitive field (`Config` holding
+    /// `SecurityConfig.private_key`) is not marked itself, so a consumer redacting
+    /// a whole message should walk into its submessages.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Sensitive {
+      get { if ((_hasBits0 & 64) != 0) { return sensitive_; } else { return SensitiveDefaultValue; } }
+      set {
+        _hasBits0 |= 64;
+        sensitive_ = value;
+      }
+    }
+    /// <summary>Gets whether the "sensitive" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool HasSensitive {
+      get { return (_hasBits0 & 64) != 0; }
+    }
+    /// <summary>Clears the value of the "sensitive" field</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearSensitive() {
+      _hasBits0 &= ~64;
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -662,6 +708,7 @@ namespace Meshtastic.Protobufs {
       if (SinceFirmware != other.SinceFirmware) return false;
       if (DeprecatedSince != other.DeprecatedSince) return false;
       if (OemFixedGps != other.OemFixedGps) return false;
+      if (Sensitive != other.Sensitive) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -681,6 +728,7 @@ namespace Meshtastic.Protobufs {
       if (HasSinceFirmware) hash ^= SinceFirmware.GetHashCode();
       if (HasDeprecatedSince) hash ^= DeprecatedSince.GetHashCode();
       if (HasOemFixedGps) hash ^= OemFixedGps.GetHashCode();
+      if (HasSensitive) hash ^= Sensitive.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -747,6 +795,10 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(96);
         output.WriteBool(OemFixedGps);
       }
+      if (HasSensitive) {
+        output.WriteRawTag(104);
+        output.WriteBool(Sensitive);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -805,6 +857,10 @@ namespace Meshtastic.Protobufs {
         output.WriteRawTag(96);
         output.WriteBool(OemFixedGps);
       }
+      if (HasSensitive) {
+        output.WriteRawTag(104);
+        output.WriteBool(Sensitive);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -849,6 +905,9 @@ namespace Meshtastic.Protobufs {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(DeprecatedSince);
       }
       if (HasOemFixedGps) {
+        size += 1 + 1;
+      }
+      if (HasSensitive) {
         size += 1 + 1;
       }
       if (_unknownFields != null) {
@@ -898,6 +957,9 @@ namespace Meshtastic.Protobufs {
       }
       if (other.HasOemFixedGps) {
         OemFixedGps = other.OemFixedGps;
+      }
+      if (other.HasSensitive) {
+        Sensitive = other.Sensitive;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -966,6 +1028,10 @@ namespace Meshtastic.Protobufs {
             OemFixedGps = input.ReadBool();
             break;
           }
+          case 104: {
+            Sensitive = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -1031,6 +1097,10 @@ namespace Meshtastic.Protobufs {
           }
           case 96: {
             OemFixedGps = input.ReadBool();
+            break;
+          }
+          case 104: {
+            Sensitive = input.ReadBool();
             break;
           }
         }

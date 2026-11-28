@@ -10,6 +10,37 @@ import type { TAKPacketV2 } from "./types.js";
 const MAX_DECOMPRESSED_SIZE = 4096;
 
 /**
+ * The dictionary to compress `packet` with: the one {@link selectDictId} picks
+ * for its CoT type, except that a detection that is not an aircraft track takes
+ * the non-aircraft dictionary whatever its type. The 4 KB aircraft dictionary is
+ * built for aircraft tracks, and the non-aircraft one compresses a detection
+ * marker smaller. The ID travels in the flags byte, so a receiver decodes either
+ * choice.
+ */
+// The schema's rule for TAKDetection.uas_id, which the parser applies to CoT XML: only for
+// Kind_Uas (1), and at most 20 bytes.
+const KIND_UAS = 1;
+const UAS_ID_MAX_BYTES = 20;
+
+/**
+ * `packet`, or a copy whose detection holds its UAS ID as the schema allows. The compressor
+ * applies it to what it sends and what it receives, as the parser and builder do to CoT XML.
+ */
+function withSchemaUasId(packet: TAKPacketV2): TAKPacketV2 {
+  const detection = packet.detection;
+  if (!detection) return packet;
+  const current = detection.uasId ?? new Uint8Array(0);
+  const allowed = (detection.kind ?? 0) === KIND_UAS ? current.subarray(0, UAS_ID_MAX_BYTES) : current.subarray(0, 0);
+  if (allowed.length === current.length) return packet;
+  return { ...packet, detection: { ...detection, uasId: Buffer.from(allowed) } };
+}
+
+function dictIdFor(packet: TAKPacketV2): number {
+  if (packet.detection != null && packet.aircraft == null) return DICT_ID_NON_AIRCRAFT;
+  return selectDictId(packet.cotTypeId ?? 0, packet.cotTypeStr ?? undefined);
+}
+
+/**
  * The 4-byte zstd frame magic (little-endian 0xFD2FB528). Stripped on compress
  * and prepended on decompress: the SDK is both ends and identifies the frame
  * from its own 1-byte flags prefix, so the magic is pure overhead. Done in app
@@ -166,7 +197,9 @@ export class TakCompressor {
    * Compress a {@link TAKPacketV2} into a wire payload: `[flags][zstd body]`.
    *
    * Serializes the packet to protobuf, picks the dictionary from the packet's
-   * CoT type ({@link selectDictId}), compresses as one independent zstd frame
+   * CoT type ({@link selectDictId}, except that a detection that is not an
+   * aircraft track always uses the non-aircraft dictionary), compresses as one
+   * independent zstd frame
    * (level 19, content-size/checksum/dictID frame fields off), and strips the
    * 4-byte zstd magic. If the raw protobuf is no larger than the compressed
    * body, emits the skip-compress form `[0xFF][raw protobuf]` instead so the
@@ -200,12 +233,10 @@ export class TakCompressor {
     const TAKPacketV2Type = await getTAKPacketV2Type();
     const err = TAKPacketV2Type.verify(packet);
     if (err) throw new Error(`Invalid TAKPacketV2: ${err}`);
-    const msg = TAKPacketV2Type.create(packet);
+    const msg = TAKPacketV2Type.create(withSchemaUasId(packet));
     const protobufBytes = Buffer.from(TAKPacketV2Type.encode(msg).finish());
 
-    const cotTypeId = packet.cotTypeId ?? 0;
-    const cotTypeStr = packet.cotTypeStr ?? undefined;
-    const dictId = selectDictId(cotTypeId, cotTypeStr);
+    const dictId = dictIdFor(packet);
 
     const compressor = this.compressors.get(dictId);
     if (!compressor) throw new Error(`No compressor for dict ${dictId}`);
@@ -300,7 +331,7 @@ export class TakCompressor {
       // (7.x wrote zero-valued own properties to the wire), so without this
       // option those fields come back undefined instead. Oneof members are
       // never defaulted, so payload_variant is unaffected.
-      return TAKPacketV2Type.toObject(msg, { defaults: true }) as TAKPacketV2;
+      return withSchemaUasId(TAKPacketV2Type.toObject(msg, { defaults: true }) as TAKPacketV2);
     } catch (e) {
       throw new Error(`Protobuf parsing failed: ${e}`);
     }
@@ -375,7 +406,7 @@ export class TakCompressor {
    */
   async compressWithStats(packet: TAKPacketV2): Promise<CompressionResult> {
     const TAKPacketV2Type = await getTAKPacketV2Type();
-    const msg = TAKPacketV2Type.create(packet);
+    const msg = TAKPacketV2Type.create(withSchemaUasId(packet));
     const protobufBytes = TAKPacketV2Type.encode(msg).finish();
 
     const wirePayload = await this.compress(packet);

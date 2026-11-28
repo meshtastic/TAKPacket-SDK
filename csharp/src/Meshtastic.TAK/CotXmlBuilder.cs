@@ -21,8 +21,10 @@ namespace Meshtastic.TAK;
 /// meters (from centimeters), and integer-scaled coordinates back to degrees
 /// (from degrees×1e7). Delta-encoded route waypoints, R&amp;B anchors, and
 /// drawn-shape vertices are re-anchored against the envelope coordinate.</para>
-/// <para>Doubles are formatted with the invariant culture so locales that use a
-/// comma decimal separator cannot corrupt the XML.</para>
+/// <para>Every number and timestamp is formatted with the invariant culture, so the
+/// XML is the same whatever the current culture is. Otherwise a comma decimal separator
+/// (de-DE), a U+2212 minus sign (sv-SE), a '.' time separator (fi-FI) or a non-Gregorian
+/// calendar (th-TH, ar-SA) would corrupt it.</para>
 /// </remarks>
 public class CotXmlBuilder
 {
@@ -150,7 +152,7 @@ public class CotXmlBuilder
         var r = (argb >> 16) & 0xFF;
         var g = (argb >> 8) & 0xFF;
         var b = argb & 0xFF;
-        return $"{a:x2}{b:x2}{g:x2}{r:x2}";
+        return string.Create(CultureInfo.InvariantCulture, $"{a:x2}{b:x2}{g:x2}{r:x2}");
     }
 
     /// <summary>
@@ -158,6 +160,23 @@ public class CotXmlBuilder
     /// decimal separators (e.g. de-DE) don't break CoT XML parsing.
     /// </summary>
     private static string F(double d) => d.ToString("R", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Render an integer using invariant culture. Plain interpolation formats with the
+    /// current culture, whose minus sign is U+2212 under sv-SE, nb-NO or fi-FI and
+    /// carries a bidi mark under ar-SA, fa-IR or he-IL; no binding's parser reads
+    /// either back as a negative number.
+    /// </summary>
+    private static string I(long n) => n.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Render a CoT timestamp (UTC, millisecond precision) using invariant culture. A
+    /// culture-sensitive format swaps ':' for the culture's time separator ('.' under
+    /// fi-FI or da-DK) and counts the year in the culture's calendar (Buddhist under
+    /// th-TH, Hijri under ar-SA), so the receiver reads a garbled or long-expired time.
+    /// </summary>
+    private static string CotTime(DateTimeOffset t) =>
+        t.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
 
     /// <summary>
     /// Build a complete CoT XML <c>&lt;event&gt;</c> document from a decoded packet.
@@ -196,8 +215,8 @@ public class CotXmlBuilder
                 start = DateTimeOffset.FromUnixTimeSeconds(recovered.Value);
             }
         }
-        var timeStr = start.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
-        var staleStr = stale.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        var timeStr = CotTime(start);
+        var staleStr = CotTime(stale);
 
         var cotType = CotTypeMapper.TypeToString((int)pkt.CotTypeId) ?? pkt.CotTypeStr ?? "";
         // Missing/Unspecified how falls back to "m-g".
@@ -215,7 +234,9 @@ public class CotXmlBuilder
         var sb = new StringBuilder();
         sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
         sb.AppendLine($"<event version=\"2.0\" uid=\"{Esc(pkt.Uid)}\" type=\"{Esc(cotType)}\" how=\"{Esc(how)}\" time=\"{timeStr}\" start=\"{timeStr}\" stale=\"{staleStr}\">");
-        sb.AppendLine($"  <point lat=\"{F(lat)}\" lon=\"{F(lon)}\" hae=\"{pkt.Altitude}\" ce=\"9999999\" le=\"9999999\"/>");
+        // ce carries a detection's horizontal uncertainty; anything else keeps CoT's "unknown".
+        var ce = I(DetectionXml.PointCe(pkt.Detection));
+        sb.AppendLine($"  <point lat=\"{F(lat)}\" lon=\"{F(lon)}\" hae=\"{I(pkt.Altitude)}\" ce=\"{ce}\" le=\"9999999\"/>");
         sb.AppendLine("  <detail>");
 
         var isRoute = pkt.PayloadVariantCase == TAKPacketV2.PayloadVariantOneofCase.Route;
@@ -249,7 +270,7 @@ public class CotXmlBuilder
             sb.AppendLine(tag + "/>");
         }
 
-        if (pkt.Battery > 0) sb.AppendLine($"    <status battery=\"{pkt.Battery}\"/>");
+        if (pkt.Battery > 0) sb.AppendLine($"    <status battery=\"{I(pkt.Battery)}\"/>");
 
         if (pkt.Speed > 0 || pkt.Course > 0)
             sb.AppendLine($"    <track speed=\"{F(pkt.Speed / 100.0)}\" course=\"{F(pkt.Course / 100.0)}\"/>");
@@ -269,6 +290,37 @@ public class CotXmlBuilder
 
         if (!string.IsNullOrEmpty(pkt.DeviceCallsign))
             sb.AppendLine($"    <uid Droid=\"{Esc(pkt.DeviceCallsign)}\"/>");
+
+        // Environment (weather annotation), payload-agnostic. temperature is always
+        // written; a zero wind direction or speed reads as unset, as it does in
+        // Kotlin after a wire round trip. Unsigned fields print as their Int32 reading.
+        if (pkt.Environment != null)
+        {
+            var env = pkt.Environment;
+            var tag = $"    <environment temperature=\"{F(env.TemperatureCX10 / 10.0)}\"";
+            if (env.WindDirectionDeg != 0) tag += $" windDirection=\"{I(unchecked((int)env.WindDirectionDeg))}\"";
+            if (env.WindSpeedCmS != 0) tag += $" windSpeed=\"{F(unchecked((int)env.WindSpeedCmS) / 100.0)}\"";
+            sb.AppendLine(tag + "/>");
+        }
+
+        // SensorFov (camera / FLIR / laser cone): geometry only, and never a type
+        // attribute. range is omitted when unset so the receiver applies its own
+        // default; a zero vfov or roll reads as unset, as it does in Kotlin.
+        if (pkt.SensorFov != null)
+        {
+            var sensor = pkt.SensorFov;
+            var tag = $"    <sensor azimuth=\"{I(unchecked((int)sensor.AzimuthDeg))}\"";
+            if (sensor.HasRangeM) tag += $" range=\"{I(unchecked((int)sensor.RangeM))}\"";
+            tag += $" fov=\"{I(unchecked((int)sensor.FovHorizontalDeg))}\"";
+            if (sensor.FovVerticalDeg != 0) tag += $" vfov=\"{I(unchecked((int)sensor.FovVerticalDeg))}\"";
+            tag += $" elevation=\"{I(sensor.ElevationDeg)}\"";
+            if (sensor.RollDeg != 0) tag += $" roll=\"{I(sensor.RollDeg)}\"";
+            if (!string.IsNullOrEmpty(sensor.Model)) tag += $" model=\"{Esc(sensor.Model)}\"";
+            sb.AppendLine(tag + "/>");
+        }
+
+        // Passive-sensor detection, payload-agnostic like the two annotations above.
+        if (pkt.Detection != null) DetectionXml.Append(sb, pkt.Detection);
 
         switch (pkt.PayloadVariantCase)
         {
@@ -379,7 +431,7 @@ public class CotXmlBuilder
                     if (!string.IsNullOrEmpty(pkt.Aircraft.Icao)) parts.Add($"ICAO: {pkt.Aircraft.Icao}");
                     if (!string.IsNullOrEmpty(pkt.Aircraft.Registration)) parts.Add($"REG: {pkt.Aircraft.Registration}");
                     if (!string.IsNullOrEmpty(pkt.Aircraft.AircraftType)) parts.Add($"Type: {pkt.Aircraft.AircraftType}");
-                    parts.Add($"Squawk: {pkt.Aircraft.Squawk}");
+                    parts.Add($"Squawk: {I(pkt.Aircraft.Squawk)}");
                     if (!string.IsNullOrEmpty(pkt.Aircraft.Flight)) parts.Add($"Flight: {pkt.Aircraft.Flight}");
                     sb.AppendLine($"    <remarks>{Esc(string.Join(" ", parts))}</remarks>");
                 }
@@ -495,7 +547,7 @@ public class CotXmlBuilder
                 var minorM = shape.MinorCm / 100.0;
                 var strokeW = shape.StrokeWeightX10 / 10.0;
                 sb.AppendLine("    <shape>");
-                sb.AppendLine($"      <ellipse major=\"{F(majorM)}\" minor=\"{F(minorM)}\" angle=\"{shape.AngleDeg}\"/>");
+                sb.AppendLine($"      <ellipse major=\"{F(majorM)}\" minor=\"{F(minorM)}\" angle=\"{I(shape.AngleDeg)}\"/>");
                 // KML style link — iTAK requires this to render circles/ellipses
                 sb.Append($"      <link uid=\"{Esc(uid)}.Style\" type=\"b-x-KmlStyle\" relation=\"p-c\">");
                 sb.Append($"<Style><LineStyle><color>{ArgbToAbgrHex(strokeVal)}</color><width>{F(strokeW)}</width></LineStyle>");
@@ -537,13 +589,13 @@ public class CotXmlBuilder
 
         if (emitStroke)
         {
-            sb.AppendLine($"    <strokeColor value=\"{strokeVal}\"/>");
+            sb.AppendLine($"    <strokeColor value=\"{I(strokeVal)}\"/>");
             if (shape.StrokeWeightX10 > 0)
                 sb.AppendLine($"    <strokeWeight value=\"{F(shape.StrokeWeightX10 / 10.0)}\"/>");
         }
         if (emitFill)
         {
-            sb.AppendLine($"    <fillColor value=\"{fillVal}\"/>");
+            sb.AppendLine($"    <fillColor value=\"{I(fillVal)}\"/>");
         }
         sb.AppendLine($"    <labels_on value=\"{(shape.LabelsOn ? "true" : "false")}\"/>");
     }
@@ -561,7 +613,7 @@ public class CotXmlBuilder
         }
         var colorArgb = AtakPalette.ResolveColor(marker.Color, marker.ColorArgb);
         var colorVal = unchecked((int)colorArgb);
-        if (colorVal != 0) sb.AppendLine($"    <color argb=\"{colorVal}\"/>");
+        if (colorVal != 0) sb.AppendLine($"    <color argb=\"{I(colorVal)}\"/>");
         if (!string.IsNullOrEmpty(marker.Iconset))
             sb.AppendLine($"    <usericon iconsetpath=\"{Esc(marker.Iconset)}\"/>");
     }
@@ -585,7 +637,7 @@ public class CotXmlBuilder
             sb.AppendLine($"    <bearing value=\"{F(rab.BearingCdeg / 100.0)}\"/>");
         var strokeArgb = AtakPalette.ResolveColor(rab.StrokeColor, rab.StrokeArgb);
         var strokeVal = unchecked((int)strokeArgb);
-        if (strokeVal != 0) sb.AppendLine($"    <strokeColor value=\"{strokeVal}\"/>");
+        if (strokeVal != 0) sb.AppendLine($"    <strokeColor value=\"{I(strokeVal)}\"/>");
         if (rab.StrokeWeightX10 > 0)
             sb.AppendLine($"    <strokeWeight value=\"{F(rab.StrokeWeightX10 / 10.0)}\"/>");
     }
@@ -600,7 +652,7 @@ public class CotXmlBuilder
             var llon = (eventLonI + (link.Point?.LonDeltaI ?? 0)) / 1e7;
             var linkType = link.LinkType == 1 ? "b-m-p-c" : "b-m-p-w";
             // Generate deterministic uid when not present
-            var uid = string.IsNullOrEmpty(link.Uid) ? $"{eventUid}-{idx}" : link.Uid;
+            var uid = string.IsNullOrEmpty(link.Uid) ? $"{eventUid}-{I(idx)}" : link.Uid;
             var linkParts = new List<string>();
             linkParts.Add($"uid=\"{Esc(uid)}\"");
             linkParts.Add($"type=\"{linkType}\"");
@@ -653,11 +705,11 @@ public class CotXmlBuilder
             parts.Add($"precedence=\"{precName}\"");
 
         // Precedence patient counts (newer ATAK format)
-        if (c.UrgentCount > 0) parts.Add($"urgent=\"{c.UrgentCount}\"");
-        if (c.UrgentSurgicalCount > 0) parts.Add($"urgent_surgical=\"{c.UrgentSurgicalCount}\"");
-        if (c.PriorityCount > 0) parts.Add($"priority=\"{c.PriorityCount}\"");
-        if (c.RoutineCount > 0) parts.Add($"routine=\"{c.RoutineCount}\"");
-        if (c.ConvenienceCount > 0) parts.Add($"convenience=\"{c.ConvenienceCount}\"");
+        if (c.UrgentCount > 0) parts.Add($"urgent=\"{I(c.UrgentCount)}\"");
+        if (c.UrgentSurgicalCount > 0) parts.Add($"urgent_surgical=\"{I(c.UrgentSurgicalCount)}\"");
+        if (c.PriorityCount > 0) parts.Add($"priority=\"{I(c.PriorityCount)}\"");
+        if (c.RoutineCount > 0) parts.Add($"routine=\"{I(c.RoutineCount)}\"");
+        if (c.ConvenienceCount > 0) parts.Add($"convenience=\"{I(c.ConvenienceCount)}\"");
 
         // Equipment bitfield flags
         if ((c.EquipmentFlags & 0x01) != 0) parts.Add("none=\"true\"");
@@ -669,20 +721,20 @@ public class CotXmlBuilder
         if (!string.IsNullOrEmpty(c.EquipmentDetail))
             parts.Add($"equipment_detail=\"{Esc(c.EquipmentDetail)}\"");
 
-        if (c.LitterPatients > 0) parts.Add($"litter=\"{c.LitterPatients}\"");
-        if (c.AmbulatoryPatients > 0) parts.Add($"ambulatory=\"{c.AmbulatoryPatients}\"");
+        if (c.LitterPatients > 0) parts.Add($"litter=\"{I(c.LitterPatients)}\"");
+        if (c.AmbulatoryPatients > 0) parts.Add($"ambulatory=\"{I(c.AmbulatoryPatients)}\"");
 
         if (SecurityNames.TryGetValue(c.Security, out var secName))
             parts.Add($"security=\"{secName}\"");
         if (HlzMarkingNames.TryGetValue(c.HlzMarking, out var hlzName))
             parts.Add($"hlz_marking=\"{hlzName}\"");
 
-        if (c.UsMilitary > 0) parts.Add($"us_military=\"{c.UsMilitary}\"");
-        if (c.UsCivilian > 0) parts.Add($"us_civilian=\"{c.UsCivilian}\"");
-        if (c.NonUsMilitary > 0) parts.Add($"non_us_military=\"{c.NonUsMilitary}\"");
-        if (c.NonUsCivilian > 0) parts.Add($"non_us_civilian=\"{c.NonUsCivilian}\"");
-        if (c.Epw > 0) parts.Add($"epw=\"{c.Epw}\"");
-        if (c.Child > 0) parts.Add($"child=\"{c.Child}\"");
+        if (c.UsMilitary > 0) parts.Add($"us_military=\"{I(c.UsMilitary)}\"");
+        if (c.UsCivilian > 0) parts.Add($"us_civilian=\"{I(c.UsCivilian)}\"");
+        if (c.NonUsMilitary > 0) parts.Add($"non_us_military=\"{I(c.NonUsMilitary)}\"");
+        if (c.NonUsCivilian > 0) parts.Add($"non_us_civilian=\"{I(c.NonUsCivilian)}\"");
+        if (c.Epw > 0) parts.Add($"epw=\"{I(c.Epw)}\"");
+        if (c.Child > 0) parts.Add($"child=\"{I(c.Child)}\"");
 
         // Terrain bitfield flags + slope direction detail
         if ((c.TerrainFlags & 0x01) != 0) parts.Add("terrain_slope=\"true\"");

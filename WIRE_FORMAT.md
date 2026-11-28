@@ -70,7 +70,7 @@ keeps those two bytes.
 
 | ID | Name | Dictionary Size | Usage |
 |----|------|-----------------|-------|
-| `0x00` | Non-aircraft | 524,288 bytes | PLI, GeoChat, ground units, shapes, markers, routes, ranging, alerts, casevac, emergency, task, TAKTALK, delete events |
+| `0x00` | Non-aircraft | 524,288 bytes | PLI, GeoChat, ground units, shapes, markers, routes, ranging, alerts, casevac, emergency, task, TAKTALK, delete events, and any detection that is not an aircraft track (see §5) |
 | `0x01` | Aircraft | 4,096 bytes | ADS-B tracks, military air, helicopters |
 | `0x02`-`0x3C` | Reserved | — | Reserved for future dictionary types |
 | `0x3D`, `0x3E` | Never assigned | — | `0xFD` and `0xFE` mask to these with `& 0x3F`, so they must never name a dictionary |
@@ -154,10 +154,12 @@ The payload is a raw serialized `TAKPacketV2` protobuf message with no compressi
 
 ## 5. Dictionary Selection
 
-The sending application selects the dictionary based on the CoT event type:
+The sending application selects the dictionary from the CoT event type, with one exception for detections:
 
 ```
-Parse the CoT type string (e.g., "a-f-G-U-C")
+If the packet carries a detection (field 47) and its payload is not an aircraft track:
+    Use non-aircraft dictionary (ID 0x00)
+Otherwise, parse the CoT type string (e.g., "a-f-G-U-C")
 Split by "-" into atoms: ["a", "f", "G", "U", "C"]
 If the 3rd atom (index 2) is "A":
     Use aircraft dictionary (ID 0x01)
@@ -166,6 +168,8 @@ Else:
 ```
 
 Aircraft types have the Air battle dimension indicator `A` as the 3rd hierarchical atom in the CoT type string (e.g., `a-f-A-M-H`, `a-n-A-C-F`). All other types (ground, sea, tasking, bits, drawings) use the non-aircraft dictionary.
+
+The exception exists because the 4 KB aircraft dictionary is built for aircraft tracks. A UAS detection such as `a-u-A-M-H-Q` is aircraft-typed but carries a marker, which the non-aircraft dictionary compresses better: the two UAS fixtures come out 22 and 13 bytes smaller with it. A detection on an aircraft track changes nothing: the CoT type picks the dictionary, as it would without one. The choice is the sender's alone, since the receiver reads the dictionary ID from the flags byte.
 
 ## 6. Protobuf Schema
 
@@ -200,7 +204,15 @@ message TAKPacketV2 {
   string cot_type_str = 23;      // Fallback for unknown CoT types
   string remarks = 24;           // Optional <remarks> free text (non-chat types)
 
-  reserved 30;                        // former `bool pli` arm — PLI is now implicit
+  // Annotations: optional, and attach to any payload_variant
+  optional TAKEnvironment environment = 25;  // <environment>: temperature, wind
+  optional SensorFov sensor_fov = 26;        // <sensor>: field-of-view cone
+  optional uint32 start_epoch_lo14 = 43;     // Low 14 bits of the event's start, epoch seconds UTC
+  optional TAKDetection detection = 47;      // <__detection>: passive-sensor metadata (below)
+
+  reserved 27, 28, 30;           // 27, 28 kept for annotations; 30 was the `bool pli` arm
+  optional Marti marti = 29;     // <marti> directed-routing recipients; unset = broadcast
+
   oneof payload_variant {
     // (no `pli` arm) A packet with NO payload_variant set is an implicit
     // PLI position report. The old `bool pli = 30` was removed because the
@@ -218,11 +230,16 @@ message TAKPacketV2 {
     TaskRequest task = 40;            // Tasking / engagement request
     TakTalkMessage taktalk = 41;      // TAKTALK chat message (m-t-t)
     TakTalkRoomData taktalk_room = 42; // TAKTALK room/membership broadcast (y-)
+    VoiceProfile voice_profile = 44;   // TAKTALK synthetic speech profile
+    VoiceProfileRequest voice_profile_request = 45; // Request for a peer's voice profile (y-)
+    TakTalkRoomRequest taktalk_room_request = 46;   // Request for a room's name and roster (y-)
   }
 }
 ```
 
-The `payload_variant` oneof has 12 typed cases (tags 31–42); a packet with **no** `payload_variant` set is an implicit PLI position report, for 13 payload variants in total. The `CotType` enum covers 126 well-known CoT types (`CotType_Other` = 0 through `CotType_y` = 126). Unknown types use `CotType_Other` (0) with the raw type string in `cot_type_str`.
+The fields are listed in the order the `.proto` declares them, which is not tag order. Kotlin's Wire runtime writes fields in declaration order, while the protoc-based runtimes (Swift, Python, C#, TypeScript) write them in tag order, so a packet carrying `start_epoch_lo14` serializes it in a different position per binding. Decoders accept either order, so frames interoperate, but such a packet's protobuf bytes are not identical across bindings. `detection` is declared ahead of `marti` too, but Kotlin writes it itself, after every other field, which is where tag order puts it (see Field 47).
+
+The `payload_variant` oneof has 15 typed cases (tags 31–42 and 44–46). A packet with **no** `payload_variant` set carries only its envelope, the 16th payload variant; with a friendly `a-f-*` type, that is an implicit PLI position report. The three TAKTALK arms at tags 44–46 encode and decode in every binding, but only Kotlin converts them to and from CoT XML. The `CotType` enum covers 126 well-known CoT types (`CotType_Other` = 0 through `CotType_y` = 126). Unknown types use `CotType_Other` (0) with the raw type string in `cot_type_str`.
 
 ### Field 24: Remarks
 
@@ -232,6 +249,33 @@ The top-level `string remarks = 24` field carries free-text annotations (`<remar
 - **Aircraft payloads** — remarks are synthesized from the structured ICAO/registration/flight/squawk fields on rebuild
 
 Remarks are optional. When the compressed packet would exceed the LoRa MTU, the `compressWithRemarksFallback()` helper automatically clears the remarks field and re-compresses before giving up.
+
+### Field 47: Detection
+
+`optional TAKDetection detection = 47` carries metadata for an event that reports an object a passive sensor found: an uncrewed aircraft (UAS), its operator or home point, a person or a vehicle. The event itself still carries the object's position, CoT type and links. Affiliation is not in the message: the CoT type carries it, and the producer chooses it. Its only identifier is `uas_id`, the UAS ID that Remote ID broadcasts, kept only when `kind` is `Kind_Uas`. It is `bytes`, at most 20: a serial number or CAA registration is ASCII text without the broadcast's NUL fill, and any other ID type, such as a UTM-assigned UUID or a specific-session ID, is the broadcast's raw bytes. `TAKDetection.UasIdType` and `TAKDetection.UasStatus` take their values from ASTM F3411.
+
+In CoT XML it is one self-closing child of `<detail>`, each attribute left out at its default:
+
+```xml
+<__detection kind="uas" sources="remote_id rf" confidence="87" state="active" trend="closing"
+    count="2" sensorAnchored="true" cep="12" rssi="-71" uasId="..." uasIdType="serial_number"
+    uasStatus="airborne"/>
+```
+
+- Enum attributes carry the value's suffix in lowercase snake_case (`Kind_UasOperator` is `uas_operator`). `sources` is a space-separated list of `Source` tokens, and its proto field is their bitwise OR. Reading ignores case, takes an unknown token as unspecified and skips one in `sources`.
+- Numbers are plain decimals, rounded half up. `confidence` is clamped to 0–100, and `count` and `cep` to zero or more.
+- `uasId` is dropped unless `kind` is `uas`. An ID made only of ASCII letters, digits, `-`, `.` and `_`, as serial numbers and CAA registrations are, is written as that text; any other is written as `hex:` followed by its bytes in lowercase hex, so neither form needs escaping. Reading trims the value, then takes one that starts with `hex:` (in any case) as hex, and drops it unless the rest is an even number of hex digits; any other value is the ID's UTF-8 text. Either way the ID is cut to 20 bytes.
+- `cep` is also the event's `<point ce>`. The builder writes it there, or `9999999`, CoT's unknown, when the detection has no `cep`. When the element has no `cep`, the parser reads `<point ce>`, wherever `<point>` sits in the event, and takes `9999999` or more as no `cep`. An event without the element keeps `ce="9999999"`.
+
+None of these names is one the parsers classify an event by, or that `CotMeshSanitizer` strips, so the annotation never changes an event's payload variant.
+
+A detection that is not an aircraft track is compressed with the non-aircraft dictionary whatever its CoT type, unless skip-compress sends it raw; see §5.
+
+On the wire, every binding keeps `uas_id` only for `Kind_Uas` and cuts it to 20 bytes, in what it sends and what it receives, as the XML does.
+
+Kotlin builds on a published `org.meshtastic:protobufs` that predates `TAKDetection`, so it writes the field itself, as an unknown field after every other field, and reads it from the packet's bytes. Its bytes match the protoc-based bindings', and so does its reading: repeated tag 47 messages merge, and a field in the wrong wire type is skipped.
+
+Firmware never reads the field: `atak.options` marks it `FT_IGNORE`, so the stack-allocated nanopb `TAKPacketV2` does not grow.
 
 ## 7. Transport
 

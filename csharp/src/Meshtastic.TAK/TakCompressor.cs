@@ -105,11 +105,29 @@ public class TakCompressor
     public TakCompressor(int level = 19) => _level = level;
 
     /// <summary>
+    /// The dictionary to compress <paramref name="packet"/> with: the one
+    /// <see cref="DictionaryProvider.SelectDictId"/> picks for its CoT type, except that a
+    /// detection that is not an aircraft track takes the non-aircraft dictionary whatever its
+    /// type. The 4 KB aircraft dictionary is built for aircraft tracks, and the non-aircraft one
+    /// compresses a detection marker smaller. The ID travels in the flags byte, so a receiver
+    /// decodes either choice.
+    /// </summary>
+    private static int DictIdFor(Meshtastic.Protobufs.TAKPacketV2 packet)
+    {
+        if (packet.Detection != null
+            && packet.PayloadVariantCase != Meshtastic.Protobufs.TAKPacketV2.PayloadVariantOneofCase.Aircraft)
+            return DictionaryProvider.DictIdNonAircraft;
+        return DictionaryProvider.SelectDictId(packet.CotTypeId != 0 ? (int)packet.CotTypeId : 0,
+            string.IsNullOrEmpty(packet.CotTypeStr) ? null : packet.CotTypeStr);
+    }
+
+    /// <summary>
     /// Compress a packet into its on-wire payload <c>[1 byte flags][zstd body]</c>.
     /// </summary>
     /// <remarks>
     /// <para>Selects the dictionary from the packet's CoT type (see
-    /// <see cref="DictionaryProvider.SelectDictId"/>), compresses with content-size,
+    /// <see cref="DictionaryProvider.SelectDictId"/>), except that a detection that is
+    /// not an aircraft track always uses the non-aircraft dictionary, compresses with content-size,
     /// checksum, and dictionary-ID frame fields all disabled, then strips the 4-byte
     /// zstd magic (see <see cref="ZstdMagic"/>). If the raw protobuf is no larger
     /// than the compressed body, emits <c>[0xFF][raw protobuf]</c> instead so the
@@ -123,9 +141,9 @@ public class TakCompressor
     /// (which would break the strip/prepend contract).</exception>
     public byte[] Compress(Meshtastic.Protobufs.TAKPacketV2 packet)
     {
+        packet = DetectionXml.WithSchemaUasId(packet);
         var protoBytes = packet.ToByteArray();
-        var dictId = DictionaryProvider.SelectDictId(packet.CotTypeId != 0 ? (int)packet.CotTypeId : 0,
-            string.IsNullOrEmpty(packet.CotTypeStr) ? null : packet.CotTypeStr);
+        var dictId = DictIdFor(packet);
         var dict = DictionaryProvider.GetDictionary(dictId)
             ?? throw new InvalidOperationException($"No dictionary for ID {dictId}");
 
@@ -223,7 +241,7 @@ public class TakCompressor
 
         try
         {
-            return Meshtastic.Protobufs.TAKPacketV2.Parser.ParseFrom(protoBytes);
+            return DetectionXml.WithSchemaUasId(Meshtastic.Protobufs.TAKPacketV2.Parser.ParseFrom(protoBytes));
         }
         catch (Exception ex)
         {
@@ -298,6 +316,7 @@ public class TakCompressor
     /// emitted dictionary ID, and wire payload.</returns>
     public CompressionResult CompressWithStats(Meshtastic.Protobufs.TAKPacketV2 packet)
     {
+        packet = DetectionXml.WithSchemaUasId(packet);
         var protoBytes = packet.ToByteArray();
         var wire = Compress(packet);
         // Report the ACTUAL emitted mode from the flags byte — skip-compress may

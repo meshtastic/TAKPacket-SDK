@@ -371,7 +371,10 @@ export interface SensorFov {
   type?: number;
   /** Center azimuth of the cone in whole degrees. */
   azimuthDeg?: number;
-  /** Sensor range in meters. */
+  /**
+   * Sensor range in meters, or `undefined` when unset (receivers then use
+   * ATAK-CIV's 100 m default). Optional on the wire, so 0 stays distinguishable.
+   */
   rangeM?: number;
   /** Horizontal field-of-view width in whole degrees. */
   fovHorizontalDeg?: number;
@@ -383,6 +386,40 @@ export interface SensorFov {
   rollDeg?: number;
   /** Sensor model identifier. */
   model?: string;
+}
+
+/**
+ * Passive-sensor metadata from the <__detection> detail element, for an event
+ * that reports an object a sensor found rather than the sender itself.
+ */
+export interface TAKDetection {
+  /** TAKDetection.Kind: 0=Unspecified, 1=Uas, 2=UasOperator, 3=UasHome, 4=Person, 5=Vehicle, 6=Other */
+  kind?: number;
+  /** Bitwise OR of TAKDetection.Source bits; 0 = not stated. */
+  sources?: number;
+  /** Confidence in the report, in percent (0–100); 0 = unknown. */
+  confidence?: number;
+  /** TAKDetection.State: 0=Unspecified, 1=New, 2=Active, 3=Coasting, 4=Lost */
+  state?: number;
+  /** TAKDetection.Trend: 0=Unspecified, 1=Closing, 2=Steady, 3=Opening */
+  trend?: number;
+  /** Number of objects the event stands for; 0 = one. */
+  count?: number;
+  /** True when the event's point is the reporting sensor, because the object's position is unknown. */
+  sensorAnchored?: boolean;
+  /** Horizontal position uncertainty in meters, also the event's `<point ce>`; 0 = unknown. */
+  cepM?: number;
+  /** Calibrated received power at the reporting sensor, in dBm; 0 = unknown. */
+  rssiDbm?: number;
+  /**
+   * UAS ID from a Remote ID broadcast, at most 20 bytes, kept only when `kind` is Uas: ASCII text
+   * for a serial number or CAA registration, the broadcast's bytes for any other ID type.
+   */
+  uasId?: Uint8Array | Buffer;
+  /** TAKDetection.UasIdType (ASTM F3411): 0=Unspecified, 1=SerialNumber, ..., 4=SpecificSession */
+  uasIdType?: number;
+  /** TAKDetection.UasStatus (ASTM F3411): 0=Unspecified, 1=Ground, ..., 4=SystemFailure */
+  uasStatus?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -464,6 +501,8 @@ export interface TAKPacketV2 {
   environment?: TAKEnvironment;
   /** Optional sensor field-of-view annotation; attaches to any event type (not a payload variant). */
   sensorFov?: SensorFov;
+  /** Optional passive-sensor detection annotation; attaches to any event type (not a payload variant). */
+  detection?: TAKDetection;
   /**
    * Directed-routing recipient list (CoT <marti><dest callsign='X'/>…</marti>).
    * Absent / undefined = broadcast (default for situational-awareness);

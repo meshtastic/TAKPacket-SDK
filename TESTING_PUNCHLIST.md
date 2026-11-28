@@ -101,6 +101,17 @@ Manual testing checklist for ATAK ↔ iTAK over Meshtastic mesh. Covers all payl
 | 10.1 | Delete marker | Either | Delete a previously sent marker | Other side removes the marker from the map | ☐ |
 | 10.2 | Delete shape | Either | Delete a previously sent shape | Other side removes the shape | ☐ |
 
+## 11. Detections — Passive-Sensor Reports
+
+The source events are the `testdata/cot_xml/detection_*.xml` fixtures, fed into the sending client as CoT.
+
+| # | Test | Direction | Steps | Expected | Pass |
+|---|------|-----------|-------|----------|------|
+| 11.1 | UAS detection | Either | Send `detection_uas_remoteid.xml` | Marker at its point, linked to `SENSOR-1`; the rebuilt CoT carries the same `<__detection>` and `ce="12"` | ☐ |
+| 11.2 | Sensor-anchored detection | Either | Send `detection_uas_sensor_anchored.xml` | Marker at the sensor's point with its 360° sensor cone; `sensorAnchored="true"` preserved | ☐ |
+| 11.3 | UAS ID on other kinds | Either | Send `detection_uas_operator.xml` with a `uasId` attribute added | Rebuilt CoT has no `uasId` | ☐ |
+| 11.4 | Not a contact | Either | Send `detection_uas_remoteid.xml` | The detection does not appear in Contacts and offers no chat | ☐ |
+
 ---
 
 ## Feature-Level Verification
@@ -170,6 +181,7 @@ Manual testing checklist for ATAK ↔ iTAK over Meshtastic mesh. Covers all payl
 | CASEVAC | 2 | | | |
 | Tasking | 1 | | | |
 | Delete | 2 | | | |
+| Detections | 4 | | | |
 | Features | 12 | | | |
 | Compression | 5 | | | |
-| **Total** | **62** | | | |
+| **Total** | **66** | | | |

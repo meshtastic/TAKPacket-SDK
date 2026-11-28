@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Google.Protobuf;
 using Meshtastic.TAK;
@@ -22,7 +23,7 @@ public class StartEpochTests
     private const long Boundary = StartEpoch.Modulus * 109_000L;
 
     private static string Iso(long epochSeconds) =>
-        DateTimeOffset.FromUnixTimeSeconds(epochSeconds).ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+        DateTimeOffset.FromUnixTimeSeconds(epochSeconds).ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
 
     private static string Cot(string start, string stale) =>
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
@@ -231,7 +232,7 @@ public class StartEpochTests
         var stale = Iso(start + 300);
         var asOffset = DateTimeOffset.FromUnixTimeSeconds(start)
             .ToOffset(TimeSpan.FromHours(4))
-            .ToString("yyyy-MM-ddTHH:mm:ss.fffzzz");
+            .ToString("yyyy-MM-ddTHH:mm:ss.fffzzz", CultureInfo.InvariantCulture);
 
         var fromZ = new CotXmlParser().Parse(Cot(Iso(start), stale));
         var fromOffset = new CotXmlParser().Parse(Cot(asOffset, stale));
@@ -255,7 +256,7 @@ public class StartEpochTests
         // runner's offset, silently and differently per machine. ATAK would read it as
         // GMT. We refuse either way.
         var start = NowSec() - 90;
-        var noZone = DateTimeOffset.FromUnixTimeSeconds(start).ToString(format);
+        var noZone = DateTimeOffset.FromUnixTimeSeconds(start).ToString(format, CultureInfo.InvariantCulture);
         var pkt = new CotXmlParser().Parse(Cot(noZone, Iso(start + 300)));
         Assert.False(pkt.HasStartEpochLo14, $"'{noZone}' ({format}) was encoded anyway");
     }
@@ -269,7 +270,7 @@ public class StartEpochTests
         // must agree with the uppercase form rather than merely be non-null.
         var start = NowSec() - 90;
         var lower = DateTimeOffset.FromUnixTimeSeconds(start)
-            .ToString("yyyy-MM-ddTHH:mm:ss.fff") + "z";
+            .ToString("yyyy-MM-ddTHH:mm:ss.fff", CultureInfo.InvariantCulture) + "z";
         var fromLower = new CotXmlParser().Parse(Cot(lower, Iso(start + 300)));
         Assert.True(fromLower.HasStartEpochLo14, $"'{lower}' was refused");
         var fromUpper = new CotXmlParser().Parse(Cot(Iso(start), Iso(start + 300)));

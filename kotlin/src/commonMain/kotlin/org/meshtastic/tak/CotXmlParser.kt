@@ -258,6 +258,12 @@ public class CotXmlParser {
         var environmentData: TakPacketV2Data.EnvironmentData? = null
         var sensorFovData: TakPacketV2Data.SensorFovData? = null
 
+        // --- Detection annotation; <point ce> backs up its cep ----------
+        // The element's attributes are held until the event ends, so a <point>
+        // that comes after <detail> still backs up a missing cep.
+        var detectionAttributes: Map<String, String?>? = null
+        var pointCe: String? = null
+
         try {
             while (reader.hasNext()) {
                 when (reader.next()) {
@@ -281,6 +287,7 @@ public class CotXmlParser {
                                 lat = reader.getAttributeValue(null, "lat")?.toDoubleOrNull() ?: 0.0
                                 lon = reader.getAttributeValue(null, "lon")?.toDoubleOrNull() ?: 0.0
                                 hae = reader.getAttributeValue(null, "hae")?.toDoubleOrNull() ?: 0.0
+                                pointCe = reader.getAttributeValue(null, "ce")
                             }
 
                             "detail" -> {
@@ -698,6 +705,10 @@ public class CotXmlParser {
                                                 ?.roundToInt(),
                                         model = model,
                                     )
+                            }
+
+                            DetectionXml.ELEMENT -> {
+                                detectionAttributes = DetectionXml.ATTRIBUTES.associateWith { reader.getAttributeValue(null, it) }
                             }
 
                             "link" -> {
@@ -1258,6 +1269,7 @@ public class CotXmlParser {
             sensorFov = sensorFovData,
             marti = martiDests.toList(),
             payload = payload,
+            detection = detectionAttributes?.let { DetectionXml.parse(it::get, pointCe) },
         )
     }
 
@@ -1299,6 +1311,12 @@ public class CotXmlParser {
      * ISO-8601 instant strings ATAK emits (`2026-03-15T19:00:00Z`, with or
      * without fractional seconds), matching `DateTimeFormatter.ISO_INSTANT`.
      * Any parse failure returns 0, identical to the original try/catch.
+     *
+     * Capped at [Int.MAX_VALUE] seconds (about 68 years), as every other binding caps
+     * it. [TakPacketV2Data.staleSeconds] is a signed Int, so a longer span would come
+     * out negative and [CotXmlBuilder] would give the event its 45-second minimum
+     * instead. Uncapped, `toInt()` also wraps a span over 136 years around to a
+     * shorter one.
      */
     private fun computeStaleSeconds(
         timeStr: String,
@@ -1309,7 +1327,7 @@ public class CotXmlParser {
             val time = Instant.parse(timeStr)
             val stale = Instant.parse(staleStr)
             val diff = stale.epochSeconds - time.epochSeconds
-            if (diff > 0) diff.toInt() else 0
+            if (diff > 0) diff.coerceAtMost(Int.MAX_VALUE.toLong()).toInt() else 0
         } catch (e: Exception) {
             0
         }
