@@ -305,6 +305,15 @@ public final class org/meshtastic/tak/DictionaryProvider {
 	public final fun selectDictId (ILjava/lang/String;)I
 }
 
+public final class org/meshtastic/tak/FragmentPolicy : java/lang/Enum {
+	public static final field FRAGMENT_FIRST Lorg/meshtastic/tak/FragmentPolicy;
+	public static final field NEVER Lorg/meshtastic/tak/FragmentPolicy;
+	public static final field STRIP_FIRST Lorg/meshtastic/tak/FragmentPolicy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lorg/meshtastic/tak/FragmentPolicy;
+	public static fun values ()[Lorg/meshtastic/tak/FragmentPolicy;
+}
+
 public abstract interface class org/meshtastic/tak/Logger {
 	public abstract fun log (Ljava/lang/String;)V
 }
@@ -364,12 +373,18 @@ public final class org/meshtastic/tak/TakCompressor {
 	public synthetic fun <init> (IILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun compress (Lorg/meshtastic/tak/TakPacketV2Data;)[B
 	public final fun compressForMesh (Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public final fun compressForMesh (Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;Lorg/meshtastic/tak/FragmentPolicy;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public final fun compressForMesh (Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;Lorg/meshtastic/tak/FragmentPolicy;Lorg/meshtastic/tak/AirtimeBudget;)Lorg/meshtastic/tak/MeshEncodeResult;
 	public final fun compressForMesh (Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;Z)Lorg/meshtastic/tak/MeshEncodeResult;
 	public final fun compressForMesh (Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;)Lorg/meshtastic/tak/MeshEncodeResult;
 	public final fun compressForMesh (Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public final fun compressForMesh (Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;Lorg/meshtastic/tak/FragmentPolicy;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public final fun compressForMesh (Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;Lorg/meshtastic/tak/FragmentPolicy;Lorg/meshtastic/tak/AirtimeBudget;)Lorg/meshtastic/tak/MeshEncodeResult;
 	public final fun compressForMesh (Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;Z)Lorg/meshtastic/tak/MeshEncodeResult;
 	public final fun compressForMesh (Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public static synthetic fun compressForMesh$default (Lorg/meshtastic/tak/TakCompressor;Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;Lorg/meshtastic/tak/FragmentPolicy;Lorg/meshtastic/tak/AirtimeBudget;ILjava/lang/Object;)Lorg/meshtastic/tak/MeshEncodeResult;
 	public static synthetic fun compressForMesh$default (Lorg/meshtastic/tak/TakCompressor;Ljava/lang/String;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;ILjava/lang/Object;)Lorg/meshtastic/tak/MeshEncodeResult;
+	public static synthetic fun compressForMesh$default (Lorg/meshtastic/tak/TakCompressor;Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;Lorg/meshtastic/tak/FragmentPolicy;Lorg/meshtastic/tak/AirtimeBudget;ILjava/lang/Object;)Lorg/meshtastic/tak/MeshEncodeResult;
 	public static synthetic fun compressForMesh$default (Lorg/meshtastic/tak/TakCompressor;Lorg/meshtastic/tak/TakPacketV2Data;Lorg/meshtastic/tak/TakFragmenter;ZLorg/meshtastic/tak/AirtimeBudget;ILjava/lang/Object;)Lorg/meshtastic/tak/MeshEncodeResult;
 	public final fun compressWithRemarksFallback (Lorg/meshtastic/tak/TakPacketV2Data;I)[B
 	public final fun compressWithRemarksFallbackDetailed (Lorg/meshtastic/tak/TakPacketV2Data;I)Lorg/meshtastic/tak/TakCompressor$RemarksFallbackResult;

@@ -74,6 +74,27 @@ One version covers all five bindings, so a release is a single tag and a single 
   and `Limits.LARGE` (512 and 64), and `TakFragmenter.sourceFragmentsFor(size)`,
   which reports K for a payload size.
 
+- Kotlin: `FragmentPolicy`, a three-way choice for `compressForMesh` of what
+  gives way first when a CoT does not fit one frame. `NEVER` and
+  `FRAGMENT_FIRST` are the two behaviours that `fragmentIfOversize = false` and
+  `true` already select. `STRIP_FIRST` is new: it drops the remarks before it
+  considers a fragment set. A CoT that misses one frame only because of its
+  remarks then still goes out as one frame, where `FRAGMENT_FIRST` spends a
+  burst to keep them whenever the fragmenter's caps and the airtime budget
+  allow one (three frames for two source fragments under the default repair
+  policy). Under `STRIP_FIRST` a burst is spent only on what dropping the
+  remarks cannot fix, such as geometry or a long chat message, and a CoT with
+  no remarks behaves the same under both policies.
+
+  Both `compressForMesh` overloads take the policy in place of the flag, and
+  the XML overload parses with `CotXmlParser.Limits.LARGE` for either
+  fragmenting policy. Under those two, a shape over 32 vertices that fits one
+  frame therefore goes out whole, where `NEVER` cuts it to 32 at parse. The
+  `fragmentIfOversize` overloads are unchanged and remain as shorthand, so no
+  existing caller has to change. The policy overloads carry `@JvmOverloads`
+  like the flag ones, so Java can name a policy and leave off `airtime`.
+  `README.md` has a flowchart and a table of what each policy does.
+
 - Kotlin: a Java-friendly API on the JVM artifact. Fluent builders replace the
   long Kotlin constructors from Java: `TakPacketV2Data.Builder` (with
   `cotType(String)`, `how(String)`, `latitudeDegrees`/`longitudeDegrees`,
