@@ -26,6 +26,12 @@ public enum CotXmlParserError: Error {
 /// | shape `major`/`minor` (m) | `major_cm` / `minor_cm` | centimeters (× 100) |
 /// | R&B `range` (m) | `range_cm` | centimeters (× 100) |
 /// | R&B `bearing` (deg) | `bearing_cdeg` | degrees × 100 |
+/// | `environment@temperature` (°C) | `temperature_c_x10` | deci-degrees Celsius (× 10) |
+/// | `environment@windSpeed` (m/s) | `wind_speed_cm_s` | cm/s (× 100) |
+///
+/// Every scaled value is rounded to the nearest integer as Kotlin's `roundToInt()`
+/// does, a half going toward positive infinity, and clamped to the Int32 range, so
+/// each field gets the same integer as in the Kotlin binding's protobuf.
 ///
 /// ### Classification notes
 /// - A position report with no payload-specific `<detail>` produces a packet with
@@ -100,13 +106,29 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     /// cast, producing a crash instead of a graceful degrade.
     private static func scaleLatitudeI(_ lat: Double) -> Int32 {
         let clamped = max(-90.0, min(90.0, lat))
-        return Int32((clamped * 1e7).rounded())
+        return roundToInt(clamped * 1e7)
     }
 
     /// Scale a longitude degree value into `sfixed32 longitude_i`, clamped to ±180°.
     private static func scaleLongitudeI(_ lon: Double) -> Int32 {
         let clamped = max(-180.0, min(180.0, lon))
-        return Int32((clamped * 1e7).rounded())
+        return roundToInt(clamped * 1e7)
+    }
+
+    /// Kotlin's `Double.roundToInt()`, which is Java's `Math.round`: a half goes toward
+    /// positive infinity (2.5 gives 3, -2.5 gives -2), clamped to the Int32 range. Not
+    /// `rounded()`, which takes a half away from zero (-2.5 gives -3), and not an
+    /// `Int32(_:)` conversion, which truncates (-29.667 gives -29 where Kotlin gives -30)
+    /// and traps on NaN, an infinity or anything outside the Int32 range. Taken from the
+    /// fractional part rather than as `(d + 0.5).rounded(.down)`, because that sum rounds
+    /// the largest double below 0.5 up to 1 where Java gives 0. NaN gives 0, as Java's
+    /// `Math.round` does (Kotlin's `roundToInt` throws instead).
+    static func roundToInt(_ d: Double) -> Int32 {
+        if d.isNaN { return 0 }
+        if d >= Double(Int32.max) { return .max }
+        if d <= Double(Int32.min) { return .min }
+        let whole = d.rounded(.down)
+        return Int32(d - whole >= 0.5 ? whole + 1 : whole)
     }
 
     // State during parsing
@@ -131,6 +153,11 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var timeStr = ""
     private var staleStr = ""
     private var startStr = ""
+    // The event's <point ce>, which backs up a detection's cep.
+    private var pointCe: String?
+    // The <__detection> element's attributes, read once the event is in, so a <point> that
+    // comes after <detail> still backs up a missing cep.
+    private var detectionAttributes: [String: String]?
     private var inRemarks = false
 
     // --- TAKTALK m-t-t accumulators -----------------------------------
@@ -330,6 +357,8 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         squawk = 0; category = ""; rssiX10 = 0; gps = false; cotHostId = ""
         chatTo = nil; chatToCallsign = nil
         timeStr = ""; staleStr = ""; startStr = ""
+        pointCe = nil
+        detectionAttributes = nil
         inRemarks = false
         // --- Reset TAKTALK accumulators ---
         hasTakTalkData = false
@@ -417,6 +446,10 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         let parser = XMLParser(data: data)
         parser.delegate = self
         parser.parse()
+
+        if let detectionAttributes {
+            packet.detection = DetectionXml.parse(detectionAttributes, pointCe: pointCe)
+        }
 
         // Parse aircraft data from remarks if ICAO not yet found
         if icao.isEmpty, !remarksText.isEmpty {
@@ -829,7 +862,8 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             let hae = Double(attributes["hae"] ?? "0") ?? 0
             packet.latitudeI = Self.scaleLatitudeI(lat)
             packet.longitudeI = Self.scaleLongitudeI(lon)
-            packet.altitude = Int32(hae)
+            packet.altitude = Self.roundToInt(hae)
+            pointCe = attributes["ce"]
 
         case "contact":
             packet.callsign = attributes["callsign"] ?? ""
@@ -858,12 +892,12 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             // sentinel for "unknown / not moving". The proto field is uint32
             // (cm/s for speed, degrees×100 for course), so a naive
             // UInt32(spd * 100) call on a negative Double traps with
-            // "value cannot be converted to UInt32". Clamp to 0 and round
-            // to preserve precision on legitimate positive values.
+            // "value cannot be converted to UInt32". Round as Kotlin does,
+            // which also keeps a huge value inside Int32, then clamp to 0.
             let spd = Double(attributes["speed"] ?? "0") ?? 0
             let crs = Double(attributes["course"] ?? "0") ?? 0
-            packet.speed = UInt32(max(0, (spd * 100).rounded()))
-            packet.course = UInt32(max(0, (crs * 100).rounded()))
+            packet.speed = UInt32(max(0, Self.roundToInt(spd * 100)))
+            packet.course = UInt32(max(0, Self.roundToInt(crs * 100)))
 
         case "takv":
             packet.takVersion = attributes["version"] ?? ""
@@ -880,7 +914,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
         case "_radio":
             if let rssiStr = attributes["rssi"], let rssi = Double(rssiStr) {
-                rssiX10 = Int32(rssi * 10)
+                rssiX10 = Self.roundToInt(rssi * 10)
                 hasAircraftData = true
             }
             gps = attributes["gps"] == "true"
@@ -949,6 +983,44 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
                 martiDests.append(cs)
             }
 
+        // <environment> and <sensor> annotate any event type. Kotlin converts
+        // units in its serializer; here the proto is the model, so the parser
+        // writes the wire values directly. Unsigned fields take the Int32's bits,
+        // as Wire does with Kotlin's Int, so even negative input encodes the same.
+        case "environment":
+            // Only an element with a parseable attribute replaces an earlier one.
+            let temp = Self.parseDouble(attributes["temperature"])
+            let windDir = Self.parseInt(attributes["windDirection"])
+            let windSpeed = Self.parseDouble(attributes["windSpeed"])
+            if temp != nil || windDir != nil || windSpeed != nil {
+                var env = TAKEnvironment()
+                env.temperatureCX10 = temp.map { Self.roundToInt($0 * 10) } ?? 0
+                env.windDirectionDeg = windDir.map { UInt32(truncatingIfNeeded: $0) } ?? 0
+                env.windSpeedCmS = windSpeed.map { UInt32(truncatingIfNeeded: Self.roundToInt($0 * 100)) } ?? 0
+                packet.environment = env
+            }
+
+        case "sensor":
+            // Present even with no attributes. Missing ones take ATAK-CIV's
+            // defaults, except range, which stays unset so receivers apply theirs.
+            let model = attributes["model"]
+            let rounded = { (name: String) in Self.parseDouble(attributes[name]).map(Self.roundToInt) }
+            var fov = SensorFov()
+            fov.type = Self.inferSensorType(model)
+            fov.azimuthDeg = UInt32(truncatingIfNeeded: rounded("azimuth") ?? 270)
+            if let range = rounded("range") { fov.rangeM = UInt32(truncatingIfNeeded: range) }
+            fov.fovHorizontalDeg = UInt32(truncatingIfNeeded: rounded("fov") ?? 45)
+            fov.fovVerticalDeg = UInt32(truncatingIfNeeded: rounded("vfov") ?? 0)
+            fov.elevationDeg = rounded("elevation") ?? 0
+            fov.rollDeg = rounded("roll") ?? 0
+            fov.model = model ?? ""
+            packet.sensorFov = fov
+
+        // Passive-sensor detection, payload-agnostic like the two annotations
+        // above. Present even with no attributes; the last element wins.
+        case DetectionXml.element:
+            detectionAttributes = attributes
+
         case "link":
             handleLink(attributes: attributes)
 
@@ -964,8 +1036,8 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
             if inShape {
                 let majorM = Double(attributes["major"] ?? "0") ?? 0
                 let minorM = Double(attributes["minor"] ?? "0") ?? 0
-                shapeMajorCm = UInt32(max(0, majorM * 100))
-                shapeMinorCm = UInt32(max(0, minorM * 100))
+                shapeMajorCm = UInt32(max(0, Self.roundToInt(majorM * 100)))
+                shapeMinorCm = UInt32(max(0, Self.roundToInt(minorM * 100)))
                 if let a = attributes["angle"], let ai = UInt32(a) {
                     shapeAngleDeg = ai
                 }
@@ -981,7 +1053,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
 
         case "strokeWeight":
             let w = Double(attributes["value"] ?? "0") ?? 0
-            strokeWeightX10 = UInt32(max(0, w * 10))
+            strokeWeightX10 = UInt32(max(0, Self.roundToInt(w * 10)))
             hasShapeData = true
 
         case "fillColor":
@@ -1009,7 +1081,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         case "bullseye":
             hasShapeData = true
             let dist = Double(attributes["distance"] ?? "0") ?? 0
-            bullseyeDistanceDm = UInt32(max(0, dist * 10))
+            bullseyeDistanceDm = UInt32(max(0, Self.roundToInt(dist * 10)))
             bullseyeBearingRef = Self.bearingRefMap[attributes["bearingRef"] ?? ""] ?? 0
             var flags: UInt32 = 0
             if attributes["rangeRingVisible"] == "true" { flags |= 0x01 }
@@ -1022,12 +1094,12 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         // --- Range and bearing -----------------------------------------
         case "range":
             let v = Double(attributes["value"] ?? "0") ?? 0
-            rabRangeCm = UInt32(max(0, v * 100))
+            rabRangeCm = UInt32(max(0, Self.roundToInt(v * 100)))
             hasRabData = true
 
         case "bearing":
             let v = Double(attributes["value"] ?? "0") ?? 0
-            rabBearingCdeg = UInt32(max(0, v * 100))
+            rabBearingCdeg = UInt32(max(0, Self.roundToInt(v * 100)))
             hasRabData = true
 
         // --- Route -----------------------------------------------------
@@ -1426,13 +1498,60 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         return StartEpoch.truncate(seconds)
     }
 
+    /// Seconds from the event's `time` to its `stale`, computed as Kotlin does: each
+    /// timestamp is rounded down to whole epoch seconds before subtracting, so 00.900 to
+    /// 02.100 is 2 seconds, where truncating the 1.2-second difference gives 1. Zero when
+    /// stale is not after time, and capped at `Int32.max` (about 68 years): the Kotlin
+    /// binding keeps `stale_seconds` in a signed Int, so it reads anything larger back as
+    /// negative.
     private func computeStaleSeconds(_ timeStr: String, _ staleStr: String) -> UInt32 {
         guard !timeStr.isEmpty, !staleStr.isEmpty else { return 0 }
 
         guard let time = Self.isoFmtFrac.date(from: timeStr) ?? Self.isoFmtNoFrac.date(from: timeStr),
               let stale = Self.isoFmtFrac.date(from: staleStr) ?? Self.isoFmtNoFrac.date(from: staleStr) else { return 0 }
 
-        let diff = stale.timeIntervalSince(time)
-        return diff > 0 ? UInt32(diff) : 0
+        let diff = Int64(stale.timeIntervalSince1970.rounded(.down))
+            - Int64(time.timeIntervalSince1970.rounded(.down))
+        return diff > 0 ? UInt32(min(diff, Int64(Int32.max))) : 0
+    }
+
+    // MARK: - Environment and sensor helpers
+
+    private static let asciiWhitespace = CharacterSet(charactersIn: " \t\n\r\u{0B}\u{0C}")
+
+    /// Kotlin's `String.toDoubleOrNull()` for plain decimals: optional surrounding
+    /// ASCII whitespace, an optional sign, digits with an optional fraction, and an
+    /// optional exponent. `Double(_:)` alone rejects the whitespace and accepts hex,
+    /// `inf` and `nan`, so the shape is checked first. The fraction is its own group so that
+    /// no digit run can be split between two quantifiers, which would make a failed match
+    /// backtrack in quadratic time.
+    static func parseDouble(_ raw: String?) -> Double? {
+        guard let s = raw?.trimmingCharacters(in: asciiWhitespace),
+              s.range(of: #"^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?$"#,
+                      options: .regularExpression) != nil,
+              let d = Double(s) else { return nil }
+        // Kotlin throws on NaN and clamps Infinity; reading both as absent is this port's one deliberate deviation.
+        return d.isFinite ? d : nil
+    }
+
+    /// Kotlin's `String.toIntOrNull()` for ASCII digits: an optional sign, then digits
+    /// that fit Int32, with no whitespace. `Int32(_:)` accepts exactly that.
+    private static func parseInt(_ raw: String?) -> Int32? {
+        raw.flatMap { Int32($0) }
+    }
+
+    /// Kotlin's `inferSensorType`: the first keyword group found in the lowercased
+    /// model wins, so "FLIR radar" is thermal. A bare "rf" is not a keyword.
+    static func inferSensorType(_ model: String?) -> SensorFov.SensorType {
+        guard let model = model, !model.isEmpty else { return .unspecified }
+        let m = model.lowercased()
+        // .literal matches the raw text, as Kotlin's `in` does; contains would compare whole Characters.
+        func has(_ keys: String...) -> Bool { keys.contains { m.range(of: $0, options: .literal) != nil } }
+        if has("flir", "thermal", "boson") { return .thermal }
+        if has("laser", "lrf") { return .laser }
+        if has("nvg", "night") { return .nvg }
+        if has("radar", "rf-") { return .rf }
+        if has("cam", "eo-", "optic") { return .camera }
+        return .other
     }
 }

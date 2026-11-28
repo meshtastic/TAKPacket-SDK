@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
-from xml.sax.saxutils import escape
 from . import atak_pb2
 from . import atak_palette
 from .cot_type_mapper import CotTypeMapper
+from . import detection_xml
 from . import start_epoch
 
 _TEAM_ENUM_TO_NAME = {
@@ -37,6 +37,25 @@ _SHAPE_KIND_BULLSEYE = 7
 _SHAPE_KIND_ELLIPSE = 8
 
 
+def _esc(value: str) -> str:
+    """Escape ``value`` for an XML attribute value or element body.
+
+    Writes ``& < > " '`` as ``&amp; &lt; &gt; &quot; &apos;``, the same five
+    entities as Kotlin's ``CotXmlBuilder.esc``. Every attribute this builder
+    writes is double-quoted, so a bare ``"`` in a value would end the attribute
+    early and leave the receiver with XML it cannot parse.
+    ``xml.sax.saxutils.escape`` alone handles only ``& < >``. Element bodies go
+    through the same helper, as they do in Kotlin.
+    """
+    return (
+        value.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
+
+
 def _argb_to_abgr_hex(argb: int) -> str:
     """Convert ARGB int to ABGR hex string (KML color format)."""
     a = (argb >> 24) & 0xFF
@@ -61,6 +80,17 @@ def _argb_to_signed(argb: int) -> int:
     """
     argb &= 0xFFFFFFFF
     return argb - 0x100000000 if argb >= 0x80000000 else argb
+
+
+def _as_int32(value: int) -> int:
+    """Read a uint32 field as the signed int32 that Kotlin's ``Int`` prints."""
+    value &= 0xFFFFFFFF
+    return value - 0x100000000 if value >= 0x80000000 else value
+
+
+def _detection_token(tokens: dict, value: int) -> str | None:
+    """A ``<__detection>`` enum value's token; ``None`` for 0 (Unspecified) or a value without one."""
+    return tokens.get(value) if value else None
 
 
 # Tag tokens that can never appear inside one <detail> element's content.
@@ -103,8 +133,7 @@ class CotXmlBuilder:
         floor) regardless, so an honest ``start`` never shortens an event's life. Colors are emitted in
         ATAK's signed-int32 form, resolving the palette ``Team`` enum to its
         canonical ARGB and falling back to the exact ``_argb`` bits for custom
-        colors. Default TAK endpoints and TAK-Talk ``how="null"`` conventions
-        are reproduced so the output matches real ATAK captures.
+        colors. Default TAK endpoints are reproduced so the output matches real ATAK captures.
 
         Args:
             packet: The packet to render.
@@ -136,14 +165,8 @@ class CotXmlBuilder:
         stale_str = stale.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
         cot_type = CotTypeMapper.type_to_string(packet.cot_type_id) or packet.cot_type_str or ""
-        # For most CoT types, missing/Unspecified how falls back to "m-g".
-        # TAKTALK m-t-t and y- are special-cased to use ATAK's "null" how
-        # convention — the plugin's inbound classifier gates on this value
-        # for TTS routing, so source how="null" must NOT round-trip as "m-g".
-        how = (
-            CotTypeMapper.how_to_string(packet.how)
-            or ("null" if cot_type in ("m-t-t", "y-") else "m-g")
-        )
+        # Missing/Unspecified how falls back to "m-g".
+        how = CotTypeMapper.how_to_string(packet.how) or "m-g"
         lat = packet.latitude_i / 1e7
         lon = packet.longitude_i / 1e7
         if (packet.WhichOneof("payload_variant") == "route"
@@ -151,12 +174,16 @@ class CotXmlBuilder:
                 and len(packet.route.links) > 0):
             lat = packet.route.links[0].point.lat_delta_i / 1e7
             lon = packet.route.links[0].point.lon_delta_i / 1e7
+        # ce carries a detection's horizontal uncertainty; anything else keeps CoT's "unknown".
+        ce = detection_xml.UNKNOWN_CE
+        if packet.HasField("detection") and _as_int32(packet.detection.cep_m) > 0:
+            ce = _as_int32(packet.detection.cep_m)
 
         lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
-            f'<event version="2.0" uid="{escape(packet.uid)}" type="{escape(cot_type)}" '
-            f'how="{escape(how)}" time="{time_str}" start="{time_str}" stale="{stale_str}">',
-            f'  <point lat="{lat}" lon="{lon}" hae="{packet.altitude}" ce="9999999" le="9999999"/>',
+            f'<event version="2.0" uid="{_esc(packet.uid)}" type="{_esc(cot_type)}" '
+            f'how="{_esc(how)}" time="{time_str}" start="{time_str}" stale="{stale_str}">',
+            f'  <point lat="{lat}" lon="{lon}" hae="{packet.altitude}" ce="{ce}" le="9999999"/>',
             '  <detail>',
         ]
 
@@ -173,8 +200,8 @@ class CotXmlBuilder:
             # directed GeoChat / TAK-Talk back down the server stream. A concrete host
             # breaks it, and packets from older senders may still carry one, so any
             # endpoint on the packet is ignored here. The constant needs no escaping.
-            parts = [f'callsign="{escape(packet.callsign)}"', 'endpoint="*:-1:stcp"']
-            if packet.phone: parts.append(f'phone="{escape(packet.phone)}"')
+            parts = [f'callsign="{_esc(packet.callsign)}"', 'endpoint="*:-1:stcp"']
+            if packet.phone: parts.append(f'phone="{_esc(packet.phone)}"')
             lines.append(f'    <contact {" ".join(parts)}/>')
 
         team_name = _TEAM_ENUM_TO_NAME.get(packet.team)
@@ -193,10 +220,10 @@ class CotXmlBuilder:
 
         if packet.tak_version or packet.tak_platform:
             parts = []
-            if packet.tak_device: parts.append(f'device="{escape(packet.tak_device)}"')
-            if packet.tak_platform: parts.append(f'platform="{escape(packet.tak_platform)}"')
-            if packet.tak_os: parts.append(f'os="{escape(packet.tak_os)}"')
-            if packet.tak_version: parts.append(f'version="{escape(packet.tak_version)}"')
+            if packet.tak_device: parts.append(f'device="{_esc(packet.tak_device)}"')
+            if packet.tak_platform: parts.append(f'platform="{_esc(packet.tak_platform)}"')
+            if packet.tak_os: parts.append(f'os="{_esc(packet.tak_os)}"')
+            if packet.tak_version: parts.append(f'version="{_esc(packet.tak_version)}"')
             lines.append(f'    <takv {" ".join(parts)}/>')
 
         if packet.geo_src or packet.alt_src:
@@ -205,7 +232,41 @@ class CotXmlBuilder:
             lines.append(f'    <precisionlocation geopointsrc="{gs}" altsrc="{als}"/>')
 
         if packet.device_callsign:
-            lines.append(f'    <uid Droid="{escape(packet.device_callsign)}"/>')
+            lines.append(f'    <uid Droid="{_esc(packet.device_callsign)}"/>')
+
+        # Weather annotation, for any event type. temperature is always written;
+        # a zero wind direction or speed reads as unset.
+        if packet.HasField("environment"):
+            env = packet.environment
+            parts = [f'temperature="{env.temperature_c_x10 / 10.0}"']
+            if env.wind_direction_deg:
+                parts.append(f'windDirection="{_as_int32(env.wind_direction_deg)}"')
+            if env.wind_speed_cm_s:
+                parts.append(f'windSpeed="{_as_int32(env.wind_speed_cm_s) / 100.0}"')
+            lines.append(f'    <environment {" ".join(parts)}/>')
+
+        # Sensor cone geometry, for any event type. range is written whenever it
+        # is present, even as 0; absent, the receiver applies ATAK-CIV's 100 m
+        # default. A zero vfov or roll reads as unset. No type attribute: the
+        # parser infers the type from model.
+        if packet.HasField("sensor_fov"):
+            s = packet.sensor_fov
+            parts = [f'azimuth="{_as_int32(s.azimuth_deg)}"']
+            if s.HasField("range_m"):
+                parts.append(f'range="{_as_int32(s.range_m)}"')
+            parts.append(f'fov="{_as_int32(s.fov_horizontal_deg)}"')
+            if s.fov_vertical_deg:
+                parts.append(f'vfov="{_as_int32(s.fov_vertical_deg)}"')
+            parts.append(f'elevation="{s.elevation_deg}"')
+            if s.roll_deg:
+                parts.append(f'roll="{s.roll_deg}"')
+            if s.model:
+                parts.append(f'model="{_esc(s.model)}"')
+            lines.append(f'    <sensor {" ".join(parts)}/>')
+
+        # Passive-sensor detection, for any event type like the two annotations above.
+        if packet.HasField("detection"):
+            self._emit_detection(lines, packet.detection)
 
         # Payload-specific
         which = packet.WhichOneof("payload_variant")
@@ -213,7 +274,7 @@ class CotXmlBuilder:
             chat = packet.chat
             if chat.receipt_type != 0 and chat.receipt_for_uid:
                 lines.append(
-                    f'    <link uid="{escape(chat.receipt_for_uid)}" '
+                    f'    <link uid="{_esc(chat.receipt_for_uid)}" '
                     f'relation="p-p" type="b-t-f"/>'
                 )
             else:
@@ -228,29 +289,29 @@ class CotXmlBuilder:
                     sender_cs = (chat.to_callsign or packet.callsign or "UNKNOWN")
                     lines.append(
                         f'    <__chat parent="RootContactGroup" groupOwner="false"'
-                        f' messageId="{escape(msg_id)}" chatroom="{escape(chatroom)}"'
-                        f' id="{escape(chatroom)}" senderCallsign="{escape(sender_cs)}">'
+                        f' messageId="{_esc(msg_id)}" chatroom="{_esc(chatroom)}"'
+                        f' id="{_esc(chatroom)}" senderCallsign="{_esc(sender_cs)}">'
                     )
                     lines.append(
-                        f'      <chatgrp uid0="{escape(sender_uid)}"'
-                        f' uid1="{escape(chatroom)}" id="{escape(chatroom)}"/>'
+                        f'      <chatgrp uid0="{_esc(sender_uid)}"'
+                        f' uid1="{_esc(chatroom)}" id="{_esc(chatroom)}"/>'
                     )
                     lines.append('    </__chat>')
                     lines.append(
-                        f'    <link uid="{escape(sender_uid)}"'
+                        f'    <link uid="{_esc(sender_uid)}"'
                         f' type="a-f-G-U-C" relation="p-p"/>'
                     )
                     lines.append(
                         f'    <__serverdestination destinations='
-                        f'"0.0.0.0:4242:tcp:{escape(sender_uid)}"/>'
+                        f'"0.0.0.0:4242:tcp:{_esc(sender_uid)}"/>'
                     )
                     lines.append(
-                        f'    <remarks source="BAO.F.ATAK.{escape(sender_uid)}"'
-                        f' to="{escape(chatroom)}" time="{time_str}">'
-                        f'{escape(chat.message)}</remarks>'
+                        f'    <remarks source="BAO.F.ATAK.{_esc(sender_uid)}"'
+                        f' to="{_esc(chatroom)}" time="{time_str}">'
+                        f'{_esc(chat.message)}</remarks>'
                     )
                 else:
-                    lines.append(f'    <remarks>{escape(chat.message)}</remarks>')
+                    lines.append(f'    <remarks>{_esc(chat.message)}</remarks>')
                 # TAKTALK-flavored sidecars. proto3-optional means
                 # HasField() distinguishes "absent" from "explicit empty".
                 # voice_profile_id being present-with-empty-content
@@ -264,32 +325,32 @@ class CotXmlBuilder:
                         if chat.voice_profile_id:
                             lines.append(
                                 f'    <voice_profile_id>'
-                                f'{escape(chat.voice_profile_id)}'
+                                f'{_esc(chat.voice_profile_id)}'
                                 f'</voice_profile_id>'
                             )
                         else:
                             lines.append('    <voice_profile_id/>')
                     if packet.callsign:
                         lines.append(
-                            f'    <callsign>{escape(packet.callsign)}</callsign>'
+                            f'    <callsign>{_esc(packet.callsign)}</callsign>'
                         )
                     if chat.lang:
-                        lines.append(f'    <Ea>{escape(chat.lang)}</Ea>')
+                        lines.append(f'    <Ea>{_esc(chat.lang)}</Ea>')
                     if chat.room_id:
-                        lines.append(f'    <roomId>{escape(chat.room_id)}</roomId>')
+                        lines.append(f'    <roomId>{_esc(chat.room_id)}</roomId>')
         elif which == "taktalk":
             # TAKTALK m-t-t voice/text message. Element-body shape matches
             # what ATAK + the TAKTALK plugin emit so the receiver's plugin
             # parses it natively.
             tt = packet.taktalk
             if packet.callsign:
-                lines.append(f'    <callsign>{escape(packet.callsign)}</callsign>')
+                lines.append(f'    <callsign>{_esc(packet.callsign)}</callsign>')
             if tt.lang:
-                lines.append(f'    <lang>{escape(tt.lang)}</lang>')
-            lines.append(f'    <text>{escape(tt.text)}</text>')
+                lines.append(f'    <lang>{_esc(tt.lang)}</lang>')
+            lines.append(f'    <text>{_esc(tt.text)}</text>')
             if tt.chatroom_id:
                 lines.append(
-                    f'    <chatroom-id>{escape(tt.chatroom_id)}</chatroom-id>'
+                    f'    <chatroom-id>{_esc(tt.chatroom_id)}</chatroom-id>'
                 )
             if tt.from_voice:
                 lines.append('    <voice/>')
@@ -305,32 +366,32 @@ class CotXmlBuilder:
             if packet.callsign:
                 lines.append(
                     f'    <sender-callsign>'
-                    f'{escape(packet.callsign)}'
+                    f'{_esc(packet.callsign)}'
                     f'</sender-callsign>'
                 )
             if room.room_id:
                 lines.append(
-                    f'    <chatroom-id>{escape(room.room_id)}</chatroom-id>'
+                    f'    <chatroom-id>{_esc(room.room_id)}</chatroom-id>'
                 )
             if room.room_name:
                 lines.append(
-                    f'    <chatroom-name>{escape(room.room_name)}</chatroom-name>'
+                    f'    <chatroom-name>{_esc(room.room_name)}</chatroom-name>'
                 )
             if room.participants:
                 joined = ",".join(room.participants)
                 lines.append(
                     f'    <chatroom-participants>'
-                    f'{escape(joined)}'
+                    f'{_esc(joined)}'
                     f'</chatroom-participants>'
                 )
         elif which == "aircraft":
             ac = packet.aircraft
             if ac.icao:
-                parts = [f'icao="{escape(ac.icao)}"']
-                if ac.registration: parts.append(f'reg="{escape(ac.registration)}"')
-                if ac.flight: parts.append(f'flight="{escape(ac.flight)}"')
-                if ac.category: parts.append(f'cat="{escape(ac.category)}"')
-                if ac.cot_host_id: parts.append(f'cot_host_id="{escape(ac.cot_host_id)}"')
+                parts = [f'icao="{_esc(ac.icao)}"']
+                if ac.registration: parts.append(f'reg="{_esc(ac.registration)}"')
+                if ac.flight: parts.append(f'flight="{_esc(ac.flight)}"')
+                if ac.category: parts.append(f'cat="{_esc(ac.category)}"')
+                if ac.cot_host_id: parts.append(f'cot_host_id="{_esc(ac.cot_host_id)}"')
                 lines.append(f'    <_aircot_ {" ".join(parts)}/>')
                 if ac.squawk > 0:
                     rparts = []
@@ -339,7 +400,7 @@ class CotXmlBuilder:
                     if ac.aircraft_type: rparts.append(f'Type: {ac.aircraft_type}')
                     rparts.append(f'Squawk: {ac.squawk}')
                     if ac.flight: rparts.append(f'Flight: {ac.flight}')
-                    lines.append(f'    <remarks>{escape(" ".join(rparts))}</remarks>')
+                    lines.append(f'    <remarks>{_esc(" ".join(rparts))}</remarks>')
                 if ac.rssi_x10 != 0:
                     rssi_val = ac.rssi_x10 / 10.0
                     gps_attr = ' gps="true"' if ac.gps else ''
@@ -379,7 +440,7 @@ class CotXmlBuilder:
         if packet.remarks and which not in (
             "chat", "aircraft", "route", "taktalk", "taktalk_room",
         ):
-            lines.append(f'    <remarks>{escape(packet.remarks)}</remarks>')
+            lines.append(f'    <remarks>{_esc(packet.remarks)}</remarks>')
 
         # Directed-routing recipient list (<marti><dest callsign='X'/>…</marti>).
         # Emit last among <detail> children to match ATAK's element ordering.
@@ -387,7 +448,7 @@ class CotXmlBuilder:
         # callsign, so dropping it silently breaks voice messaging end-to-end.
         if packet.HasField("marti") and packet.marti.dest_callsign:
             dest_tags = "".join(
-                f'<dest callsign="{escape(d)}"/>' for d in packet.marti.dest_callsign
+                f'<dest callsign="{_esc(d)}"/>' for d in packet.marti.dest_callsign
             )
             lines.append(f'    <marti>{dest_tags}</marti>')
 
@@ -442,7 +503,7 @@ class CotXmlBuilder:
                 lines.append(f'      <ellipse major="{major_m}" minor="{minor_m}" angle="{shape.angle_deg}"/>')
                 # KML style link — iTAK requires this to render circles/ellipses
                 stroke_abgr = _argb_to_abgr_hex(stroke_val)
-                kml = f'      <link uid="{escape(uid)}.Style" type="b-x-KmlStyle" relation="p-c">'
+                kml = f'      <link uid="{_esc(uid)}.Style" type="b-x-KmlStyle" relation="p-c">'
                 kml += f'<Style><LineStyle><color>{stroke_abgr}</color><width>{stroke_w}</width></LineStyle>'
                 if fill_val != 0:
                     kml += f'<PolyStyle><color>{_argb_to_abgr_hex(fill_val)}</color></PolyStyle>'
@@ -475,7 +536,7 @@ class CotXmlBuilder:
             if shape.bullseye_flags & 0x08:
                 parts.append('mils="true"')
             if shape.bullseye_uid_ref:
-                parts.append(f'bullseyeUID="{escape(shape.bullseye_uid_ref)}"')
+                parts.append(f'bullseyeUID="{_esc(shape.bullseye_uid_ref)}"')
             if parts:
                 lines.append(f'    <bullseye {" ".join(parts)}/>')
             else:
@@ -505,11 +566,11 @@ class CotXmlBuilder:
         if marker.readiness:
             lines.append('    <status readiness="true"/>')
         if marker.parent_uid:
-            parts = [f'uid="{escape(marker.parent_uid)}"']
+            parts = [f'uid="{_esc(marker.parent_uid)}"']
             if marker.parent_type:
-                parts.append(f'type="{escape(marker.parent_type)}"')
+                parts.append(f'type="{_esc(marker.parent_type)}"')
             if marker.parent_callsign:
-                parts.append(f'parent_callsign="{escape(marker.parent_callsign)}"')
+                parts.append(f'parent_callsign="{_esc(marker.parent_callsign)}"')
             parts.append('relation="p-p"')
             lines.append(f'    <link {" ".join(parts)}/>')
         color_argb = atak_palette.resolve_color(marker.color, marker.color_argb)
@@ -517,7 +578,7 @@ class CotXmlBuilder:
         if color_val != 0:
             lines.append(f'    <color argb="{color_val}"/>')
         if marker.iconset:
-            lines.append(f'    <usericon iconsetpath="{escape(marker.iconset)}"/>')
+            lines.append(f'    <usericon iconsetpath="{_esc(marker.iconset)}"/>')
 
     def _emit_rab(self, lines: list, rab, event_lat_i: int, event_lon_i: int) -> None:
         """Append a Range-and-Bearing payload's ``<detail>`` children.
@@ -540,7 +601,7 @@ class CotXmlBuilder:
             alon = anchor_lon_i / 1e7
             parts = []
             if rab.anchor_uid:
-                parts.append(f'uid="{escape(rab.anchor_uid)}"')
+                parts.append(f'uid="{_esc(rab.anchor_uid)}"')
             parts.append('relation="p-p"')
             parts.append('type="b-m-p-w"')
             parts.append(f'point="{alat},{alon}"')
@@ -584,10 +645,10 @@ class CotXmlBuilder:
             link_type = "b-m-p-c" if link.link_type == 1 else "b-m-p-w"
             # Generate deterministic uid when not present
             uid = link.uid if link.uid else f"{event_uid}-{idx}"
-            parts = [f'uid="{escape(uid)}"']
+            parts = [f'uid="{_esc(uid)}"']
             parts.append(f'type="{link_type}"')
             if link.callsign:
-                parts.append(f'callsign="{escape(link.callsign)}"')
+                parts.append(f'callsign="{_esc(link.callsign)}"')
             # ATAK expects 3-component point: lat,lon,hae
             parts.append(f'point="{llat},{llon},0" relation="c"')
             lines.append(f'    <link {" ".join(parts)}/>')
@@ -599,7 +660,7 @@ class CotXmlBuilder:
         if direction_name:
             parts.append(f'direction="{direction_name}"')
         if route.prefix:
-            parts.append(f'prefix="{escape(route.prefix)}"')
+            parts.append(f'prefix="{_esc(route.prefix)}"')
         if route.stroke_weight_x10 > 0:
             sw = route.stroke_weight_x10 / 10.0
             parts.append(f'stroke="{sw}"')
@@ -609,7 +670,7 @@ class CotXmlBuilder:
             lines.append('    <link_attr/>')
         # Conditional remarks element (route block handles its own remarks)
         if remarks:
-            lines.append(f'    <remarks>{escape(remarks)}</remarks>')
+            lines.append(f'    <remarks>{_esc(remarks)}</remarks>')
         else:
             lines.append('    <remarks/>')
         # routeinfo with navcues child (after link_attr)
@@ -619,7 +680,7 @@ class CotXmlBuilder:
         lines.append(f'    <strokeWeight value="{sw}"/>')
         lines.append('    <strokeStyle value="solid"/>')
         if callsign:
-            lines.append(f'    <contact callsign="{escape(callsign)}"/>')
+            lines.append(f'    <contact callsign="{_esc(callsign)}"/>')
         lines.append('    <labels_on value="false"/>')
         lines.append('    <color value="-1"/>')
 
@@ -663,10 +724,10 @@ class CotXmlBuilder:
         """
         parts = []
         # Metadata (emit first to match ATAK's attribute ordering)
-        if c.title: parts.append(f'title="{escape(c.title)}"')
+        if c.title: parts.append(f'title="{_esc(c.title)}"')
         if c.medline_remarks:
-            parts.append(f'medline_remarks="{escape(c.medline_remarks)}"')
-        if c.frequency: parts.append(f'freq="{escape(c.frequency)}"')
+            parts.append(f'medline_remarks="{_esc(c.medline_remarks)}"')
+        if c.frequency: parts.append(f'freq="{_esc(c.frequency)}"')
         name = self._PRECEDENCE_INT_TO_NAME.get(c.precedence)
         if name:
             parts.append(f'precedence="{name}"')
@@ -683,7 +744,7 @@ class CotXmlBuilder:
         if c.equipment_flags & 0x10: parts.append('blood="true"')
         if c.equipment_flags & 0x20: parts.append('equipment_other="true"')
         if c.equipment_detail:
-            parts.append(f'equipment_detail="{escape(c.equipment_detail)}"')
+            parts.append(f'equipment_detail="{_esc(c.equipment_detail)}"')
         if c.litter_patients > 0: parts.append(f'litter="{c.litter_patients}"')
         if c.ambulatory_patients > 0: parts.append(f'ambulatory="{c.ambulatory_patients}"')
         sec = self._SECURITY_INT_TO_NAME.get(c.security)
@@ -698,25 +759,25 @@ class CotXmlBuilder:
         if c.child > 0: parts.append(f'child="{c.child}"')
         if c.terrain_flags & 0x01: parts.append('terrain_slope="true"')
         if c.terrain_slope_dir:
-            parts.append(f'terrain_slope_dir="{escape(c.terrain_slope_dir)}"')
+            parts.append(f'terrain_slope_dir="{_esc(c.terrain_slope_dir)}"')
         if c.terrain_flags & 0x02: parts.append('terrain_rough="true"')
         if c.terrain_flags & 0x04: parts.append('terrain_loose="true"')
         if c.terrain_flags & 0x08: parts.append('terrain_trees="true"')
         if c.terrain_flags & 0x10: parts.append('terrain_wires="true"')
         if c.terrain_flags & 0x20: parts.append('terrain_other="true"')
         if c.terrain_other_detail:
-            parts.append(f'terrain_other_detail="{escape(c.terrain_other_detail)}"')
+            parts.append(f'terrain_other_detail="{_esc(c.terrain_other_detail)}"')
         if c.zone_protected_coord:
-            parts.append(f'zone_protected_coord="{escape(c.zone_protected_coord)}"')
-        if c.zone_marker: parts.append(f'zone_prot_marker="{escape(c.zone_marker)}"')
-        if c.marked_by: parts.append(f'marked_by="{escape(c.marked_by)}"')
+            parts.append(f'zone_protected_coord="{_esc(c.zone_protected_coord)}"')
+        if c.zone_marker: parts.append(f'zone_prot_marker="{_esc(c.zone_marker)}"')
+        if c.marked_by: parts.append(f'marked_by="{_esc(c.marked_by)}"')
         # Tier-2 situational awareness free-text
-        if c.obstacles: parts.append(f'obstacles="{escape(c.obstacles)}"')
+        if c.obstacles: parts.append(f'obstacles="{_esc(c.obstacles)}"')
         if c.winds_are_from:
-            parts.append(f'winds_are_from="{escape(c.winds_are_from)}"')
-        if c.friendlies: parts.append(f'friendlies="{escape(c.friendlies)}"')
-        if c.enemy: parts.append(f'enemy="{escape(c.enemy)}"')
-        if c.hlz_remarks: parts.append(f'hlz_remarks="{escape(c.hlz_remarks)}"')
+            parts.append(f'winds_are_from="{_esc(c.winds_are_from)}"')
+        if c.friendlies: parts.append(f'friendlies="{_esc(c.friendlies)}"')
+        if c.enemy: parts.append(f'enemy="{_esc(c.enemy)}"')
+        if c.hlz_remarks: parts.append(f'hlz_remarks="{_esc(c.hlz_remarks)}"')
 
         if len(c.zmist) == 0:
             if parts:
@@ -731,12 +792,12 @@ class CotXmlBuilder:
             lines.append('      <zMistsMap>')
             for z in c.zmist:
                 z_parts = []
-                if z.title: z_parts.append(f'title="{escape(z.title)}"')
-                if z.z: z_parts.append(f'z="{escape(z.z)}"')
-                if z.m: z_parts.append(f'm="{escape(z.m)}"')
-                if z.i: z_parts.append(f'i="{escape(z.i)}"')
-                if z.s: z_parts.append(f's="{escape(z.s)}"')
-                if z.t: z_parts.append(f't="{escape(z.t)}"')
+                if z.title: z_parts.append(f'title="{_esc(z.title)}"')
+                if z.z: z_parts.append(f'z="{_esc(z.z)}"')
+                if z.m: z_parts.append(f'm="{_esc(z.m)}"')
+                if z.i: z_parts.append(f'i="{_esc(z.i)}"')
+                if z.s: z_parts.append(f's="{_esc(z.s)}"')
+                if z.t: z_parts.append(f't="{_esc(z.t)}"')
                 if z_parts:
                     lines.append(f'        <zMist {" ".join(z_parts)}/>')
                 else:
@@ -768,12 +829,12 @@ class CotXmlBuilder:
             lines.append('    <emergency/>')
         if e.authoring_uid:
             lines.append(
-                f'    <link uid="{escape(e.authoring_uid)}" '
+                f'    <link uid="{_esc(e.authoring_uid)}" '
                 f'relation="p-p" type="a-f-G-U-C"/>'
             )
         if e.cancel_reference_uid:
             lines.append(
-                f'    <link uid="{escape(e.cancel_reference_uid)}" '
+                f'    <link uid="{_esc(e.cancel_reference_uid)}" '
                 f'relation="p-p" type="b-a-o-tbl"/>'
             )
 
@@ -789,19 +850,76 @@ class CotXmlBuilder:
             t: The ``TaskRequest`` payload message.
         """
         parts = []
-        if t.task_type: parts.append(f'type="{escape(t.task_type)}"')
+        if t.task_type: parts.append(f'type="{_esc(t.task_type)}"')
         pri = self._TASK_PRIORITY_INT_TO_NAME.get(t.priority)
         if pri: parts.append(f'priority="{pri}"')
         stat = self._TASK_STATUS_INT_TO_NAME.get(t.status)
         if stat: parts.append(f'status="{stat}"')
-        if t.assignee_uid: parts.append(f'assignee="{escape(t.assignee_uid)}"')
-        if t.note: parts.append(f'note="{escape(t.note)}"')
+        if t.assignee_uid: parts.append(f'assignee="{_esc(t.assignee_uid)}"')
+        if t.note: parts.append(f'note="{_esc(t.note)}"')
         if parts:
             lines.append(f'    <task {" ".join(parts)}/>')
         else:
             lines.append('    <task/>')
         if t.target_uid:
             lines.append(
-                f'    <link uid="{escape(t.target_uid)}" '
+                f'    <link uid="{_esc(t.target_uid)}" '
                 f'relation="p-p" type="a-f-G"/>'
             )
+
+    # --- Detection annotation -------------------------------------------
+
+    def _emit_detection(self, lines: list, d) -> None:
+        """Append the ``<__detection>`` line for a ``TAKDetection`` to ``lines``.
+
+        Attributes follow a fixed order, each left out at its default. An enum
+        value without a token, and a source bit without one, are left out too;
+        they still travel on the wire. ``confidence``, ``count`` and ``cep`` are
+        read as signed int32, as the Kotlin binding holds them, so a value that
+        arrived out of range is clamped or left out. Mutates ``lines`` in place.
+
+        Args:
+            lines: The output line list to append to.
+            d: The ``TAKDetection`` annotation message.
+        """
+        parts = []
+        kind = _detection_token(detection_xml.KIND_TOKENS, d.kind)
+        if kind:
+            parts.append(f'kind="{kind}"')
+        sources = " ".join(
+            t for bit, t in detection_xml.SOURCE_TOKENS.items() if d.sources & bit
+        )
+        if sources:
+            parts.append(f'sources="{sources}"')
+        confidence = min(max(_as_int32(d.confidence), 0), detection_xml.CONFIDENCE_MAX)
+        if confidence > 0:
+            parts.append(f'confidence="{confidence}"')
+        state = _detection_token(detection_xml.STATE_TOKENS, d.state)
+        if state:
+            parts.append(f'state="{state}"')
+        trend = _detection_token(detection_xml.TREND_TOKENS, d.trend)
+        if trend:
+            parts.append(f'trend="{trend}"')
+        count = _as_int32(d.count)
+        if count > 0:
+            parts.append(f'count="{count}"')
+        if d.sensor_anchored:
+            parts.append('sensorAnchored="true"')
+        cep = _as_int32(d.cep_m)
+        if cep > 0:
+            parts.append(f'cep="{cep}"')
+        if d.rssi_dbm != 0:
+            parts.append(f'rssi="{d.rssi_dbm}"')
+        uas_id = d.uas_id[:detection_xml.UAS_ID_MAX_BYTES]
+        if d.kind == atak_pb2.TAKDetection.Kind_Uas and uas_id:
+            parts.append(f'uasId="{detection_xml.uas_id_attribute(uas_id)}"')
+        id_type = _detection_token(detection_xml.UAS_ID_TYPE_TOKENS, d.uas_id_type)
+        if id_type:
+            parts.append(f'uasIdType="{id_type}"')
+        status = _detection_token(detection_xml.UAS_STATUS_TOKENS, d.uas_status)
+        if status:
+            parts.append(f'uasStatus="{status}"')
+        if parts:
+            lines.append(f'    <{detection_xml.ELEMENT} {" ".join(parts)}/>')
+        else:
+            lines.append(f'    <{detection_xml.ELEMENT}/>')

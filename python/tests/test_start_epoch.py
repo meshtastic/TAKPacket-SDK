@@ -1,6 +1,6 @@
 """Coverage for the ``start`` timestamp, mirroring the Kotlin binding's tests.
 
-The 47 shared fixtures cannot provide this. Every one is stamped months in the
+The shared fixtures cannot provide this. Every one is stamped months in the
 past, so the parser correctly refuses to encode its ``start`` (outside the bound)
 and the builder falls back to the decode instant. That makes the whole fixture
 corpus pass whether this feature works or not. So the timestamps here are minted

@@ -59,6 +59,8 @@ class RoundTripTest {
         // this list matching the receiver's callsign so a regression here
         // silently breaks voice messaging end-to-end.
         assertEquals(packet.marti, decompressed.marti, "marti mismatch in $fixture")
+        // Passive-sensor annotation (tag 47). Crosses the wire losslessly, so every field compares.
+        assertEquals(packet.detection, decompressed.detection, "detection mismatch in $fixture")
 
         // Verify payload type matches
         assertEquals(
@@ -633,7 +635,7 @@ class RoundTripTest {
     //   ~/Downloads/cotexplorer-20260526T211059Z.txt
 
     @Test
-    fun `m-t-t typed message parses text, chatroom-id, lang and no voice`() {
+    fun `m-t-t typed message parses text, chatroom-id, lang and no voice profile`() {
         val xml = loadFixture("taktalk_text.xml")
         val packet = parser.parse(xml)
         assertEquals(CotTypeMapper.COTTYPE_M_T_T, packet.cotTypeId)
@@ -641,7 +643,8 @@ class RoundTripTest {
         assertEquals("Testing 123, testing 123.", tt.text)
         assertEquals("1", tt.chatroomId)
         assertEquals("English", tt.lang)
-        assertFalse(tt.fromVoice, "no <voice/> in source — fromVoice must be false")
+        assertFalse(tt.fromVoice, "fromVoice has no XML counterpart; the parser never sets it")
+        assertEquals("", tt.voiceProfileId, "no <voice> in source — no voice profile ID")
 
         // Round-trip through compress → decompress → build preserves the four
         // TAKTALK fields. The rebuilt XML must carry element-body children so
@@ -659,20 +662,22 @@ class RoundTripTest {
             rebuilt.contains("<lang>English</lang>"),
             "rebuilt XML must re-emit <lang>",
         )
-        assertFalse(
+        assertTrue(
             rebuilt.contains("<voice/>"),
-            "no source <voice/> means no rebuilt <voice/>",
+            "<voice> is always emitted for TAKTALK, empty when there is no voice profile ID",
         )
     }
 
     @Test
-    fun `m-t-t voice push-to-talk preserves fromVoice and re-emits voice marker`() {
+    fun `m-t-t voice push-to-talk re-emits the voice element`() {
         val xml = loadFixture("taktalk_voice.xml")
         val packet = parser.parse(xml)
         assertEquals(CotTypeMapper.COTTYPE_M_T_T, packet.cotTypeId)
         val tt = packet.payload as TakPacketV2Data.Payload.TakTalk
         assertEquals("Testing 123", tt.text)
-        assertTrue(tt.fromVoice, "source had <voice/> — fromVoice must be true")
+        // <voice> carries the voice profile ID (empty here), not a speech marker.
+        assertEquals("", tt.voiceProfileId, "empty <voice/> — no voice profile ID")
+        assertFalse(tt.fromVoice, "fromVoice is not inferred from <voice> being present")
         // Regression for in-field bug where TAKTALK m-t-t reached the receiver
         // missing <callsign> and <voice/> because the parser only captured
         // callsign from <contact callsign=> attribute (used by PLI/chat), not
@@ -700,7 +705,7 @@ class RoundTripTest {
         val rebuilt = builder.build(compressor.decompress(compressor.compress(packet)))
         assertTrue(
             rebuilt.contains("<voice/>"),
-            "rebuilt XML must re-emit the <voice/> push-to-talk marker",
+            "rebuilt XML must re-emit <voice/>, the empty voice profile ID",
         )
         assertTrue(rebuilt.contains("<text>Testing 123</text>"))
         assertTrue(

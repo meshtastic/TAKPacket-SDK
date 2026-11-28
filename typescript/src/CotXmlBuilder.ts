@@ -4,7 +4,7 @@ import { resolveColor } from "./AtakPalette.js";
 import type {
   TAKPacketV2, GeoChat, AircraftTrack, DrawnShape, Marker,
   RangeAndBearing, Route, RouteLink, CasevacReport, EmergencyAlert,
-  TaskRequest, CotGeoPoint, ZMistEntry,
+  TaskRequest, CotGeoPoint, ZMistEntry, TAKDetection,
 } from "./types.js";
 
 const TEAM_NAMES: Record<number, string> = {
@@ -65,6 +65,27 @@ const TASK_STATUS_INT_TO_NAME: Record<number, string> = {
   4: "Completed", 5: "Cancelled",
 };
 
+// --- TAKDetection tokens, indexed by value (mirror CotXmlParser tables) ---
+const DETECTION_KINDS = ["unspecified", "uas", "uas_operator", "uas_home", "person", "vehicle", "other"];
+const DETECTION_STATES = ["unspecified", "new", "active", "coasting", "lost"];
+const DETECTION_TRENDS = ["unspecified", "closing", "steady", "opening"];
+const DETECTION_UAS_ID_TYPES = ["unspecified", "serial_number", "caa_registration", "utm_assigned", "specific_session"];
+const DETECTION_UAS_STATUSES = ["unspecified", "ground", "airborne", "emergency", "system_failure"];
+/** TAKDetection.Source tokens by bit position: index i names the bit `1 << i`. */
+const DETECTION_SOURCES = ["remote_id", "rf", "acoustic", "radar", "optical", "thermal", "seismic", "magnetic"];
+const DETECTION_KIND_UAS = 1;
+/** CoT's "unknown" circular error, written to `<point ce>` when there is no cep to carry. */
+const UNKNOWN_CE = 9999999;
+const UAS_ID_MAX_BYTES = 20;
+/** A `uasId` of only these bytes is written as text; any other is written as hex. */
+const UAS_ID_TEXT = /^[A-Za-z0-9._-]*$/;
+
+/** The `uasId` attribute: the ID's text when every byte is a plain ID character, else `hex:` and lowercase hex. */
+function uasIdAttribute(id: Buffer): string {
+  const text = id.toString("latin1");
+  return UAS_ID_TEXT.test(text) ? text : `hex:${id.toString("hex")}`;
+}
+
 // --- GeoChat ReceiptType -----------------------------------------------
 const RECEIPT_TYPE_NONE = 0;
 
@@ -118,6 +139,7 @@ function argbToSigned(argb: number): number {
  * Wire units are converted back to ATAK's XML units: `latitudeI`/`longitudeI`
  * (degrees×1e7) become decimal degrees, `speed` (cm/s) and `course`
  * (degrees×100) are divided by 100, and shape radii / ranges (cm) by 100.
+ * `<point ce>` is a detection's `cepM` when it has one, else CoT's unknown 9999999.
  * Because the wire format does not carry timestamps, `time`/`start` are set to
  * the sender's own `start` when `startEpochLo14` is present and reconstructs
  * plausibly and to "now" otherwise, while `stale` is always now + `staleSeconds`
@@ -164,12 +186,8 @@ export function buildCotXml(packet: TAKPacketV2): string {
   const stale = new Date(Date.now() + staleSecs * 1000).toISOString();
 
   const cotType = typeToString(packet.cotTypeId ?? 0) ?? packet.cotTypeStr ?? "";
-  // For most CoT types, missing/Unspecified how falls back to "m-g".
-  // TAKTALK m-t-t and y- are special-cased to use ATAK's "null" how
-  // convention — the plugin's inbound classifier gates on this value
-  // for TTS routing, so source how="null" must NOT round-trip as "m-g".
-  const how = howToString(packet.how ?? 0)
-    ?? ((cotType === "m-t-t" || cotType === "y-") ? "null" : "m-g");
+  // Missing/Unspecified how falls back to "m-g".
+  const how = howToString(packet.how ?? 0) ?? "m-g";
   let lat = (packet.latitudeI ?? 0) / 1e7;
   let lon = (packet.longitudeI ?? 0) / 1e7;
   const routePayload = packet.route;
@@ -182,11 +200,14 @@ export function buildCotXml(packet: TAKPacketV2): string {
     }
   }
   const alt = packet.altitude ?? 0;
+  // ce carries a detection's horizontal uncertainty; anything else keeps CoT's "unknown".
+  const cepM = (packet.detection?.cepM ?? 0) | 0;
+  const ce = cepM > 0 ? cepM : UNKNOWN_CE;
 
   const lines: string[] = [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<event version="2.0" uid="${esc(String(packet.uid ?? ""))}" type="${esc(cotType)}" how="${esc(how)}" time="${now}" start="${now}" stale="${stale}">`,
-    `  <point lat="${lat}" lon="${lon}" hae="${alt}" ce="9999999" le="9999999"/>`,
+    `  <point lat="${lat}" lon="${lon}" hae="${alt}" ce="${ce}" le="9999999"/>`,
     `  <detail>`,
   ];
 
@@ -245,6 +266,38 @@ export function buildCotXml(packet: TAKPacketV2): string {
 
   const deviceCallsign = packet.deviceCallsign ?? "";
   if (deviceCallsign) lines.push(`    <uid Droid="${esc(deviceCallsign)}"/>`);
+
+  // Weather and sensor-cone annotations attach to any payload. `| 0` prints a
+  // uint32 as its int32 reading, the way Kotlin's Int prints it.
+  const environment = packet.environment;
+  if (environment) {
+    let tag = `    <environment temperature="${(environment.temperatureCX10 ?? 0) / 10}"`;
+    const windDirection = (environment.windDirectionDeg ?? 0) | 0;
+    if (windDirection !== 0) tag += ` windDirection="${windDirection}"`;
+    const windSpeedCmS = (environment.windSpeedCmS ?? 0) | 0;
+    if (windSpeedCmS !== 0) tag += ` windSpeed="${windSpeedCmS / 100}"`;
+    lines.push(tag + "/>");
+  }
+
+  // Geometry only. No `type` attribute: the parser infers SensorType from `model`.
+  const sensor = packet.sensorFov;
+  if (sensor) {
+    let tag = `    <sensor azimuth="${(sensor.azimuthDeg ?? 0) | 0}"`;
+    // range_m has explicit presence: written whenever set, 0 included.
+    if (sensor.rangeM != null) tag += ` range="${sensor.rangeM | 0}"`;
+    tag += ` fov="${(sensor.fovHorizontalDeg ?? 0) | 0}"`;
+    const vfov = (sensor.fovVerticalDeg ?? 0) | 0;
+    if (vfov !== 0) tag += ` vfov="${vfov}"`;
+    tag += ` elevation="${sensor.elevationDeg ?? 0}"`;
+    const roll = sensor.rollDeg ?? 0;
+    if (roll !== 0) tag += ` roll="${roll}"`;
+    const model = sensor.model ?? "";
+    if (model) tag += ` model="${esc(model)}"`;
+    lines.push(tag + "/>");
+  }
+
+  // Passive-sensor detection, payload-agnostic like the two annotations above.
+  if (packet.detection) emitDetection(lines, packet.detection);
 
   // Payload-specific
   const chat = packet.chat;
@@ -778,4 +831,51 @@ function emitTask(lines: string[], task: TaskRequest): void {
   if (targetUid) {
     lines.push(`    <link uid="${esc(targetUid)}" relation="p-p" type="a-f-G"/>`);
   }
+}
+
+/**
+ * One `<__detection>` line, each attribute left out at its default. Unsigned
+ * fields are read as int32. Source bits with no token still travel on the
+ * wire but are left out of the XML.
+ */
+function emitDetection(lines: string[], detection: TAKDetection): void {
+  const token = (tokens: readonly string[], value: number | undefined): string | undefined =>
+    value ? tokens[value] : undefined;
+  const parts: string[] = [];
+
+  const kind = detection.kind ?? 0;
+  const kindToken = token(DETECTION_KINDS, kind);
+  if (kindToken) parts.push(`kind="${kindToken}"`);
+
+  const sourceBits = detection.sources ?? 0;
+  const sources = DETECTION_SOURCES.filter((_, bit) => (sourceBits & (1 << bit)) !== 0);
+  if (sources.length > 0) parts.push(`sources="${sources.join(" ")}"`);
+
+  const confidence = Math.min(100, Math.max(0, (detection.confidence ?? 0) | 0));
+  if (confidence > 0) parts.push(`confidence="${confidence}"`);
+
+  const state = token(DETECTION_STATES, detection.state);
+  if (state) parts.push(`state="${state}"`);
+  const trend = token(DETECTION_TRENDS, detection.trend);
+  if (trend) parts.push(`trend="${trend}"`);
+
+  const count = (detection.count ?? 0) | 0;
+  if (count > 0) parts.push(`count="${count}"`);
+  if (detection.sensorAnchored === true) parts.push(`sensorAnchored="true"`);
+  const cep = (detection.cepM ?? 0) | 0;
+  if (cep > 0) parts.push(`cep="${cep}"`);
+  const rssi = detection.rssiDbm ?? 0;
+  if (rssi !== 0) parts.push(`rssi="${rssi}"`);
+
+  const uasId = kind === DETECTION_KIND_UAS && detection.uasId
+    ? Buffer.from(detection.uasId).subarray(0, UAS_ID_MAX_BYTES)
+    : Buffer.alloc(0);
+  if (uasId.length > 0) parts.push(`uasId="${uasIdAttribute(uasId)}"`);
+
+  const uasIdType = token(DETECTION_UAS_ID_TYPES, detection.uasIdType);
+  if (uasIdType) parts.push(`uasIdType="${uasIdType}"`);
+  const uasStatus = token(DETECTION_UAS_STATUSES, detection.uasStatus);
+  if (uasStatus) parts.push(`uasStatus="${uasStatus}"`);
+
+  lines.push(parts.length > 0 ? `    <__detection ${parts.join(" ")}/>` : "    <__detection/>");
 }

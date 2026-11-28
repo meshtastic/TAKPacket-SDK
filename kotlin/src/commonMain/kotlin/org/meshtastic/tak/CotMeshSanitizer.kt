@@ -24,10 +24,10 @@ public object CotMeshSanitizer {
     // Display-only / receiver-rederivable elements that add ~100–200 wire bytes.
     //
     // DELIBERATELY ABSENT: <voice> and <marti>. They are TAK-Talk essentials —
-    // <voice/> marks a push-to-talk (voice) message and <marti><dest
+    // <voice> carries the voice profile to speak the message with and <marti><dest
     // callsign="…"/></marti> carries the directed-routing recipients. Stripping
     // either breaks TAK-Talk: the receiving ATAK plugin can neither play nor
-    // route the m-t-t. The SDK carries both compactly (voice→bool,
+    // route the m-t-t. The SDK carries both compactly (voice→profile ID,
     // marti→repeated string) and re-emits them on rebuild, omitting an empty
     // marti — so there is nothing to gain by stripping and a feature to lose.
     private val STRIP_ELEMENTS =

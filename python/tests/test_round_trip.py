@@ -41,6 +41,11 @@ def test_full_round_trip_preserves_fields(fixture):
     assert list(packet.marti.dest_callsign) == list(decompressed.marti.dest_callsign), (
         f"marti mismatch in {fixture}"
     )
+    # Passive-sensor detection annotation; absent on most fixtures.
+    assert packet.HasField("detection") == decompressed.HasField("detection"), (
+        f"detection presence mismatch in {fixture}"
+    )
+    assert packet.detection == decompressed.detection, f"detection mismatch in {fixture}"
 
     # Payload-specific field assertions
     which_orig = packet.WhichOneof("payload_variant")

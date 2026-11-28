@@ -51,15 +51,33 @@ public class TakCompressor(
     }
 
     /**
+     * The dictionary to compress [packet] with: the one [DictionaryProvider.selectDictId] picks
+     * for its CoT type, except that a detection that is not an aircraft track takes
+     * [DictionaryProvider.DICT_ID_NON_AIRCRAFT] whatever its type. The 4 KB aircraft dictionary
+     * is built for aircraft tracks, and the non-aircraft one compresses a detection marker
+     * smaller. The ID travels in the flags byte, so a receiver decodes either choice.
+     */
+    private fun dictIdFor(packet: TakPacketV2Data): Int =
+        if (packet.detection != null && packet.payload !is TakPacketV2Data.Payload.Aircraft) {
+            DictionaryProvider.DICT_ID_NON_AIRCRAFT
+        } else {
+            DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
+        }
+
+    /**
      * Compress a TakPacketV2Data into a wire payload:
      * [flags byte][zstd-compressed protobuf]
+     *
+     * The dictionary is the one [DictionaryProvider.selectDictId] picks for the CoT type, except
+     * that a detection that is not an aircraft track always uses
+     * [DictionaryProvider.DICT_ID_NON_AIRCRAFT].
      *
      * @throws ZstdException if the underlying zstd codec fails to compress.
      */
     @Throws(ZstdException::class)
     public fun compress(packet: TakPacketV2Data): ByteArray {
         val protobufBytes = TakPacketV2Serializer.serialize(packet)
-        val dictId = DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
+        val dictId = dictIdFor(packet)
 
         // Compress exactly one independent frame per packet through the codec
         // SPI's one-shot API (NEVER a streaming API) so every packet decodes in

@@ -84,8 +84,8 @@ class GoldenDecodeCommonTest {
         }
 
         assertTrue(failures.isEmpty(), "decode failed $failures")
-        // Sanity: the oracle actually ran over the compressed fixtures (matches the
-        // 45 compressed / 2 uncompressed split).
+        // Sanity: the oracle actually ran over the compressed fixtures. Today every
+        // golden is dictionary-compressed; none takes the 0xFF path.
         assertTrue(compressed > 0, "no compressed fixtures were exercised")
         assertEquals(InlinedFixtures.names.size, compressed + skipped, "every fixture must be accounted for")
     }

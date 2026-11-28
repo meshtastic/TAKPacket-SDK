@@ -6,7 +6,7 @@ import type {
   TAKPacketV2, GeoChat, AircraftTrack, DrawnShape, Marker,
   RangeAndBearing, Route, RouteLink, CasevacReport, EmergencyAlert,
   TaskRequest, CotGeoPoint, ZMistEntry,
-  TakTalkMessage, TakTalkRoomData,
+  TakTalkMessage, TakTalkRoomData, TAKEnvironment, SensorFov, TAKDetection,
 } from "./types.js";
 
 const TEAM_NAME_TO_ENUM: Record<string, number> = {
@@ -163,6 +163,64 @@ const RECEIPT_TYPE_NONE = 0;
 const RECEIPT_TYPE_DELIVERED = 1;
 const RECEIPT_TYPE_READ = 2;
 
+// SensorFov.SensorType constants
+const SENSOR_TYPE_UNSPECIFIED = 0;
+const SENSOR_TYPE_CAMERA = 1;
+const SENSOR_TYPE_THERMAL = 2;
+const SENSOR_TYPE_LASER = 3;
+const SENSOR_TYPE_NVG = 4;
+const SENSOR_TYPE_RF = 5;
+const SENSOR_TYPE_OTHER = 6;
+
+/**
+ * Coarse sensor class from ATAK's free-form `model` string. Keywords are
+ * tested in order, so "FLIR radar" is Thermal; a bare "rf" is Other.
+ */
+function inferSensorType(model: string): number {
+  if (model.length === 0) return SENSOR_TYPE_UNSPECIFIED;
+  const m = model.toLowerCase();
+  const has = (...keys: string[]) => keys.some((k) => m.includes(k));
+  if (has("flir", "thermal", "boson")) return SENSOR_TYPE_THERMAL;
+  if (has("laser", "lrf")) return SENSOR_TYPE_LASER;
+  if (has("nvg", "night")) return SENSOR_TYPE_NVG;
+  if (has("radar", "rf-")) return SENSOR_TYPE_RF;
+  if (has("cam", "eo-", "optic")) return SENSOR_TYPE_CAMERA;
+  return SENSOR_TYPE_OTHER;
+}
+
+// XML's five predefined entities and its character references. The parser runs with
+// processEntities off, so it reads no DTD and leaves these in values; they are decoded here
+// in one pass, so a decoded `&` never starts another reference. A reference to a code point
+// XML doesn't allow is left as written.
+const XML_REFERENCE = /&(?:(lt|gt|amp|quot|apos)|#([0-9]{1,7})|#x([0-9a-fA-F]{1,6}));/g;
+const PREDEFINED_ENTITIES: Record<string, string> = { lt: "<", gt: ">", amp: "&", quot: "\"", apos: "'" };
+
+function isXmlChar(cp: number): boolean {
+  return cp === 0x9 || cp === 0xa || cp === 0xd || (cp >= 0x20 && cp <= 0xd7ff)
+    || (cp >= 0xe000 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0x10ffff);
+}
+
+function decodeXmlReferences(s: string): string {
+  if (!s.includes("&")) return s;
+  return s.replace(XML_REFERENCE, (ref: string, name?: string, dec?: string, hex?: string) => {
+    if (name !== undefined) return PREDEFINED_ENTITIES[name];
+    const cp = dec !== undefined ? Number.parseInt(dec, 10) : Number.parseInt(hex!, 16);
+    return isXmlChar(cp) ? String.fromCodePoint(cp) : ref;
+  });
+}
+
+/** Decodes the references in every attribute value and text node of a parsed tree, in place. */
+function decodeXmlReferencesIn<T>(node: T): T {
+  if (typeof node === "string") return decodeXmlReferences(node) as T;
+  if (Array.isArray(node)) {
+    node.forEach((child, i) => { node[i] = decodeXmlReferencesIn(child); });
+  } else if (node !== null && typeof node === "object") {
+    const record = node as Record<string, unknown>;
+    for (const key of Object.keys(record)) record[key] = decodeXmlReferencesIn(record[key]);
+  }
+  return node;
+}
+
 /**
  * Extract the inner bytes of the `<detail>` element from a CoT XML event,
  * exactly as they appear in the source — no XML normalization, no
@@ -188,28 +246,37 @@ function toArray<T>(x: T | T[] | undefined | null): T[] {
 }
 
 /**
- * protobufjs serializes scalar fields that are explicitly passed to
- * `create()`, even when they hold the proto3 default value (0, "", false).
- * Proto3 wire format elides defaults; this helper mimics that behavior by
- * removing keys whose values are the zero-value for their type, so the
- * resulting byte stream matches what a proto3-native encoder produces.
+ * Fields declared `optional` in atak.proto whose zero is a value rather than an
+ * absence. A proto3 encoder writes an `optional` field that was set, even at its
+ * default, so {@link stripZeros} keeps these whatever they hold. The parser says
+ * "not supplied" by leaving the key out, never by writing 0.
  *
- * Only touches the top-level keys — nested objects are left to the caller.
+ * `startEpochLo14` is the only scalar one `stripZeros` ever sees; the other
+ * `optional` fields on `TAKPacketV2` are messages, which it never removes. `start`
+ * mod 16384 is 0 for one second in every 16384 (about every 4.55 hours), and
+ * stripping that zero made a real start read as absent, so the receiver fell back
+ * to its decode time.
  */
+const PRESENCE_FIELDS: ReadonlySet<string> = new Set(["startEpochLo14"]);
+
 /**
  * protobufjs serializes scalar fields that are explicitly passed to
  * `create()`, even when they hold the proto3 default value (0, "", false).
  * Proto3 wire format elides defaults; this helper mimics that behavior by
  * removing keys whose values are the zero-value for their type, so the
  * resulting byte stream matches what a proto3-native encoder produces.
+ * Fields in {@link PRESENCE_FIELDS} are kept even at zero, because proto3
+ * does not elide an `optional` field that was set.
  *
  * Only touches the top-level keys — nested objects are left to the caller.
  */
 function stripZeros<T extends object>(obj: T): T {
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-    if (v === 0 || v === "" || v === false) continue;
-    if (Array.isArray(v) && v.length === 0) continue;
+    if (!PRESENCE_FIELDS.has(k)) {
+      if (v === 0 || v === "" || v === false) continue;
+      if (Array.isArray(v) && v.length === 0) continue;
+    }
     result[k] = v;
   }
   return result as T;
@@ -227,6 +294,164 @@ function makeGeoPoint(latDeltaI: number, lonDeltaI: number): CotGeoPoint {
   return gp;
 }
 
+// --- <environment> / <sensor> attribute helpers ---------------------------
+
+const INT32_MIN = -2147483648;
+const INT32_MAX = 2147483647;
+const DECIMAL_RE = /^[\t\n\v\f\r ]*[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[\t\n\v\f\r ]*$/;
+const INTEGER_RE = /^[+-]?[0-9]+$/;
+
+/** A string attribute of a fast-xml-parser node. A bare `<sensor/>` arrives as "". */
+function attrOf(node: unknown, name: string): string | undefined {
+  if (node === null || typeof node !== "object") return undefined;
+  const v = (node as Record<string, unknown>)[`@_${name}`];
+  return typeof v === "string" ? v : undefined;
+}
+
+/**
+ * Kotlin's `String.toDoubleOrNull()` for plain decimals. `parseFloat` reads
+ * "12abc" as 12 and `Number("")` is 0, so the shape is checked first.
+ */
+function parseDecimal(raw: string | undefined): number | undefined {
+  if (raw === undefined || !DECIMAL_RE.test(raw)) return undefined;
+  const d = Number(raw);
+  // Deliberate deviation: Kotlin throws on NaN and clamps Infinity; both count as absent here.
+  return Number.isFinite(d) ? d : undefined;
+}
+
+/** Kotlin's `String.toIntOrNull()`: optional sign, ASCII digits only, int32 range. */
+function parseInt32(raw: string | undefined): number | undefined {
+  if (raw === undefined || !INTEGER_RE.test(raw)) return undefined;
+  const n = Number(raw);
+  return n >= INT32_MIN && n <= INT32_MAX ? n | 0 : undefined;
+}
+
+/**
+ * Kotlin's `Double.roundToInt()`: halves round up (-2.5 -> -2), clamped to
+ * int32. `| 0` folds -0 into 0.
+ */
+function roundToInt(d: number): number {
+  return Math.min(INT32_MAX, Math.max(INT32_MIN, Math.round(d))) | 0;
+}
+
+/** A plain decimal rounded by {@link roundToInt}, or undefined. */
+function parseRounded(raw: string | undefined): number | undefined {
+  const d = parseDecimal(raw);
+  return d === undefined ? undefined : roundToInt(d);
+}
+
+// The uint32 fields below take the int32 as is: protobufjs writes it `>>> 0`,
+// the same bits Wire writes for Kotlin's Int. None of these messages goes
+// through stripZeros: it would drop a present rangeM of 0, and keeping every
+// field lets a parsed message compare equal to a decoded one. protobufjs 8
+// already skips zero fields on encode.
+
+/** One `<environment>` element, or undefined when none of its attributes parses. */
+function parseEnvironment(node: unknown): TAKEnvironment | undefined {
+  const temperature = parseDecimal(attrOf(node, "temperature"));
+  const windDirection = parseInt32(attrOf(node, "windDirection"));
+  const windSpeed = parseDecimal(attrOf(node, "windSpeed"));
+  if (temperature === undefined && windDirection === undefined && windSpeed === undefined) {
+    return undefined;
+  }
+  return {
+    temperatureCX10: temperature === undefined ? 0 : roundToInt(temperature * 10),
+    windDirectionDeg: windDirection ?? 0,
+    windSpeedCmS: windSpeed === undefined ? 0 : roundToInt(windSpeed * 100),
+  };
+}
+
+/**
+ * One `<sensor>` element. Present even with no attributes: azimuth and fov fall
+ * back to ATAK-CIV's 270 and 45, and `type` is inferred from `model`, never read.
+ */
+function parseSensor(node: unknown): SensorFov {
+  const whole = (name: string): number | undefined => parseRounded(attrOf(node, name));
+  const model = attrOf(node, "model") ?? "";
+  const range = whole("range");
+  return {
+    type: inferSensorType(model),
+    azimuthDeg: whole("azimuth") ?? 270,
+    // proto3 `optional`: set only when it parses, so range="0" stays distinct from no range.
+    ...(range === undefined ? {} : { rangeM: range }),
+    fovHorizontalDeg: whole("fov") ?? 45,
+    fovVerticalDeg: whole("vfov") ?? 0,
+    elevationDeg: whole("elevation") ?? 0,
+    rollDeg: whole("roll") ?? 0,
+    model,
+  };
+}
+
+// --- <__detection> ----------------------------------------------------------
+
+// TAKDetection enum tokens, indexed by value: each value's name in lowercase
+// snake_case. CotXmlBuilder mirrors these tables.
+const DETECTION_KINDS = ["unspecified", "uas", "uas_operator", "uas_home", "person", "vehicle", "other"];
+const DETECTION_STATES = ["unspecified", "new", "active", "coasting", "lost"];
+const DETECTION_TRENDS = ["unspecified", "closing", "steady", "opening"];
+const DETECTION_UAS_ID_TYPES = ["unspecified", "serial_number", "caa_registration", "utm_assigned", "specific_session"];
+const DETECTION_UAS_STATUSES = ["unspecified", "ground", "airborne", "emergency", "system_failure"];
+/** TAKDetection.Source tokens by bit position: index i names the bit `1 << i`. */
+const DETECTION_SOURCES = ["remote_id", "rf", "acoustic", "radar", "optical", "thermal", "seismic", "magnetic"];
+const DETECTION_KIND_UAS = 1;
+/** CoT's "unknown" circular error: a `<point ce>` this large carries no cep. */
+const UNKNOWN_CE = 9999999;
+const UAS_ID_MAX_BYTES = 20;
+const UAS_ID_HEX_PREFIX = "hex:";
+
+/**
+ * A `uasId` attribute's bytes, read trimmed like every attribute of the element: hex after `hex:`
+ * (in any case), else the text's UTF-8, cut to 20. A hex value whose rest is not an even number of
+ * hex digits gives no ID.
+ */
+function parseUasId(value: string | undefined): Buffer {
+  if (value === undefined) return Buffer.alloc(0);
+  const raw = value.trim();
+  if (raw.slice(0, UAS_ID_HEX_PREFIX.length).toLowerCase() === UAS_ID_HEX_PREFIX) {
+    const digits = raw.slice(UAS_ID_HEX_PREFIX.length);
+    if (digits.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(digits)) return Buffer.alloc(0);
+    return Buffer.from(Buffer.from(digits, "hex").subarray(0, UAS_ID_MAX_BYTES));
+  }
+  return Buffer.from(Buffer.from(raw, "utf8").subarray(0, UAS_ID_MAX_BYTES));
+}
+
+/** An enum token's value, ignoring case; an absent or unknown token is 0 (unspecified). */
+function detectionToken(raw: string | undefined, tokens: readonly string[]): number {
+  const i = raw === undefined ? -1 : tokens.indexOf(raw.trim().toLowerCase());
+  return i < 0 ? 0 : i;
+}
+
+/**
+ * One `<__detection>` element. Present even with no attributes: absent numbers
+ * and unknown tokens read as 0. `pointCe` is the event's `<point ce>`, which
+ * stands in for a missing `cep`.
+ */
+function parseDetection(node: unknown, pointCe: string | undefined): TAKDetection {
+  const kind = detectionToken(attrOf(node, "kind"), DETECTION_KINDS);
+  let sources = 0;
+  // Split on ASCII whitespace, as Java's `\s` does; unknown tokens are skipped.
+  for (const token of (attrOf(node, "sources") ?? "").trim().split(/[\t\n\v\f\r ]+/)) {
+    const bit = DETECTION_SOURCES.indexOf(token.toLowerCase());
+    if (bit >= 0) sources |= 1 << bit;
+  }
+  const ce = parseRounded(pointCe);
+  const cep = parseRounded(attrOf(node, "cep")) ?? (ce !== undefined && ce < UNKNOWN_CE ? ce : 0);
+  return {
+    kind,
+    sources,
+    confidence: Math.min(100, Math.max(0, parseRounded(attrOf(node, "confidence")) ?? 0)),
+    state: detectionToken(attrOf(node, "state"), DETECTION_STATES),
+    trend: detectionToken(attrOf(node, "trend"), DETECTION_TRENDS),
+    count: Math.max(0, parseRounded(attrOf(node, "count")) ?? 0),
+    sensorAnchored: attrOf(node, "sensorAnchored")?.trim().toLowerCase() === "true",
+    cepM: Math.max(0, cep),
+    rssiDbm: parseRounded(attrOf(node, "rssi")) ?? 0,
+    uasId: kind === DETECTION_KIND_UAS ? parseUasId(attrOf(node, "uasId")) : Buffer.alloc(0),
+    uasIdType: detectionToken(attrOf(node, "uasIdType"), DETECTION_UAS_ID_TYPES),
+    uasStatus: detectionToken(attrOf(node, "uasStatus"), DETECTION_UAS_STATUSES),
+  };
+}
+
 /**
  * Parse a CoT XML event string into a {@link TAKPacketV2} data object.
  *
@@ -236,8 +461,8 @@ function makeGeoPoint(latDeltaI: number, lonDeltaI: number): CotGeoPoint {
  * drawn shape, marker, range-and-bearing, route, casevac, emergency, task, or
  * TAKTALK message/room. An event with no recognized payload (and an `a-f-*`
  * type) yields an implicit PLI: a packet with no payload variant set. Optional
- * top-level annotations (`environment`, `sensorFov`, `marti` directed-routing
- * recipients) attach to any event type.
+ * top-level annotations (`environment`, `sensorFov`, `detection`, `marti`
+ * directed-routing recipients) attach to any event type.
  *
  * @remarks
  * Field values are converted to the protobuf wire units: `latitudeI`/
@@ -250,7 +475,9 @@ function makeGeoPoint(latDeltaI: number, lonDeltaI: number): CotGeoPoint {
  * ~20 wire bytes. Unknown CoT types are carried as `cotTypeStr` so they round-trip.
  *
  * For XXE safety the parser rejects any input containing a `<!DOCTYPE` or
- * `<!ENTITY>` declaration and does not process entities.
+ * `<!ENTITY>` declaration and reads no DTD. It decodes XML's five predefined
+ * entities and its character references in values itself, as the other
+ * bindings' XML parsers do.
  *
  * @param cotXml - A CoT XML event string (the document must contain an
  *                 `<event>` element).
@@ -283,7 +510,7 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
     textNodeName: "#text",
     processEntities: false,
   });
-  const doc = parser.parse(cotXml);
+  const doc = decodeXmlReferencesIn(parser.parse(cotXml));
   const event = doc.event;
   if (!event) throw new Error("No <event> element found");
 
@@ -502,14 +729,18 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
     }
   }
 
-  // Compute stale seconds
+  // Compute stale seconds as Kotlin does: each timestamp is rounded down to whole
+  // epoch seconds before subtracting, so 00.900 to 02.100 is 2 seconds, where
+  // rounding the 1.2-second difference gives 1. Capped at 2^31 - 1 (about 68
+  // years): the Kotlin binding keeps stale_seconds in a signed Int, so it reads
+  // anything larger back as negative.
   const timeStr = event["@_time"] ?? "";
   const staleStr = event["@_stale"] ?? "";
   let staleSeconds = 0;
   if (timeStr && staleStr) {
-    const t = new Date(timeStr).getTime();
-    const s = new Date(staleStr).getTime();
-    if (s > t) staleSeconds = Math.round((s - t) / 1000);
+    const t = Math.floor(new Date(timeStr).getTime() / 1000);
+    const s = Math.floor(new Date(staleStr).getTime() / 1000);
+    if (s > t) staleSeconds = Math.min(s - t, 0x7fffffff);
   }
 
   // Carry the event's `start` so a receiver can tell how old the report is.
@@ -1131,6 +1362,20 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
   // Chat uses GeoChat.message for the text; remarks stays empty.
   if (!hasChat && remarksText) {
     pkt.remarks = remarksText;
+  }
+
+  // Weather and sensor-cone annotations, payload-agnostic like marti. A later
+  // <environment> that parses replaces an earlier one; the last <sensor> wins.
+  for (const node of toArray<unknown>(detail.environment)) {
+    const environment = parseEnvironment(node);
+    if (environment) pkt.environment = environment;
+  }
+  const sensors = toArray<unknown>(detail.sensor);
+  if (sensors.length > 0) pkt.sensorFov = parseSensor(sensors[sensors.length - 1]);
+  // Passive-sensor detection, payload-agnostic too. The last <__detection> wins.
+  const detections = toArray<unknown>(detail.__detection);
+  if (detections.length > 0) {
+    pkt.detection = parseDetection(detections[detections.length - 1], attrOf(point, "ce"));
   }
 
   // Directed-routing recipients. Only attach the Marti message when there

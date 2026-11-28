@@ -25,3 +25,10 @@ export function loadGolden(name: string): Buffer | null {
   if (!fs.existsSync(p)) return null;
   return fs.readFileSync(p);
 }
+
+/** Kotlin's serialized TAKPacketV2 for a fixture, before compression. */
+export function loadGoldenProtobuf(name: string): Buffer | null {
+  const p = path.join(TESTDATA, "protobuf", `${name}.pb`);
+  if (!fs.existsSync(p)) return null;
+  return fs.readFileSync(p);
+}

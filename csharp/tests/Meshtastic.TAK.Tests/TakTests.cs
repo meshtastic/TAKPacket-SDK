@@ -36,6 +36,10 @@ public class TakTests
         return File.Exists(path) ? File.ReadAllBytes(path) : null;
     }
 
+    // Kotlin's intermediate protobuf bytes for a fixture (testdata/protobuf/<name>.pb).
+    private byte[] LoadProtobuf(string name) =>
+        File.ReadAllBytes(Path.Combine(TestDataDir, "protobuf", $"{name}.pb"));
+
     // === CotTypeMapper ===
 
     [Fact]
@@ -146,6 +150,8 @@ public class TakTests
         Assert.Equal(
             pkt.Marti?.DestCallsign?.ToArray() ?? Array.Empty<string>(),
             dec.Marti?.DestCallsign?.ToArray() ?? Array.Empty<string>());
+        // Passive-sensor detection annotation; null on both sides when absent.
+        Assert.Equal(pkt.Detection, dec.Detection);
 
         // Payload-specific field assertions
         Assert.Equal(pkt.PayloadVariantCase, dec.PayloadVariantCase);
@@ -415,6 +421,221 @@ public class TakTests
         Assert.Equal(Meshtastic.Protobufs.CotType.AFGUC, dec.CotTypeId);
         Assert.Equal("TEST", dec.Callsign);
         Assert.Equal(340522000, dec.LatitudeI);
+    }
+
+    // === Environment / SensorFov annotations ===
+    //
+    // <environment> and <sensor> attach to any event. The expectations are Kotlin's
+    // behavior after a wire round trip, which is what a mesh receiver sees. Decimals
+    // print through the builder's F(), so 12.0 is written "12" where Kotlin writes "12.0".
+
+    private static string CotWithDetail(string detail) =>
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+        "<event version=\"2.0\" uid=\"ALPHA-1-UID\" type=\"a-f-G-U-C\" how=\"m-g\" " +
+        "time=\"2026-03-15T16:12:00Z\" start=\"2026-03-15T16:12:00Z\" stale=\"2026-03-15T16:12:45Z\">" +
+        "<point lat=\"38.8895\" lon=\"-77.0353\" hae=\"0.0\" ce=\"9999999.0\" le=\"9999999.0\"/>" +
+        $"<detail><contact callsign=\"ALPHA-1\"/>{detail}</detail></event>";
+
+    private TAKPacketV2 ParseDetail(string detail) => _parser.Parse(CotWithDetail(detail));
+
+    private string RebuildOverWire(TAKPacketV2 pkt) =>
+        new CotXmlBuilder().Build(_compressor.Decompress(_compressor.Compress(pkt)));
+
+    private static void AssertPliWithSensorAnnotations(TAKPacketV2 pkt)
+    {
+        var env = pkt.Environment;
+        Assert.NotNull(env);
+        Assert.Equal(225, env.TemperatureCX10);
+        Assert.Equal(270u, env.WindDirectionDeg);
+        Assert.Equal(1200u, env.WindSpeedCmS);
+
+        var s = pkt.SensorFov;
+        Assert.NotNull(s);
+        Assert.Equal(SensorFov.Types.SensorType.Thermal, s.Type);
+        Assert.Equal(45u, s.AzimuthDeg);
+        Assert.True(s.HasRangeM, "range was set in the fixture");
+        Assert.Equal(2500u, s.RangeM);
+        Assert.Equal(45u, s.FovHorizontalDeg);
+        Assert.Equal(30u, s.FovVerticalDeg);
+        Assert.Equal(-5, s.ElevationDeg);
+        Assert.Equal(0, s.RollDeg);
+        Assert.Equal("FLIR-Boson-640", s.Model);
+    }
+
+    [Fact]
+    public void PliWithSensor_AnnotationsSurviveTheWireAndTheRebuild()
+    {
+        var pkt = _parser.Parse(LoadXml("pli_with_sensor"));
+        // The annotations don't perturb payload dispatch: still an implicit PLI.
+        Assert.Equal(TAKPacketV2.PayloadVariantOneofCase.None, pkt.PayloadVariantCase);
+        AssertPliWithSensorAnnotations(pkt);
+
+        var dec = _compressor.Decompress(_compressor.Compress(pkt));
+        AssertPliWithSensorAnnotations(dec);
+
+        // Both elements sit right after <uid Droid>, environment first, one per line.
+        var xml = new CotXmlBuilder().Build(dec);
+        var lines = xml.Split('\n').Select(l => l.Trim()).ToList();
+        var uidLine = lines.IndexOf("<uid Droid=\"OBSERVER-07\"/>");
+        Assert.True(uidLine >= 0, "rebuilt XML lost <uid Droid>");
+        Assert.Equal("<environment temperature=\"22.5\" windDirection=\"270\" windSpeed=\"12\"/>", lines[uidLine + 1]);
+        var sensorLine = lines[uidLine + 2];
+        Assert.Equal(
+            "<sensor azimuth=\"45\" range=\"2500\" fov=\"45\" vfov=\"30\" elevation=\"-5\" model=\"FLIR-Boson-640\"/>",
+            sensorLine);
+        Assert.DoesNotContain(" type=", sensorLine);
+
+        AssertPliWithSensorAnnotations(_parser.Parse(xml));
+    }
+
+    [Fact]
+    public void PliWithSensor_ProtobufMatchesTheKotlinGolden()
+    {
+        // Protobuf serialization is deterministic, so the parsed packet must
+        // serialize to exactly the bytes Kotlin wrote for this fixture. The
+        // fixture's start is months old, so neither side encodes start_epoch_lo14
+        // and the comparison doesn't depend on the clock.
+        var pkt = _parser.Parse(LoadXml("pli_with_sensor"));
+        Assert.Equal(LoadProtobuf("pli_with_sensor"), pkt.ToByteArray());
+    }
+
+    [Fact]
+    public void Sensor_WithNoAttributes_TakesTheKotlinDefaults()
+    {
+        var pkt = ParseDetail("<sensor/>");
+        var s = pkt.SensorFov;
+        Assert.NotNull(s);
+        Assert.Equal(270u, s.AzimuthDeg);
+        Assert.Equal(45u, s.FovHorizontalDeg);
+        Assert.False(s.HasRangeM, "an absent range must stay absent");
+        Assert.Equal(0u, s.FovVerticalDeg);
+        Assert.Equal(0, s.ElevationDeg);
+        Assert.Equal(0, s.RollDeg);
+        Assert.Equal("", s.Model);
+        Assert.Equal(SensorFov.Types.SensorType.Unspecified, s.Type);
+        Assert.Contains("<sensor azimuth=\"270\" fov=\"45\" elevation=\"0\"/>", RebuildOverWire(pkt));
+    }
+
+    [Fact]
+    public void Environment_TemperatureOnly_LeavesTheWindAtZero()
+    {
+        var pkt = ParseDetail("<environment temperature=\"-3\"/>");
+        Assert.NotNull(pkt.Environment);
+        Assert.Equal(-30, pkt.Environment.TemperatureCX10);
+        Assert.Equal(0u, pkt.Environment.WindDirectionDeg);
+        Assert.Equal(0u, pkt.Environment.WindSpeedCmS);
+        Assert.Contains("<environment temperature=\"-3\"/>", RebuildOverWire(pkt));
+    }
+
+    [Theory]
+    [InlineData("<environment windDirection=\"270.5\"/>")] // windDirection must be a plain Int
+    [InlineData("<environment windDirection=\" 270\"/>")]  // with no whitespace
+    [InlineData("<environment/>")]
+    [InlineData("<environment temperature=\"abc\"/>")]
+    [InlineData("<environment temperature=\"NaN\"/>")]     // NaN and Infinity read as absent
+    [InlineData("<environment temperature=\"1e400\"/>")]
+    public void Environment_WithNothingParseable_IsAbsent(string element)
+    {
+        var pkt = ParseDetail(element);
+        Assert.Null(pkt.Environment);
+        Assert.DoesNotContain("<environment", RebuildOverWire(pkt));
+    }
+
+    [Fact]
+    public void Annotations_RoundHalvesUpLikeKotlinRoundToInt()
+    {
+        var s = ParseDetail("<sensor azimuth=\"44.5\" elevation=\"-2.5\"/>").SensorFov;
+        Assert.Equal(45u, s.AzimuthDeg);
+        Assert.Equal(-2, s.ElevationDeg); // toward +infinity, not away from zero
+        // Java's Math.round gives 0 here; floor(d + 0.5) would give 1.
+        Assert.Equal(0, ParseDetail("<sensor roll=\"0.49999999999999994\"/>").SensorFov.RollDeg);
+        // 22.45 * 10 is exactly 224.5 as a double, so this is 225 (banker's rounding gives 224).
+        Assert.Equal(225, ParseDetail("<environment temperature=\"22.45\"/>").Environment.TemperatureCX10);
+        // 1.005 * 100 is 100.49999999999999 as a double: the double product is rounded, not the decimal.
+        Assert.Equal(100u, ParseDetail("<environment windSpeed=\"1.005\"/>").Environment.WindSpeedCmS);
+    }
+
+    [Theory]
+    [InlineData("45", 45u)]
+    [InlineData(" 45 ", 45u)]          // surrounding whitespace is allowed for a double
+    [InlineData("+45", 45u)]
+    [InlineData("2500.0", 2500u)]
+    [InlineData(".5", 1u)]
+    [InlineData("5.", 5u)]
+    [InlineData("1e3", 1000u)]
+    [InlineData("-5", 4294967291u)]    // uint32 takes the Int32's two's-complement bits
+    [InlineData("", 270u)]             // anything unparseable falls back to the default
+    [InlineData("abc", 270u)]
+    [InlineData("4,5", 270u)]
+    [InlineData("0x10", 270u)]
+    [InlineData("NaN", 270u)]          // NaN and Infinity read as absent, where Kotlin
+    [InlineData("Infinity", 270u)]     // throws or clamps: the deliberate deviation
+    [InlineData("1e400", 270u)]        // overflows to Infinity
+    public void Sensor_AzimuthParsesAsAnOrdinaryDecimal(string raw, uint expected)
+    {
+        Assert.Equal(expected, ParseDetail($"<sensor azimuth=\"{raw}\"/>").SensorFov.AzimuthDeg);
+    }
+
+    [Fact]
+    public void Annotations_UnsignedFieldsRebuildAsTheirInt32Reading()
+    {
+        var pkt = ParseDetail("<environment temperature=\"0\" windDirection=\"-90\"/><sensor azimuth=\"-10\"/>");
+        Assert.Equal(unchecked((uint)-90), pkt.Environment.WindDirectionDeg);
+        Assert.Equal(unchecked((uint)-10), pkt.SensorFov.AzimuthDeg);
+        var xml = RebuildOverWire(pkt);
+        Assert.Contains("<environment temperature=\"0\" windDirection=\"-90\"/>", xml);
+        Assert.Contains("<sensor azimuth=\"-10\" fov=\"45\" elevation=\"0\"/>", xml);
+    }
+
+    [Theory]
+    [InlineData(null, SensorFov.Types.SensorType.Unspecified)]
+    [InlineData("", SensorFov.Types.SensorType.Unspecified)]
+    [InlineData("FLIR-Boson-640", SensorFov.Types.SensorType.Thermal)]
+    [InlineData("thermal cam", SensorFov.Types.SensorType.Thermal)]
+    [InlineData("Boson", SensorFov.Types.SensorType.Thermal)]
+    [InlineData("LRF-3000", SensorFov.Types.SensorType.Laser)]
+    [InlineData("laser", SensorFov.Types.SensorType.Laser)]
+    [InlineData("NVG-21", SensorFov.Types.SensorType.Nvg)]
+    [InlineData("night vision", SensorFov.Types.SensorType.Nvg)]
+    [InlineData("radar", SensorFov.Types.SensorType.Rf)]
+    [InlineData("rf-detector", SensorFov.Types.SensorType.Rf)]
+    [InlineData("RF-Scanner", SensorFov.Types.SensorType.Rf)]
+    [InlineData("rfscanner", SensorFov.Types.SensorType.Other)]
+    [InlineData("rf", SensorFov.Types.SensorType.Other)]
+    [InlineData("EO-IR", SensorFov.Types.SensorType.Camera)]
+    [InlineData("camera", SensorFov.Types.SensorType.Camera)]
+    [InlineData("optic", SensorFov.Types.SensorType.Camera)]
+    [InlineData("widget", SensorFov.Types.SensorType.Other)]
+    [InlineData("FLIR radar", SensorFov.Types.SensorType.Thermal)] // order matters
+    public void Sensor_TypeIsInferredFromModel(string? model, SensorFov.Types.SensorType expected)
+    {
+        var element = model == null ? "<sensor/>" : $"<sensor model=\"{model}\"/>";
+        Assert.Equal(expected, ParseDetail(element).SensorFov.Type);
+    }
+
+    [Fact]
+    public void Sensor_RangeZero_StaysPresentOverTheWire()
+    {
+        var pkt = ParseDetail("<sensor range=\"0\"/>");
+        Assert.True(pkt.SensorFov.HasRangeM, "range=\"0\" is present, not absent");
+        Assert.Equal(0u, pkt.SensorFov.RangeM);
+        Assert.Contains(" range=\"0\"", RebuildOverWire(pkt));
+    }
+
+    [Fact]
+    public void Annotations_LaterElementsReplaceEarlierOnes()
+    {
+        // An <environment> with nothing parseable keeps the earlier reading...
+        var kept = ParseDetail("<environment temperature=\"10\"/><environment windSpeed=\"abc\"/>").Environment;
+        Assert.Equal(100, kept.TemperatureCX10);
+        // ...and one that parses replaces it outright rather than merging.
+        var replaced = ParseDetail("<environment temperature=\"10\"/><environment windSpeed=\"2\"/>").Environment;
+        Assert.Equal(0, replaced.TemperatureCX10);
+        Assert.Equal(200u, replaced.WindSpeedCmS);
+        // The last <sensor> wins, and its type attribute is never read.
+        var s = ParseDetail("<sensor azimuth=\"10\" model=\"FLIR\"/><sensor type=\"Thermal\" model=\"camera\"/>").SensorFov;
+        Assert.Equal(270u, s.AzimuthDeg);
+        Assert.Equal(SensorFov.Types.SensorType.Camera, s.Type);
     }
 
     public static TheoryData<string> FixtureData()

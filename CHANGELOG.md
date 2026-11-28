@@ -10,6 +10,11 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ### Breaking
 
+- Kotlin: `TakPacketV2Data` gains a trailing `detection: DetectionData?`
+  parameter, which changes its all-args constructor and `copy()` in
+  `kotlin/api/*.api`. Kotlin source that leaves it out still compiles, after a
+  recompile. Java code that calls either must pass `null` for it, or build the
+  packet with `TakPacketV2Data.Builder` instead.
 - Kotlin: `TakPacketV2Data.Payload` has three new subclasses
   (`VoiceProfile`, `VoiceProfileRequest`, `TakTalkRoomRequest`), so an
   exhaustive `when` over a payload no longer compiles. Add branches for them,
@@ -112,19 +117,115 @@ One version covers all five bindings, so a release is a single tag and a single 
   receiver's default voice. Its constructor and `copy` gain the parameter, so
   code compiled against an earlier SDK needs recompiling. A voice profile's opaque model data is usually larger than
   one frame, so send it with `fragmentIfOversize = true` and a fragmenter whose
-  `maxSourceFragments` covers it (the default 8 carries about 1.7 KB). All three are packet-level only for
-  now: `CotXmlParser` never produces them and `CotXmlBuilder` renders just the
-  envelope. A receiver on an earlier SDK, or on the Swift, Python, TypeScript
-  or C# bindings, decodes an unfragmented one as a PLI, since it does not know
-  the arm; one without fragment support rejects a fragmented voice profile.
+  `maxSourceFragments` covers it (the default 8 carries about 1.7 KB).
+
+  All three round-trip as CoT XML the way the ATAK TAKTALK plugin writes
+  them: type `y-`, routed by UID prefix (`TAKTALK-RESPONSE-`,
+  `TAKTALK-REQUEST-`, and `ROOM-REQUEST` with no trailing hyphen), each with
+  `<sender-callsign>`, written even when the callsign is empty since the
+  plugin's receiver reads it unguarded; the room broadcast now does the same.
+  The room request adds `<chatroom-id>`; the voice profile
+  adds `<voice-data>` (Base64 in 76-character lines), `<voice-id>` and
+  `<voice-name>`. `CotXmlBuilder` adds the prefix to a UID that lacks it and,
+  like the plugin, sends these events already stale. `CotXmlParser` resolves
+  character references before decoding `<voice-data>` strictly, so a corrupt
+  profile throws `IllegalArgumentException` instead of arriving as wrong
+  bytes. The request XML has no profile ID, so a
+  `VoiceProfileRequest.voiceProfileId` doesn't survive it; set
+  `TakPacketSdk.logger` to see that and other dropped fields logged.
+
+  A receiver on an earlier SDK, or on the Swift, Python, TypeScript or C#
+  bindings, decodes an unfragmented one as a PLI, since it does not know the
+  arm; one without fragment support rejects a fragmented voice profile.
+
+- Kotlin, Swift, Python, C# and TypeScript: the `TAKPacketV2.detection`
+  annotation (tag 47), metadata for an event that reports an object a passive
+  sensor found: an uncrewed aircraft, its operator or home point, a person or a
+  vehicle. It carries the object's kind, the kinds of sensing behind the
+  report, confidence, track state and trend, a count, whether the point is the
+  sensor rather than the object, horizontal uncertainty and received power. Its
+  only identifier is the UAS ID that Remote ID broadcasts, which every binding
+  keeps only for kind `uas`, in CoT XML and in the compressors alike. It travels
+  as up to 20 bytes, so the binary UUID and session-ID forms survive as well as
+  text serial numbers. Affiliation stays in the CoT type.
+
+  In CoT XML it is one `<__detection>` child of `<detail>`, parsed and built
+  the same way in all five bindings; `WIRE_FORMAT.md` has the attributes and
+  tokens. A text UAS ID is written as itself and any other as `hex:` and its
+  bytes, and it is read trimmed, like the element's other attributes. Its `cep`
+  is also written as the event's `<point ce>`; events
+  without the annotation keep `ce="9999999"`. Four new fixtures cover it.
+
+  The compressors send a detection that is not an aircraft track with the
+  non-aircraft dictionary, whatever its CoT type. By type alone an `a-u-A-…`
+  UAS marker would take the 4 KB aircraft dictionary, which is built for
+  aircraft tracks; the two UAS fixtures come out 22 and 13 bytes smaller this
+  way, at 156 and 140 bytes. An aircraft track is still picked by its type.
+  Receivers need no change, since the dictionary ID travels in the flags byte,
+  and `selectDictId` itself still picks by type alone.
+
+  Wire-compatible: the field is optional, so an older peer skips it, and no
+  existing golden changes. Firmware never reads it (`FT_IGNORE` in
+  `atak.options`).
+
+  Kotlin: `DetectionData` has a Java-friendly `Builder`, and `TakPacketV2Data`
+  takes it as a new trailing parameter (see Breaking). No published
+  `org.meshtastic:protobufs` has `TAKDetection` yet, so Kotlin writes and reads
+  the field itself and stays on 2.8.3: consumers need no newer `protobufs`.
+
+  The Swift, Python and C# generated classes are regenerated for it, which also
+  brings in `VoiceProfile`, `VoiceProfileRequest` and `TakTalkRoomRequest`
+  (tags 44-46) and `FieldMetadata.sensitive`: earlier submodule bumps never
+  regenerated them. Nothing hand-written in those bindings uses them yet.
 
 ### Changed
+
+- All bindings: `CotXmlBuilder` no longer writes `how="null"` for TAKTALK
+  `m-t-t` and `y-` events; a missing `how` falls back to `"m-g"` for every type.
+
+- Kotlin: a TAKTALK message's `<voice>` element now carries
+  `TakTalk.voiceProfileId` as its body, and `CotXmlBuilder` writes it for
+  every `m-t-t`, `<voice/>` when there is no ID. `CotXmlParser` reads the ID
+  from it and no longer sets `fromVoice` from the element being present:
+  `fromVoice` has no CoT XML counterpart, so a parsed message has it false and
+  the builder doesn't render it. The two `<voice/>` fixtures' goldens change
+  accordingly (`from_voice` is no longer set). The Swift, Python, TypeScript
+  and C# parsers still set `from_voice` from `<voice>` and ignore its body.
 
 - Kotlin: `org.meshtastic:protobufs` 2.8.3, for the TAKTALK voice profile and
   request messages.
   Consumers that pin their own `protobufs` need 2.8.3 or later.
 
 ### Fixed
+
+- TypeScript: `parseCotXml` now decodes XML's predefined entities and its
+  character references in attribute values and text, as the other bindings'
+  parsers do. It left them encoded, so `A &amp; B` reached the packet as
+  written rather than as `A & B`. It still rejects DOCTYPE and ENTITY
+  declarations.
+- Swift, Python, C# and TypeScript: `CotXmlParser` now reads `<environment>`
+  and `<sensor>`, and `CotXmlBuilder` writes them back, as Kotlin always has.
+  These four bindings dropped both elements on parse, and never rebuilt one
+  they received from a Kotlin sender. The rules are Kotlin's: a bare
+  `<sensor/>` has azimuth 270 and fov 45, the sensor type is inferred from
+  `model` (only `radar` or `rf-` gives RF), `range` stays unset unless it
+  parses, and the builder never writes a `type`. All five bindings now
+  produce the same protobuf for the `pli_with_sensor` fixture, byte for byte.
+
+- Kotlin: `CotXmlParser` dropped entity references from element bodies, so
+  `A &amp; B` parsed as `A  B` and `&#65;` disappeared, in every text field.
+  The reader now expands them. Declared entities are still refused; an
+  undeclared reference is malformed XML and now throws
+  `IllegalArgumentException`.
+
+- Python: `CotXmlBuilder` left `"` unescaped in attribute values, so a
+  callsign, UID, chatroom, marti `dest` callsign, iconset path or any other
+  value containing one ended its attribute early, and the receiver couldn't
+  parse the event. It now escapes `& < > " '` as
+  `&amp; &lt; &gt; &quot; &apos;` in every attribute value and element body,
+  as the Kotlin, Swift, TypeScript and C# builders do. Element text such as
+  `<remarks>` therefore carries `&quot;` and `&apos;` where it had bare quotes;
+  it parses back to the same text.
 
 - The documented LoRa MTU is now 225 bytes, not 237, in `WIRE_FORMAT.md`, every
   binding's README and API docs, and each binding's compression tests.
@@ -138,6 +239,62 @@ One version covers all five bindings, so a release is a single tag and a single 
   No wire format or API changes. All 47 fixtures fit, the largest being 193
   bytes. Callers that sized `maxWireBytes` from the old documentation should
   use 225.
+
+- TypeScript: `parseCotXml` dropped `startEpochLo14` when the event's `start`
+  was 0 mod 16384, one second in every 16384 (about every 4.55 hours), so the
+  receiver rebuilt that event with its own decode time instead of the sender's
+  `start`. The parser's final `stripZeros` pass removes proto3 default values
+  and took that 0 for one, though `start_epoch_lo14` is `optional` precisely so
+  a zero stays distinct from no value. The pass now keeps it, as the Kotlin,
+  Swift, Python and C# parsers already did. No wire format or API changes.
+
+- C#: `CotXmlBuilder` now writes the same XML whatever the current culture is.
+  Integers were formatted in the current culture, so under sv-SE, nb-NO or
+  fi-FI a negative altitude or ARGB color came out with a U+2212 minus
+  (`hae="−22"`), and under ar-SA, fa-IR or he-IL with a bidi mark in front of
+  it. No binding's parser reads either form back, and the C# parser throws on
+  it. The `time`, `start` and `stale` timestamps used the culture's time
+  separator and calendar: fi-FI and da-DK wrote `06.28.05`, th-TH put the year
+  543 years ahead, and ar-SA and fa-IR wrote Hijri and Persian dates, which a
+  receiver reads as an event that went stale centuries ago.
+
+- C#, Python and Swift: `CotXmlParser` now rounds like Kotlin, with a half
+  going toward positive infinity (Java's `Math.round`), so every scaled field
+  gets the same integer as in Kotlin's protobuf. C# rounded latitude,
+  longitude, speed and course half to even, so `course="0.125"` gave 12 where
+  Kotlin gives 13, and truncated altitude, RSSI, ellipse radii, stroke weight,
+  bullseye distance and range and bearing. Python truncated those and speed
+  and course as well, and rounded latitude and longitude half to even. Swift
+  truncated the same fields as C#, and rounded the other four with a negative
+  half away from zero, so `lon="-77.03530015"` gave -770353002 where Kotlin
+  gives -770353001. In all three, `hae="-29.667"` gave -29 where Kotlin gives
+  -30, and three fixtures (`pli_full`, `chat_taktalk_dm`,
+  `chat_taktalk_voice_profile`) parsed to a different altitude than their
+  Kotlin goldens.
+
+  Out-of-range and NaN values no longer crash Swift or make Python raise.
+  Swift stopped with a fatal conversion error on `hae="1e10"`, `hae="NaN"` or
+  `speed="1e10"`, and Python raised `ValueError` or `OverflowError`. A value
+  too large for its field now clamps to the Int32 range, as in Kotlin, and a
+  NaN gives 0, where Kotlin's parser rejects the event.
+
+- All bindings: `CotXmlParser` computes `stale_seconds` the same way. C#,
+  Python, Swift and TypeScript now round `time` and `stale` each down to
+  whole epoch seconds before subtracting, as Kotlin does. C#, Python and
+  Swift truncated the difference and TypeScript rounded it, so they could be
+  a second off Kotlin whenever the two timestamps had different fractions:
+  `00.900` to `02.100` gave 1 where Kotlin gives 2, and TypeScript gave 2 for
+  `00.100` to `01.900` where Kotlin gives 1.
+
+  A span longer than about 68 years now caps at 2,147,483,647 seconds in all
+  five, as it already did in C#. Kotlin keeps `stale_seconds` in a signed
+  Int, so a receiver on the Kotlin binding reads a larger value as negative
+  and marks the event stale 45 seconds after it arrives. Kotlin's own parser
+  gave a negative `staleSeconds` for a span of 68 to 136 years, so those
+  events went stale 45 seconds after reaching another Kotlin client, and it
+  wrapped a longer span around to a shorter one: 174 years came out as about
+  38. Swift crashed on a span over about 136 years and Python raised
+  `ValueError` on one.
 
 ## [0.10.0] - 2026-10-31
 

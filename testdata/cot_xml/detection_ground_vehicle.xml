@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="cf0d1bbf-c9f1-4985-88aa-3c1a807f62b9" type="a-u-G-E-V" how="m-r" time="2026-03-15T15:00:00Z" start="2026-03-15T15:00:00Z" stale="2026-03-15T15:01:00Z">
+  <point lat="33.1219" lon="-107.2488" hae="1288.0" ce="25.0" le="9999999.0"/>
+  <detail>
+    <contact callsign="VEHICLE-1"/>
+    <link uid="ANDROID-0000000000000012" type="a-f-G-E-S" parent_callsign="SENSOR-1" relation="p-p"/>
+    <track speed="6.2" course="270.0"/>
+    <__detection kind="vehicle" sources="acoustic seismic" confidence="72" state="active" trend="opening" count="2" cep="25"/>
+  </detail>
+</event>

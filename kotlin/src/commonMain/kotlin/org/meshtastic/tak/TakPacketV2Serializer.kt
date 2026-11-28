@@ -1,5 +1,6 @@
 package org.meshtastic.tak
 
+import com.squareup.wire.FieldEncoding
 import okio.ByteString.Companion.toByteString
 import org.meshtastic.proto.AircraftTrack
 import org.meshtastic.proto.CasevacReport
@@ -429,6 +430,11 @@ public object TakPacketV2Serializer {
                     // the source packet had no <environment> / <sensor> element).
                     wb.environment = environmentField
                     wb.sensor_fov = sensorFovField
+                    // Field 47 has no generated type in the protobufs this builds on;
+                    // DetectionWire writes it, and unknown fields go out after the rest.
+                    data.detection?.let {
+                        wb.addUnknownField(DetectionWire.TAG, FieldEncoding.LENGTH_DELIMITED, DetectionWire.encode(it))
+                    }
                     // Directed-routing recipients (<marti><dest callsign='X'/>…</marti>).
                     // null = broadcast; non-null Marti carries 1+ dest callsigns.
                     wb.marti = martiField
@@ -734,6 +740,7 @@ public object TakPacketV2Serializer {
             // (broadcast packet) or when it has no dest_callsign entries.
             marti = proto.marti?.dest_callsign?.toList() ?: emptyList(),
             payload = payload,
+            detection = DetectionWire.read(bytes),
         )
     }
 

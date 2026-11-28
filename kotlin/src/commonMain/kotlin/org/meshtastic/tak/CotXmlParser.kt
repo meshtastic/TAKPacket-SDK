@@ -24,7 +24,9 @@ public class CotXmlParser {
      *
      * @throws IllegalArgumentException if the XML contains a prohibited DOCTYPE
      *         or ENTITY declaration (XXE / entity-expansion guard) or is
-     *         otherwise unparseable.
+     *         otherwise unparseable, or if a TAKTALK voice profile's
+     *         `<voice-data>` is not valid Base64 (decoded strictly, so a corrupt
+     *         profile fails here rather than arriving as wrong bytes).
      */
     @Throws(IllegalArgumentException::class)
     public fun parse(cotXml: String): TakPacketV2Data = parse(cotXml, Limits.SINGLE_FRAME)
@@ -49,7 +51,11 @@ public class CotXmlParser {
             throw IllegalArgumentException("XML contains prohibited DOCTYPE or ENTITY declaration")
         }
 
-        val reader = xmlStreaming.newReader(cotXml)
+        // expandEntities: otherwise the reader hands &amp;, &lt;, &#10; and the like over as
+        // ENTITY_REF events, which the text handler below never sees, and they vanish from
+        // element bodies ("A &amp; B" parsed as "A  B"). Declared entities are still refused
+        // by the guard above; an undeclared reference is malformed XML and now throws.
+        val reader = xmlStreaming.newReader(cotXml, expandEntities = true)
 
         var uid = ""
         var cotTypeStr = ""
@@ -99,7 +105,16 @@ public class CotXmlParser {
         var talkText = ""
         var talkChatroomId = ""
         var talkLang = ""
-        var fromVoice = false
+        var talkVoiceProfileId = ""
+        var inTaktalkVoice = false
+
+        // --- TAKTALK voice profile (y-, TAKTALK-RESPONSE-) accumulators --
+        var voiceDataText = ""
+        var voiceId = ""
+        var voiceName = ""
+        var inVoiceData = false
+        var inVoiceId = false
+        var inVoiceName = false
         var inTaktalkText = false
         var inTaktalkChatroomId = false
         var inTaktalkLang = false
@@ -243,6 +258,12 @@ public class CotXmlParser {
         var environmentData: TakPacketV2Data.EnvironmentData? = null
         var sensorFovData: TakPacketV2Data.SensorFovData? = null
 
+        // --- Detection annotation; <point ce> backs up its cep ----------
+        // The element's attributes are held until the event ends, so a <point>
+        // that comes after <detail> still backs up a missing cep.
+        var detectionAttributes: Map<String, String?>? = null
+        var pointCe: String? = null
+
         try {
             while (reader.hasNext()) {
                 when (reader.next()) {
@@ -266,6 +287,7 @@ public class CotXmlParser {
                                 lat = reader.getAttributeValue(null, "lat")?.toDoubleOrNull() ?: 0.0
                                 lon = reader.getAttributeValue(null, "lon")?.toDoubleOrNull() ?: 0.0
                                 hae = reader.getAttributeValue(null, "hae")?.toDoubleOrNull() ?: 0.0
+                                pointCe = reader.getAttributeValue(null, "ce")
                             }
 
                             "detail" -> {
@@ -368,11 +390,26 @@ public class CotXmlParser {
                                 }
                             }
 
+                            // The body is the sender's voice profile ID, empty when none is
+                            // selected. fromVoice has no XML counterpart and is not inferred
+                            // from this element being present.
                             "voice" -> {
                                 if (cotTypeStr == "m-t-t") {
                                     hasTakTalkData = true
-                                    fromVoice = true
+                                    inTaktalkVoice = true
                                 }
+                            }
+
+                            "voice-data" -> {
+                                inVoiceData = cotTypeStr == "y-"
+                            }
+
+                            "voice-id" -> {
+                                inVoiceId = cotTypeStr == "y-"
+                            }
+
+                            "voice-name" -> {
+                                inVoiceName = cotTypeStr == "y-"
                             }
 
                             "callsign" -> {
@@ -670,6 +707,10 @@ public class CotXmlParser {
                                     )
                             }
 
+                            DetectionXml.ELEMENT -> {
+                                detectionAttributes = DetectionXml.ATTRIBUTES.associateWith { reader.getAttributeValue(null, it) }
+                            }
+
                             "link" -> {
                                 val linkUidAttr = reader.getAttributeValue(null, "uid")
                                 val pointAttr = reader.getAttributeValue(null, "point")
@@ -813,6 +854,22 @@ public class CotXmlParser {
                                         callsign = text
                                     }
 
+                                    inTaktalkVoice -> {
+                                        talkVoiceProfileId = text
+                                    }
+
+                                    inVoiceData -> {
+                                        voiceDataText = text
+                                    }
+
+                                    inVoiceId -> {
+                                        voiceId = text
+                                    }
+
+                                    inVoiceName -> {
+                                        voiceName = text
+                                    }
+
                                     inChatEa -> {
                                         chatLang = text
                                     }
@@ -874,6 +931,22 @@ public class CotXmlParser {
 
                             "callsign" -> {
                                 inMttCallsign = false
+                            }
+
+                            "voice" -> {
+                                inTaktalkVoice = false
+                            }
+
+                            "voice-data" -> {
+                                inVoiceData = false
+                            }
+
+                            "voice-id" -> {
+                                inVoiceId = false
+                            }
+
+                            "voice-name" -> {
+                                inVoiceName = false
                             }
 
                             "Ea" -> {
@@ -977,6 +1050,24 @@ public class CotXmlParser {
                     TakPacketV2Data.Payload.Pli(true)
                 }
 
+                // The TAKTALK plugin routes its y- control events by UID prefix, and a room
+                // request carries <chatroom-id> like a room broadcast, so these come first.
+                cotTypeStr == "y-" && uid.startsWith(TakTalkXml.VOICE_PROFILE_UID_PREFIX) -> {
+                    TakPacketV2Data.Payload.VoiceProfile(
+                        voiceProfileId = voiceId,
+                        voiceProfileName = voiceName,
+                        profileData = TakTalkXml.decodeVoiceData(voiceDataText),
+                    )
+                }
+
+                cotTypeStr == "y-" && uid.startsWith(TakTalkXml.VOICE_PROFILE_REQUEST_UID_PREFIX) -> {
+                    TakPacketV2Data.Payload.VoiceProfileRequest()
+                }
+
+                cotTypeStr == "y-" && uid.startsWith(TakTalkXml.ROOM_REQUEST_UID_PREFIX) -> {
+                    TakPacketV2Data.Payload.TakTalkRoomRequest(roomId = roomDataId)
+                }
+
                 hasRoomData && cotTypeStr == "y-" -> {
                     TakPacketV2Data.Payload.TakTalkRoom(
                         roomId = roomDataId,
@@ -990,7 +1081,7 @@ public class CotXmlParser {
                         text = talkText,
                         chatroomId = talkChatroomId,
                         lang = talkLang,
-                        fromVoice = fromVoice,
+                        voiceProfileId = talkVoiceProfileId,
                     )
                 }
 
@@ -1178,6 +1269,7 @@ public class CotXmlParser {
             sensorFov = sensorFovData,
             marti = martiDests.toList(),
             payload = payload,
+            detection = detectionAttributes?.let { DetectionXml.parse(it::get, pointCe) },
         )
     }
 
@@ -1219,6 +1311,12 @@ public class CotXmlParser {
      * ISO-8601 instant strings ATAK emits (`2026-03-15T19:00:00Z`, with or
      * without fractional seconds), matching `DateTimeFormatter.ISO_INSTANT`.
      * Any parse failure returns 0, identical to the original try/catch.
+     *
+     * Capped at [Int.MAX_VALUE] seconds (about 68 years), as every other binding caps
+     * it. [TakPacketV2Data.staleSeconds] is a signed Int, so a longer span would come
+     * out negative and [CotXmlBuilder] would give the event its 45-second minimum
+     * instead. Uncapped, `toInt()` also wraps a span over 136 years around to a
+     * shorter one.
      */
     private fun computeStaleSeconds(
         timeStr: String,
@@ -1229,7 +1327,7 @@ public class CotXmlParser {
             val time = Instant.parse(timeStr)
             val stale = Instant.parse(staleStr)
             val diff = stale.epochSeconds - time.epochSeconds
-            if (diff > 0) diff.toInt() else 0
+            if (diff > 0) diff.coerceAtMost(Int.MAX_VALUE.toLong()).toInt() else 0
         } catch (e: Exception) {
             0
         }

@@ -22,7 +22,10 @@ namespace Meshtastic.TAK;
 /// to degrees×1e7 (clamped to the legal ±90°/±180° range), speed to cm/s, course
 /// to degrees×100, shape radii to centimeters, altitude to meters HAE (may be
 /// negative). ATAK's stationary sentinels (e.g. <c>speed="-1.0"</c>) are clamped
-/// to 0 before the unsigned cast. All numeric parsing uses the invariant culture.</para>
+/// to 0 before the unsigned cast. All numeric parsing uses the invariant culture.
+/// Every scaled value is rounded to the nearest integer as Kotlin's
+/// <c>roundToInt()</c> does, a half going toward positive infinity, so each field
+/// gets the same integer as in the Kotlin binding's protobuf.</para>
 /// <para>Security: input containing a <c>&lt;!DOCTYPE&gt;</c> or
 /// <c>&lt;!ENTITY&gt;</c> declaration is rejected up front to prevent XXE and
 /// entity-expansion attacks.</para>
@@ -96,7 +99,7 @@ public class CotXmlParser
     private static int ScaleLatitudeI(double lat)
     {
         var clamped = Math.Max(-90.0, Math.Min(90.0, lat));
-        return (int)Math.Round(clamped * 1e7);
+        return RoundToInt(clamped * 1e7);
     }
 
     /// <summary>
@@ -105,7 +108,26 @@ public class CotXmlParser
     private static int ScaleLongitudeI(double lon)
     {
         var clamped = Math.Max(-180.0, Math.Min(180.0, lon));
-        return (int)Math.Round(clamped * 1e7);
+        return RoundToInt(clamped * 1e7);
+    }
+
+    /// <summary>
+    /// Kotlin's <c>Double.roundToInt()</c>, which is Java's <c>Math.round</c>: a half
+    /// goes toward positive infinity (2.5 gives 3, -2.5 gives -2), clamped to the Int32
+    /// range. Not <c>Math.Round</c>, whose default is banker's rounding (2.5 gives 2), and
+    /// not a cast, which truncates (-29.667 gives -29 where Kotlin gives -30). Taken from
+    /// the fractional part rather than as <c>floor(d + 0.5)</c>, because that sum rounds
+    /// the largest double below 0.5 up to 1 where Java gives 0. NaN gives 0, as Java's
+    /// <c>Math.round</c> does (Kotlin's <c>roundToInt</c> throws instead).
+    /// </summary>
+    internal static int RoundToInt(double d)
+    {
+        if (double.IsNaN(d)) return 0;
+        var whole = Math.Floor(d);
+        var r = d - whole >= 0.5 ? whole + 1 : whole;
+        if (r >= int.MaxValue) return int.MaxValue;
+        if (r <= int.MinValue) return int.MinValue;
+        return (int)r;
     }
 
     // --- CasevacReport / EmergencyAlert / TaskRequest mappings -----------
@@ -310,7 +332,7 @@ public class CotXmlParser
         {
             pkt.LatitudeI = ScaleLatitudeI(double.Parse(point.Attribute("lat")?.Value ?? "0", CultureInfo.InvariantCulture));
             pkt.LongitudeI = ScaleLongitudeI(double.Parse(point.Attribute("lon")?.Value ?? "0", CultureInfo.InvariantCulture));
-            pkt.Altitude = (int)double.Parse(point.Attribute("hae")?.Value ?? "0", CultureInfo.InvariantCulture);
+            pkt.Altitude = RoundToInt(double.Parse(point.Attribute("hae")?.Value ?? "0", CultureInfo.InvariantCulture));
         }
 
         var detail = evt.Element("detail");
@@ -568,8 +590,8 @@ public class CotXmlParser
                     // huge value). Clamp to 0 first.
                     var spdCs = double.Parse(el.Attribute("speed")?.Value ?? "0", CultureInfo.InvariantCulture) * 100;
                     var crsCs = double.Parse(el.Attribute("course")?.Value ?? "0", CultureInfo.InvariantCulture) * 100;
-                    pkt.Speed = (uint)Math.Max(0, Math.Round(spdCs));
-                    pkt.Course = (uint)Math.Max(0, Math.Round(crsCs));
+                    pkt.Speed = (uint)Math.Max(0, RoundToInt(spdCs));
+                    pkt.Course = (uint)Math.Max(0, RoundToInt(crsCs));
                     break;
                 case "takv":
                     pkt.TakVersion = el.Attribute("version")?.Value ?? "";
@@ -586,7 +608,7 @@ public class CotXmlParser
                     break;
                 case "_radio":
                     if (el.Attribute("rssi")?.Value is { } rssi)
-                    { rssiX10 = (int)(double.Parse(rssi, CultureInfo.InvariantCulture) * 10); hasAircraft = true; }
+                    { rssiX10 = RoundToInt(double.Parse(rssi, CultureInfo.InvariantCulture) * 10); hasAircraft = true; }
                     gps = el.Attribute("gps")?.Value == "true";
                     break;
                 case "_aircot_":
@@ -689,6 +711,53 @@ public class CotXmlParser
                             martiDests.Add(cs);
                     }
                     break;
+                // <environment temperature=".." windDirection=".." windSpeed=".."/>
+                // Payload-agnostic weather annotation. Set only when at least one
+                // attribute parses, so an element with none keeps an earlier one.
+                case "environment":
+                    var envTemp = ToDoubleOrNull(el.Attribute("temperature")?.Value);
+                    var envWindDir = ToIntOrNull(el.Attribute("windDirection")?.Value);
+                    var envWindSpeed = ToDoubleOrNull(el.Attribute("windSpeed")?.Value);
+                    if (envTemp.HasValue || envWindDir.HasValue || envWindSpeed.HasValue)
+                    {
+                        // uint32 fields take the Int32's two's-complement bits, which is
+                        // what Wire writes for Kotlin's Int, so the bytes match Kotlin's.
+                        pkt.Environment = new TAKEnvironment
+                        {
+                            TemperatureCX10 = envTemp.HasValue ? RoundToInt(envTemp.Value * 10) : 0,
+                            WindDirectionDeg = envWindDir.HasValue ? unchecked((uint)envWindDir.Value) : 0,
+                            WindSpeedCmS = envWindSpeed.HasValue ? unchecked((uint)RoundToInt(envWindSpeed.Value * 100)) : 0,
+                        };
+                    }
+                    break;
+                // <sensor azimuth=".." range=".." fov=".." vfov=".." elevation=".."
+                // roll=".." model=".."/> FOV cone, payload-agnostic. Present even with
+                // no attributes, and the last one wins. type is never read from the
+                // XML: it is always inferred from model.
+                case "sensor":
+                    var sensorModel = el.Attribute("model")?.Value ?? "";
+                    var sensorFov = new SensorFov
+                    {
+                        Type = InferSensorType(sensorModel),
+                        AzimuthDeg = unchecked((uint)(RoundedAttr(el, "azimuth") ?? 270)),
+                        FovHorizontalDeg = unchecked((uint)(RoundedAttr(el, "fov") ?? 45)),
+                        FovVerticalDeg = unchecked((uint)(RoundedAttr(el, "vfov") ?? 0)),
+                        ElevationDeg = RoundedAttr(el, "elevation") ?? 0,
+                        RollDeg = RoundedAttr(el, "roll") ?? 0,
+                        Model = sensorModel,
+                    };
+                    // range_m is proto3 optional: left unset unless it parses, so a
+                    // range="0" stays present and a missing one stays absent.
+                    if (RoundedAttr(el, "range") is { } sensorRange)
+                        sensorFov.RangeM = unchecked((uint)sensorRange);
+                    pkt.SensorFov = sensorFov;
+                    break;
+                // <__detection .../> passive-sensor detection, payload-agnostic like the
+                // two annotations above. Present even with no attributes, and the last one
+                // wins. The event's <point ce> backs up its cep.
+                case DetectionXml.Element:
+                    pkt.Detection = DetectionXml.Parse(el, point?.Attribute("ce")?.Value);
+                    break;
                 case "link":
                     HandleLink(el);
                     break;
@@ -699,8 +768,8 @@ public class CotXmlParser
                     {
                         var majorM = double.Parse(ellipse.Attribute("major")?.Value ?? "0", CultureInfo.InvariantCulture);
                         var minorM = double.Parse(ellipse.Attribute("minor")?.Value ?? "0", CultureInfo.InvariantCulture);
-                        shapeMajorCm = (uint)Math.Max(0, majorM * 100);
-                        shapeMinorCm = (uint)Math.Max(0, minorM * 100);
+                        shapeMajorCm = (uint)Math.Max(0, RoundToInt(majorM * 100));
+                        shapeMinorCm = (uint)Math.Max(0, RoundToInt(minorM * 100));
                         if (uint.TryParse(ellipse.Attribute("angle")?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ang))
                             shapeAngleDeg = ang;
                     }
@@ -713,7 +782,7 @@ public class CotXmlParser
                     break;
                 case "strokeWeight":
                     if (double.TryParse(el.Attribute("value")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var sw))
-                        strokeWeightX10 = (uint)Math.Max(0, sw * 10);
+                        strokeWeightX10 = (uint)Math.Max(0, RoundToInt(sw * 10));
                     hasShapeData = true;
                     break;
                 case "fillColor":
@@ -737,7 +806,7 @@ public class CotXmlParser
                 case "bullseye":
                     hasShapeData = true;
                     if (double.TryParse(el.Attribute("distance")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var dist))
-                        bullseyeDistanceDm = (uint)Math.Max(0, dist * 10);
+                        bullseyeDistanceDm = (uint)Math.Max(0, RoundToInt(dist * 10));
                     bullseyeBearingRef = BearingRefMap.GetValueOrDefault(
                         el.Attribute("bearingRef")?.Value ?? "", 0u);
                     uint flags = 0;
@@ -750,12 +819,12 @@ public class CotXmlParser
                     break;
                 case "range":
                     if (double.TryParse(el.Attribute("value")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var rangeVal))
-                        rabRangeCm = (uint)Math.Max(0, rangeVal * 100);
+                        rabRangeCm = (uint)Math.Max(0, RoundToInt(rangeVal * 100));
                     hasRabData = true;
                     break;
                 case "bearing":
                     if (double.TryParse(el.Attribute("value")?.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var bearingVal))
-                        rabBearingCdeg = (uint)Math.Max(0, bearingVal * 100);
+                        rabBearingCdeg = (uint)Math.Max(0, RoundToInt(bearingVal * 100));
                     hasRabData = true;
                     break;
                 case "__routeinfo":
@@ -1243,11 +1312,81 @@ public class CotXmlParser
         return StartEpoch.Truncate(seconds);
     }
 
+    // --- <environment> / <sensor> number parsing ---------------------------
+    // These follow the Kotlin parser's String.toDoubleOrNull(), String.toIntOrNull()
+    // and Double.roundToInt(), so ordinary input serializes to Kotlin's bytes.
+
+    // The fraction is its own group so that no digit run can be split between two
+    // quantifiers, which would make a failed match backtrack in quadratic time.
+    private static readonly Regex PlainDoubleRegex = new(
+        @"^[\t\n\v\f\r ]*[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[\t\n\v\f\r ]*\z",
+        RegexOptions.Compiled);
+
+    private static readonly Regex PlainIntRegex = new(@"^[+-]?[0-9]+\z", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Kotlin's <c>String.toDoubleOrNull()</c> for ordinary decimals: optional
+    /// surrounding ASCII whitespace, an optional sign, digits with an optional
+    /// fraction, and an optional exponent. Null for anything else, including the
+    /// NaN and Infinity spellings (which fail the pattern) and an overflow such as
+    /// <c>1e400</c> (which fails the finiteness check).
+    /// </summary>
+    internal static double? ToDoubleOrNull(string? s)
+    {
+        // Deliberate deviation: Kotlin keeps NaN and Infinity (roundToInt then throws or clamps); this reads both as absent.
+        if (s == null || !PlainDoubleRegex.IsMatch(s)) return null;
+        return double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) && double.IsFinite(d)
+            ? d : null;
+    }
+
+    /// <summary>
+    /// Kotlin's <c>String.toIntOrNull()</c>, limited to ASCII digits: one optional
+    /// leading sign, then digits only, no whitespace, and the value must fit an Int32.
+    /// </summary>
+    private static int? ToIntOrNull(string? s) =>
+        s != null && PlainIntRegex.IsMatch(s)
+            && int.TryParse(s, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var v)
+            ? v : null;
+
+    /// <summary>The named attribute parsed as a double and rounded, or null.</summary>
+    private static int? RoundedAttr(XElement el, string name) =>
+        ToDoubleOrNull(el.Attribute(name)?.Value) is { } d ? RoundToInt(d) : null;
+
+    /// <summary>
+    /// Coarse sensor category inferred from a free-form model string, matching
+    /// Kotlin's <c>inferSensorType</c>. Substrings are tested in order, so
+    /// "FLIR radar" is Thermal.
+    /// </summary>
+    private static SensorFov.Types.SensorType InferSensorType(string? model)
+    {
+        if (string.IsNullOrEmpty(model)) return SensorFov.Types.SensorType.Unspecified;
+        var m = model.ToLowerInvariant();
+        if (m.Contains("flir") || m.Contains("thermal") || m.Contains("boson"))
+            return SensorFov.Types.SensorType.Thermal;
+        if (m.Contains("laser") || m.Contains("lrf"))
+            return SensorFov.Types.SensorType.Laser;
+        if (m.Contains("nvg") || m.Contains("night"))
+            return SensorFov.Types.SensorType.Nvg;
+        // Only "radar" and "rf-": a bare "rf" is too common a substring.
+        if (m.Contains("radar") || m.Contains("rf-"))
+            return SensorFov.Types.SensorType.Rf;
+        if (m.Contains("cam") || m.Contains("eo-") || m.Contains("optic"))
+            return SensorFov.Types.SensorType.Camera;
+        return SensorFov.Types.SensorType.Other;
+    }
+
+    /// <summary>
+    /// Seconds from the event's <c>time</c> to its <c>stale</c>, computed as Kotlin does: each
+    /// timestamp is rounded down to whole epoch seconds before subtracting, so 00.900 to 02.100
+    /// is 2 seconds, where truncating the 1.2-second difference gives 1. Zero when stale is not
+    /// after time, and capped at <see cref="int.MaxValue"/> (about 68 years): the Kotlin binding
+    /// keeps stale_seconds in a signed Int, so it reads anything larger back as negative.
+    /// </summary>
     private static uint ComputeStaleSeconds(string timeStr, string staleStr)
     {
         if (string.IsNullOrEmpty(timeStr) || string.IsNullOrEmpty(staleStr)) return 0;
         if (!DateTimeOffset.TryParse(timeStr, out var t) || !DateTimeOffset.TryParse(staleStr, out var s)) return 0;
-        var diff = (int)(s - t).TotalSeconds;
-        return diff > 0 ? (uint)diff : 0;
+        var diff = s.ToUnixTimeSeconds() - t.ToUnixTimeSeconds();
+        return diff > 0 ? (uint)Math.Min(diff, int.MaxValue) : 0;
     }
 }
