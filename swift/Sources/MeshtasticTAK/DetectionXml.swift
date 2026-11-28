@@ -161,10 +161,23 @@ enum DetectionXml {
         raw.flatMap { CotXmlParser.parseDouble(trim($0)) }.map(CotXmlParser.roundToInt)
     }
 
-    /// A `uasId` attribute's bytes: hex after `hex:` (in any case), else the text's UTF-8, cut
-    /// to 20. A hex value whose rest is not an even number of hex digits gives no ID.
+    /// `packet` with its detection's UAS ID as the schema allows it: only for a UAS, and at most
+    /// 20 bytes. The compressor applies it to what it sends and what it receives, as the parser
+    /// and builder apply it to CoT XML.
+    static func withSchemaUasId(_ packet: TAKPacketV2) -> TAKPacketV2 {
+        guard packet.hasDetection else { return packet }
+        let id = packet.detection.kind == .uas ? Data(packet.detection.uasID.prefix(uasIdMaxBytes)) : Data()
+        guard id != packet.detection.uasID else { return packet }
+        var copy = packet
+        copy.detection.uasID = id
+        return copy
+    }
+
+    /// A `uasId` attribute's bytes, read trimmed like every attribute here: hex after `hex:` (in
+    /// any case), else the text's UTF-8, cut to 20. A hex value whose rest is not an even number
+    /// of hex digits gives no ID.
     private static func parseUasId(_ raw: String?) -> Data {
-        guard let raw else { return Data() }
+        guard let raw = raw.map(trim) else { return Data() }
         let utf8 = Array(raw.utf8)
         let isHex = utf8.count >= uasIdHexPrefix.count
             && zip(utf8, uasIdHexPrefix).allSatisfy { asciiLowercased($0) == $1 }

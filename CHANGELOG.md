@@ -10,6 +10,11 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ### Breaking
 
+- Kotlin: `TakPacketV2Data` gains a trailing `detection: DetectionData?`
+  parameter, which changes its all-args constructor and `copy()` in
+  `kotlin/api/*.api`. Kotlin source that leaves it out still compiles, after a
+  recompile. Java code that calls either must pass `null` for it, or build the
+  packet with `TakPacketV2Data.Builder` instead.
 - Kotlin: `TakPacketV2Data.Payload` has three new subclasses
   (`VoiceProfile`, `VoiceProfileRequest`, `TakTalkRoomRequest`), so an
   exhaustive `when` over a payload no longer compiles. Add branches for them,
@@ -118,21 +123,23 @@ One version covers all five bindings, so a release is a single tag and a single 
   vehicle. It carries the object's kind, the kinds of sensing behind the
   report, confidence, track state and trend, a count, whether the point is the
   sensor rather than the object, horizontal uncertainty and received power. Its
-  only identifier is the UAS ID that Remote ID broadcasts, kept only for kind
-  `uas`. It travels as up to 20 bytes, so the binary UUID and session-ID forms
-  survive as well as text serial numbers. Affiliation stays in the CoT type.
+  only identifier is the UAS ID that Remote ID broadcasts, which every binding
+  keeps only for kind `uas`, in CoT XML and in the compressors alike. It travels
+  as up to 20 bytes, so the binary UUID and session-ID forms survive as well as
+  text serial numbers. Affiliation stays in the CoT type.
 
   In CoT XML it is one `<__detection>` child of `<detail>`, parsed and built
   the same way in all five bindings; `WIRE_FORMAT.md` has the attributes and
   tokens. A text UAS ID is written as itself and any other as `hex:` and its
-  bytes. Its `cep` is also written as the event's `<point ce>`; events
+  bytes, and it is read trimmed, like the element's other attributes. Its `cep`
+  is also written as the event's `<point ce>`; events
   without the annotation keep `ce="9999999"`. Four new fixtures cover it.
 
   The compressors send a detection that is not an aircraft track with the
   non-aircraft dictionary, whatever its CoT type. By type alone an `a-u-A-…`
   UAS marker would take the 4 KB aircraft dictionary, which is built for
   aircraft tracks; the two UAS fixtures come out 22 and 13 bytes smaller this
-  way, at 156 and 140 bytes. An aircraft track keeps the aircraft dictionary.
+  way, at 156 and 140 bytes. An aircraft track is still picked by its type.
   Receivers need no change, since the dictionary ID travels in the flags byte,
   and `selectDictId` itself still picks by type alone.
 
@@ -140,13 +147,10 @@ One version covers all five bindings, so a release is a single tag and a single 
   existing golden changes. Firmware never reads it (`FT_IGNORE` in
   `atak.options`).
 
-  Kotlin: `TakPacketV2Data` gains a trailing `detection: DetectionData?`
-  parameter, so its all-args constructor and `copy()` change in
-  `kotlin/api/*.api`. Source-compatible, but code compiled against an earlier
-  version that calls either needs a recompile. `DetectionData` has a
-  Java-friendly `Builder`. No published `org.meshtastic:protobufs` has
-  `TAKDetection` yet, so Kotlin writes and reads the field itself and stays on
-  2.8.3: consumers need no newer `protobufs`.
+  Kotlin: `DetectionData` has a Java-friendly `Builder`, and `TakPacketV2Data`
+  takes it as a new trailing parameter (see Breaking). No published
+  `org.meshtastic:protobufs` has `TAKDetection` yet, so Kotlin writes and reads
+  the field itself and stays on 2.8.3: consumers need no newer `protobufs`.
 
   The Swift, Python and C# generated classes are regenerated for it, which also
   brings in `VoiceProfile`, `VoiceProfileRequest` and `TakTalkRoomRequest`
@@ -173,6 +177,11 @@ One version covers all five bindings, so a release is a single tag and a single 
 
 ### Fixed
 
+- TypeScript: `parseCotXml` now decodes XML's predefined entities and its
+  character references in attribute values and text, as the other bindings'
+  parsers do. It left them encoded, so `A &amp; B` reached the packet as
+  written rather than as `A & B`. It still rejects DOCTYPE and ENTITY
+  declarations.
 - Swift, Python, C# and TypeScript: `CotXmlParser` now reads `<environment>`
   and `<sensor>`, and `CotXmlBuilder` writes them back, as Kotlin always has.
   These four bindings dropped both elements on parse, and never rebuilt one

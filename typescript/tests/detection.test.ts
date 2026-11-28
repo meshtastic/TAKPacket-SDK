@@ -352,3 +352,45 @@ describe("detection dictionary choice", () => {
     expect(await wireDictId({ ...track, detection })).toBe(DICT_ID_AIRCRAFT);
   });
 });
+
+describe("TAKDetection rules on the wire and in the XML", () => {
+  it("keeps a UAS ID only for a UAS, and at most 20 bytes", async () => {
+    const vehicle: TAKPacketV2 = {
+      cotTypeStr: "a-u-G", uid: "UAS-1", callsign: "UAS-1",
+      detection: { ...DEFAULTS, kind: Kind.Vehicle, uasId: Buffer.from(UAS_ID) },
+    };
+    const back = await compressor.decompress(await compressor.compress(vehicle));
+    expect(Buffer.from(back.detection!.uasId!)).toEqual(Buffer.alloc(0));
+    // The caller's packet keeps what it had.
+    expect(Buffer.from(vehicle.detection!.uasId!).toString()).toBe(UAS_ID);
+
+    const uas: TAKPacketV2 = { ...vehicle, detection: { ...DEFAULTS, kind: Kind.Uas, uasId: Buffer.alloc(25, 0x41) } };
+    const cut = await compressor.decompress(await compressor.compress(uas));
+    expect(Buffer.from(cut.detection!.uasId!)).toEqual(Buffer.alloc(20, 0x41));
+
+    // A peer's packet is read the same way; a 0xFF frame carries its protobuf as is.
+    const T = await getTAKPacketV2Type();
+    const raw = Buffer.concat([Buffer.from([0xff]), Buffer.from(T.encode(T.create(vehicle)).finish())]);
+    expect(Buffer.from((await compressor.decompress(raw)).detection!.uasId!)).toEqual(Buffer.alloc(0));
+  });
+
+  it("reads a UAS ID trimmed", () => {
+    const id = (element: string) => Buffer.from(parseCotXml(event(element)).detection!.uasId!);
+    expect(id(`<__detection kind="uas" uasId="  ${UAS_ID} "/>`).toString()).toBe(UAS_ID);
+    expect(id(`<__detection kind="uas" uasId=" hex:5a5a "/>`)).toEqual(Buffer.from([0x5a, 0x5a]));
+  });
+
+  it("decodes entity and character references, and the builder escapes once", () => {
+    const xml = event(
+      `<sensor fov="45" range="300" azimuth="90" model="FLIR &amp; EO"/>` +
+      `<__detection kind="uas" confidence="&#56;&#x37;"/>` +
+      `<remarks>a &lt; b &amp;amp; c</remarks>`,
+    );
+    const pkt = parseCotXml(xml);
+    expect(pkt.sensorFov!.model).toBe("FLIR & EO");
+    expect(pkt.detection!.confidence).toBe(87);
+    // One pass: "&amp;amp;" is the text "&amp;", not "&".
+    expect(pkt.remarks).toBe("a < b &amp; c");
+    expect(buildCotXml(pkt)).toContain(`model="FLIR &amp; EO"`);
+  });
+});

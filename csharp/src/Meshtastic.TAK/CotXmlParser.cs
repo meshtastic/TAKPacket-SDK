@@ -1316,8 +1316,10 @@ public class CotXmlParser
     // These follow the Kotlin parser's String.toDoubleOrNull(), String.toIntOrNull()
     // and Double.roundToInt(), so ordinary input serializes to Kotlin's bytes.
 
+    // The fraction is its own group so that no digit run can be split between two
+    // quantifiers, which would make a failed match backtrack in quadratic time.
     private static readonly Regex PlainDoubleRegex = new(
-        @"^[\t\n\v\f\r ]*[+-]?(?:[0-9]+\.?[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[\t\n\v\f\r ]*\z",
+        @"^[\t\n\v\f\r ]*[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?[\t\n\v\f\r ]*\z",
         RegexOptions.Compiled);
 
     private static readonly Regex PlainIntRegex = new(@"^[+-]?[0-9]+\z", RegexOptions.Compiled);

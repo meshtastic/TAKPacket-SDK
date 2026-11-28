@@ -316,6 +316,23 @@ class DetectionXmlTest {
     }
 
     @Test
+    fun aPointAfterTheDetailStillBacksUpTheCep() {
+        val xml =
+            """<event version="2.0" uid="2f6d3b8e-5a41-4c1f-9e07-6b2d8c4a1f35" type="a-u-A-M-H-Q" how="m-r" time="2026-11-20T15:00:00Z" start="2026-11-20T15:00:00Z" stale="2026-11-20T15:01:00Z">
+  <detail><contact callsign="UAS-1"/><__detection kind="uas"/></detail>
+  <point lat="33.1286" lon="-107.2470" hae="1452.0" ce="15.0" le="9999999"/>
+</event>"""
+        assertEquals(15, parser.parse(xml).detection?.cepMeters)
+        assertEquals(12, parser.parse(xml.replace("""kind="uas"/>""", """kind="uas" cep="12"/>""")).detection?.cepMeters)
+    }
+
+    @Test
+    fun aUasIdIsReadTrimmed() {
+        assertContentEquals(uasId.encodeToByteArray(), detection("""<__detection kind="uas" uasId="  $uasId "/>""")?.uasId)
+        assertContentEquals(byteArrayOf(0x5a, 0x5a), detection("""<__detection kind="uas" uasId=" hex:5a5a "/>""")?.uasId)
+    }
+
+    @Test
     fun theAnnotationLeavesThePayloadVariantAlone() {
         val parentLink = """<link uid="ANDROID-0000000000000012" type="a-f-G-E-S" parent_callsign="SENSOR-1" relation="p-p"/>"""
         val marker = parser.parse(event(parentLink + fullElement)).payload

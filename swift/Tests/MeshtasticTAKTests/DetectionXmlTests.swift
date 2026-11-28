@@ -386,6 +386,45 @@ struct DetectionXmlSuite {
         #expect(fromBin.detection == parsed.detection)
     }
 
+    @Test("a point after the detail still backs up the cep")
+    func pointAfterDetailBacksUpTheCep() throws {
+        let xml = """
+            <event version="2.0" uid="2f6d3b8e-5a41-4c1f-9e07-6b2d8c4a1f35" type="a-u-A-M-H-Q" how="m-r" time="2026-11-20T15:00:00Z" start="2026-11-20T15:00:00Z" stale="2026-11-20T15:01:00Z">
+              <detail><contact callsign="UAS-1"/><__detection kind="uas"/></detail>
+              <point lat="33.1286" lon="-107.2470" hae="1452.0" ce="15.0" le="9999999"/>
+            </event>
+            """
+        #expect(try detection(fromXml: xml)?.cepM == 15)
+        let withCep = xml.replacingOccurrences(of: #"kind="uas"/>"#, with: #"kind="uas" cep="12"/>"#)
+        #expect(try detection(fromXml: withCep)?.cepM == 12)
+    }
+
+    @Test("a UAS ID is read trimmed")
+    func uasIdIsReadTrimmed() throws {
+        #expect(try detection(#"<__detection kind="uas" uasId="  \#(uasId) "/>"#)?.uasID == Data(uasId.utf8))
+        #expect(try detection(#"<__detection kind="uas" uasId=" hex:5a5a "/>"#)?.uasID == Data([0x5a, 0x5a]))
+    }
+
+    @Test("the wire keeps a UAS ID only for a UAS, and at most 20 bytes")
+    func wireKeepsTheUasIdRule() throws {
+        var vehicle = TAKDetection()
+        vehicle.kind = .vehicle
+        vehicle.uasID = Data(uasId.utf8)
+        let pkt = packet(vehicle)
+        #expect(try overTheWire(pkt).detection.uasID.isEmpty)
+        // The caller's packet keeps what it had.
+        #expect(pkt.detection.uasID == Data(uasId.utf8))
+
+        var uas = TAKDetection()
+        uas.kind = .uas
+        uas.uasID = Data(repeating: 0x41, count: 25)
+        #expect(try overTheWire(packet(uas)).detection.uasID == Data(repeating: 0x41, count: 20))
+
+        // A peer's packet is read the same way; a 0xFF frame carries its protobuf as is.
+        let raw = Data([0xFF]) + (try pkt.serializedData())
+        #expect(try compressor.decompress(raw).detection.uasID.isEmpty)
+    }
+
     @Test("detection fixtures keep their payload and sensor cone")
     func fixturesKeepTheirPayloadAndSensorCone() throws {
         let remote = try parser.parse(try TestFixtures.loadFixture("detection_uas_remoteid"))

@@ -353,7 +353,9 @@ public data class TakPacketV2Data(
         /**
          * UAS ID from a Remote ID broadcast, at most 20 bytes: ASCII text for a serial number
          * or a CAA registration, without the broadcast's NUL fill, and the broadcast's bytes for
-         * any other [uasIdType]. The parser and the builder keep it only when [kind] is [Kind.Uas].
+         * any other [uasIdType]. The parser, the builder and the serializer keep it only when
+         * [kind] is [Kind.Uas], cut to 20 bytes. The array is held as given, not copied, like a
+         * voice profile's data, so don't change it once it's in a detection.
          */
         val uasId: ByteArray = ByteArray(0),
         /** Type of [uasId]. */

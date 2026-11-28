@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import zstandard
 from . import atak_pb2
+from .detection_xml import UAS_ID_MAX_BYTES
 from .dictionary_provider import DictionaryProvider, DICT_ID_NON_AIRCRAFT, DICT_ID_AIRCRAFT, DICT_ID_UNCOMPRESSED
 
 # Maximum allowed decompressed payload size (bytes). Prevents decompression bombs.
@@ -18,6 +19,25 @@ MAX_DECOMPRESSED_SIZE = 4096
 # set the experimental magicless parameter. The magic is a fixed constant, so
 # this stays fully stateless: every frame is independently reconstructable.
 _ZSTD_MAGIC = b"\x28\xb5\x2f\xfd"
+
+
+def _with_schema_uas_id(packet: atak_pb2.TAKPacketV2) -> atak_pb2.TAKPacketV2:
+    """``packet``, or a copy whose detection holds its UAS ID as the schema allows.
+
+    That is only for a UAS, and at most 20 bytes. The compressor applies it to
+    what it sends and what it receives, as the XML reader and builder do.
+    """
+    if not packet.HasField("detection"):
+        return packet
+    detection = packet.detection
+    uas_id = detection.uas_id if detection.kind == atak_pb2.TAKDetection.Kind_Uas else b""
+    uas_id = uas_id[:UAS_ID_MAX_BYTES]
+    if uas_id == detection.uas_id:
+        return packet
+    copy = atak_pb2.TAKPacketV2()
+    copy.CopyFrom(packet)
+    copy.detection.uas_id = uas_id
+    return copy
 
 
 def _dict_id_for(packet: atak_pb2.TAKPacketV2) -> int:
@@ -189,6 +209,7 @@ class TakCompressor:
                 if the produced zstd frame does not start with the expected
                 magic (which would break the strip/prepend contract).
         """
+        packet = _with_schema_uas_id(packet)
         protobuf_bytes = packet.SerializeToString()
         dict_id = _dict_id_for(packet)
 
@@ -263,7 +284,7 @@ class TakCompressor:
             pkt.ParseFromString(protobuf_bytes)
         except Exception as e:
             raise ValueError(f"Protobuf parsing failed: {e}") from e
-        return pkt
+        return _with_schema_uas_id(pkt)
 
     def compress_with_remarks_fallback(
         self,
@@ -331,6 +352,7 @@ class TakCompressor:
             A :class:`CompressionResult` with the protobuf size, wire size,
             emitted dictionary ID, and the wire payload.
         """
+        packet = _with_schema_uas_id(packet)
         protobuf_bytes = packet.SerializeToString()
         wire_payload = self.compress(packet)
         # Report the ACTUAL emitted mode from the flags byte — skip-compress may

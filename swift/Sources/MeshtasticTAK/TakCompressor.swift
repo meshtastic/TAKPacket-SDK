@@ -104,7 +104,7 @@ public class TakCompressor {
     ///   on a zstd error or unexpected frame header. May also rethrow a protobuf
     ///   serialization error.
     public func compress(_ packet: TAKPacketV2) throws -> Data {
-        let protobufBytes = try packet.serializedData()
+        let protobufBytes = try DetectionXml.withSchemaUasId(packet).serializedData()
         let dictId = Self.dictId(for: packet)
         guard let dictData = DictionaryProvider.getDictionary(dictId) else {
             throw TakCompressorError.noDictionary(dictId)
@@ -168,7 +168,7 @@ public class TakCompressor {
             throw TakCompressorError.decompressionFailed("Payload size \(protobufBytes.count) exceeds limit \(maxDecompressedSize)")
         }
 
-        return try TAKPacketV2(serializedBytes: protobufBytes)
+        return DetectionXml.withSchemaUasId(try TAKPacketV2(serializedBytes: protobufBytes))
     }
 
     /// Compress a packet, stripping remarks if the result exceeds `maxWireBytes`.
@@ -256,7 +256,7 @@ public class TakCompressor {
     ///   the wire size, the emitted dictionary ID, and the wire payload.
     /// - Throws: The same errors as ``compress(_:)``.
     public func compressWithStats(_ packet: TAKPacketV2) throws -> CompressionResult {
-        let protobufBytes = try packet.serializedData()
+        let protobufBytes = try DetectionXml.withSchemaUasId(packet).serializedData()
         let wirePayload = try compress(packet)
         // Report the ACTUAL emitted mode from the flags byte — skip-compress may
         // have emitted 0xFF (uncompressed) when compression didn't pay.

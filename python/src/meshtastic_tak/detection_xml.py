@@ -54,11 +54,13 @@ _HEX_DIGITS = frozenset("0123456789abcdefABCDEF")
 def parse_uas_id(raw: str | None) -> bytes:
     """A ``uasId`` attribute's bytes: hex after ``hex:``, else the text's UTF-8.
 
-    The prefix matches in any case. A hex value whose rest is not an even
-    number of hex digits gives no ID. Either form is cut to 20 bytes.
+    The value is read trimmed, like every attribute of the element, and the
+    prefix matches in any case. A hex value whose rest is not an even number
+    of hex digits gives no ID. Either form is cut to 20 bytes.
     """
     if raw is None:
         return b""
+    raw = raw.strip()
     prefix = len(UAS_ID_HEX_PREFIX)
     if raw[:prefix].lower() == UAS_ID_HEX_PREFIX:
         digits = raw[prefix:]

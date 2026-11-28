@@ -188,6 +188,39 @@ function inferSensorType(model: string): number {
   return SENSOR_TYPE_OTHER;
 }
 
+// XML's five predefined entities and its character references. The parser runs with
+// processEntities off, so it reads no DTD and leaves these in values; they are decoded here
+// in one pass, so a decoded `&` never starts another reference. A reference to a code point
+// XML doesn't allow is left as written.
+const XML_REFERENCE = /&(?:(lt|gt|amp|quot|apos)|#([0-9]{1,7})|#x([0-9a-fA-F]{1,6}));/g;
+const PREDEFINED_ENTITIES: Record<string, string> = { lt: "<", gt: ">", amp: "&", quot: "\"", apos: "'" };
+
+function isXmlChar(cp: number): boolean {
+  return cp === 0x9 || cp === 0xa || cp === 0xd || (cp >= 0x20 && cp <= 0xd7ff)
+    || (cp >= 0xe000 && cp <= 0xfffd) || (cp >= 0x10000 && cp <= 0x10ffff);
+}
+
+function decodeXmlReferences(s: string): string {
+  if (!s.includes("&")) return s;
+  return s.replace(XML_REFERENCE, (ref: string, name?: string, dec?: string, hex?: string) => {
+    if (name !== undefined) return PREDEFINED_ENTITIES[name];
+    const cp = dec !== undefined ? Number.parseInt(dec, 10) : Number.parseInt(hex!, 16);
+    return isXmlChar(cp) ? String.fromCodePoint(cp) : ref;
+  });
+}
+
+/** Decodes the references in every attribute value and text node of a parsed tree, in place. */
+function decodeXmlReferencesIn<T>(node: T): T {
+  if (typeof node === "string") return decodeXmlReferences(node) as T;
+  if (Array.isArray(node)) {
+    node.forEach((child, i) => { node[i] = decodeXmlReferencesIn(child); });
+  } else if (node !== null && typeof node === "object") {
+    const record = node as Record<string, unknown>;
+    for (const key of Object.keys(record)) record[key] = decodeXmlReferencesIn(record[key]);
+  }
+  return node;
+}
+
 /**
  * Extract the inner bytes of the `<detail>` element from a CoT XML event,
  * exactly as they appear in the source — no XML normalization, no
@@ -367,11 +400,13 @@ const UAS_ID_MAX_BYTES = 20;
 const UAS_ID_HEX_PREFIX = "hex:";
 
 /**
- * A `uasId` attribute's bytes: hex after `hex:` (in any case), else the text's UTF-8, cut to 20.
- * A hex value whose rest is not an even number of hex digits gives no ID.
+ * A `uasId` attribute's bytes, read trimmed like every attribute of the element: hex after `hex:`
+ * (in any case), else the text's UTF-8, cut to 20. A hex value whose rest is not an even number of
+ * hex digits gives no ID.
  */
-function parseUasId(raw: string | undefined): Buffer {
-  if (raw === undefined) return Buffer.alloc(0);
+function parseUasId(value: string | undefined): Buffer {
+  if (value === undefined) return Buffer.alloc(0);
+  const raw = value.trim();
   if (raw.slice(0, UAS_ID_HEX_PREFIX.length).toLowerCase() === UAS_ID_HEX_PREFIX) {
     const digits = raw.slice(UAS_ID_HEX_PREFIX.length);
     if (digits.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(digits)) return Buffer.alloc(0);
@@ -440,7 +475,9 @@ function parseDetection(node: unknown, pointCe: string | undefined): TAKDetectio
  * ~20 wire bytes. Unknown CoT types are carried as `cotTypeStr` so they round-trip.
  *
  * For XXE safety the parser rejects any input containing a `<!DOCTYPE` or
- * `<!ENTITY>` declaration and does not process entities.
+ * `<!ENTITY>` declaration and reads no DTD. It decodes XML's five predefined
+ * entities and its character references in values itself, as the other
+ * bindings' XML parsers do.
  *
  * @param cotXml - A CoT XML event string (the document must contain an
  *                 `<event>` element).
@@ -473,7 +510,7 @@ export function parseCotXml(cotXml: string): TAKPacketV2 {
     textNodeName: "#text",
     processEntities: false,
   });
-  const doc = parser.parse(cotXml);
+  const doc = decodeXmlReferencesIn(parser.parse(cotXml));
   const event = doc.event;
   if (!event) throw new Error("No <event> element found");
 

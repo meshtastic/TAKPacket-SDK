@@ -141,6 +141,7 @@ public class TakCompressor
     /// (which would break the strip/prepend contract).</exception>
     public byte[] Compress(Meshtastic.Protobufs.TAKPacketV2 packet)
     {
+        packet = DetectionXml.WithSchemaUasId(packet);
         var protoBytes = packet.ToByteArray();
         var dictId = DictIdFor(packet);
         var dict = DictionaryProvider.GetDictionary(dictId)
@@ -240,7 +241,7 @@ public class TakCompressor
 
         try
         {
-            return Meshtastic.Protobufs.TAKPacketV2.Parser.ParseFrom(protoBytes);
+            return DetectionXml.WithSchemaUasId(Meshtastic.Protobufs.TAKPacketV2.Parser.ParseFrom(protoBytes));
         }
         catch (Exception ex)
         {
@@ -315,6 +316,7 @@ public class TakCompressor
     /// emitted dictionary ID, and wire payload.</returns>
     public CompressionResult CompressWithStats(Meshtastic.Protobufs.TAKPacketV2 packet)
     {
+        packet = DetectionXml.WithSchemaUasId(packet);
         var protoBytes = packet.ToByteArray();
         var wire = Compress(packet);
         // Report the ACTUAL emitted mode from the flags byte — skip-compress may

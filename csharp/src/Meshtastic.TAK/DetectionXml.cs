@@ -195,11 +195,29 @@ internal static class DetectionXml
     private static int? Number(string? raw) =>
         raw != null && CotXmlParser.ToDoubleOrNull(raw.Trim()) is { } d ? CotXmlParser.RoundToInt(d) : null;
 
-    // A uasId attribute's bytes: hex after "hex:" (in any case), else the text's UTF-8, cut to
-    // 20. A hex value whose rest is not an even number of hex digits gives no ID.
+    /// <summary>
+    /// <paramref name="packet"/>, or a copy of it whose detection holds its UAS ID as the schema
+    /// allows: only for a UAS, and at most 20 bytes. The compressor applies it to what it sends
+    /// and what it receives, as the parser and builder apply it to CoT XML.
+    /// </summary>
+    internal static TAKPacketV2 WithSchemaUasId(TAKPacketV2 packet)
+    {
+        if (packet.Detection is not { } detection) return packet;
+        var id = detection.Kind == TAKDetection.Types.Kind.Uas ? detection.UasId : ByteString.Empty;
+        if (id.Length > UasIdMaxBytes) id = ByteString.CopyFrom(id.Span[..UasIdMaxBytes]);
+        if (id.Equals(detection.UasId)) return packet;
+        var copy = packet.Clone();
+        copy.Detection.UasId = id;
+        return copy;
+    }
+
+    // A uasId attribute's bytes, read trimmed like every attribute here: hex after "hex:" (in
+    // any case), else the text's UTF-8, cut to 20. A hex value whose rest is not an even number
+    // of hex digits gives no ID.
     private static ByteString ParseUasId(string? raw)
     {
         if (raw == null) return ByteString.Empty;
+        raw = raw.Trim();
         byte[] bytes;
         if (raw.StartsWith(UasIdHexPrefix, StringComparison.OrdinalIgnoreCase))
         {

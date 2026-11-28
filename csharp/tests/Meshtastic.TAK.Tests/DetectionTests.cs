@@ -370,6 +370,31 @@ public class DetectionTests
         Assert.Contains("<__detection kind=\"uas\" sources=\"radar\"/>", _builder.Build(PacketWith(d)));
     }
 
+    [Fact]
+    public void TheWireKeepsAUasIdOnlyForAUasAndAtMost20Bytes()
+    {
+        var vehicle = new TAKDetection { Kind = TAKDetection.Types.Kind.Vehicle, UasId = ByteString.CopyFromUtf8(UasId) };
+        var pkt = PacketWith(vehicle);
+        Assert.Equal(ByteString.Empty, ThroughTheWire(pkt).Detection.UasId);
+        // The caller's packet keeps what it had.
+        Assert.Equal(ByteString.CopyFromUtf8(UasId), pkt.Detection.UasId);
+
+        var longId = ByteString.CopyFrom(Enumerable.Repeat((byte)0x41, 25).ToArray());
+        var uas = new TAKDetection { Kind = TAKDetection.Types.Kind.Uas, UasId = longId };
+        Assert.Equal(longId.Span[..20].ToArray(), ThroughTheWire(PacketWith(uas)).Detection.UasId.ToByteArray());
+
+        // A peer's packet is read the same way; a 0xFF frame carries its protobuf as is.
+        var raw = new[] { (byte)DictionaryProvider.DictIdUncompressed }.Concat(pkt.ToByteArray()).ToArray();
+        Assert.Equal(ByteString.Empty, _compressor.Decompress(raw).Detection.UasId);
+    }
+
+    [Fact]
+    public void AUasIdIsReadTrimmed()
+    {
+        Assert.Equal(ByteString.CopyFromUtf8(UasId), DetectionOf($"<__detection kind=\"uas\" uasId=\"  {UasId} \"/>")!.UasId);
+        Assert.Equal(ByteString.CopyFrom(0x5a, 0x5a), DetectionOf("<__detection kind=\"uas\" uasId=\" hex:5a5a \"/>")!.UasId);
+    }
+
     // === Shared fixtures ===
 
     // Parses a fixture and checks it against Kotlin's goldens, byte for byte: Kotlin writes tag 47

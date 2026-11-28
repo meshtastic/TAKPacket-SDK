@@ -21,7 +21,7 @@ Kotlin is the canonical implementation. It generates the golden test artifacts (
 
 ## Proto schema
 
-The protobuf schema lives in the `protobufs` git submodule (branch `takv2_geometry`). The key file is `protobufs/meshtastic/atak.proto`. Kotlin uses Wire 6.2.0 for codegen; other platforms use pre-generated bindings that are checked in.
+The protobuf schema lives in the `protobufs` git submodule (`meshtastic/protobufs`, branch `master`). The key file is `protobufs/meshtastic/atak.proto`. Kotlin doesn't generate code from it: it takes its proto types from the published `org.meshtastic:protobufs` artifact, and writes `TAKPacketV2.detection` (tag 47) itself until a release has `TAKDetection`. Swift, Python and C# use generated bindings that are checked in; TypeScript loads the `.proto` at runtime.
 
 **`TAKPacketV2`** has top-level fields at tags 1-26, 29, 43 and 47, plus a `payload_variant` oneof at tags 31-42 and 44-46 with 15 typed payload cases: GeoChat, AircraftTrack, raw_detail, DrawnShape, Marker, RangeAndBearing, Route, CasevacReport, EmergencyAlert, TaskRequest, TakTalkMessage, TakTalkRoomData, VoiceProfile, VoiceProfileRequest, TakTalkRoomRequest. **PLI is implicit (v0.4.0):** the former `bool pli = 30` oneof arm was removed — a packet with NO payload variant + an `a-f-*` cot type IS a PLI.
 

@@ -155,6 +155,9 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     private var startStr = ""
     // The event's <point ce>, which backs up a detection's cep.
     private var pointCe: String?
+    // The <__detection> element's attributes, read once the event is in, so a <point> that
+    // comes after <detail> still backs up a missing cep.
+    private var detectionAttributes: [String: String]?
     private var inRemarks = false
 
     // --- TAKTALK m-t-t accumulators -----------------------------------
@@ -355,6 +358,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         chatTo = nil; chatToCallsign = nil
         timeStr = ""; staleStr = ""; startStr = ""
         pointCe = nil
+        detectionAttributes = nil
         inRemarks = false
         // --- Reset TAKTALK accumulators ---
         hasTakTalkData = false
@@ -442,6 +446,10 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         let parser = XMLParser(data: data)
         parser.delegate = self
         parser.parse()
+
+        if let detectionAttributes {
+            packet.detection = DetectionXml.parse(detectionAttributes, pointCe: pointCe)
+        }
 
         // Parse aircraft data from remarks if ICAO not yet found
         if icao.isEmpty, !remarksText.isEmpty {
@@ -1011,7 +1019,7 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
         // Passive-sensor detection, payload-agnostic like the two annotations
         // above. Present even with no attributes; the last element wins.
         case DetectionXml.element:
-            packet.detection = DetectionXml.parse(attributes, pointCe: pointCe)
+            detectionAttributes = attributes
 
         case "link":
             handleLink(attributes: attributes)
@@ -1514,10 +1522,12 @@ public class CotXmlParser: NSObject, XMLParserDelegate {
     /// Kotlin's `String.toDoubleOrNull()` for plain decimals: optional surrounding
     /// ASCII whitespace, an optional sign, digits with an optional fraction, and an
     /// optional exponent. `Double(_:)` alone rejects the whitespace and accepts hex,
-    /// `inf` and `nan`, so the shape is checked first.
+    /// `inf` and `nan`, so the shape is checked first. The fraction is its own group so that
+    /// no digit run can be split between two quantifiers, which would make a failed match
+    /// backtrack in quadratic time.
     static func parseDouble(_ raw: String?) -> Double? {
         guard let s = raw?.trimmingCharacters(in: asciiWhitespace),
-              s.range(of: #"^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?$"#,
+              s.range(of: #"^[+-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+-]?[0-9]+)?$"#,
                       options: .regularExpression) != nil,
               let d = Double(s) else { return nil }
         // Kotlin throws on NaN and clamps Infinity; reading both as absent is this port's one deliberate deviation.

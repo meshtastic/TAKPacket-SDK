@@ -36,12 +36,31 @@ internal object DetectionXml {
     /** CoT's "unknown" circular error, written to `<point ce>` when there is no cep to carry. */
     const val UNKNOWN_CE: Int = 9_999_999
 
+    /** Every attribute the element defines, so a parser can hold them until the event ends. */
+    val ATTRIBUTES: List<String> =
+        listOf(
+            "kind",
+            "sources",
+            "confidence",
+            "state",
+            "trend",
+            "count",
+            "sensorAnchored",
+            "cep",
+            "rssi",
+            "uasId",
+            "uasIdType",
+            "uasStatus",
+        )
+
     private const val CONFIDENCE_MAX = 100
 
     // A plain decimal: optional sign, digits with an optional fraction, optional exponent.
     // Narrower than toDoubleOrNull on purpose (no NaN, Infinity, hex or f/d suffix), so every
-    // binding accepts exactly the same strings.
-    private val DECIMAL = Regex("[+-]?(\\d+\\.?\\d*|\\.\\d+)([eE][+-]?\\d+)?")
+    // binding accepts exactly the same strings. The fraction is its own group so that no digit
+    // run can be split between two quantifiers, which would make a failed match backtrack in
+    // time quadratic in its length.
+    private val DECIMAL = Regex("[+-]?(\\d+(\\.\\d*)?|\\.\\d+)([eE][+-]?\\d+)?")
     private val SPACES = Regex("\\s+")
 
     private val KINDS = tokenTable(DetectionData.Kind.entries)
@@ -148,9 +167,10 @@ internal object DetectionXml {
  * The `uasId` attribute of [DetectionXml]'s element. A UAS ID is up to 20 bytes. One made only
  * of ASCII letters, digits, `-`, `.` and `_`, as serial numbers and CAA registrations are, is
  * written as that text; any other is written as `hex:` and its bytes in lowercase hex, so
- * neither form needs escaping. Reading takes a value that starts with `hex:` (in any case) as
- * hex, and drops it unless the rest is whole hex digits; any other value is the ID's UTF-8
- * text. Either way the ID is cut to 20 bytes.
+ * neither form needs escaping. Reading trims the value, as it does every attribute of the
+ * element, then takes one that starts with `hex:` (in any case) as hex, and drops it unless the
+ * rest is whole hex digits; any other value is the ID's UTF-8 text. Either way the ID is cut to
+ * 20 bytes.
  */
 internal object UasIdXml {
     /** No UAS ID. */
@@ -168,12 +188,13 @@ internal object UasIdXml {
     private const val BYTE_MASK = 0xFF
 
     /** An attribute value's bytes: hex after a `hex:` prefix, else the text's UTF-8, cut to 20. */
-    fun parse(raw: String?): ByteArray =
-        when {
-            raw == null -> NONE
-            raw.startsWith(HEX_PREFIX, ignoreCase = true) -> decodeHex(raw.substring(HEX_PREFIX.length))?.cut() ?: NONE
-            else -> raw.encodeToByteArray().cut()
+    fun parse(raw: String?): ByteArray {
+        val value = raw?.trim() ?: return NONE
+        return when {
+            value.startsWith(HEX_PREFIX, ignoreCase = true) -> decodeHex(value.substring(HEX_PREFIX.length))?.cut() ?: NONE
+            else -> value.encodeToByteArray().cut()
         }
+    }
 
     /** The attribute value for [id] cut to 20 bytes, or null when there is no ID. */
     fun attribute(id: ByteArray): String? {

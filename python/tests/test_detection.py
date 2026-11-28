@@ -435,3 +435,22 @@ def test_an_aircraft_track_keeps_the_aircraft_dictionary_with_a_detection():
     assert track.WhichOneof("payload_variant") == "aircraft"
     track.detection.CopyFrom(detection)
     assert _wire_dict_id(track) == DICT_ID_AIRCRAFT
+
+
+def test_the_wire_keeps_a_uas_id_only_for_a_uas_and_at_most_20_bytes():
+    vehicle = _packet(D(kind=D.Kind_Vehicle, uas_id=UAS_ID.encode()))
+    assert _through_the_wire(vehicle).detection.uas_id == b""
+    # The caller's packet keeps what it had.
+    assert vehicle.detection.uas_id == UAS_ID.encode()
+
+    long_id = b"A" * 25
+    assert _through_the_wire(_packet(D(kind=D.Kind_Uas, uas_id=long_id))).detection.uas_id == long_id[:20]
+
+    # A peer's packet is read the same way; a 0xFF frame carries its protobuf as is.
+    raw = bytes([0xFF]) + vehicle.SerializeToString()
+    assert compressor.decompress(raw).detection.uas_id == b""
+
+
+def test_a_uas_id_is_read_trimmed():
+    assert _detection(f'<__detection kind="uas" uasId="  {UAS_ID} "/>').uas_id == UAS_ID.encode()
+    assert _detection('<__detection kind="uas" uasId=" hex:5a5a "/>').uas_id == b"ZZ"

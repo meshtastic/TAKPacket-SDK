@@ -259,7 +259,9 @@ public class CotXmlParser {
         var sensorFovData: TakPacketV2Data.SensorFovData? = null
 
         // --- Detection annotation; <point ce> backs up its cep ----------
-        var detectionData: TakPacketV2Data.DetectionData? = null
+        // The element's attributes are held until the event ends, so a <point>
+        // that comes after <detail> still backs up a missing cep.
+        var detectionAttributes: Map<String, String?>? = null
         var pointCe: String? = null
 
         try {
@@ -706,7 +708,7 @@ public class CotXmlParser {
                             }
 
                             DetectionXml.ELEMENT -> {
-                                detectionData = DetectionXml.parse({ reader.getAttributeValue(null, it) }, pointCe)
+                                detectionAttributes = DetectionXml.ATTRIBUTES.associateWith { reader.getAttributeValue(null, it) }
                             }
 
                             "link" -> {
@@ -1267,7 +1269,7 @@ public class CotXmlParser {
             sensorFov = sensorFovData,
             marti = martiDests.toList(),
             payload = payload,
-            detection = detectionData,
+            detection = detectionAttributes?.let { DetectionXml.parse(it::get, pointCe) },
         )
     }
 

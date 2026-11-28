@@ -10,6 +10,7 @@ import org.meshtastic.tak.TakPacketV2Data.DetectionData.Trend
 import org.meshtastic.tak.TakPacketV2Data.DetectionData.UasIdType
 import org.meshtastic.tak.TakPacketV2Data.DetectionData.UasStatus
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -88,17 +89,41 @@ class DetectionWireTest {
 
     @Test
     fun unknownFieldsAndEnumValuesInTheMessageAreSkipped() {
-        // Kind 99, then a varint tag 13 and a length-delimited tag 14 this model doesn't have.
-        val odd = "0863" + fullHex.removePrefix("0801") + "6805" + "720161"
-        assertEquals(full.copy(kind = Kind.Unspecified), deserialize(field47(odd) + serialize(packet(null))).detection)
+        // State 99, then a varint tag 13 and a length-delimited tag 14 this model doesn't have.
+        val odd = fullHex.replaceFirst("18572002", "18572063") + "6805" + "720161"
+        assertEquals(full.copy(state = State.Unspecified), deserialize(field47(odd) + serialize(packet(null))).detection)
     }
 
     @Test
-    fun theLastTag47WinsAndOneOfAnotherWireTypeIsSkipped() {
-        val empty = field47("")
-        val twice = field47(fullHex) + empty + serialize(packet(null))
-        assertEquals(DetectionData(), deserialize(twice).detection)
+    fun repeatedTag47MessagesMerge() {
+        // The first gives the kind and the second the confidence; protobuf merges them, so both stay.
+        val merged = field47("0801") + field47("1857") + serialize(packet(null))
+        assertEquals(DetectionData(kind = Kind.Uas, confidence = 87), deserialize(merged).detection)
+        // An empty second message takes nothing away.
+        assertEquals(full, deserialize(field47(fullHex) + field47("") + serialize(packet(null))).detection)
+    }
+
+    @Test
+    fun aFieldInAnotherWireTypeIsSkipped() {
+        // confidence (tag 3) as length-delimited bytes, then a valid state: only the state counts.
+        assertEquals(DetectionData(state = State.Active), deserialize(field47("1a01572002") + serialize(packet(null))).detection)
         // Tag 47 as a varint, key (47 << 3) | 0 = 376 (f8 02), is no TAKDetection; protoc skips it too.
         assertNull(deserialize("f80205".decodeHex().toByteArray() + serialize(packet(null))).detection)
+    }
+
+    @Test
+    fun aUasIdGoesOnlyWithAUasAndAtMost20Bytes() {
+        // protoc's bytes for `full` as a vehicle without its ID.
+        val vehicle = full.copy(kind = Kind.Vehicle)
+        assertEquals("0805100318572002280130023801400c488d0158016002", DetectionWire.encode(vehicle).hex())
+        assertEquals(vehicle.copy(uasId = ByteArray(0)), deserialize(serialize(packet(vehicle))).detection)
+
+        val long = ByteArray(25) { 0x41 }
+        assertContentEquals(long.copyOf(20), deserialize(serialize(packet(full.copy(uasId = long)))).detection?.uasId)
+
+        // What a peer sends is read the same way: a vehicle's ID is dropped, a long one cut.
+        assertEquals(DetectionData(kind = Kind.Vehicle), deserialize(field47("08055203414243") + serialize(packet(null))).detection)
+        val peerLong = "0801" + "5219" + "41".repeat(25)
+        assertContentEquals(long.copyOf(20), deserialize(field47(peerLong) + serialize(packet(null))).detection?.uasId)
     }
 }

@@ -169,7 +169,7 @@ Else:
 
 Aircraft types have the Air battle dimension indicator `A` as the 3rd hierarchical atom in the CoT type string (e.g., `a-f-A-M-H`, `a-n-A-C-F`). All other types (ground, sea, tasking, bits, drawings) use the non-aircraft dictionary.
 
-The exception exists because the 4 KB aircraft dictionary is built for aircraft tracks. A UAS detection such as `a-u-A-M-H-Q` is aircraft-typed but carries a marker, which the non-aircraft dictionary compresses better: the two UAS fixtures come out 22 and 13 bytes smaller with it. A detection that is an aircraft track keeps the aircraft dictionary. The choice is the sender's alone, since the receiver reads the dictionary ID from the flags byte.
+The exception exists because the 4 KB aircraft dictionary is built for aircraft tracks. A UAS detection such as `a-u-A-M-H-Q` is aircraft-typed but carries a marker, which the non-aircraft dictionary compresses better: the two UAS fixtures come out 22 and 13 bytes smaller with it. A detection on an aircraft track changes nothing: the CoT type picks the dictionary, as it would without one. The choice is the sender's alone, since the receiver reads the dictionary ID from the flags byte.
 
 ## 6. Protobuf Schema
 
@@ -239,7 +239,7 @@ message TAKPacketV2 {
 
 The fields are listed in the order the `.proto` declares them, which is not tag order. Kotlin's Wire runtime writes fields in declaration order, while the protoc-based runtimes (Swift, Python, C#, TypeScript) write them in tag order, so a packet carrying `start_epoch_lo14` serializes it in a different position per binding. Decoders accept either order, so frames interoperate, but such a packet's protobuf bytes are not identical across bindings. `detection` is declared ahead of `marti` too, but Kotlin writes it itself, after every other field, which is where tag order puts it (see Field 47).
 
-The `payload_variant` oneof has 15 typed cases (tags 31–42 and 44–46); a packet with **no** `payload_variant` set is an implicit PLI position report, for 16 payload variants in total. The `CotType` enum covers 126 well-known CoT types (`CotType_Other` = 0 through `CotType_y` = 126). Unknown types use `CotType_Other` (0) with the raw type string in `cot_type_str`.
+The `payload_variant` oneof has 15 typed cases (tags 31–42 and 44–46). A packet with **no** `payload_variant` set carries only its envelope, the 16th payload variant; with a friendly `a-f-*` type, that is an implicit PLI position report. The three TAKTALK arms at tags 44–46 encode and decode in every binding, but only Kotlin converts them to and from CoT XML. The `CotType` enum covers 126 well-known CoT types (`CotType_Other` = 0 through `CotType_y` = 126). Unknown types use `CotType_Other` (0) with the raw type string in `cot_type_str`.
 
 ### Field 24: Remarks
 
@@ -264,14 +264,16 @@ In CoT XML it is one self-closing child of `<detail>`, each attribute left out a
 
 - Enum attributes carry the value's suffix in lowercase snake_case (`Kind_UasOperator` is `uas_operator`). `sources` is a space-separated list of `Source` tokens, and its proto field is their bitwise OR. Reading ignores case, takes an unknown token as unspecified and skips one in `sources`.
 - Numbers are plain decimals, rounded half up. `confidence` is clamped to 0–100, and `count` and `cep` to zero or more.
-- `uasId` is dropped unless `kind` is `uas`. An ID made only of ASCII letters, digits, `-`, `.` and `_`, as serial numbers and CAA registrations are, is written as that text; any other is written as `hex:` followed by its bytes in lowercase hex, so neither form needs escaping. Reading takes a value that starts with `hex:` (in any case) as hex, and drops it unless the rest is an even number of hex digits; any other value is the ID's UTF-8 text. Either way the ID is cut to 20 bytes.
-- `cep` is also the event's `<point ce>`. The builder writes it there, and the parser reads `<point ce>` when the element has no `cep`. An event without the element keeps `ce="9999999"`.
+- `uasId` is dropped unless `kind` is `uas`. An ID made only of ASCII letters, digits, `-`, `.` and `_`, as serial numbers and CAA registrations are, is written as that text; any other is written as `hex:` followed by its bytes in lowercase hex, so neither form needs escaping. Reading trims the value, then takes one that starts with `hex:` (in any case) as hex, and drops it unless the rest is an even number of hex digits; any other value is the ID's UTF-8 text. Either way the ID is cut to 20 bytes.
+- `cep` is also the event's `<point ce>`. The builder writes it there, or `9999999`, CoT's unknown, when the detection has no `cep`. When the element has no `cep`, the parser reads `<point ce>`, wherever `<point>` sits in the event, and takes `9999999` or more as no `cep`. An event without the element keeps `ce="9999999"`.
 
 None of these names is one the parsers classify an event by, or that `CotMeshSanitizer` strips, so the annotation never changes an event's payload variant.
 
-A detection that is not an aircraft track is compressed with the non-aircraft dictionary whatever its CoT type; see §5.
+A detection that is not an aircraft track is compressed with the non-aircraft dictionary whatever its CoT type, unless skip-compress sends it raw; see §5.
 
-Kotlin builds on a published `org.meshtastic:protobufs` that predates `TAKDetection`, so it writes the field itself, as an unknown field after every other field, and reads it from the packet's bytes. Its bytes match the protoc-based bindings'.
+On the wire, every binding keeps `uas_id` only for `Kind_Uas` and cuts it to 20 bytes, in what it sends and what it receives, as the XML does.
+
+Kotlin builds on a published `org.meshtastic:protobufs` that predates `TAKDetection`, so it writes the field itself, as an unknown field after every other field, and reads it from the packet's bytes. Its bytes match the protoc-based bindings', and so does its reading: repeated tag 47 messages merge, and a field in the wrong wire type is skipped.
 
 Firmware never reads the field: `atak.options` marks it `FT_IGNORE`, so the stack-allocated nanopb `TAKPacketV2` does not grow.
 

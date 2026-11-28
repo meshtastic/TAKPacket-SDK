@@ -17,6 +17,24 @@ const MAX_DECOMPRESSED_SIZE = 4096;
  * marker smaller. The ID travels in the flags byte, so a receiver decodes either
  * choice.
  */
+// The schema's rule for TAKDetection.uas_id, which the parser applies to CoT XML: only for
+// Kind_Uas (1), and at most 20 bytes.
+const KIND_UAS = 1;
+const UAS_ID_MAX_BYTES = 20;
+
+/**
+ * `packet`, or a copy whose detection holds its UAS ID as the schema allows. The compressor
+ * applies it to what it sends and what it receives, as the parser and builder do to CoT XML.
+ */
+function withSchemaUasId(packet: TAKPacketV2): TAKPacketV2 {
+  const detection = packet.detection;
+  if (!detection) return packet;
+  const current = detection.uasId ?? new Uint8Array(0);
+  const allowed = (detection.kind ?? 0) === KIND_UAS ? current.subarray(0, UAS_ID_MAX_BYTES) : current.subarray(0, 0);
+  if (allowed.length === current.length) return packet;
+  return { ...packet, detection: { ...detection, uasId: Buffer.from(allowed) } };
+}
+
 function dictIdFor(packet: TAKPacketV2): number {
   if (packet.detection != null && packet.aircraft == null) return DICT_ID_NON_AIRCRAFT;
   return selectDictId(packet.cotTypeId ?? 0, packet.cotTypeStr ?? undefined);
@@ -215,7 +233,7 @@ export class TakCompressor {
     const TAKPacketV2Type = await getTAKPacketV2Type();
     const err = TAKPacketV2Type.verify(packet);
     if (err) throw new Error(`Invalid TAKPacketV2: ${err}`);
-    const msg = TAKPacketV2Type.create(packet);
+    const msg = TAKPacketV2Type.create(withSchemaUasId(packet));
     const protobufBytes = Buffer.from(TAKPacketV2Type.encode(msg).finish());
 
     const dictId = dictIdFor(packet);
@@ -313,7 +331,7 @@ export class TakCompressor {
       // (7.x wrote zero-valued own properties to the wire), so without this
       // option those fields come back undefined instead. Oneof members are
       // never defaulted, so payload_variant is unaffected.
-      return TAKPacketV2Type.toObject(msg, { defaults: true }) as TAKPacketV2;
+      return withSchemaUasId(TAKPacketV2Type.toObject(msg, { defaults: true }) as TAKPacketV2);
     } catch (e) {
       throw new Error(`Protobuf parsing failed: ${e}`);
     }
@@ -388,7 +406,7 @@ export class TakCompressor {
    */
   async compressWithStats(packet: TAKPacketV2): Promise<CompressionResult> {
     const TAKPacketV2Type = await getTAKPacketV2Type();
-    const msg = TAKPacketV2Type.create(packet);
+    const msg = TAKPacketV2Type.create(withSchemaUasId(packet));
     const protobufBytes = TAKPacketV2Type.encode(msg).finish();
 
     const wirePayload = await this.compress(packet);
