@@ -51,20 +51,6 @@ public class TakCompressor(
     }
 
     /**
-     * The dictionary to compress [packet] with: the one [DictionaryProvider.selectDictId] picks
-     * for its CoT type, except that a detection that is not an aircraft track takes
-     * [DictionaryProvider.DICT_ID_NON_AIRCRAFT] whatever its type. The 4 KB aircraft dictionary
-     * is built for aircraft tracks, and the non-aircraft one compresses a detection marker
-     * smaller. The ID travels in the flags byte, so a receiver decodes either choice.
-     */
-    private fun dictIdFor(packet: TakPacketV2Data): Int =
-        if (packet.detection != null && packet.payload !is TakPacketV2Data.Payload.Aircraft) {
-            DictionaryProvider.DICT_ID_NON_AIRCRAFT
-        } else {
-            DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
-        }
-
-    /**
      * Compress a TakPacketV2Data into a wire payload:
      * [flags byte][zstd-compressed protobuf]
      *
@@ -457,3 +443,17 @@ public class TakCompressor(
         override fun hashCode(): Int = wirePayload.contentHashCode()
     }
 }
+
+/**
+ * The dictionary to compress [packet] with: the one [DictionaryProvider.selectDictId] picks
+ * for its CoT type, except that a detection that is not an aircraft track takes
+ * [DictionaryProvider.DICT_ID_NON_AIRCRAFT] whatever its type. The 4 KB aircraft dictionary
+ * is built for aircraft tracks, and the non-aircraft one compresses a detection marker
+ * smaller. The ID travels in the flags byte, so a receiver decodes either choice.
+ */
+private fun dictIdFor(packet: TakPacketV2Data): Int =
+    if (packet.detection != null && packet.payload !is TakPacketV2Data.Payload.Aircraft) {
+        DictionaryProvider.DICT_ID_NON_AIRCRAFT
+    } else {
+        DictionaryProvider.selectDictId(packet.cotTypeId, packet.cotTypeStr)
+    }
